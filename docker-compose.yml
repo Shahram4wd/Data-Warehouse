@@ -1,27 +1,39 @@
 version: '3.9'
+
 services:
   web:
-    build: ./docker/web
-    command: python /code/manage.py runserver 0.0.0.0:8000
+    build: .
+    command: bash -c "if [ ! -f manage.py ]; then django-admin startproject data_warehouse .; fi && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - .:/code
+      - .:/app
+    env_file:
+      - .env
     ports:
       - "8000:8000"
+    depends_on:
+      - redis
+
+  celery:
+    build: .
+    command: celery -A data_warehouse worker -l info
+    volumes:
+      - .:/app
     env_file:
       - .env
     depends_on:
-      - db
+      - redis
 
-  db:
-    image: postgres:13
+  celery-beat:
+    build: .
+    command: celery -A data_warehouse beat -l info
     volumes:
-      - pgdata:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "5432:5432"
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
 
-volumes:
-  pgdata:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
