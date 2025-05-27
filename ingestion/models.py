@@ -28,7 +28,7 @@ class Division(models.Model):
 
 
 class UserData(models.Model):
-    user_id = models.IntegerField(primary_key=True)
+    id = models.IntegerField(primary_key=True)
     division = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, related_name='users')
     first_name = models.CharField(max_length=100, null=True, blank=True)
     first_name_alt = models.CharField(max_length=100, null=True, blank=True)
@@ -39,10 +39,6 @@ class UserData(models.Model):
     gender_id = models.IntegerField(null=True, blank=True)
     marital_status_id = models.IntegerField(null=True, blank=True)
     time_zone_name = models.CharField(max_length=50)
-    lead_radius_zip = models.CharField(max_length=20, null=True, blank=True)
-    lead_radius_distance = models.FloatField(null=True, blank=True)
-    lead_types = models.IntegerField(null=True, blank=True)
-    lead_call_center = models.BooleanField(default=True)
     title_id = models.SmallIntegerField(null=True, blank=True)
     manager_user_id = models.IntegerField(null=True, blank=True)
     hired_on = models.DateTimeField(null=True, blank=True)

@@ -18,7 +18,7 @@ class DivisionAdmin(admin.ModelAdmin):
 
 @admin.register(UserData)
 class UserDataAdmin(admin.ModelAdmin):
-    list_display = ('user_id', 'first_name', 'last_name', 'email', 'division')
+    list_display = ('id', 'first_name', 'last_name', 'email', 'division')
 
 
 @admin.register(Prospect)

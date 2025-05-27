@@ -1,17 +1,10 @@
-import requests
 from ingestion.models import Division
-from ingestion.genius.genius_client import GeniusClient
-from django.conf import settings
+import requests
 
-def sync_divisions():
-    client = GeniusClient(
-        settings.GENIUS_API_URL,
-        settings.GENIUS_USERNAME,
-        settings.GENIUS_PASSWORD
-    )
-
+def sync_divisions(client):
     url = "/api/divisions/division/"
     full_url = f"{client.base_url.rstrip('/')}{url}"
+    total_synced = 0
 
     while full_url:
         print(f"Fetching: {full_url}")
@@ -32,5 +25,8 @@ def sync_divisions():
                     "is_omniscient": item.get("is_omniscient", False),
                 }
             )
+            total_synced += 1
 
-        full_url = data.get("next")  # move to next page if paginated
+        full_url = data.get("next")
+
+    return total_synced

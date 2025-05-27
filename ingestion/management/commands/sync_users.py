@@ -1,10 +1,10 @@
 from django.core.management.base import BaseCommand
 from ingestion.genius.genius_client import GeniusClient
-from ingestion.genius.division_sync import sync_divisions
+from ingestion.genius.user_data_sync import sync_user_data
 from django.conf import settings
 
 class Command(BaseCommand):
-    help = "Sync divisions from Genius"
+    help = "Fetch and sync user data from Genius"
 
     def handle(self, *args, **kwargs):
         client = GeniusClient(
@@ -13,5 +13,5 @@ class Command(BaseCommand):
             settings.GENIUS_PASSWORD
         )
 
-        count = sync_divisions(client)
-        self.stdout.write(self.style.SUCCESS(f"Synced {count} division records"))
+        count = sync_user_data(client)
+        self.stdout.write(self.style.SUCCESS(f"Synced {count} user records"))
