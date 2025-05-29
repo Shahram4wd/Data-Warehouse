@@ -8,3 +8,5 @@ django-celery-beat
 redis
 gunicorn
 requests
+tqdm>=4.66.1
+python-dotenv==1.0.0

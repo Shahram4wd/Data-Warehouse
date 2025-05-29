@@ -1,0 +1,32 @@
+import requests
+from django.conf import settings
+from ingestion.models import UserData
+
+def sync_single_user(client, user_id):
+    url = f"{client.base_url.rstrip('/')}/api/users/users/{user_id}/"
+    response = requests.get(url, headers=client._headers())
+    response.raise_for_status()
+    item = response.json()
+
+    UserData.objects.update_or_create(
+        id=item["id"],
+        defaults={
+            "division_id": item.get("division"),
+            "first_name": item.get("first_name"),
+            "first_name_alt": item.get("first_name_alt") or None,
+            "last_name": item.get("last_name") or None,
+            "email": item.get("email") or None,
+            "personal_email": item.get("personal_email") or None,
+            "birth_date": item.get("birth_date") or None,
+            "gender_id": item.get("gender", {}).get("id") if item.get("gender") else None,
+            "marital_status_id": item.get("marital_status", {}).get("id") if item.get("marital_status") else None,
+            "time_zone_name": item.get("time_zone_name") or "",
+            "title_id": item.get("title"),
+            "manager_user_id": item.get("manager"),
+            "hired_on": item.get("hired_on") or None,
+            "start_date": item.get("start_date") or None,
+            "add_user_id": item.get("add_user"),
+            "add_datetime": item.get("add_datetime") or None,
+        }
+    )
+    return item["id"]

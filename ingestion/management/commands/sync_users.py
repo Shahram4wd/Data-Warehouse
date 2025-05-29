@@ -4,7 +4,7 @@ from ingestion.genius.user_data_sync import sync_user_data
 from django.conf import settings
 
 class Command(BaseCommand):
-    help = "Fetch and sync user data from Genius"
+    help = "Fetch and sync user data from Genius incrementally"
 
     def handle(self, *args, **kwargs):
         client = GeniusClient(

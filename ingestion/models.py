@@ -1,6 +1,13 @@
 
 from django.db import models
 
+class SyncTracker(models.Model):
+    object_name = models.CharField(max_length=255, unique=True)
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.object_name}: {self.last_synced_at}"
+
 class DivisionGroup(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     group_label = models.CharField(max_length=255, null=True, blank=True)
@@ -45,7 +52,6 @@ class UserData(models.Model):
     start_date = models.DateTimeField(null=True, blank=True)
     add_user_id = models.IntegerField(null=True, blank=True)
     add_datetime = models.DateTimeField(null=True, blank=True, auto_now_add=True)
-    user_associations_id = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}".strip()
