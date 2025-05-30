@@ -1,7 +1,8 @@
 import requests
 from urllib.parse import urlencode
 from django.utils import timezone
-from ingestion.models import UserData, SyncTracker
+from ingestion.models import UserData, SyncTracker, Division
+from .base_sync import BaseGeniusSync
 
 
 def get_last_synced(object_name):
@@ -65,3 +66,26 @@ def sync_user_data(client):
     update_last_synced(object_name)
     print(f"Total users synced: {total_synced}")
     return total_synced
+
+
+class DivisionSync(BaseGeniusSync):
+    object_name = "divisions"
+    # Updated API endpoint to match the response structure
+    api_endpoint = "/api/divisions/division/"  # Changed from "/api/users/divisions/"
+    model_class = Division
+    env_batch_size_key = "DIVISION_SYNC_BATCH_SIZE"
+    
+    def process_item(self, item):
+        Division.objects.update_or_create(
+            id=item["id"],
+            defaults={
+                "name": item.get("label"),  # Use "label" from response instead of "name"
+                "abbreviation": item.get("abbreviation"),
+                "is_inactive": item.get("is_inactive", False),
+                "group_id": item.get("group", {}).get("id") if item.get("group") else None,
+                "region_id": item.get("region", {}).get("id") if item.get("region") else None,
+                # Add other division fields that match your model
+                "is_utility": item.get("is_utility", False),
+                "is_corp": item.get("is_corp", False),
+            }
+        )

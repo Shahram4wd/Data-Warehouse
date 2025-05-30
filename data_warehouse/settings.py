@@ -27,7 +27,21 @@ INSTALLED_APPS = [
     #my apps
     'ingestion',
     'django_celery_beat',
+    'rest_framework',
+    'drf_spectacular',
 ]
+
+# Add DRF settings
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Spectacular settings
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Data Warehouse API',
+    'DESCRIPTION': 'API for syncing and managing data warehouse data',
+    'VERSION': '1.0.0',
+}
 
 # Middleware
 MIDDLEWARE = [
