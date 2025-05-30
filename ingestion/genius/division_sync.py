@@ -70,10 +70,8 @@ def sync_user_data(client):
 
 class DivisionSync(BaseGeniusSync):
     object_name = "divisions"
-    # Updated API endpoint to match the response structure
-    api_endpoint = "/api/divisions/division/"  # Changed from "/api/users/divisions/"
+    api_endpoint = "/api/divisions/division/"
     model_class = Division
-    env_batch_size_key = "DIVISION_SYNC_BATCH_SIZE"
     
     def process_item(self, item):
         Division.objects.update_or_create(
@@ -84,7 +82,6 @@ class DivisionSync(BaseGeniusSync):
                 "is_inactive": item.get("is_inactive", False),
                 "group_id": item.get("group", {}).get("id") if item.get("group") else None,
                 "region_id": item.get("region", {}).get("id") if item.get("region") else None,
-                # Add other division fields that match your model
                 "is_utility": item.get("is_utility", False),
                 "is_corp": item.get("is_corp", False),
             }

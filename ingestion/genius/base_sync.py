@@ -11,12 +11,11 @@ class BaseGeniusSync:
     object_name = None  # e.g. "users", "divisions", "prospects"
     api_endpoint = None  # e.g. "/api/users/users/"
     model_class = None  # e.g. UserData, Division, Prospect
-    env_batch_size_key = None  # e.g. "USER_SYNC_BATCH_SIZE"
-    default_batch_size = 100
     
     def __init__(self, client):
         self.client = client
-        self.batch_size = int(os.environ.get(self.env_batch_size_key, self.default_batch_size))
+        # Use the single batch size variable
+        self.batch_size = int(os.environ.get('GENIUS_SYNC_BATCH_SIZE', 100))
     
     def get_last_synced(self):
         """Get the timestamp of the last successful sync for this object type"""

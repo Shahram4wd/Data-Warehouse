@@ -5,7 +5,6 @@ class UserSync(BaseGeniusSync):
     object_name = "users"
     api_endpoint = "/api/users/users/"
     model_class = UserData
-    env_batch_size_key = "USER_SYNC_BATCH_SIZE"
     
     def process_item(self, item):
         UserData.objects.update_or_create(
