@@ -7,12 +7,16 @@ class MarketingSourceSync(BaseGeniusSync):
     model_class = MarketingSource
     
     def process_item(self, item):
+        # Extract the marketing source type ID from the nested object
+        marketing_source_type_id = None
+        if item.get("marketing_source_type"):
+            marketing_source_type_id = item["marketing_source_type"].get("id")
+        
         MarketingSource.objects.update_or_create(
             id=item["id"],
             defaults={
-                "label": item.get("label"),  # Using 'label' instead of 'name'
-                "marketing_source_type_id": item.get("  ", {}).get("id") if item.get("marketing_source_type") else None,  # Using proper nested field
-                "division_id": item.get("division"),
+                "label": item.get("label"),
+                "type_id": marketing_source_type_id,  # Just use the ID directly
                 "is_active": item.get("is_active", True),
                 "description": item.get("description") or "",
                 "start_date": item.get("start_date") or None,

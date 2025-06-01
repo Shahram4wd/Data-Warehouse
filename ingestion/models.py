@@ -195,7 +195,6 @@ class Quote(models.Model):
 
 class MarketingSourceType(models.Model):
     id = models.IntegerField(primary_key=True)
-    division = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, blank=True, related_name='marketing_source_types')
     label = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -207,8 +206,7 @@ class MarketingSourceType(models.Model):
 
 class MarketingSource(models.Model):
     id = models.IntegerField(primary_key=True)
-    type = models.ForeignKey('MarketingSourceType', on_delete=models.PROTECT, related_name='marketing_sources')
-    division = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, blank=True, related_name='marketing_sources')
+    type_id = models.IntegerField(null=True, blank=True)
     label = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     start_date = models.DateField(null=True, blank=True)

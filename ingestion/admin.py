@@ -1,4 +1,3 @@
-
 from django.contrib import admin
 from .models import (
     DivisionGroup, Division, UserData, Prospect, ProspectSource,
@@ -63,9 +62,9 @@ class QuoteAdmin(admin.ModelAdmin):
 
 @admin.register(MarketingSourceType)
 class MarketingSourceTypeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'label', 'is_active', 'division')
+    list_display = ('id', 'label', 'is_active')
 
 
 @admin.register(MarketingSource)
 class MarketingSourceAdmin(admin.ModelAdmin):
-    list_display = ('id', 'label', 'type', 'is_active', 'division')
+    list_display = ['id', 'label', 'type_id', 'is_active', 'start_date', 'end_date']

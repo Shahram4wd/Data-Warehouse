@@ -1,31 +1,61 @@
-from django.core.management.base import BaseCommand, CommandError
-from ingestion.genius.genius_client import GeniusClient
-from ingestion.genius.user_sync import UserSync
-from django.conf import settings
+import requests
+from django.core.management.base import BaseCommand
+from ingestion.models import UserData
+from ingestion.utils import parse_datetime_obj, process_batches
+from tqdm import tqdm
+
+BATCH_SIZE = 500
 
 class Command(BaseCommand):
-    help = "Sync users from Genius API. Syncs a single user if user_id is provided, otherwise syncs all users."
-
-    def add_arguments(self, parser):
-        parser.add_argument("--user_id", type=int, help="Optional: The ID of a specific user to sync", required=False)
+    help = "Sync Genius users from an external API."
 
     def handle(self, *args, **options):
-        client = GeniusClient(
-            settings.GENIUS_API_URL,
-            settings.GENIUS_USERNAME,
-            settings.GENIUS_PASSWORD
-        )
+        api_url = "https://api.example.com/genius/users"
+        response = requests.get(api_url)
 
-        sync = UserSync(client)
-        user_id = options.get("user_id")
-        
-        try:
-            if user_id:
-                result_id = sync.sync_single(user_id)
-                self.stdout.write(self.style.SUCCESS(f"User {result_id} synced successfully."))
-            else:
-                total_synced = sync.sync_all()
-                self.stdout.write(self.style.SUCCESS(f"All users sync complete. Total users synced: {total_synced}"))
-        except Exception as e:
-            mode = f"user {user_id}" if user_id else "all users"
-            raise CommandError(f"Failed to sync {mode}: {e}")
+        if response.status_code != 200:
+            self.stdout.write(self.style.ERROR(f"Failed to fetch data from API: {response.status_code}"))
+            return
+
+        users = response.json()
+        user_ids = [user["id"] for user in users]
+        existing_users = UserData.objects.in_bulk(user_ids)
+
+        to_create = []
+        to_update = []
+
+        self.stdout.write(self.style.SUCCESS(f"Processing {len(users)} users from API..."))
+
+        for user in tqdm(users):
+            try:
+                user_id = user["id"]
+                fields = {
+                    "first_name": user.get("first_name", ""),
+                    "last_name": user.get("last_name", ""),
+                    "email": user.get("email"),
+                    "birth_date": parse_datetime_obj(user.get("birth_date")),
+                    "hired_on": parse_datetime_obj(user.get("hired_on")),
+                    "start_date": parse_datetime_obj(user.get("start_date")),
+                    "add_user_id": user.get("add_user_id"),
+                    "add_datetime": parse_datetime_obj(user.get("add_datetime")),
+                }
+
+                if user_id in existing_users:
+                    user_instance = existing_users[user_id]
+                    for attr, val in fields.items():
+                        setattr(user_instance, attr, val)
+                    to_update.append(user_instance)
+                else:
+                    fields["id"] = user_id
+                    to_create.append(UserData(**fields))
+
+                if len(to_update) >= BATCH_SIZE or len(to_create) >= BATCH_SIZE:
+                    process_batches(to_create, to_update, UserData, fields.keys(), BATCH_SIZE)
+
+            except (ValueError, KeyError) as e:
+                self.stdout.write(self.style.WARNING(f"Skipping user due to error: {user}. Error: {e}"))
+
+        # Final batch processing
+        process_batches(to_create, to_update, UserData, fields.keys(), BATCH_SIZE)
+
+        self.stdout.write(self.style.SUCCESS("User sync completed."))
