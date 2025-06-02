@@ -6,7 +6,7 @@ from ingestion.models import Appointment
 from ingestion.utils import parse_datetime_obj, process_batches
 from tqdm import tqdm
 
-BATCH_SIZE = 500
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))  # Default to 500 if not set
 
 class Command(BaseCommand):
     help = "Import appointments from a Genius-exported CSV file. Default CSV path: ingestion/csv/appointments.csv"

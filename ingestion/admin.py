@@ -33,6 +33,8 @@ class ProspectSourceAdmin(admin.ModelAdmin):
 @admin.register(AppointmentType)
 class AppointmentTypeAdmin(admin.ModelAdmin):
     list_display = ('id', 'label', 'is_active')
+    search_fields = ('label',)
+    list_filter = ('is_active',)
 
 
 @admin.register(AppointmentOutcome)

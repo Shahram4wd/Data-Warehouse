@@ -97,8 +97,8 @@ class ProspectSource(models.Model):
 
 
 class AppointmentType(models.Model):
-    id = models.SmallIntegerField(primary_key=True)
-    label = models.CharField(max_length=100, null=True, blank=True)
+    id = models.AutoField(primary_key=True)
+    label = models.CharField(max_length=50, blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -131,7 +131,6 @@ class Appointment(models.Model):
     prospect_source = models.ForeignKey('ProspectSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     user_id = models.IntegerField(null=True, blank=True)
     type = models.ForeignKey('AppointmentType', on_delete=models.PROTECT, related_name='appointments')
-    marketing_task_id = models.IntegerField()
     date = models.DateField(null=True, blank=True)
     time = models.TimeField(null=True, blank=True)
     duration = models.TimeField(null=True, blank=True)

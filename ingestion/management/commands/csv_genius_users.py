@@ -1,11 +1,12 @@
 import csv
+import os
 from datetime import datetime
 from django.core.management.base import BaseCommand
 from ingestion.models import UserData
 from tqdm import tqdm
 from django.db import transaction
 
-BATCH_SIZE = 500
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))  # Default to 500 if not set
 
 def parse_date(value):
     """Convert common date formats to YYYY-MM-DD."""
