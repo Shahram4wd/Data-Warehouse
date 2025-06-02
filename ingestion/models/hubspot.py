@@ -1,11 +1,17 @@
 from django.db import models
 from django.utils import timezone
 
-class HubspotContact(models.Model):
+class Hubspot_Contact(models.Model):  # Updated table name
     id = models.CharField(max_length=50, primary_key=True)
     address = models.TextField(null=True, blank=True)
+    adgroupid = models.CharField(max_length=255, null=True, blank=True)
+    ap_leadid = models.CharField(max_length=255, null=True, blank=True)
+    campaign_content = models.CharField(max_length=255, null=True, blank=True)
     campaign_name = models.CharField(max_length=255, null=True, blank=True)
     city = models.CharField(max_length=255, null=True, blank=True)
+    clickcheck = models.CharField(max_length=255, null=True, blank=True)
+    clicktype = models.CharField(max_length=255, null=True, blank=True)
+    comments = models.TextField(null=True, blank=True)
     createdate = models.DateTimeField(null=True, blank=True)
     division = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
@@ -14,10 +20,20 @@ class HubspotContact(models.Model):
     hs_object_id = models.CharField(max_length=255, null=True, blank=True)
     lastmodifieddate = models.DateTimeField(null=True, blank=True)
     lastname = models.CharField(max_length=255, null=True, blank=True)
+    lead_salesrabbit_lead_id = models.CharField(max_length=255, null=True, blank=True)
     marketsharp_id = models.CharField(max_length=255, null=True, blank=True)
-    original_lead_source = models.CharField(max_length=255, null=True, blank=True)
+    msm_source = models.CharField(max_length=255, null=True, blank=True)
+    original_lead_source = models.TextField(null=True, blank=True)
+    original_lead_source_created = models.DateTimeField(null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
+    price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    reference_code = models.CharField(max_length=255, null=True, blank=True)
+    search_terms = models.CharField(max_length=255, null=True, blank=True)
     state = models.CharField(max_length=255, null=True, blank=True)
+    tier = models.CharField(max_length=255, null=True, blank=True)
+    trustedform_cert_url = models.URLField(null=True, blank=True)
+    vendorleadid = models.CharField(max_length=255, null=True, blank=True)
+    vertical = models.CharField(max_length=255, null=True, blank=True)
     zip = models.CharField(max_length=20, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -26,7 +42,7 @@ class HubspotContact(models.Model):
     def __str__(self):
         return f"{self.firstname} {self.lastname} ({self.email})"
 
-class HubspotDeal(models.Model):
+class Hubspot_Deal(models.Model):  # Updated table name
     id = models.CharField(max_length=50, primary_key=True)
     deal_name = models.CharField(max_length=255, null=True, blank=True)
     amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
@@ -46,7 +62,7 @@ class HubspotDeal(models.Model):
     def __str__(self):
         return f"{self.deal_name} ({self.amount})"
 
-class HubspotSyncHistory(models.Model):
+class Hubspot_SyncHistory(models.Model):  # Updated table name
     endpoint = models.CharField(max_length=100)
     last_synced_at = models.DateTimeField(null=True, blank=True)
     

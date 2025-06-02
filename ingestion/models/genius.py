@@ -2,7 +2,7 @@ from django.db import models
 
 # SyncTracker has been moved to common.py
 
-class DivisionGroup(models.Model):
+class Genius_DivisionGroup(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     group_label = models.CharField(max_length=255, null=True, blank=True)
     region = models.IntegerField(default=1)
@@ -14,7 +14,7 @@ class DivisionGroup(models.Model):
         return self.group_label or f"DivisionGroup {self.id}"
 
 
-class Division(models.Model):
+class Genius_Division(models.Model):
     id = models.IntegerField(primary_key=True)
     group_id = models.SmallIntegerField(null=True, blank=True)
     region_id = models.SmallIntegerField(null=True, blank=True)
@@ -29,9 +29,9 @@ class Division(models.Model):
         return self.label or f"Division {self.id}"
 
 
-class UserData(models.Model):
+class Genius_UserData(models.Model):
     id = models.IntegerField(primary_key=True)
-    division = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, related_name='users')
+    division = models.ForeignKey('Genius_Division', on_delete=models.SET_NULL, null=True, related_name='users')
     first_name = models.CharField(max_length=100, null=True, blank=True)
     first_name_alt = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
@@ -52,9 +52,9 @@ class UserData(models.Model):
         return f"{self.first_name} {self.last_name}".strip()
 
 
-class Prospect(models.Model):
+class Genius_Prospect(models.Model):
     id = models.IntegerField(primary_key=True)
-    division = models.ForeignKey('Division', on_delete=models.SET_NULL, null=True, related_name='prospects')
+    division = models.ForeignKey('Genius_Division', on_delete=models.SET_NULL, null=True, related_name='prospects')
     first_name = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
     alt_first_name = models.CharField(max_length=100, null=True, blank=True)
@@ -79,10 +79,10 @@ class Prospect(models.Model):
         return f"{self.first_name} {self.last_name or ''}".strip()
 
 
-class ProspectSource(models.Model):
+class Genius_ProspectSource(models.Model):
     id = models.AutoField(primary_key=True)
-    prospect = models.ForeignKey('Prospect', on_delete=models.CASCADE, related_name='sources')
-    marketing_source = models.ForeignKey('MarketingSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='prospect_sources')
+    prospect = models.ForeignKey('Genius_Prospect', on_delete=models.CASCADE, related_name='sources')
+    marketing_source = models.ForeignKey('Genius_MarketingSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='prospect_sources')
     source_date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     add_user_id = models.IntegerField()
@@ -92,7 +92,7 @@ class ProspectSource(models.Model):
         return f"Source {self.marketing_source_id or 'N/A'} for Prospect {self.prospect_id or 'N/A'}"
 
 
-class AppointmentType(models.Model):
+class Genius_AppointmentType(models.Model):
     id = models.AutoField(primary_key=True)
     label = models.CharField(max_length=50, blank=True, null=True)
     is_active = models.BooleanField(default=True)
@@ -101,7 +101,7 @@ class AppointmentType(models.Model):
         return self.label or f"AppointmentType {self.id}"
 
 
-class AppointmentOutcomeType(models.Model):
+class Genius_AppointmentOutcomeType(models.Model):
     id = models.AutoField(primary_key=True)
     label = models.CharField(max_length=50, blank=True, null=True)
     sort_idx = models.PositiveSmallIntegerField()
@@ -111,7 +111,7 @@ class AppointmentOutcomeType(models.Model):
         return self.label or f"Appointment Outcome Type {self.id}"
 
 
-class AppointmentOutcome(models.Model):
+class Genius_AppointmentOutcome(models.Model):
     id = models.AutoField(primary_key=True)
     type_id = models.PositiveSmallIntegerField(default=0)
     label = models.CharField(max_length=50, blank=True, null=True)
@@ -121,12 +121,12 @@ class AppointmentOutcome(models.Model):
         return self.label or f"Appointment Outcome {self.id}"
 
 
-class Appointment(models.Model):
+class Genius_Appointment(models.Model):
     id = models.IntegerField(primary_key=True)
-    prospect = models.ForeignKey('Prospect', on_delete=models.CASCADE, related_name='appointments')
-    prospect_source = models.ForeignKey('ProspectSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+    prospect = models.ForeignKey('Genius_Prospect', on_delete=models.CASCADE, related_name='appointments')
+    prospect_source = models.ForeignKey('Genius_ProspectSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     user_id = models.IntegerField(null=True, blank=True)
-    type = models.ForeignKey('AppointmentType', on_delete=models.PROTECT, related_name='appointments')
+    type = models.ForeignKey('Genius_AppointmentType', on_delete=models.PROTECT, related_name='appointments')
     date = models.DateField(null=True, blank=True)
     time = models.TimeField(null=True, blank=True)
     duration = models.DurationField(null=True, blank=True)
@@ -145,7 +145,7 @@ class Appointment(models.Model):
     confirm_with = models.CharField(max_length=100, null=True, blank=True)
     spouses_present = models.IntegerField(default=0)
     is_complete = models.IntegerField(default=0)
-    complete_outcome = models.ForeignKey('AppointmentOutcome', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+    complete_outcome = models.ForeignKey('Genius_AppointmentOutcome', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     complete_user_id = models.IntegerField(null=True, blank=True)
     complete_date = models.DateTimeField(null=True, blank=True)
     marketsharp_id = models.CharField(max_length=100, null=True, blank=True)
@@ -157,7 +157,7 @@ class Appointment(models.Model):
         return f"Appointment {self.id} for Prospect {self.prospect_id}"
 
 
-class Service(models.Model):
+class Genius_Service(models.Model):
     id = models.SmallIntegerField(primary_key=True)
     label = models.CharField(max_length=100, null=True, blank=True)
     is_active = models.BooleanField(default=True)
@@ -168,21 +168,21 @@ class Service(models.Model):
         return self.label or f"Service {self.id}"
 
 
-class AppointmentService(models.Model):
-    appointment = models.ForeignKey('Appointment', on_delete=models.CASCADE)
-    service = models.ForeignKey('Service', on_delete=models.CASCADE)
+class Genius_AppointmentService(models.Model):
+    appointment = models.ForeignKey('Genius_Appointment', on_delete=models.CASCADE)
+    service = models.ForeignKey('Genius_Service', on_delete=models.CASCADE)
 
     class Meta:
         unique_together = ('appointment', 'service')
 
 
-class Quote(models.Model):
+class Genius_Quote(models.Model):
     id = models.IntegerField(primary_key=True)
-    prospect = models.ForeignKey('Prospect', on_delete=models.CASCADE, related_name='quotes')
-    appointment = models.ForeignKey('Appointment', on_delete=models.CASCADE, related_name='quotes')
+    prospect = models.ForeignKey('Genius_Prospect', on_delete=models.CASCADE, related_name='quotes')
+    appointment = models.ForeignKey('Genius_Appointment', on_delete=models.CASCADE, related_name='quotes')
     job_id = models.IntegerField(null=True, blank=True)
     client_cid = models.IntegerField(null=True, blank=True)
-    service = models.ForeignKey('Service', on_delete=models.PROTECT, related_name='quotes')
+    service = models.ForeignKey('Genius_Service', on_delete=models.PROTECT, related_name='quotes')
     label = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -197,7 +197,7 @@ class Quote(models.Model):
         return f"Quote {self.id} – ${self.amount:.2f}"
 
 
-class MarketingSourceType(models.Model):
+class Genius_MarketingSourceType(models.Model):
     id = models.IntegerField(primary_key=True)
     label = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
@@ -208,7 +208,7 @@ class MarketingSourceType(models.Model):
         return self.label or f"Marketing Source Type {self.id}"
 
 
-class MarketingSource(models.Model):
+class Genius_MarketingSource(models.Model):
     id = models.IntegerField(primary_key=True)
     type_id = models.IntegerField(null=True, blank=True)
     label = models.CharField(max_length=255, null=True, blank=True)

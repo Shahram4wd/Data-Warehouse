@@ -16,7 +16,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from ingestion.hubspot.hubspot_client import HubspotClient
-from ingestion.models.hubspot import HubspotContact, HubspotDeal, HubspotSyncHistory
+from ingestion.models.hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_SyncHistory  # Updated imports
 
 logger = logging.getLogger(__name__)
 
@@ -97,14 +97,14 @@ class Command(BaseCommand):
     def get_last_sync(self, endpoint):
         """Get the last sync time for an endpoint."""
         try:
-            history = HubspotSyncHistory.objects.get(endpoint=endpoint)
+            history = Hubspot_SyncHistory.objects.get(endpoint=endpoint)
             return history.last_synced_at
-        except HubspotSyncHistory.DoesNotExist:
+        except Hubspot_SyncHistory.DoesNotExist:
             return None
 
     def update_last_sync(self, endpoint):
         """Update the last sync time for an endpoint."""
-        history, _ = HubspotSyncHistory.objects.get_or_create(endpoint=endpoint)
+        history, _ = Hubspot_SyncHistory.objects.get_or_create(endpoint=endpoint)
         history.last_synced_at = timezone.now()
         history.save()
 
@@ -145,7 +145,7 @@ class Command(BaseCommand):
             }
             
             # Update or create the contact
-            HubspotContact.objects.update_or_create(
+            Hubspot_Contact.objects.update_or_create(  # Updated reference
                 id=record_id,
                 defaults=contact_data
             )
@@ -176,7 +176,7 @@ class Command(BaseCommand):
             }
             
             # Update or create the deal
-            HubspotDeal.objects.update_or_create(
+            Hubspot_Deal.objects.update_or_create(  # Updated reference
                 id=record_id,
                 defaults=deal_data
             )

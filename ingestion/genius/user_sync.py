@@ -1,13 +1,13 @@
-from ingestion.models import UserData
+from ingestion.models.genius import Genius_UserData  # Updated import
 from .base_sync import BaseGeniusSync
 
 class UserSync(BaseGeniusSync):
     object_name = "users"
     api_endpoint = "/api/users/users/"
-    model_class = UserData
+    model_class = Genius_UserData  # Updated model class
     
     def process_item(self, item):
-        UserData.objects.update_or_create(
+        Genius_UserData.objects.update_or_create(
             id=item["id"],
             defaults={
                 "division_id": item.get("division"),
