@@ -2,7 +2,7 @@ import csv
 import os
 from datetime import datetime
 from django.core.management.base import BaseCommand
-from ingestion.models import UserData
+from ingestion.models.genius import UserData  # Updated import
 from tqdm import tqdm
 from django.db import transaction
 

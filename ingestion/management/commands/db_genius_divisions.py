@@ -64,8 +64,7 @@ class Command(BaseCommand):
         # Get the batch of records
         cursor.execute(f"""
             SELECT id, group_id, region_id, label, abbreviation, 
-                   is_utility, is_corp, is_omniscient, is_inactive,
-                   paychex_company_number, is_vp_commission_ignored, rescission_period_days
+                   is_utility, is_corp, is_omniscient, is_inactive
             FROM {table_name}
             LIMIT {BATCH_SIZE} OFFSET {offset}
         """)
@@ -85,8 +84,7 @@ class Command(BaseCommand):
                 # Extract fields from row
                 (
                     record_id, group_id, region_id, label, abbreviation, 
-                    is_utility, is_corp, is_omniscient, is_inactive,
-                    paychex_company_number, is_vp_commission_ignored, rescission_period_days
+                    is_utility, is_corp, is_omniscient, is_inactive
                 ) = row
 
                 # Get division group
@@ -97,23 +95,19 @@ class Command(BaseCommand):
                 is_corp = int(is_corp) if is_corp is not None else 0
                 is_omniscient = int(is_omniscient) if is_omniscient is not None else 0
                 is_inactive = int(is_inactive) if is_inactive is not None else 0
-                is_vp_commission_ignored = int(is_vp_commission_ignored) if is_vp_commission_ignored is not None else 0
-                rescission_period_days = int(rescission_period_days) if rescission_period_days is not None else 0
 
                 # Create or update record
                 if record_id in existing_records:
                     record = self._update_record(
                         existing_records[record_id], 
                         group_id, region_id, label, abbreviation,
-                        is_utility, is_corp, is_omniscient, is_inactive,
-                        paychex_company_number, is_vp_commission_ignored, rescission_period_days
+                        is_utility, is_corp, is_omniscient, is_inactive
                     )
                     to_update.append(record)
                 else:
                     record = self._create_record(
                         record_id, group_id, region_id, label, abbreviation,
-                        is_utility, is_corp, is_omniscient, is_inactive,
-                        paychex_company_number, is_vp_commission_ignored, rescission_period_days
+                        is_utility, is_corp, is_omniscient, is_inactive
                     )
                     to_create.append(record)
                     
@@ -124,8 +118,7 @@ class Command(BaseCommand):
         self._save_records(to_create, to_update)
     
     def _update_record(self, record, group_id, region_id, label, abbreviation,
-                      is_utility, is_corp, is_omniscient, is_inactive,
-                      paychex_company_number, is_vp_commission_ignored, rescission_period_days):
+                      is_utility, is_corp, is_omniscient, is_inactive):
         """Update an existing division record."""
         record.group_id = group_id
         record.region_id = region_id
@@ -134,16 +127,11 @@ class Command(BaseCommand):
         record.is_utility = is_utility
         record.is_corp = is_corp
         record.is_omniscient = is_omniscient
-        # Handle additional fields from the table design
         record.is_inactive = is_inactive
-        record.paychex_company_number = paychex_company_number
-        record.is_vp_commission_ignored = is_vp_commission_ignored
-        record.rescission_period_days = rescission_period_days
         return record
     
     def _create_record(self, record_id, group_id, region_id, label, abbreviation,
-                      is_utility, is_corp, is_omniscient, is_inactive,
-                      paychex_company_number, is_vp_commission_ignored, rescission_period_days):
+                      is_utility, is_corp, is_omniscient, is_inactive):
         """Create a new division record."""
         return Division(
             id=record_id,
@@ -154,10 +142,7 @@ class Command(BaseCommand):
             is_utility=is_utility,
             is_corp=is_corp,
             is_omniscient=is_omniscient,
-            is_inactive=is_inactive,
-            paychex_company_number=paychex_company_number,
-            is_vp_commission_ignored=is_vp_commission_ignored,
-            rescission_period_days=rescission_period_days
+            is_inactive=is_inactive
         )
     
     def _save_records(self, to_create, to_update):
@@ -171,8 +156,7 @@ class Command(BaseCommand):
                     to_update,
                     [
                         'group_id', 'region_id', 'label', 'abbreviation',
-                        'is_utility', 'is_corp', 'is_omniscient', 'is_inactive',
-                        'paychex_company_number', 'is_vp_commission_ignored', 'rescission_period_days'
+                        'is_utility', 'is_corp', 'is_omniscient', 'is_inactive'
                     ],
                     batch_size=BATCH_SIZE
                 )

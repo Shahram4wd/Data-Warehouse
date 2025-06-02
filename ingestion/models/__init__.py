@@ -1,19 +1,15 @@
-# This file is being replaced by the models package structure.
-# Imports are maintained for backwards compatibility in __init__.py
-# Please update your imports to use the new structure:
-#
-# from ingestion.models.common import SyncTracker
-# from ingestion.models.genius import Division, UserData, etc.
+# Import common models
+from .common import SyncTracker
 
-# Point to the new module structure
-from .models.common import SyncTracker
-from .models.genius import (
+# Import Genius models
+from .genius import (
     DivisionGroup, Division, UserData, Prospect, ProspectSource,
     AppointmentType, AppointmentOutcome, Appointment, AppointmentService,
     Service, Quote, MarketingSourceType, MarketingSource, AppointmentOutcomeType
 )
 
-# Keep all the model references available
+# Import all models to maintain backwards compatibility
+# This allows existing code to continue using: from ingestion.models import X
 __all__ = [
     'SyncTracker',
     'DivisionGroup', 'Division', 'UserData', 'Prospect', 'ProspectSource',
