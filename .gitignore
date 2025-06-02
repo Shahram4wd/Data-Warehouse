@@ -5,6 +5,7 @@ __pycache__/
 *.pot
 *.pyc
 .env
+*.csv
 *.db
 /media
 /staticfiles
