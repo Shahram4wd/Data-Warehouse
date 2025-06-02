@@ -1,4 +1,3 @@
-
 from django.db import models
 
 class SyncTracker(models.Model):
@@ -106,14 +105,24 @@ class AppointmentType(models.Model):
         return self.label or f"AppointmentType {self.id}"
 
 
-class AppointmentOutcome(models.Model):
-    id = models.SmallIntegerField(primary_key=True)
-    type_id = models.SmallIntegerField(default=0)
-    label = models.CharField(max_length=100, null=True, blank=True)
+class AppointmentOutcomeType(models.Model):
+    id = models.AutoField(primary_key=True)
+    label = models.CharField(max_length=50, blank=True, null=True)
+    sort_idx = models.PositiveSmallIntegerField()
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.label or f"Outcome {self.id}"
+        return self.label or f"Appointment Outcome Type {self.id}"
+
+
+class AppointmentOutcome(models.Model):
+    id = models.AutoField(primary_key=True)
+    type_id = models.PositiveSmallIntegerField(default=0)
+    label = models.CharField(max_length=50, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.label or f"Appointment Outcome {self.id}"
 
 
 class Appointment(models.Model):

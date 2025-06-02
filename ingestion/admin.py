@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     DivisionGroup, Division, UserData, Prospect, ProspectSource,
     AppointmentType, AppointmentOutcome, Appointment, AppointmentService,
-    Service, Quote, MarketingSourceType, MarketingSource
+    Service, Quote, MarketingSourceType, MarketingSource, AppointmentOutcomeType
 )
 
 @admin.register(DivisionGroup)
@@ -37,7 +37,7 @@ class AppointmentTypeAdmin(admin.ModelAdmin):
 
 @admin.register(AppointmentOutcome)
 class AppointmentOutcomeAdmin(admin.ModelAdmin):
-    list_display = ('id', 'label', 'type_id', 'is_active')
+    list_display = ('id', 'type_id', 'label', 'is_active')
 
 
 @admin.register(Appointment)
@@ -68,3 +68,8 @@ class MarketingSourceTypeAdmin(admin.ModelAdmin):
 @admin.register(MarketingSource)
 class MarketingSourceAdmin(admin.ModelAdmin):
     list_display = ['id', 'label', 'type_id', 'is_active', 'start_date', 'end_date']
+
+
+@admin.register(AppointmentOutcomeType)
+class AppointmentOutcomeTypeAdmin(admin.ModelAdmin):
+    list_display = ('id', 'label', 'sort_idx', 'is_active')
