@@ -1,5 +1,7 @@
 from datetime import datetime
+import os
 import psycopg2
+import mysql.connector
 from django.db import transaction
 
 def parse_datetime_obj(value):
@@ -61,3 +63,24 @@ def prepare_data(row, field_mapping, required_fields):
             return None  # Skip rows with missing required fields
         data[model_field] = value
     return data
+
+def get_mysql_connection():
+    """
+    Establish and return a connection to the MySQL database using environment variables.
+    """
+    db_host = os.getenv("GENIUS_DB_HOST")
+    db_name = os.getenv("GENIUS_DB_NAME")
+    db_user = os.getenv("GENIUS_DB_USER")
+    db_password = os.getenv("GENIUS_DB_PASSWORD")
+    db_port = os.getenv("GENIUS_DB_PORT", 3306)  # Default to 3306 if not set
+
+    if not all([db_host, db_name, db_user, db_password]):
+        raise ValueError("Database connection details are missing in environment variables.")
+
+    return mysql.connector.connect(
+        host=db_host,
+        database=db_name,
+        user=db_user,
+        password=db_password,
+        port=db_port
+    )
