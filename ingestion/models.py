@@ -93,7 +93,7 @@ class ProspectSource(models.Model):
     add_date = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Source {self.marketing_source_id} for Prospect {self.prospect_id}"
+        return f"Source {self.marketing_source_id or 'N/A'} for Prospect {self.prospect_id or 'N/A'}"
 
 
 class AppointmentType(models.Model):
@@ -133,7 +133,7 @@ class Appointment(models.Model):
     type = models.ForeignKey('AppointmentType', on_delete=models.PROTECT, related_name='appointments')
     date = models.DateField(null=True, blank=True)
     time = models.TimeField(null=True, blank=True)
-    duration = models.TimeField(null=True, blank=True)
+    duration = models.DurationField(null=True, blank=True)
     address1 = models.CharField(max_length=255, null=True, blank=True)
     address2 = models.CharField(max_length=255, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
@@ -142,13 +142,13 @@ class Appointment(models.Model):
     email = models.EmailField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     add_user_id = models.IntegerField()
-    add_date = models.DateTimeField(auto_now_add=True)
+    add_date = models.DateTimeField(null=True, blank=True)
     assign_date = models.DateTimeField(null=True, blank=True)
     confirm_user_id = models.IntegerField(null=True, blank=True)
     confirm_date = models.DateTimeField(null=True, blank=True)
     confirm_with = models.CharField(max_length=100, null=True, blank=True)
-    spouses_present = models.BooleanField(default=False)
-    is_complete = models.BooleanField(default=False)
+    spouses_present = models.IntegerField(default=0)
+    is_complete = models.IntegerField(default=0)
     complete_outcome = models.ForeignKey('AppointmentOutcome', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
     complete_user_id = models.IntegerField(null=True, blank=True)
     complete_date = models.DateTimeField(null=True, blank=True)

@@ -1,8 +1,11 @@
 import os
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from ingestion.models import Prospect, Division
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
+from datetime import timezone as dt_timezone
+from datetime import datetime
 
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))  # Default to 500 if not set
 
@@ -59,76 +62,92 @@ class Command(BaseCommand):
         """Process a single batch of records."""
         to_create = []
         to_update = []
-        existing_records = Prospect.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
+        existing_records = Prospect.objects.in_bulk([row[0] for row in rows])
 
         for row in rows:
-            (
-                record_id, division_id, first_name, last_name, alt_first_name, alt_last_name,
-                address1, address2, city, county, state, zip, phone1, phone2, email, notes,
-                add_user_id, add_date, marketsharp_id, leap_customer_id, third_party_source_id
-            ) = row
+            try:
+                (
+                    record_id, division_id, first_name, last_name, alt_first_name, alt_last_name,
+                    address1, address2, city, county, state, zip, phone1, phone2, email, notes,
+                    add_user_id, add_date, marketsharp_id, leap_customer_id, third_party_source_id
+                ) = row
 
-            division = divisions.get(division_id)  # Use preloaded divisions
+                division = divisions.get(division_id)  # Use preloaded divisions
+                
+                # Handle datetime fields properly
+                if isinstance(add_date, datetime):
+                    add_date = timezone.make_aware(add_date, dt_timezone.utc) if timezone.is_naive(add_date) else add_date
+                
+                if record_id in existing_records:
+                    record_instance = existing_records[record_id]
+                    record_instance.division = division
+                    record_instance.first_name = first_name
+                    record_instance.last_name = last_name
+                    record_instance.alt_first_name = alt_first_name
+                    record_instance.alt_last_name = alt_last_name
+                    record_instance.address1 = address1
+                    record_instance.address2 = address2
+                    record_instance.city = city
+                    record_instance.county = county
+                    record_instance.state = state
+                    record_instance.zip = zip
+                    record_instance.phone1 = phone1
+                    record_instance.phone2 = phone2
+                    record_instance.email = email
+                    record_instance.notes = notes
+                    record_instance.add_user_id = add_user_id
+                    record_instance.add_date = add_date
+                    record_instance.marketsharp_id = marketsharp_id
+                    record_instance.leap_customer_id = leap_customer_id
+                    record_instance.third_party_source_id = third_party_source_id
+                    to_update.append(record_instance)
+                else:
+                    to_create.append(Prospect(
+                        id=record_id,
+                        division=division,
+                        first_name=first_name,
+                        last_name=last_name,
+                        alt_first_name=alt_first_name,
+                        alt_last_name=alt_last_name,
+                        address1=address1,
+                        address2=address2,
+                        city=city,
+                        county=county,
+                        state=state,
+                        zip=zip,
+                        phone1=phone1,
+                        phone2=phone2,
+                        email=email,
+                        notes=notes,
+                        add_user_id=add_user_id,
+                        add_date=add_date,
+                        marketsharp_id=marketsharp_id,
+                        leap_customer_id=leap_customer_id,
+                        third_party_source_id=third_party_source_id
+                    ))
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"Error processing record ID {row[0] if row else 'unknown'}: {e}"))
 
-            if record_id in existing_records:
-                record_instance = existing_records[record_id]
-                record_instance.division = division
-                record_instance.first_name = first_name
-                record_instance.last_name = last_name
-                record_instance.alt_first_name = alt_first_name
-                record_instance.alt_last_name = alt_last_name
-                record_instance.address1 = address1
-                record_instance.address2 = address2
-                record_instance.city = city
-                record_instance.county = county
-                record_instance.state = state
-                record_instance.zip = zip
-                record_instance.phone1 = phone1
-                record_instance.phone2 = phone2
-                record_instance.email = email
-                record_instance.notes = notes
-                record_instance.add_user_id = add_user_id
-                record_instance.add_date = add_date
-                record_instance.marketsharp_id = marketsharp_id
-                record_instance.leap_customer_id = leap_customer_id
-                record_instance.third_party_source_id = third_party_source_id
-                to_update.append(record_instance)
-            else:
-                to_create.append(Prospect(
-                    id=record_id,
-                    division=division,
-                    first_name=first_name,
-                    last_name=last_name,
-                    alt_first_name=alt_first_name,
-                    alt_last_name=alt_last_name,
-                    address1=address1,
-                    address2=address2,
-                    city=city,
-                    county=county,
-                    state=state,
-                    zip=zip,
-                    phone1=phone1,
-                    phone2=phone2,
-                    email=email,
-                    notes=notes,
-                    add_user_id=add_user_id,
-                    add_date=add_date,
-                    marketsharp_id=marketsharp_id,
-                    leap_customer_id=leap_customer_id,
-                    third_party_source_id=third_party_source_id
-                ))
-
-        # Bulk create and update
-        if to_create:
-            Prospect.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
-        if to_update:
-            Prospect.objects.bulk_update(
-                to_update,
-                [
-                    'division', 'first_name', 'last_name', 'alt_first_name', 'alt_last_name',
-                    'address1', 'address2', 'city', 'county', 'state', 'zip', 'phone1', 'phone2',
-                    'email', 'notes', 'add_user_id', 'add_date', 'marketsharp_id', 'leap_customer_id',
-                    'third_party_source_id'
-                ],
-                batch_size=BATCH_SIZE
-            )
+        # Bulk create and update with error handling
+        try:
+            if to_create:
+                Prospect.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+            if to_update:
+                Prospect.objects.bulk_update(
+                    to_update,
+                    [
+                        'division', 'first_name', 'last_name', 'alt_first_name', 'alt_last_name',
+                        'address1', 'address2', 'city', 'county', 'state', 'zip', 'phone1', 'phone2',
+                        'email', 'notes', 'add_user_id', 'add_date', 'marketsharp_id', 'leap_customer_id',
+                        'third_party_source_id'
+                    ],
+                    batch_size=BATCH_SIZE
+                )
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Error during bulk operations: {e}"))
+            # Individual save fallback
+            for record in to_create + to_update:
+                try:
+                    record.save()
+                except Exception as save_error:
+                    self.stdout.write(self.style.ERROR(f"Error saving record {record.id}: {save_error}"))
