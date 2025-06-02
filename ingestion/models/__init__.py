@@ -8,11 +8,15 @@ from .genius import (
     Service, Quote, MarketingSourceType, MarketingSource, AppointmentOutcomeType
 )
 
+# Import Hubspot models
+from .hubspot import HubspotContact, HubspotDeal, HubspotSyncHistory
+
 # Import all models to maintain backwards compatibility
 # This allows existing code to continue using: from ingestion.models import X
 __all__ = [
     'SyncTracker',
     'DivisionGroup', 'Division', 'UserData', 'Prospect', 'ProspectSource',
     'AppointmentType', 'AppointmentOutcome', 'Appointment', 'AppointmentService',
-    'Service', 'Quote', 'MarketingSourceType', 'MarketingSource', 'AppointmentOutcomeType'
+    'Service', 'Quote', 'MarketingSourceType', 'MarketingSource', 'AppointmentOutcomeType',
+    'HubspotContact', 'HubspotDeal', 'HubspotSyncHistory'
 ]
