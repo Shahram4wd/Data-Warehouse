@@ -89,18 +89,14 @@ class BaseProcessor:
         """Cache model fields to improve performance."""
         return {field.name for field in model._meta.fields if not field.primary_key}
 
-    def extract_data(self, properties, field_mappings: Dict[str, FieldMapping]) -> Tuple[Optional[UUID], Dict[str, Any]]:
-        """Extract and validate data from XML properties."""
-        if properties is None:
-            self.logger.error("No properties found in XML")
-            return None, {}
-
+    def extract_data(self, entry: Dict[str, Any], field_mappings: Dict[str, FieldMapping]) -> Tuple[Optional[UUID], Dict[str, Any]]:
+        """Extract and validate data from a dictionary entry."""
         data = {}
         object_id = None
         has_required_fields = True
 
         for key, mapping in field_mappings.items():
-            value = self.data_processor.get_xml_text(properties, mapping.xml_field)
+            value = entry.get(mapping.xml_field)  # Updated to use dictionary access
             parsed_value = self.parse_value(value, mapping.field_type, key)
 
             if mapping.required and parsed_value is None:
@@ -117,7 +113,7 @@ class BaseProcessor:
 
     async def process_entries(
         self,
-        entries: List[Any],
+        entries: List[Dict[str, Any]],  # Updated to expect a list of dictionaries
         model,
         field_mappings: Dict[str, FieldMapping],
         batch_size: int
@@ -138,8 +134,7 @@ class BaseProcessor:
             for i in range(0, len(entries), batch_size):
                 chunk = entries[i:i + batch_size]
                 for entry in chunk:
-                    properties = entry.find('.//m:properties', namespaces=self.data_processor.nsmap)
-                    object_id, data = self.extract_data(properties, field_mappings)
+                    object_id, data = self.extract_data(entry, field_mappings)  # Updated to pass the dictionary directly
                     
                     if object_id and data:
                         valid_records.append((object_id, data))

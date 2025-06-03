@@ -11,6 +11,10 @@ def register_processor(registry: ProcessorRegistry):
     )
 
 class CompanyProcessor(BaseProcessor):
+    def __init__(self, logger, data_processor):
+        super().__init__(logger, data_processor)
+        self._logger = logger  # Initialize the logger
+
     field_mappings = {
         'id': FieldMapping('id', 'id', 'int', required=True),
         'number': FieldMapping('number', 'number', 'int'),
@@ -32,5 +36,9 @@ class CompanyProcessor(BaseProcessor):
 
     async def process_objects(self, xml_data: str, batch_size: int) -> int:
         """Process Company objects using shared logic in BaseProcessor."""
+        self._logger.info("Starting to process Company data...")
         entries = self.data_processor.parse_xml(xml_data)
-        return await self.process_entries(entries, Company, self.field_mappings, batch_size)
+        self._logger.info(f"Parsed {len(entries)} records from the XML data.")
+        processed_count = await self.process_entries(entries, Company, self.field_mappings, batch_size)
+        self._logger.info(f"Successfully processed {processed_count} Company records.")
+        return processed_count

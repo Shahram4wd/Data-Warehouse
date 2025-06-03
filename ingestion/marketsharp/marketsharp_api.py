@@ -41,7 +41,7 @@ class MarketSharpAPI:
         if not secret_key_decoded:
             raise ValueError("Invalid secret key. Ensure MARKETSHARP_SECRET_KEY is correctly set.")
 
-        logger.info(f"Timestamp: {ts}, Message: {msg}, Decoded Secret Key (first 4): {secret_key_decoded[:4]}...")  # Issue here
+        self._logger.info(f"Timestamp: {ts}, Message: {msg}, Decoded Secret Key (first 4): {secret_key_decoded[:4]}...")
 
         h = self._make_hash(secret_key_decoded, msg)
         auth = f'{self._coi}:{self._api_key}:{ts}:{h}'
@@ -66,10 +66,10 @@ class MarketSharpAPI:
         while attempts < MAX_RETRIES:
             try:
                 self._logger.info(f"Attempt {attempts + 1} of {MAX_RETRIES}")
-                print("url=", paginated_url)
+                self._logger.info(f"Fetching URL: {paginated_url}")
                 async with session.get(paginated_url, headers=headers) as response:
                     if response.status == 200:
-                        return await response.text()  # Resetting attempts isn't necessary since we're returning
+                        return await response.text()
                     elif response.status == 503:
                         self._logger.warning(f"503 Service Unavailable. Retrying after {RETRY_DELAY} seconds...")
                         await asyncio.sleep(RETRY_DELAY)
