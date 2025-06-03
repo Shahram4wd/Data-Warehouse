@@ -18,7 +18,7 @@ from ingestion.models.hubspot import Hubspot_Contact, Hubspot_SyncHistory
 
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 100  # Process 100 records at a time
+BATCH_SIZE = 100  # Adjust batch size to process more contacts per checkpoint
 
 class Command(BaseCommand):
     help = "Sync contacts from HubSpot API"
@@ -78,52 +78,54 @@ class Command(BaseCommand):
             client = HubspotClient(token)
             
             self.stdout.write("Starting to fetch contacts from HubSpot...")
+            self.stdout.write(f"Using batch size: {BATCH_SIZE}")
             
             while True:
                 # Check if we've reached the maximum number of pages
                 if max_pages > 0 and total_pages >= max_pages:
                     self.stdout.write(f"Reached maximum page limit of {max_pages}")
                     break
-                
+
                 # Fetch a single page
                 total_pages += 1
                 self.stdout.write(f"Fetching page {total_pages}...")
-                
-                # Use asyncio.run for each page to reset the async context
+
+                # Log the parameters being sent
+                self.stdout.write(f"Fetching page from {client.BASE_URL} with params: {{'limit': 100, 'after': {next_page_token}}}")
+
                 page_result = asyncio.run(client.get_page(
                     endpoint=endpoint,
                     last_sync=last_sync,
                     page_token=next_page_token
                 ))
-                
+
                 if not page_result or not page_result[0]:
                     self.stdout.write("No more data to fetch")
                     break
-                
+
                 page_data, next_page_token = page_result
                 self.stdout.write(f"Retrieved {len(page_data)} contacts")
                 all_contacts.extend(page_data)
-                
+
                 # Save data if we've reached a checkpoint
-                if total_pages % checkpoint_interval == 0:
+                if len(all_contacts) >= BATCH_SIZE:
                     self.stdout.write(f"Processing checkpoint at page {total_pages}...")
-                    self.process_contacts_batch(all_contacts)
-                    # Clear the contacts list to free memory
-                    all_contacts = []
-                
+                    self.process_contacts_batch(all_contacts[:BATCH_SIZE])
+                    all_contacts = all_contacts[BATCH_SIZE:]  # Keep remaining contacts
+
                 # If no next page token, we're done
                 if not next_page_token:
                     self.stdout.write("No more pages available")
                     break
-            
+
             # Process any remaining contacts
             if all_contacts:
                 self.stdout.write(f"Processing final batch of {len(all_contacts)} contacts...")
                 self.process_contacts_batch(all_contacts)
-            
+
             # Update last sync time
             self.update_last_sync(endpoint)
-            
+
             self.stdout.write(self.style.SUCCESS(f"HubSpot contacts sync complete. Processed {total_pages} pages."))
             
         except Exception as e:

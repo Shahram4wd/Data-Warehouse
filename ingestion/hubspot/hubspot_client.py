@@ -58,10 +58,10 @@ class HubspotClient:
                 params["after"] = page_token
             
             url = f"{self.BASE_URL}/crm/v3/objects/{endpoint}"
-            print(f"Fetching page from {url} with params: {params}")
+            #print(f"Fetching page from {url} with params: {params}")
             
             try:
-                async with session.get(url, headers=self.headers, timeout=60) as response:
+                async with session.get(url, headers=self.headers, params=params, timeout=60) as response:
                     status = response.status
                     print(f"Response status: {status}")
                     
