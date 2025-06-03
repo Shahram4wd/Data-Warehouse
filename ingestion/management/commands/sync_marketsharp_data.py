@@ -4,16 +4,15 @@ import aiohttp
 import asyncio
 from asgiref.sync import sync_to_async
 from django.core.management.base import BaseCommand
-from data_import.marketsharp_api import MarketSharpAPI
-from data_import.data_processor import DataProcessor
-from data_import.registry import ProcessorRegistry
+from ingestion.marketsharp.marketsharp_api import MarketSharpAPI  # Updated import path
+from ingestion.marketsharp.data_processor import DataProcessor  # Updated import path
+from ingestion.marketsharp.registry import ProcessorRegistry  # Updated import path
 from datetime import datetime as DateTime, timedelta
 
 logger = logging.getLogger(__name__)
 BATCH_SIZE = 5000
 
 class Command(BaseCommand):
-    
     help = 'Imports data from MarketSharp API and processes it.'
 
     def __init__(self, logger=None):
@@ -31,6 +30,12 @@ class Command(BaseCommand):
             type=str, 
             choices=list(self.registry.endpoints.keys()),  
             help='Specify which endpoint to fetch data from. Leave empty to fetch all.'
+        )
+        parser.add_argument(
+            '--concurrent',
+            type=int,
+            default=1,
+            help='Number of concurrent tasks to run (default: 1).'  # Added argument
         )
 
     async def get_latest_update(self, endpoint):
@@ -53,9 +58,10 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         logging.basicConfig(level=logging.INFO)
         endpoint = kwargs.get('endpoint')
-        asyncio.run(self.async_handle(endpoint))
+        concurrent = kwargs.get('concurrent')  # Retrieve the concurrent argument
+        asyncio.run(self.async_handle(endpoint, concurrent))
 
-    async def async_handle(self, endpoint=None, *args, **kwargs):
+    async def async_handle(self, endpoint=None, concurrent=1, *args, **kwargs):
         if endpoint:
             await self.process_endpoint(endpoint)
         else:
@@ -65,6 +71,7 @@ class Command(BaseCommand):
 
     async def process_endpoint(self, endpoint):
         start_time = DateTime.now()
+        self._logger.info(f"Starting data sync for endpoint: {endpoint}")
 
         secret_key = os.getenv('MARKETSHARP_SECRET_KEY')
         api_key = os.getenv('MARKETSHARP_API_KEY')
@@ -73,7 +80,10 @@ class Command(BaseCommand):
         url = self.registry.endpoints[endpoint]
         latest_update = await self.get_latest_update(endpoint)
 
-        self._logger.info(f"Started fetching {endpoint} from MarketSharp API.")
+        self._logger.info(f"Fetching data from MarketSharp API for endpoint: {endpoint}")
+        self._logger.info(f"API URL: {url}")
+        self._logger.info(f"Latest update timestamp: {latest_update if latest_update else 'None'}")
+
         ms_api = MarketSharpAPI(company_id, api_key, secret_key, self._logger)
         data_processor = DataProcessor(self._logger)
         processor_class = self.registry.processors[endpoint]
@@ -85,31 +95,24 @@ class Command(BaseCommand):
 
             while True:
                 try:
-                    self._logger.debug(f"Fetching {endpoint}: {url}, updated after {latest_update}, skip {skip}")
+                    self._logger.info(f"Fetching batch starting at record {skip}...")
                     xml_data = await ms_api.get_data(session, url, latest_update, skip=skip)
                     if xml_data:
                         num_records = await processor.process_objects(xml_data, BATCH_SIZE)
-
-                        if isinstance(num_records, int):
-                            total_records_processed += num_records
-                        elif hasattr(num_records, 'total_processed'):
-                            total_records_processed += num_records.total_processed  # Adjust based on your `ProcessingResult` structure.
-                        else:
-                            raise TypeError("Unexpected return type from process_objects.")
-                        
                         total_records_processed += num_records
-                        self._logger.info(f"Processed {num_records} {endpoint}. Total processed: {total_records_processed}")
+                        self._logger.info(f"Processed {num_records} records for endpoint: {endpoint}. Total processed: {total_records_processed}")
 
                         if num_records < BATCH_SIZE:
+                            self._logger.info(f"All records processed for endpoint: {endpoint}.")
                             break
 
                         skip += BATCH_SIZE
                     else:
-                        self._logger.error(f"Failed to fetch {endpoint} from the API.")
+                        self._logger.warning(f"No data returned for endpoint: {endpoint}.")
                         break
                 except Exception as e:
-                    self._logger.error(f"Error occurred while processing {endpoint}: {e}")
+                    self._logger.error(f"Error occurred while processing endpoint {endpoint}: {e}")
                     break
 
         duration = DateTime.now() - start_time
-        self._logger.info(f"Finished processing {endpoint}. Total records: {total_records_processed}. Duration: {duration}.")
+        self._logger.info(f"Finished processing endpoint: {endpoint}. Total records processed: {total_records_processed}. Duration: {duration}.")

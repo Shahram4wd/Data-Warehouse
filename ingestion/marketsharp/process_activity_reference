@@ -1,0 +1,108 @@
+import uuid
+from data_import.models import ActivityReference
+from asgiref.sync import sync_to_async
+from data_import.marketsharp_api import MarketSharpAPI
+from datetime import datetime as DateTime
+
+class ActivityReferenceProcessor:
+
+    def __init__(self, logger, data_processor):
+        self.logger = logger
+        self.data_processor = data_processor  # Inject the DataProcessor instance
+
+    async def process_objects(self, session, xml_data, ms):
+        entries = self.data_processor.parse_xml(xml_data)
+
+        records_to_insert = []
+        records_to_update = []
+        record_ids_to_fetch = []
+
+        for entry in entries:
+            properties = entry.find('.//m:properties', namespaces=MarketSharpAPI.nsmap)
+            id = self.data_processor.get_xml_text(properties, 'id')
+            if id:
+                record_ids_to_fetch.append(int(id))
+
+        if record_ids_to_fetch:
+            existing_records = await sync_to_async(list)(
+                ActivityReference.objects.filter(id__in=record_ids_to_fetch).values('id', 'last_update_utc')
+            )
+
+            existing_records_dict = {ec['id']: ec['last_update_utc'] for ec in existing_records}
+
+            for entry in entries:
+                properties = entry.find('.//m:properties', namespaces=MarketSharpAPI.nsmap)
+                id = self.data_processor.get_xml_text(properties, 'id')
+                company_id = self.data_processor.get_xml_text(properties, 'companyId')
+                name = self.data_processor.get_xml_text(properties, 'name')
+                inquiry_required = self.data_processor.get_xml_bool(properties, 'inquiryRequired')
+                appointment_required = self.data_processor.get_xml_bool(properties, 'appointmentRequired')
+                is_active = self.data_processor.get_xml_bool(properties, 'isActive')
+                created_by = self.data_processor.get_xml_text(properties, 'createdBy')
+                created_date_utc = self.data_processor.get_xml_text(properties, 'createdDateUtc')
+                created_date_utc_dt = DateTime.fromisoformat(created_date_utc) if created_date_utc else None
+                last_update_by = self.data_processor.get_xml_text(properties, 'lastUpdateBy')
+                last_update_utc = self.data_processor.get_xml_text(properties, 'lastUpdateUtc')
+                last_update_utc_dt = DateTime.fromisoformat(last_update_utc) if last_update_utc else None
+
+                if not id:
+                    continue
+
+                object_id = int(id)
+
+                if object_id in existing_records_dict:
+                    existing_last_update = existing_records_dict[object_id]
+                    if existing_last_update and last_update_utc_dt <= existing_last_update:
+                        continue  # No need to update if the API data is not newer
+                    records_to_update.append({
+                        'activity_reference_id': object_id,
+                        'company_id': company_id,
+                        'name': name,
+                        'inquiry_required': inquiry_required,
+                        'appointment_required': appointment_required,
+                        'is_active': is_active,
+                        'created_by': created_by,
+                        'created_date_utc': created_date_utc_dt,
+                        'last_update_by': last_update_by,
+                        'last_update_utc': last_update_utc_dt,
+                    })
+                else:
+                    records_to_insert.append(ActivityReference(
+                        id=object_id,
+                        company_id=company_id,
+                        name=name,
+                        inquiry_required=inquiry_required,
+                        appointment_required=appointment_required,
+                        is_active=is_active,
+                        created_by=created_by,
+                        created_date_utc=created_date_utc_dt,
+                        last_update_by=last_update_by,
+                        last_update_utc=last_update_utc_dt,
+                    ))
+
+        # Insert new activity references
+        if records_to_insert:
+            await self.bulk_insert_objects(records_to_insert)
+
+        # Update existing activity references
+        if records_to_update:
+            await self.bulk_update_objects(records_to_update)
+
+        return len(entries)
+
+    async def bulk_insert_objects(self, activity_references):
+        await sync_to_async(ActivityReference.objects.bulk_create)(activity_references)
+
+    async def bulk_update_objects(self, activity_references):
+        for activity_reference in activity_references:
+            await sync_to_async(ActivityReference.objects.filter(id=activity_reference['activity_reference_id']).update)(
+                company_id=activity_reference['company_id'],
+                name=activity_reference['name'],
+                inquiry_required=activity_reference['inquiry_required'],
+                appointment_required=activity_reference['appointment_required'],
+                is_active=activity_reference['is_active'],
+                created_by=activity_reference['created_by'],
+                created_date_utc=activity_reference['created_date_utc'],
+                last_update_by=activity_reference['last_update_by'],
+                last_update_utc=activity_reference['last_update_utc'],
+            )
