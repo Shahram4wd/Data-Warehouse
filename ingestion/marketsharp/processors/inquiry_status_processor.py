@@ -11,6 +11,10 @@ def register_processor(registry: ProcessorRegistry):
     )
 
 class InquiryStatusProcessor(BaseProcessor):
+    def __init__(self, logger, data_processor):
+        super().__init__(logger, data_processor)
+        self._logger = logger  # Initialize the logger
+        
     field_mappings = {
         'id': FieldMapping('id', 'id', 'int', required=True),
         'company_id': FieldMapping('companyId', 'company_id', 'int'),
