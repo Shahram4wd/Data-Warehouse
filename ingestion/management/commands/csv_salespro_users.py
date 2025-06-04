@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime
 from django.core.management.base import BaseCommand
-from ingestion.models.salespro import SalesPro_Users  # Updated import
+from ingestion.models.salespro import SalesPro_Users
 from tqdm import tqdm
 from django.db import transaction
 
@@ -13,7 +13,7 @@ def parse_date(value):
     """Convert common date formats to YYYY-MM-DD."""
     if not value or not str(value).strip():
         return None
-    for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%m-%d-%Y", "%Y/%m/%d"):
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m-%d-%Y", "%Y/%m/%d"):
         try:
             return datetime.strptime(value.strip(), fmt).date()
         except ValueError:
@@ -22,26 +22,39 @@ def parse_date(value):
 
 def parse_office_id(office_string):
     """Extract office ID from the assigned office string."""
+    if not office_string:
+        return None
     match = re.search(r'\(\s*([a-zA-Z0-9]+)\s*\)', office_string)
-    if match:
-        return match.group(1)
-    return None
+    return match.group(1) if match else None
 
 class Command(BaseCommand):
     help = "Import users from a SalesPro-exported CSV file"
 
     def add_arguments(self, parser):
-        parser.add_argument("csv_file", type=str)
+        parser.add_argument(
+            "csv_file",
+            type=str,
+            help="Path to the SalesPro users CSV file"
+        )
 
     def handle(self, *args, **options):
         file_path = options["csv_file"]
+
+        if not os.path.exists(file_path):
+            self.stdout.write(self.style.ERROR(f"CSV file not found at {file_path}"))
+            return
 
         with open(file_path, newline="", encoding="utf-8") as csvfile:
             reader = csv.DictReader(csvfile)
             rows = list(reader)
 
+        if not rows:
+            self.stdout.write(self.style.WARNING("CSV file is empty."))
+            return
+
         user_ids = [row["User Object ID"] for row in rows if row.get("User Object ID")]
         existing_users = SalesPro_Users.objects.in_bulk(user_ids)
+
         to_create = []
         to_update = []
 
@@ -49,21 +62,17 @@ class Command(BaseCommand):
 
         for row in tqdm(rows):
             user_id = row["User Object ID"]
-            
-            # Extract office ID if present
-            office_id = parse_office_id(row.get("Assigned Office", ""))
-            
             fields = {
-                "first_name": row["First Name"] or "",
-                "last_name": row["Last Name"] or "",
-                "username": row["Username"] or "",
-                "email": row["Email"] or "",
+                "first_name": row.get("First Name", ""),
+                "last_name": row.get("Last Name", ""),
+                "username": row.get("Username", ""),
+                "email": row.get("Email", ""),
                 "last_login": parse_date(row.get("Last Login")),
                 "is_active": row.get("Active/Inactive", "").upper() == "TRUE",
                 "send_credit_apps": row.get("Send Credit Apps", "").upper() == "TRUE",
                 "search_other_users_estimates": row.get("Search Other Users Estimates", "").upper() == "TRUE",
                 "assigned_office": row.get("Assigned Office", ""),
-                "office_id": office_id,
+                "office_id": parse_office_id(row.get("Assigned Office")),
                 "license_number": row.get("License Number", ""),
                 "additional_amount": float(row.get("Additional Amount", 0) or 0),
                 "unique_identifier": row.get("Unique Identifier", ""),
