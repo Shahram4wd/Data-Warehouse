@@ -3,20 +3,20 @@ from .common import SyncTracker
 
 # Import Genius models
 from .genius import (
-    Genius_DivisionGroup,  # Updated import
-    Genius_Division,  # Updated import
-    Genius_UserData,  # Updated import
-    Genius_Prospect,  # Updated import
-    Genius_ProspectSource,  # Updated import
-    Genius_AppointmentType,  # Updated import
-    Genius_AppointmentOutcomeType,  # Updated import
-    Genius_AppointmentOutcome,  # Updated import
-    Genius_Appointment,  # Updated import
-    Genius_Service,  # Updated import
-    Genius_AppointmentService,  # Updated import
-    Genius_Quote,  # Updated import
-    Genius_MarketingSourceType,  # Updated import
-    Genius_MarketingSource,  # Updated import
+    Genius_DivisionGroup,
+    Genius_Division,
+    Genius_UserData,
+    Genius_Prospect,
+    Genius_ProspectSource,
+    Genius_AppointmentType,
+    Genius_AppointmentOutcomeType,
+    Genius_AppointmentOutcome,
+    Genius_Appointment,
+    Genius_Service,
+    Genius_AppointmentService,
+    Genius_Quote,
+    Genius_MarketingSourceType,
+    Genius_MarketingSource,
 )
 
 # Import Hubspot models
@@ -53,5 +53,5 @@ __all__ = [
     'MarketSharp_InquirySourceSecondary', 'MarketSharp_InquiryStatus', 'MarketSharp_Job',
     'MarketSharp_Lead', 'MarketSharp_ProductDetail', 'MarketSharp_ProductInterest',
     'MarketSharp_ProductType', 'MarketSharp_Prospect',
-    'MarketingSource'  # Newly added model
+    'MarketingSource'  # Standalone marketing source model
 ]
