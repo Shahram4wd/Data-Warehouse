@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'rest_framework',
     'drf_spectacular',
+    'explorer',
 ]
 
 # Add DRF settings
@@ -59,7 +60,7 @@ ROOT_URLCONF = 'data_warehouse.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Add this line to specify the templates directory
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -100,9 +101,16 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+EXPLORER_CONNECTIONS = {'Default': 'default'}
+EXPLORER_DEFAULT_CONNECTION = 'default'
+
+
 GENIUS_API_URL = config("GENIUS_API_URL")
 GENIUS_USERNAME = config("GENIUS_USERNAME")
 GENIUS_PASSWORD = config("GENIUS_PASSWORD")
 
 # HubSpot API Configuration
 HUBSPOT_API_TOKEN = config("HUBSPOT_API_TOKEN", default="")
+
+# Redirect users to SQL Explorer after login
+LOGIN_REDIRECT_URL = '/explorer/'  # Set SQL Explorer as the default page after login
