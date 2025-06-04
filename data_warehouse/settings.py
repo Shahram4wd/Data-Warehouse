@@ -94,6 +94,13 @@ USE_TZ = True
 # Static files
 STATIC_URL = 'static/'
 
+# CSRF Trusted Origins (add this section)
+CSRF_TRUSTED_ORIGINS = [
+    'https://data-warehouse-57lg.onrender.com',
+    'https://latenightcode.com/',
+    'http://localhost:8000',
+]
+
 # Celery Configuration
 CELERY_BROKER_URL = config('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
