@@ -1,6 +1,6 @@
 import os
 from django.core.management.base import BaseCommand
-from ingestion.models import MarketingSourceType
+from ingestion.models import Genius_MarketingSourceType
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 
@@ -54,7 +54,7 @@ class Command(BaseCommand):
         """Process a single batch of records."""
         to_create = []
         to_update = []
-        existing_records = MarketingSourceType.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
+        existing_records = Genius_MarketingSourceType.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
 
         for row in rows:
             (
@@ -69,7 +69,7 @@ class Command(BaseCommand):
                 record_instance.list_order = list_order
                 to_update.append(record_instance)
             else:
-                to_create.append(MarketingSourceType(
+                to_create.append(Genius_MarketingSourceType(
                     id=record_id,
                     label=label,
                     description=description,
@@ -79,9 +79,9 @@ class Command(BaseCommand):
 
         # Bulk create and update
         if to_create:
-            MarketingSourceType.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+            Genius_MarketingSourceType.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
         if to_update:
-            MarketingSourceType.objects.bulk_update(
+            Genius_MarketingSourceType.objects.bulk_update(
                 to_update,
                 ['label', 'description', 'is_active', 'list_order'],
                 batch_size=BATCH_SIZE

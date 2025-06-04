@@ -1,7 +1,7 @@
 import requests
 from urllib.parse import urlencode
 from django.utils import timezone
-from ingestion.models import UserData, SyncTracker, Division
+from ingestion.models import Genius_UserData, SyncTracker, Genius_Division
 from .base_sync import BaseGeniusSync
 
 
@@ -71,10 +71,10 @@ def sync_user_data(client):
 class DivisionSync(BaseGeniusSync):
     object_name = "divisions"
     api_endpoint = "/api/divisions/division/"
-    model_class = Division
+    model_class = Genius_Division
     
     def process_item(self, item):
-        Division.objects.update_or_create(
+        Genius_Division.objects.update_or_create(
             id=item["id"],
             defaults={
                 "name": item.get("label"),  # Use "label" from response instead of "name"
