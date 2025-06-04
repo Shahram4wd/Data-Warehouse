@@ -16,7 +16,7 @@ class ProductInterestProcessor(BaseProcessor):
         'inquiry_id': FieldMapping('inquiryId', 'inquiry_id', 'uuid'),
         'product_type_id': FieldMapping('productTypeId', 'product_type_id', 'uuid'),
         'product_detail_id': FieldMapping('productDetailId', 'product_detail_id', 'uuid'),
-        'price_quoted': FieldMapping('priceQuoted', 'price_quoted', 'decimal'),
+        'price_quoted': FieldMapping('priceQuoted', 'price_quoted', 'decimal', default=0.00),  # Ensure default value
         'is_active': FieldMapping('isActive', 'is_active', 'boolean', default=True),
         'last_update': FieldMapping('lastUpdate', 'last_update', 'datetime'),
     }

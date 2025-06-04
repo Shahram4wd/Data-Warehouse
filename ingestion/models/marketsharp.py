@@ -531,7 +531,7 @@ class MarketSharp_ProductInterest(models.Model):
     inquiry_id = models.UUIDField(blank=True, null=True)
     product_type_id = models.UUIDField(blank=True, null=True)
     product_detail_id = models.UUIDField(blank=True, null=True)
-    price_quoted = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    price_quoted = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # Ensure default value
     is_active = models.BooleanField(default=True)
     last_update = models.DateTimeField()
 
@@ -545,7 +545,7 @@ class MarketSharp_ProductInterest(models.Model):
 
 class MarketSharp_ProductType(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, default="Unnamed Product Type")
     is_active = models.BooleanField(default=True)
     company_id = models.IntegerField(blank=True, null=True)
 

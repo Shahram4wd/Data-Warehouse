@@ -13,12 +13,16 @@ def register_processor(registry: ProcessorRegistry):
 class ProductTypeProcessor(BaseProcessor):
     field_mappings = {
         'id': FieldMapping('id', 'id', 'uuid', required=True),
-        'name': FieldMapping('name', 'name', 'string'),
+        'name': FieldMapping('name', 'name', 'string', default="Unnamed Product Type"),  # Ensure default value
         'is_active': FieldMapping('isActive', 'is_active', 'boolean', default=True),
         'company_id': FieldMapping('companyId', 'company_id', 'int'),
     }
 
     async def process_objects(self, xml_data: str, batch_size: int) -> int:
         """Process ProductType objects using shared logic in BaseProcessor."""
+        self._logger.info("Starting to process ProductType data...")
         entries = self.data_processor.parse_xml(xml_data)
-        return await self.process_entries(entries, ProductType, self.field_mappings, batch_size)
+        self._logger.info(f"Parsed {len(entries)} records from the XML data.")
+        processed_count = await self.process_entries(entries, ProductType, self.field_mappings, batch_size)
+        self._logger.info(f"Successfully processed {processed_count} ProductType records.")
+        return processed_count
