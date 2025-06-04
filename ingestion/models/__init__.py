@@ -19,8 +19,11 @@ from .genius import (
     Genius_MarketingSource,
 )
 
+# Import SalesPro models
+from .salespro import SalesPro_Users
+
 # Import Hubspot models
-from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_SyncHistory  # Updated imports
+from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_SyncHistory  
 
 # Import MarketSharp models
 from .marketsharp import (
@@ -44,6 +47,7 @@ __all__ = [
     'Genius_DivisionGroup', 'Genius_Division', 'Genius_UserData', 'Genius_Prospect', 'Genius_ProspectSource',
     'Genius_AppointmentType', 'Genius_AppointmentOutcome', 'Genius_Appointment', 'Genius_AppointmentService',
     'Genius_Service', 'Genius_Quote', 'Genius_MarketingSourceType', 'Genius_MarketingSource', 'Genius_AppointmentOutcomeType',
+    'SalesPro_Users',
     'Hubspot_Contact', 'Hubspot_Deal', 'Hubspot_SyncHistory',
     'MarketSharp_Activity', 'MarketSharp_ActivityReference', 'MarketSharp_ActivityResult',
     'MarketSharp_Address', 'MarketSharp_Appointment', 'MarketSharp_AppointmentResult',

@@ -3,6 +3,13 @@ from urllib.parse import urlencode
 from django.utils import timezone
 from ingestion.models import Genius_UserData, SyncTracker, Genius_Division
 from .base_sync import BaseGeniusSync
+import logging
+from django.db import transaction
+from ingestion.models.genius import Genius_Division, Genius_DivisionGroup
+from ingestion.utils import get_mysql_connection
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_last_synced(object_name):
@@ -86,3 +93,128 @@ class DivisionSync(BaseGeniusSync):
                 "is_corp": item.get("is_corp", False),
             }
         )
+
+
+def sync_divisions(batch_size=500):
+    """
+    Synchronize divisions from Genius database to local database.
+    
+    Args:
+        batch_size (int): Number of records to process in a batch
+        
+    Returns:
+        tuple: (created_count, updated_count, total_count)
+    """
+    logger.info("Starting division sync from Genius")
+    connection = None
+    created_count = 0
+    updated_count = 0
+    total_count = 0
+    
+    try:
+        # Database connection
+        connection = get_mysql_connection()
+        cursor = connection.cursor()
+        
+        # Get total record count
+        cursor.execute("SELECT COUNT(*) FROM division")
+        total_count = cursor.fetchone()[0]
+        logger.info(f"Found {total_count} divisions to sync")
+        
+        # Preload division groups for lookup
+        division_groups = {group.id: group for group in Genius_DivisionGroup.objects.all()}
+        
+        # Fetch all divisions
+        cursor.execute("""
+            SELECT id, group_id, region_id, label, abbreviation, 
+                   is_utility, is_corp, is_omniscient, is_inactive
+            FROM division
+        """)
+        
+        rows = cursor.fetchall()
+        existing_divisions = Genius_Division.objects.in_bulk([row[0] for row in rows])
+        
+        to_create = []
+        to_update = []
+        
+        # Process rows
+        for row in rows:
+            (
+                record_id, group_id, region_id, label, abbreviation, 
+                is_utility, is_corp, is_omniscient, is_inactive
+            ) = row
+            
+            # Convert tinyint values to appropriate types
+            is_utility = int(is_utility) if is_utility is not None else 0
+            is_corp = int(is_corp) if is_corp is not None else 0
+            is_omniscient = int(is_omniscient) if is_omniscient is not None else 0
+            is_inactive = int(is_inactive) if is_inactive is not None else 0
+            
+            if record_id in existing_divisions:
+                # Update existing division
+                division = existing_divisions[record_id]
+                division.group_id = group_id
+                division.region_id = region_id
+                division.label = label
+                division.abbreviation = abbreviation
+                division.is_utility = is_utility
+                division.is_corp = is_corp
+                division.is_omniscient = is_omniscient
+                division.is_inactive = is_inactive
+                to_update.append(division)
+                updated_count += 1
+            else:
+                # Create new division
+                division = Genius_Division(
+                    id=record_id,
+                    group_id=group_id,
+                    region_id=region_id,
+                    label=label,
+                    abbreviation=abbreviation,
+                    is_utility=is_utility,
+                    is_corp=is_corp,
+                    is_omniscient=is_omniscient,
+                    is_inactive=is_inactive
+                )
+                to_create.append(division)
+                created_count += 1
+            
+            # Process in batches
+            if len(to_create) >= batch_size:
+                with transaction.atomic():
+                    Genius_Division.objects.bulk_create(to_create)
+                to_create = []
+            
+            if len(to_update) >= batch_size:
+                with transaction.atomic():
+                    Genius_Division.objects.bulk_update(
+                        to_update,
+                        ['group_id', 'region_id', 'label', 'abbreviation', 
+                         'is_utility', 'is_corp', 'is_omniscient', 'is_inactive']
+                    )
+                to_update = []
+        
+        # Save any remaining records
+        if to_create:
+            with transaction.atomic():
+                Genius_Division.objects.bulk_create(to_create)
+        
+        if to_update:
+            with transaction.atomic():
+                Genius_Division.objects.bulk_update(
+                    to_update,
+                    ['group_id', 'region_id', 'label', 'abbreviation', 
+                     'is_utility', 'is_corp', 'is_omniscient', 'is_inactive']
+                )
+        
+        logger.info(f"Division sync completed. Created: {created_count}, Updated: {updated_count}, Total: {total_count}")
+        return created_count, updated_count, total_count
+        
+    except Exception as e:
+        logger.error(f"Error syncing divisions: {str(e)}")
+        raise
+        
+    finally:
+        if connection:
+            cursor.close()
+            connection.close()
