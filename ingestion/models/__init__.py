@@ -6,6 +6,7 @@ from .genius import (
     Genius_DivisionGroup,
     Genius_Division,
     Genius_UserData,
+    Genius_UserTitle,  # Added new model
     Genius_Prospect,
     Genius_ProspectSource,
     Genius_AppointmentType,
@@ -44,7 +45,8 @@ from .marketing_source import MarketingSource  # New import
 # This allows existing code to continue using: from ingestion.models import X
 __all__ = [
     'SyncTracker',
-    'Genius_DivisionGroup', 'Genius_Division', 'Genius_UserData', 'Genius_Prospect', 'Genius_ProspectSource',
+    'Genius_DivisionGroup', 'Genius_Division', 'Genius_UserData', 'Genius_UserTitle',  # Added new model
+    'Genius_Prospect', 'Genius_ProspectSource',
     'Genius_AppointmentType', 'Genius_AppointmentOutcome', 'Genius_Appointment', 'Genius_AppointmentService',
     'Genius_Service', 'Genius_Quote', 'Genius_MarketingSourceType', 'Genius_MarketingSource', 'Genius_AppointmentOutcomeType',
     'SalesPro_Users',

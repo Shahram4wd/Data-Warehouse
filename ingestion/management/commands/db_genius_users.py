@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from ingestion.models import UserData, Division
+from ingestion.models import Genius_UserData, Genius_Division
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import timezone as dt_timezone
@@ -16,8 +16,8 @@ class Command(BaseCommand):
         parser.add_argument(
             "--table",
             type=str,
-            default="user",
-            help="The name of the table to download data from. Defaults to 'user'."
+            default="user_data",  # Changed default from "user" to "users_data"
+            help="The name of the table to download data from. Defaults to 'user_data'."
         )
 
     def handle(self, *args, **options):
@@ -46,7 +46,7 @@ class Command(BaseCommand):
     
     def _preload_divisions(self):
         """Preload divisions for lookup."""
-        return {division.id: division for division in Division.objects.all()}
+        return {division.id: division for division in Genius_Division.objects.all()}
     
     def _process_all_records(self, cursor, table_name, divisions):
         """Process all records in batches."""
@@ -63,7 +63,7 @@ class Command(BaseCommand):
         """Process a batch of records starting at the specified offset."""
         # Get the batch of records
         cursor.execute(f"""
-            SELECT id, division_id, title_id, manager_user_id, first_name, 
+            SELECT user_id, division_id, title_id, manager_user_id, first_name, 
                    first_name_alt, last_name, email, personal_email, birth_date, ssn, 
                    gender_id, marital_status_id, time_zone_name, lead_radius_zip, 
                    lead_radius_distance, lead_types, lead_views_allowed, lead_call_center, 
@@ -88,7 +88,7 @@ class Command(BaseCommand):
         """Process a batch of user records."""
         to_create = []
         to_update = []
-        existing_records = UserData.objects.in_bulk([row[0] for row in rows])
+        existing_records = Genius_UserData.objects.in_bulk([row[0] for row in rows])
 
         for row in rows:
             try:
@@ -182,7 +182,8 @@ class Command(BaseCommand):
                       override_paychex_department_id, override_paychex_department_effective_date,
                       google_user_error, google_user_status, start_date, user_associations_id,
                       google_user_id):
-        """Update an existing user record."""
+        """Update an existing user record with only the fields that exist in the model."""
+        # Only update fields that exist in the model
         record.division = division
         record.title_id = title_id
         record.manager_user_id = manager_user_id
@@ -199,34 +200,11 @@ class Command(BaseCommand):
         record.add_datetime = add_datetime
         record.add_user_id = add_user_id
         record.start_date = start_date
-        
-        # Update additional fields from the table design
-        # Note: Make sure your UserData model has all these fields
-        record.lead_radius_zip = lead_radius_zip
-        record.lead_radius_distance = lead_radius_distance
-        record.lead_types = lead_types
-        record.lead_views_allowed = lead_views_allowed
-        record.lead_call_center = lead_call_center
-        record.google_calendar_channel_id = google_calendar_channel_id
-        record.google_calendar_resource_id = google_calendar_resource_id
-        record.google_calendar_sync_token = google_calendar_sync_token
-        record.google_calendar_sync_start = google_calendar_sync_start
-        record.google_calendar_last_sync = google_calendar_last_sync
-        record.google_calendar_channel_expiration = google_calendar_channel_expiration
-        record.project_commission_pct = project_commission_pct
-        record.is_inactive = is_inactive
+        # Added new fields
+        record.is_inactive = bool(is_inactive)
         record.inactive_on = inactive_on
         record.inactive_reason_id = inactive_reason_id
         record.inactive_reason_other = inactive_reason_other
-        record.salary_account_id = salary_account_id
-        record.advance_account_id = advance_account_id
-        record.inactive_transfer_division_id = inactive_transfer_division_id
-        record.override_paychex_department_id = override_paychex_department_id
-        record.override_paychex_department_effective_date = override_paychex_department_effective_date
-        record.google_user_error = google_user_error
-        record.google_user_status = google_user_status
-        record.user_associations_id = user_associations_id
-        record.google_user_id = google_user_id
         
         return record
     
@@ -243,8 +221,9 @@ class Command(BaseCommand):
                       override_paychex_department_id, override_paychex_department_effective_date,
                       google_user_error, google_user_status, start_date, user_associations_id,
                       google_user_id):
-        """Create a new user record."""
-        return UserData(
+        """Create a new user record with only the fields that exist in the model."""
+        # Create a new record with only the fields that exist in the model
+        return Genius_UserData(
             id=user_id,
             division=division,
             title_id=title_id,
@@ -262,61 +241,31 @@ class Command(BaseCommand):
             add_datetime=add_datetime,
             add_user_id=add_user_id,
             start_date=start_date,
-            
-            # Additional fields from the table design
-            lead_radius_zip=lead_radius_zip,
-            lead_radius_distance=lead_radius_distance,
-            lead_types=lead_types,
-            lead_views_allowed=lead_views_allowed,
-            lead_call_center=lead_call_center,
-            google_calendar_channel_id=google_calendar_channel_id,
-            google_calendar_resource_id=google_calendar_resource_id,
-            google_calendar_sync_token=google_calendar_sync_token,
-            google_calendar_sync_start=google_calendar_sync_start,
-            google_calendar_last_sync=google_calendar_last_sync,
-            google_calendar_channel_expiration=google_calendar_channel_expiration,
-            project_commission_pct=project_commission_pct,
-            is_inactive=is_inactive,
+            # Added new fields
+            is_inactive=bool(is_inactive),
             inactive_on=inactive_on,
             inactive_reason_id=inactive_reason_id,
-            inactive_reason_other=inactive_reason_other,
-            salary_account_id=salary_account_id,
-            advance_account_id=advance_account_id,
-            inactive_transfer_division_id=inactive_transfer_division_id,
-            override_paychex_department_id=override_paychex_department_id,
-            override_paychex_department_effective_date=override_paychex_department_effective_date,
-            google_user_error=google_user_error,
-            google_user_status=google_user_status,
-            user_associations_id=user_associations_id,
-            google_user_id=google_user_id
+            inactive_reason_other=inactive_reason_other
         )
     
     def _save_records(self, to_create, to_update):
         """Save records to database with error handling."""
         try:
             if to_create:
-                UserData.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+                Genius_UserData.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
             
             if to_update:
-                # List all fields that need to be updated
+                # List only fields that exist in the model
                 fields_to_update = [
                     'division', 'title_id', 'manager_user_id', 'first_name',
                     'first_name_alt', 'last_name', 'email', 'personal_email',
                     'birth_date', 'gender_id', 'marital_status_id', 'time_zone_name',
-                    'lead_radius_zip', 'lead_radius_distance', 'lead_types',
-                    'lead_views_allowed', 'lead_call_center', 'google_calendar_channel_id',
-                    'google_calendar_resource_id', 'google_calendar_sync_token',
-                    'google_calendar_sync_start', 'google_calendar_last_sync',
-                    'google_calendar_channel_expiration', 'project_commission_pct',
-                    'hired_on', 'add_datetime', 'add_user_id', 'is_inactive',
-                    'inactive_on', 'inactive_reason_id', 'inactive_reason_other',
-                    'salary_account_id', 'advance_account_id', 'inactive_transfer_division_id',
-                    'override_paychex_department_id', 'override_paychex_department_effective_date',
-                    'google_user_error', 'google_user_status', 'start_date',
-                    'user_associations_id', 'google_user_id'
+                    'hired_on', 'add_datetime', 'add_user_id', 'start_date',
+                    # Added new fields
+                    'is_inactive', 'inactive_on', 'inactive_reason_id', 'inactive_reason_other'
                 ]
                 
-                UserData.objects.bulk_update(to_update, fields_to_update, batch_size=BATCH_SIZE)
+                Genius_UserData.objects.bulk_update(to_update, fields_to_update, batch_size=BATCH_SIZE)
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Error during bulk operations: {e}"))
             # Fallback to individual saves

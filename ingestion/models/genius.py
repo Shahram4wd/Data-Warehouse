@@ -32,6 +32,8 @@ class Genius_Division(models.Model):
 class Genius_UserData(models.Model):
     id = models.IntegerField(primary_key=True)
     division = models.ForeignKey('Genius_Division', on_delete=models.SET_NULL, null=True, related_name='users')
+    title_id = models.SmallIntegerField(null=True, blank=True)
+    manager_user_id = models.IntegerField(null=True, blank=True)
     first_name = models.CharField(max_length=100, null=True, blank=True)
     first_name_alt = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
@@ -40,13 +42,15 @@ class Genius_UserData(models.Model):
     birth_date = models.DateField(null=True, blank=True)
     gender_id = models.IntegerField(null=True, blank=True)
     marital_status_id = models.IntegerField(null=True, blank=True)
-    time_zone_name = models.CharField(max_length=50)
-    title_id = models.SmallIntegerField(null=True, blank=True)
-    manager_user_id = models.IntegerField(null=True, blank=True)
+    time_zone_name = models.CharField(max_length=50, null=True, blank=True)
     hired_on = models.DateTimeField(null=True, blank=True)
     start_date = models.DateTimeField(null=True, blank=True)
     add_user_id = models.IntegerField(null=True, blank=True)
-    add_datetime = models.DateTimeField(null=True, blank=True, auto_now_add=True)
+    add_datetime = models.DateTimeField(null=True, blank=True)
+    is_inactive = models.BooleanField(default=False)
+    inactive_on = models.DateTimeField(null=True, blank=True)
+    inactive_reason_id = models.SmallIntegerField(null=True, blank=True)
+    inactive_reason_other = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}".strip()
@@ -222,3 +226,19 @@ class Genius_MarketingSource(models.Model):
 
     def __str__(self):
         return self.label or f"Marketing Source {self.id}"
+
+
+class Genius_UserTitle(models.Model):
+    id = models.SmallIntegerField(primary_key=True)
+    title = models.CharField(max_length=100, null=True, blank=True)
+    abbreviation = models.CharField(max_length=10, null=True, blank=True)
+    roles = models.CharField(max_length=256, null=True, blank=True)
+    type_id = models.SmallIntegerField(null=True, blank=True)
+    section_id = models.SmallIntegerField(null=True, blank=True)
+    sort = models.SmallIntegerField(null=True, blank=True)
+    pay_component_group_id = models.SmallIntegerField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    is_unique_per_division = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.title or f"Title {self.id}"
