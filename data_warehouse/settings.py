@@ -94,10 +94,19 @@ USE_TZ = True
 # Static files
 STATIC_URL = 'static/'
 
-# CSRF Trusted Origins (add this section)
+# CSRF Trusted Origins
 CSRF_TRUSTED_ORIGINS = [
     'https://data-warehouse-57lg.onrender.com',
-    'https://latenightcode.com/',
+    'https://latenightcode.com',  # No trailing slash
+    'https://www.latenightcode.com',  # Add www variant
+    'http://localhost:8000',
+]
+
+# CORS settings if you're using django-cors-headers
+CORS_ALLOWED_ORIGINS = [
+    'https://data-warehouse-57lg.onrender.com',
+    'https://latenightcode.com',
+    'https://www.latenightcode.com',
     'http://localhost:8000',
 ]
 
