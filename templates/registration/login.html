@@ -3,14 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
+    <title>Data Warehouse Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #2ecc71;
+            --background: #f9f9f9;
+            --card-bg: #ffffff;
+            --text: #333333;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--background);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text);
+        }
+        
+        .login-container {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            padding: 2rem;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .login-header h1 {
+            color: var(--primary);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-header p {
+            color: #777;
+            font-size: 1rem;
+            margin-top: 0;
+        }
+        
+        .login-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+        
+        .login-form input[type="text"],
+        .login-form input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            transition: border 0.3s ease;
+        }
+        
+        .login-form input[type="text"]:focus,
+        .login-form input[type="password"]:focus {
+            border-color: var(--secondary);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .login-button {
+            width: 100%;
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+        
+        .login-button:hover {
+            background-color: #2980b9;
+        }
+        
+        .errorlist {
+            color: #e74c3c;
+            list-style-type: none;
+            padding: 0;
+            margin: 0 0 1rem 0;
+            font-size: 0.9rem;
+        }
+        
+        .help-text {
+            color: #777;
+            font-size: 0.9rem;
+            margin-top: -1rem;
+            margin-bottom: 1rem;
+        }
+    </style>
 </head>
 <body>
-    <h1>Login</h1>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Login</button>
-    </form>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>Data Warehouse</h1>
+            <p>Enter your credentials to access the system</p>
+        </div>
+        
+        {% if form.errors %}
+        <div class="errorlist">
+            <p>Your username and password didn't match. Please try again.</p>
+        </div>
+        {% endif %}
+        
+        <form method="post" class="login-form">
+            {% csrf_token %}
+            
+            <label for="id_username">Username</label>
+            {{ form.username }}
+            {% if form.username.help_text %}
+            <p class="help-text">{{ form.username.help_text }}</p>
+            {% endif %}
+            
+            <label for="id_password">Password</label>
+            {{ form.password }}
+            {% if form.password.help_text %}
+            <p class="help-text">{{ form.password.help_text }}</p>
+            {% endif %}
+            
+            <button type="submit" class="login-button">Log In</button>
+            
+            <input type="hidden" name="next" value="{{ next }}">
+        </form>
+    </div>
 </body>
 </html>
