@@ -119,7 +119,36 @@ CELERY_TIMEZONE = 'UTC'
 
 EXPLORER_CONNECTIONS = {'Default': 'default'}
 EXPLORER_DEFAULT_CONNECTION = 'default'
+EXPLORER_SCHEMA_INCLUDE_TABLE_PREFIXES = "ingestion_"
+EXPLORER_DB_CONNECTIONS_ENABLED = False
 
+EXPLORER_PERMISSION_VIEW = lambda r: r.user.is_staff
+EXPLORER_PERMISSION_CHANGE = lambda r: r.user.is_staff
+
+EXPLORER_SQL_BLACKLIST = (
+     # DML
+     'COMMIT',
+     'DELETE',
+     'INSERT',
+     'MERGE',
+     'REPLACE',
+     'ROLLBACK',
+     'SET',
+     'START',
+     'UPDATE',
+     'UPSERT',
+
+     # DDL
+     'ALTER',
+     'CREATE',
+     'DROP',
+     'RENAME',
+     'TRUNCATE',
+
+     # DCL
+     'GRANT',
+     'REVOKE',
+ )
 
 GENIUS_API_URL = config("GENIUS_API_URL")
 GENIUS_USERNAME = config("GENIUS_USERNAME")
