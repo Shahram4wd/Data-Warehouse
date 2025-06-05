@@ -21,7 +21,8 @@ from .views import dashboard
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('ingestion.urls')),
+    path('api/docs/', include('ingestion.urls')),
+    path('', include('explorer.urls')),
     path('explorer/', include('explorer.urls')), 
     path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
