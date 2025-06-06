@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: data-warehouse
+    env: python
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    startCommand: gunicorn data_warehouse.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DJANGO_STATIC_ROOT
+        value: /app/staticfiles
+      - key: STATIC_URL
+        value: /static/
+      - key: PYTHONUNBUFFERED
+        value: "true"
+      - key: WEB_CONCURRENCY
+        value: "1"
+    disk:
+      name: static-files
+      mountPath: /app/staticfiles
+      sizeGB: 1
+    healthCheckPath: /admin/login/
+    autoDeploy: true
