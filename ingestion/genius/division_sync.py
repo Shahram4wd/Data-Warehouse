@@ -45,7 +45,7 @@ def sync_user_data(client):
         data = response.json()
 
         for item in data.get("results", []):
-            UserData.objects.update_or_create(
+            Genius_UserData.objects.update_or_create(
                 id=item["id"],
                 defaults={
                     "division_id": item.get("division"),

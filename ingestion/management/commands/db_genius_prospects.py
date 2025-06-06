@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from ingestion.models import Prospect, Division
+from ingestion.models import Genius_Prospect, Genius_Division
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import datetime, timezone as dt_timezone
@@ -45,7 +45,7 @@ class Command(BaseCommand):
     
     def _preload_divisions(self):
         """Preload divisions for lookup."""
-        return {division.id: division for division in Division.objects.all()}
+        return {division.id: division for division in Genius_Division.objects.all()}
     
     def _process_all_records(self, cursor, table_name, divisions):
         """Process all records in batches."""
@@ -77,7 +77,7 @@ class Command(BaseCommand):
         """Process a batch of prospect records."""
         to_create = []
         to_update = []
-        existing_records = Prospect.objects.in_bulk([row[0] for row in rows])
+        existing_records = Genius_Prospect.objects.in_bulk([row[0] for row in rows])
 
         for row in rows:
             try:
@@ -144,7 +144,7 @@ class Command(BaseCommand):
                      address1, address2, city, county, state, zip, phone1, phone2, email, notes,
                      add_user_id, add_date, marketsharp_id, leap_customer_id, third_party_source_id):
         """Create a new prospect record."""
-        return Prospect(
+        return Genius_Prospect(
             id=record_id,
             division=division,
             first_name=first_name,
@@ -172,10 +172,10 @@ class Command(BaseCommand):
         """Save records to database with error handling."""
         try:
             if to_create:
-                Prospect.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+                Genius_Prospect.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
             
             if to_update:
-                Prospect.objects.bulk_update(
+                Genius_Prospect.objects.bulk_update(
                     to_update,
                     [
                         'division', 'first_name', 'last_name', 'alt_first_name', 'alt_last_name',

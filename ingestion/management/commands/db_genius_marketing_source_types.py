@@ -54,7 +54,7 @@ class Command(BaseCommand):
         """Process a single batch of records."""
         to_create = []
         to_update = []
-        existing_records = Genius_MarketingSourceType.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
+        existing_records = Genius_MarketingSourceType.objects.in_bulk([row[0] for row in rows])
 
         for row in rows:
             (

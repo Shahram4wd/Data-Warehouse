@@ -1,6 +1,6 @@
 import os
 from django.core.management.base import BaseCommand
-from ingestion.models import Prospect, Division
+from ingestion.models import Genius_Prospect, Genius_Division
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 
@@ -56,7 +56,7 @@ class Command(BaseCommand):
         """Process a single batch of records."""
         to_create = []
         to_update = []
-        existing_records = Prospect.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
+        existing_records = Genius_Prospect.objects.in_bulk([row[0] for row in rows])
 
         for row in rows:
             (
@@ -65,7 +65,7 @@ class Command(BaseCommand):
                 add_user_id, add_date, marketsharp_id, leap_customer_id, third_party_source_id
             ) = row
 
-            division = Division.objects.filter(id=division_id).first() if division_id else None
+            division = Genius_Division.objects.filter(id=division_id).first() if division_id else None
 
             if record_id in existing_records:
                 record_instance = existing_records[record_id]
@@ -91,7 +91,7 @@ class Command(BaseCommand):
                 record_instance.third_party_source_id = third_party_source_id
                 to_update.append(record_instance)
             else:
-                to_create.append(Prospect(
+                to_create.append(Genius_Prospect(
                     id=record_id,
                     division=division,
                     first_name=first_name,
@@ -117,9 +117,9 @@ class Command(BaseCommand):
 
         # Bulk create and update
         if to_create:
-            Prospect.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+            Genius_Prospect.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
         if to_update:
-            Prospect.objects.bulk_update(
+            Genius_Prospect.objects.bulk_update(
                 to_update,
                 [
                     'division', 'first_name', 'last_name', 'alt_first_name', 'alt_last_name',

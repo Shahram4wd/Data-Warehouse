@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from ingestion.models import MarketingSource
+from ingestion.models import Genius_MarketingSource
 import requests
 import uuid
 import logging
@@ -24,7 +24,7 @@ class Command(BaseCommand):
         if force:
             self.stdout.write(self.style.WARNING("Force mode enabled - recreating all marketing sources"))
             # If using force, clear existing sources
-            MarketingSource.objects.all().delete()
+            Genius_MarketingSource.objects.all().delete()
         
         # Get marketing sources
         saved_count = self._create_sources()
@@ -33,9 +33,8 @@ class Command(BaseCommand):
     
     def _create_sources(self):
         """Create marketing sources in the database"""
-        # Similar structure to sync_genius_divisions
         # Check if we already have sources
-        existing_count = MarketingSource.objects.count()
+        existing_count = Genius_MarketingSource.objects.count()
         if existing_count > 0:
             self.stdout.write(self.style.SUCCESS(f"Found {existing_count} existing marketing sources. Use --force to recreate."))
             return existing_count
@@ -63,7 +62,7 @@ class Command(BaseCommand):
         created_count = 0
         for source in sources:
             try:
-                MarketingSource.objects.create(
+                Genius_MarketingSource.objects.create(
                     id=uuid.uuid4(),
                     name=source["name"],
                     description=source["description"],

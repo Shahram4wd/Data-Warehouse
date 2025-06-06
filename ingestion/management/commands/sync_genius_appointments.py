@@ -1,6 +1,6 @@
 import requests
-from django.core.management.base import BaseCommand
-from ingestion.models import Appointment
+from django.core.management.base import BaseCommand, CommandError
+from ingestion.models import Genius_Appointment
 from ingestion.utils import parse_datetime_obj, process_batches
 from tqdm import tqdm
 from django.conf import settings
@@ -45,7 +45,7 @@ class Command(BaseCommand):
 
         appointments = response.json()
         appointment_ids = [appointment["id"] for appointment in appointments]
-        existing_appointments = Appointment.objects.in_bulk(appointment_ids)
+        existing_appointments = Genius_Appointment.objects.in_bulk(appointment_ids)
 
         to_create = []
         to_update = []
@@ -89,15 +89,15 @@ class Command(BaseCommand):
                     to_update.append(appointment_instance)
                 else:
                     fields["id"] = appointment_id
-                    to_create.append(Appointment(**fields))
+                    to_create.append(Genius_Appointment(**fields))
 
                 if len(to_update) >= BATCH_SIZE or len(to_create) >= BATCH_SIZE:
-                    process_batches(to_create, to_update, Appointment, fields.keys(), BATCH_SIZE)
+                    process_batches(to_create, to_update, Genius_Appointment, fields.keys(), BATCH_SIZE)
 
             except (ValueError, KeyError) as e:
                 self.stdout.write(self.style.WARNING(f"Skipping appointment due to error: {appointment}. Error: {e}"))
 
         # Final batch processing
-        process_batches(to_create, to_update, Appointment, fields.keys(), BATCH_SIZE)
+        process_batches(to_create, to_update, Genius_Appointment, fields.keys(), BATCH_SIZE)
 
         self.stdout.write(self.style.SUCCESS("Appointment sync completed."))
