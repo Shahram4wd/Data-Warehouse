@@ -89,14 +89,23 @@ class BaseProcessor:
         """Cache model fields to improve performance."""
         return {field.name for field in model._meta.fields if not field.primary_key}
 
+    def find_primary_key_mapping(self, field_mappings: Dict[str, FieldMapping]) -> Tuple[str, str]:
+        # First check for a field mapped to 'id'
+        for key, mapping in field_mappings.items():
+            if mapping.model_field == 'id':
+                return key, 'id'
+
     def extract_data(self, entry: Dict[str, Any], field_mappings: Dict[str, FieldMapping]) -> Tuple[Optional[UUID], Dict[str, Any]]:
         """Extract and validate data from a dictionary entry."""
         data = {}
         object_id = None
         has_required_fields = True
+        
+        # Find primary key mapping
+        pk_key, pk_model_field = self.find_primary_key_mapping(field_mappings)
 
         for key, mapping in field_mappings.items():
-            value = entry.get(mapping.xml_field)  # Updated to use dictionary access
+            value = entry.get(mapping.xml_field)
             parsed_value = self.parse_value(value, mapping.field_type, key)
 
             if mapping.required and parsed_value is None:
@@ -106,14 +115,15 @@ class BaseProcessor:
 
             data[mapping.model_field] = parsed_value if parsed_value is not None else mapping.default
 
-            if key == 'id':
+            # Use the identified primary key field
+            if key == pk_key:
                 object_id = parsed_value
 
         return (object_id, data) if has_required_fields else (None, {})
 
     async def process_entries(
         self,
-        entries: List[Dict[str, Any]],  # Updated to expect a list of dictionaries
+        entries: List[Dict[str, Any]],
         model,
         field_mappings: Dict[str, FieldMapping],
         batch_size: int
@@ -129,12 +139,15 @@ class BaseProcessor:
         try:
             valid_records: List[Tuple[UUID, Dict[str, Any]]] = []
             record_ids: List[UUID] = []
+            
+            # Find primary key mapping
+            pk_key, pk_model_field = self.find_primary_key_mapping(field_mappings)
 
             # Process entries in chunks for better memory management
             for i in range(0, len(entries), batch_size):
                 chunk = entries[i:i + batch_size]
                 for entry in chunk:
-                    object_id, data = self.extract_data(entry, field_mappings)  # Updated to pass the dictionary directly
+                    object_id, data = self.extract_data(entry, field_mappings)
                     
                     if object_id and data:
                         valid_records.append((object_id, data))
@@ -145,9 +158,10 @@ class BaseProcessor:
             if not valid_records:
                 return result.successful
 
-            # Fetch existing records
+            # Fetch existing records using the correct primary key field
+            filter_kwargs = {f"{pk_model_field}__in": record_ids}
             existing_records = await sync_to_async(lambda: set(
-                model.objects.filter(id__in=record_ids).values_list('id', flat=True)
+                model.objects.filter(**filter_kwargs).values_list(pk_model_field, flat=True)
             ))()
 
             # Prepare records for database operations
@@ -155,7 +169,7 @@ class BaseProcessor:
             records_to_update = []
 
             for object_id, data in valid_records:
-                data['id'] = object_id
+                data[pk_model_field] = object_id  # Use the correct primary key field
                 if object_id in existing_records:
                     records_to_update.append(model(**data))
                 else:

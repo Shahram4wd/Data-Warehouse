@@ -38,9 +38,6 @@ from .marketsharp import (
     MarketSharp_ProductType, MarketSharp_Prospect
 )
 
-# Import MarketingSource model
-from .marketing_source import MarketingSource  # New import
-
 # Import all models to maintain backwards compatibility
 # This allows existing code to continue using: from ingestion.models import X
 __all__ = [
@@ -58,6 +55,5 @@ __all__ = [
     'MarketSharp_Employee', 'MarketSharp_Inquiry', 'MarketSharp_InquirySourcePrimary',
     'MarketSharp_InquirySourceSecondary', 'MarketSharp_InquiryStatus', 'MarketSharp_Job',
     'MarketSharp_Lead', 'MarketSharp_ProductDetail', 'MarketSharp_ProductInterest',
-    'MarketSharp_ProductType', 'MarketSharp_Prospect',
-    'MarketingSource'  # Standalone marketing source model
+    'MarketSharp_ProductType', 'MarketSharp_Prospect'
 ]

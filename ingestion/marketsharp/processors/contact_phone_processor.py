@@ -12,7 +12,7 @@ def register_processor(registry: ProcessorRegistry):
 
 class ContactPhoneProcessor(BaseProcessor):
     field_mappings = {
-        'contact_id': FieldMapping('contactId', 'contact_id', 'uuid', required=True),
+        'id': FieldMapping('contactId', 'contact_id', 'uuid', required=True),
         'assistant_phone': FieldMapping('assistantPhone', 'assistant_phone', 'string'),
         'work_fax': FieldMapping('workFax', 'work_fax', 'string'),
         'cell_phone': FieldMapping('cellPhone', 'cell_phone', 'string'),
