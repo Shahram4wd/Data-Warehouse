@@ -21,8 +21,8 @@ from django.views.generic import RedirectView
 urlpatterns = [
     path('admin/', admin.site.urls),
     
-    # Include ingestion app URLs
-    path('', include('ingestion.urls')),
+    # SQL Explorer URLs
+    path('', include('explorer.urls')),
     
     # SQL Explorer URLs
     path('explorer/', include('explorer.urls')),
