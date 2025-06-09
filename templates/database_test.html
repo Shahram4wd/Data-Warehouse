@@ -6,11 +6,21 @@
         body { font-family: Arial, sans-serif; margin: 40px; }
         .success { color: green; }
         .error { color: red; }
+        .warning { color: orange; }
         .info { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        .whitelist-info { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 10px 0; }
         table { border-collapse: collapse; width: 100%; }
         td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
+        .copy-btn { margin-left: 10px; padding: 2px 8px; font-size: 12px; }
     </style>
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('IP address copied to clipboard!');
+            });
+        }
+    </script>
 </head>
 <body>
     <h1>Database Connection Test</h1>
@@ -31,7 +41,13 @@
             </table>
         </div>
         
-        <p><a href="/api/test-db/">JSON API Version</a></p>
+        <div class="whitelist-info">
+            <h3>✅ IP Whitelist Status</h3>
+            <p><strong>Your Current Outbound IP:</strong> {{ our_ip }} 
+               <button class="copy-btn" onclick="copyToClipboard('{{ our_ip }}')">Copy</button>
+            </p>
+            <p class="success">This IP is successfully whitelisted in your database.</p>
+        </div>
         
     {% else %}
         <h2 class="error">❌ Database Connection: FAILED</h2>
@@ -40,18 +56,38 @@
             <h3>Error Details</h3>
             <p><strong>Error Type:</strong> {{ error_type }}</p>
             <p><strong>Error Message:</strong> {{ error }}</p>
+            <p><strong>Database Host:</strong> {{ host }}</p>
+            <p><strong>Database Port:</strong> {{ port }}</p>
+        </div>
+        
+        <div class="whitelist-info">
+            <h3 class="warning">⚠️ IP Whitelist Check</h3>
+            <p><strong>Your Current Outbound IP:</strong> {{ our_ip }} 
+               <button class="copy-btn" onclick="copyToClipboard('{{ our_ip }}')">Copy</button>
+            </p>
+            <p class="error">This IP may NOT be whitelisted in your database.</p>
+            <p><strong>Action Required:</strong> Add this IP address to your database's whitelist/firewall rules.</p>
         </div>
         
         <h3>Troubleshooting Steps:</h3>
+        <ol>
+            <li><strong>Check IP Whitelist:</strong> Ensure {{ our_ip }} is added to your database whitelist</li>
+            <li><strong>Verify Database Server:</strong> Check if the database server is running</li>
+            <li><strong>Check Connection String:</strong> Verify the database connection string in your environment variables</li>
+            <li><strong>Test Network Connectivity:</strong> Ensure network connectivity between Render and your database</li>
+            <li><strong>Verify Credentials:</strong> Check if database credentials are correct</li>
+        </ol>
+        
+        <h3>Render.com Static IPs (add these to your whitelist):</h3>
         <ul>
-            <li>Check if the database server is running</li>
-            <li>Verify the database connection string in your environment variables</li>
-            <li>Ensure network connectivity between Render and your database</li>
-            <li>Check if your database allows connections from Render's IP ranges</li>
-            <li>Verify database credentials are correct</li>
+            <li>3.95.140.172/30</li>
+            <li>3.95.140.176/30</li>
+            <li>44.194.54.40/30</li>
+            <li>44.194.54.44/30</li>
         </ul>
     {% endif %}
     
+    <p><a href="/api/test-db/">JSON API Version (Detailed Diagnostics)</a></p>
     <p><small>Test performed at: {{ "now"|date:"Y-m-d H:i:s" }} UTC</small></p>
 </body>
 </html>

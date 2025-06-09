@@ -8,6 +8,8 @@ from django.db import connection
 from django.core.cache import cache
 import time
 import logging
+import socket
+import requests
 
 from .serializers import UserSyncSerializer
 from ingestion.genius.genius_client import GeniusClient
@@ -107,7 +109,7 @@ class DatabaseTestView(views.APIView):
     
     @extend_schema(
         summary="Test database connection",
-        description="Tests database connectivity, query performance, and displays connection info",
+        description="Tests database connectivity, query performance, displays connection info, and checks IP whitelist status",
         responses={
             200: {
                 "type": "object",
@@ -116,7 +118,8 @@ class DatabaseTestView(views.APIView):
                     "database_info": {"type": "object"},
                     "connection_test": {"type": "object"},
                     "query_test": {"type": "object"},
-                    "cache_test": {"type": "object"}
+                    "cache_test": {"type": "object"},
+                    "network_test": {"type": "object"}
                 }
             }
         }
@@ -129,7 +132,8 @@ class DatabaseTestView(views.APIView):
             "database_info": {},
             "connection_test": {},
             "query_test": {},
-            "cache_test": {}
+            "cache_test": {},
+            "network_test": {}
         }
         
         # Test 1: Database Info
@@ -149,8 +153,95 @@ class DatabaseTestView(views.APIView):
                 "status": "error",
                 "error": str(e)
             }
+
+        # Test 2: Network Connectivity and IP Check
+        try:
+            db_host = settings.DATABASES['default'].get('HOST', '')
+            db_port = int(settings.DATABASES['default'].get('PORT', 5432))
+            
+            # Get our outbound IP address
+            try:
+                # Try multiple services to get our IP
+                ip_services = [
+                    'https://api.ipify.org',
+                    'https://httpbin.org/ip',
+                    'https://icanhazip.com'
+                ]
+                our_ip = None
+                for service in ip_services:
+                    try:
+                        response = requests.get(service, timeout=5)
+                        if service == 'https://httpbin.org/ip':
+                            our_ip = response.json().get('origin', '').split(',')[0].strip()
+                        else:
+                            our_ip = response.text.strip()
+                        if our_ip:
+                            break
+                    except:
+                        continue
+            except Exception as ip_error:
+                our_ip = f"Could not determine: {str(ip_error)}"
+            
+            # Test DNS resolution
+            try:
+                resolved_ip = socket.gethostbyname(db_host)
+                dns_status = "success"
+                dns_error = None
+            except Exception as dns_e:
+                resolved_ip = "failed"
+                dns_status = "error"
+                dns_error = str(dns_e)
+            
+            # Test TCP connectivity to database port
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(10)
+                tcp_start = time.time()
+                result = sock.connect_ex((db_host, db_port))
+                tcp_time = (time.time() - tcp_start) * 1000
+                sock.close()
+                
+                tcp_status = "success" if result == 0 else "failed"
+                tcp_error = None if result == 0 else f"Connection refused (code: {result})"
+            except Exception as tcp_e:
+                tcp_status = "error"
+                tcp_error = str(tcp_e)
+                tcp_time = 0
+            
+            results["network_test"] = {
+                "status": "success" if dns_status == "success" and tcp_status == "success" else "error",
+                "our_outbound_ip": our_ip,
+                "database_host": db_host,
+                "database_port": db_port,
+                "dns_resolution": {
+                    "status": dns_status,
+                    "resolved_ip": resolved_ip,
+                    "error": dns_error
+                },
+                "tcp_connectivity": {
+                    "status": tcp_status,
+                    "connection_time_ms": round(tcp_time, 2) if tcp_status != "error" else 0,
+                    "error": tcp_error
+                },
+                "whitelist_check": {
+                    "message": "If TCP connection fails, check if this IP is whitelisted in your database",
+                    "recommended_action": f"Add {our_ip} to your database whitelist" if our_ip and not our_ip.startswith("Could not") else "Check your database whitelist settings",
+                    "render_static_ips": [
+                        "3.95.140.172/30",
+                        "3.95.140.176/30", 
+                        "44.194.54.40/30",
+                        "44.194.54.44/30"
+                    ]
+                }
+            }
+        except Exception as e:
+            results["network_test"] = {
+                "status": "error",
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
         
-        # Test 2: Basic Connection Test
+        # Test 3: Basic Connection Test
         try:
             start_time = time.time()
             with connection.cursor() as cursor:
@@ -169,7 +260,14 @@ class DatabaseTestView(views.APIView):
             results["connection_test"] = {
                 "status": "error",
                 "error": str(e),
-                "error_type": type(e).__name__
+                "error_type": type(e).__name__,
+                "possible_causes": [
+                    "Database server is down",
+                    "Incorrect database credentials",
+                    "IP address not whitelisted in database",
+                    "Network connectivity issues",
+                    "Database connection limit reached"
+                ]
             }
         
         # Test 3: Query Performance Test
@@ -225,8 +323,8 @@ class DatabaseTestView(views.APIView):
         # Overall status
         all_tests_passed = all(
             test.get("status") == "success" 
-            for test in [results["database_info"], results["connection_test"], 
-                        results["query_test"], results["cache_test"]]
+            for test in [results["database_info"], results["network_test"], 
+                        results["connection_test"], results["query_test"], results["cache_test"]]
         )
         
         results["status"] = "healthy" if all_tests_passed else "unhealthy"
@@ -251,6 +349,12 @@ def database_test_html(request):
         
         connection_time = (time.time() - start_time) * 1000
         
+        # Get our IP for whitelist checking
+        try:
+            our_ip = requests.get('https://api.ipify.org', timeout=5).text.strip()
+        except:
+            our_ip = "Could not determine"
+        
         context = {
             'status': 'SUCCESS',
             'db_version': db_version,
@@ -260,13 +364,23 @@ def database_test_html(request):
             'host': settings.DATABASES['default'].get('HOST', 'unknown'),
             'port': settings.DATABASES['default'].get('PORT', 'unknown'),
             'engine': settings.DATABASES['default'].get('ENGINE', 'unknown'),
+            'our_ip': our_ip,
         }
         
     except Exception as e:
+        # Try to get our IP even if DB connection fails
+        try:
+            our_ip = requests.get('https://api.ipify.org', timeout=5).text.strip()
+        except:
+            our_ip = "Could not determine"
+            
         context = {
             'status': 'ERROR',
             'error': str(e),
             'error_type': type(e).__name__,
+            'our_ip': our_ip,
+            'host': settings.DATABASES['default'].get('HOST', 'unknown'),
+            'port': settings.DATABASES['default'].get('PORT', 'unknown'),
         }
     
     return render(request, 'database_test.html', context)

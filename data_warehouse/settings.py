@@ -178,6 +178,24 @@ GENIUS_PASSWORD = config("GENIUS_PASSWORD")
 # HubSpot API Configuration
 HUBSPOT_API_TOKEN = config("HUBSPOT_API_TOKEN", default="")
 
+# ActiveProspect API Configuration  
+ACTIVEPROSPECT_API_TOKEN = config("ACTIVEPROSPECT_API_TOKEN", default="")
+ACTIVEPROSPECT_USERNAME = config("ACTIVEPROSPECT_USERNAME", default="")
+ACTIVEPROSPECT_PASSWORD = config("ACTIVEPROSPECT_PASSWORD", default="")
+ACTIVEPROSPECT_BASE_URL = config("ACTIVEPROSPECT_BASE_URL", default="https://app.leadconduit.com")
+
+# MarketSharp API Configuration
+MARKETSHARP_SECRET_KEY = config("MARKETSHARP_SECRET_KEY", default="")
+MARKETSHARP_API_URL = config("MARKETSHARP_API_URL", default="")
+MARKETSHARP_API_KEY = config("MARKETSHARP_API_KEY", default="")
+MARKETSHARP_COMPANY_ID = config("MARKETSHARP_COMPANY_ID", default="")
+
+# Genius Database Configuration
+GENIUS_DB_HOST = config("GENIUS_DB_HOST", default="")
+GENIUS_DB_NAME = config("GENIUS_DB_NAME", default="")
+GENIUS_DB_USER = config("GENIUS_DB_USER", default="")
+GENIUS_DB_PASSWORD = config("GENIUS_DB_PASSWORD", default="")
+
 # Redirect users to SQL Explorer after login
 LOGIN_REDIRECT_URL = '/explorer/'  # Set SQL Explorer as the default page after login
 
