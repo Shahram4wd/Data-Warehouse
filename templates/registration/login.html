@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Warehouse Login</title>
+    <title>Login - Data Warehouse</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -27,123 +27,122 @@
             color: var(--text);
         }
         
-        .login-container {
-            background-color: var(--card-bg);
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            width: 100%;
+        .container {
             max-width: 400px;
-            padding: 2rem;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
-        .login-header {
+        h1 {
+            color: #333;
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 30px;
         }
         
-        .login-header h1 {
-            color: var(--primary);
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+        .form-group {
+            margin-bottom: 20px;
         }
         
-        .login-header p {
-            color: #777;
-            font-size: 1rem;
-            margin-top: 0;
-        }
-        
-        .login-form label {
+        label {
             display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: var(--primary);
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
         }
         
-        .login-form input[type="text"],
-        .login-form input[type="password"] {
+        input[type="text"],
+        input[type="password"] {
             width: 100%;
-            padding: 12px;
-            margin-bottom: 1.5rem;
+            padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 16px;
             box-sizing: border-box;
-            font-size: 1rem;
-            transition: border 0.3s ease;
         }
         
-        .login-form input[type="text"]:focus,
-        .login-form input[type="password"]:focus {
-            border-color: var(--secondary);
+        input[type="text"]:focus,
+        input[type="password"]:focus {
+            border-color: #007bff;
             outline: none;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
         }
         
-        .login-button {
-            width: 100%;
-            background-color: var(--secondary);
+        .btn {
+            background: #007bff;
             color: white;
+            padding: 12px 24px;
             border: none;
-            padding: 12px;
-            font-size: 1rem;
             border-radius: 4px;
+            font-size: 16px;
             cursor: pointer;
-            font-weight: 500;
-            transition: background-color 0.3s ease;
+            width: 100%;
         }
         
-        .login-button:hover {
-            background-color: #2980b9;
+        .btn:hover {
+            background: #0056b3;
         }
         
         .errorlist {
-            color: #e74c3c;
-            list-style-type: none;
+            color: #dc3545;
+            margin: 5px 0;
             padding: 0;
-            margin: 0 0 1rem 0;
-            font-size: 0.9rem;
+            list-style: none;
         }
         
-        .help-text {
-            color: #777;
-            font-size: 0.9rem;
-            margin-top: -1rem;
-            margin-bottom: 1rem;
+        .errorlist li {
+            margin: 3px 0;
+        }
+        
+        .nav-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .nav-links a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        
+        .nav-links a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-header">
-            <h1>Data Warehouse</h1>
-            <p>Enter your credentials to access the system</p>
-        </div>
+    <div class="container">
+        <h1>Data Warehouse Login</h1>
         
         {% if form.errors %}
-        <div class="errorlist">
-            <p>Your username and password didn't match. Please try again.</p>
-        </div>
+            <ul class="errorlist">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
         {% endif %}
         
-        <form method="post" class="login-form">
+        <form method="post">
             {% csrf_token %}
             
-            <label for="id_username">Username</label>
-            {{ form.username }}
-            {% if form.username.help_text %}
-            <p class="help-text">{{ form.username.help_text }}</p>
-            {% endif %}
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">Username:</label>
+                {{ form.username }}
+            </div>
             
-            <label for="id_password">Password</label>
-            {{ form.password }}
-            {% if form.password.help_text %}
-            <p class="help-text">{{ form.password.help_text }}</p>
-            {% endif %}
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">Password:</label>
+                {{ form.password }}
+            </div>
             
-            <button type="submit" class="login-button">Log In</button>
-            
-            <input type="hidden" name="next" value="{{ next }}">
+            <button type="submit" class="btn">Login</button>
         </form>
+        
+        <div class="nav-links">
+            <p>After login, you can <a href="/accounts/password_change/">change your password</a></p>
+        </div>
     </div>
 </body>
 </html>
