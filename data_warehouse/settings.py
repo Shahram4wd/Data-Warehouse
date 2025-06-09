@@ -89,10 +89,6 @@ DATABASES = {
         default=DATABASE_URL, 
         conn_max_age=1800,
         conn_health_checks=True,  # Add health checks
-        options={
-            'MAX_CONNS': 20,  # Limit connection pool
-            'MIN_CONNS': 1,
-        }
     ),
 }
 
