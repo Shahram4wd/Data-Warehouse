@@ -1,6 +1,6 @@
 import os
 from django.core.management.base import BaseCommand
-from ingestion.models import AppointmentOutcomeType
+from ingestion.models import Genius_AppointmentOutcomeType
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 
@@ -34,7 +34,7 @@ class Command(BaseCommand):
             # Process rows
             to_create = []
             to_update = []
-            existing_records = AppointmentOutcomeType.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
+            existing_records = Genius_AppointmentOutcomeType.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
 
             for row in tqdm(rows):
                 record_id, label, sort_idx, is_active = row
@@ -45,7 +45,7 @@ class Command(BaseCommand):
                     record_instance.is_active = bool(is_active)
                     to_update.append(record_instance)
                 else:
-                    to_create.append(AppointmentOutcomeType(
+                    to_create.append(Genius_AppointmentOutcomeType(
                         id=record_id,
                         label=label,
                         sort_idx=sort_idx,
@@ -70,8 +70,8 @@ class Command(BaseCommand):
     def _process_batches(self, to_create, to_update):
         """Helper method to process batches of records."""
         if to_create:
-            AppointmentOutcomeType.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+            Genius_AppointmentOutcomeType.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
             to_create.clear()
         if to_update:
-            AppointmentOutcomeType.objects.bulk_update(to_update, ['label', 'sort_idx', 'is_active'], batch_size=BATCH_SIZE)
+            Genius_AppointmentOutcomeType.objects.bulk_update(to_update, ['label', 'sort_idx', 'is_active'], batch_size=BATCH_SIZE)
             to_update.clear()

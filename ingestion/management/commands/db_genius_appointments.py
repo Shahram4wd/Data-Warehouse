@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from ingestion.models import Appointment, Prospect, ProspectSource, AppointmentType, AppointmentOutcome
+from ingestion.models import Genius_Appointment, Genius_Prospect, Genius_ProspectSource, Genius_AppointmentType, Genius_AppointmentOutcome
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import timezone as dt_timezone
@@ -10,7 +10,7 @@ from datetime import datetime, date, timedelta, time
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))
 
 class Command(BaseCommand):
-    help = "Download appointments directly from the database and update the local database."
+    help = "Download Genius_Appointments directly from the database and update the local database."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -52,10 +52,10 @@ class Command(BaseCommand):
     def _preload_lookup_data(self, cursor):
         """Preload all lookup data needed for processing."""
         # Load related model data
-        prospects = {prospect.id: prospect for prospect in Prospect.objects.all()}
-        prospect_sources = {source.id: source for source in ProspectSource.objects.all()}
-        appointment_types = {appt_type.id: appt_type for appt_type in AppointmentType.objects.all()}
-        appointment_outcomes = {outcome.id: outcome for outcome in AppointmentOutcome.objects.all()}
+        Genius_Prospects = {Genius_Prospect.id: Genius_Prospect for Genius_Prospect in Genius_Prospect.objects.all()}
+        Genius_Prospect_sources = {source.id: source for source in Genius_ProspectSource.objects.all()}
+        Genius_Appointment_types = {appt_type.id: appt_type for appt_type in Genius_AppointmentType.objects.all()}
+        Genius_Appointment_outcomes = {outcome.id: outcome for outcome in Genius_AppointmentOutcome.objects.all()}
         
         # Load Hubspot source IDs
         cursor.execute("""
@@ -67,10 +67,10 @@ class Command(BaseCommand):
         hubspot_sources = {row[0]: row[1] for row in cursor.fetchall()}
         
         return {
-            'prospects': prospects,
-            'prospect_sources': prospect_sources,
-            'appointment_types': appointment_types,
-            'appointment_outcomes': appointment_outcomes,
+            'Genius_Prospects': Genius_Prospects,
+            'Genius_Prospect_sources': Genius_Prospect_sources,
+            'Genius_Appointment_types': Genius_Appointment_types,
+            'Genius_Appointment_outcomes': Genius_Appointment_outcomes,
             'hubspot_sources': hubspot_sources
         }
     
@@ -91,12 +91,12 @@ class Command(BaseCommand):
         # Process the batch
         self._process_batch(rows, **lookup_data)
             
-    def _process_batch(self, rows, prospects, prospect_sources, appointment_types, 
-                      appointment_outcomes, hubspot_sources):
-        """Process a batch of appointment records."""
+    def _process_batch(self, rows, Genius_Prospects, Genius_Prospect_sources, Genius_Appointment_types, 
+                      Genius_Appointment_outcomes, hubspot_sources):
+        """Process a batch of Genius_Appointment records."""
         to_create = []
         to_update = []
-        existing_records = Appointment.objects.in_bulk([row[0] for row in rows])
+        existing_records = Genius_Appointment.objects.in_bulk([row[0] for row in rows])
 
         for row in rows:
             try:
@@ -110,10 +110,10 @@ class Command(BaseCommand):
                 ) = row
 
                 # Look up related objects
-                prospect = prospects.get(prospect_id)
-                prospect_source = prospect_sources.get(prospect_source_id)
-                appointment_type = appointment_types.get(type_id)
-                complete_outcome = appointment_outcomes.get(complete_outcome_id)
+                prospect = Genius_Prospects.get(prospect_id)
+                prospect_source = Genius_Prospect_sources.get(prospect_source_id)
+                appointment_type = Genius_Appointment_types.get(type_id)
+                complete_outcome = Genius_Appointment_outcomes.get(complete_outcome_id)
                 hubspot_id = hubspot_sources.get(third_party_source_id) if third_party_source_id is not None else None
 
                 # Process fields that need special handling
@@ -229,8 +229,8 @@ class Command(BaseCommand):
                       add_user_id, confirm_user_id, confirm_with, complete_outcome,
                       complete_user_id, marketsharp_id, marketsharp_appt_type,
                       leap_estimate_id, hubspot_id):
-        """Create a new appointment record."""
-        return Appointment(
+        """Create a new Genius_Appointment record."""
+        return Genius_Appointment(
             id=record_id,
             prospect=prospect,
             prospect_source=prospect_source,
@@ -267,10 +267,10 @@ class Command(BaseCommand):
         """Save records to database with error handling."""
         try:
             if to_create:
-                Appointment.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+                Genius_Appointment.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
             
             if to_update:
-                Appointment.objects.bulk_update(
+                Genius_Appointment.objects.bulk_update(
                     to_update,
                     [
                         'prospect', 'prospect_source', 'user_id', 'type', 'date', 'time', 'duration',
