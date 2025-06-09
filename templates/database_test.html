@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Database Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { background: #f0f0f0; padding: 10px; margin: 10px 0; }
+        table { border-collapse: collapse; width: 100%; }
+        td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Database Connection Test</h1>
+    
+    {% if status == 'SUCCESS' %}
+        <h2 class="success">✅ Database Connection: SUCCESS</h2>
+        
+        <div class="info">
+            <h3>Connection Details</h3>
+            <table>
+                <tr><th>Database Version</th><td>{{ db_version }}</td></tr>
+                <tr><th>Database Name</th><td>{{ db_name }}</td></tr>
+                <tr><th>Host</th><td>{{ host }}</td></tr>
+                <tr><th>Port</th><td>{{ port }}</td></tr>
+                <tr><th>Engine</th><td>{{ engine }}</td></tr>
+                <tr><th>Table Count</th><td>{{ table_count }}</td></tr>
+                <tr><th>Connection Time</th><td>{{ connection_time }} ms</td></tr>
+            </table>
+        </div>
+        
+        <p><a href="/api/test-db/">JSON API Version</a></p>
+        
+    {% else %}
+        <h2 class="error">❌ Database Connection: FAILED</h2>
+        
+        <div class="info">
+            <h3>Error Details</h3>
+            <p><strong>Error Type:</strong> {{ error_type }}</p>
+            <p><strong>Error Message:</strong> {{ error }}</p>
+        </div>
+        
+        <h3>Troubleshooting Steps:</h3>
+        <ul>
+            <li>Check if the database server is running</li>
+            <li>Verify the database connection string in your environment variables</li>
+            <li>Ensure network connectivity between Render and your database</li>
+            <li>Check if your database allows connections from Render's IP ranges</li>
+            <li>Verify database credentials are correct</li>
+        </ul>
+    {% endif %}
+    
+    <p><small>Test performed at: {{ "now"|date:"Y-m-d H:i:s" }} UTC</small></p>
+</body>
+</html>
