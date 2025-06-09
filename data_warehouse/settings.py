@@ -18,18 +18,22 @@ ALLOWED_HOSTS = config("DJANGO_ALLOWED_HOSTS", cast=Csv())
 
 # Installed apps
 INSTALLED_APPS = [
+    # Django built-in apps
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    #my apps
+    
+    # Custom apps
     'ingestion',
+    
+    # Third-party apps
     'django_celery_beat',
     'rest_framework',
     'drf_spectacular',
-    'explorer',
+    'explorer',  # SQL Explorer as a separate app
 ]
 
 # Add DRF settings
@@ -50,6 +54,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',  # Add WhiteNoise middleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'ingestion.middleware.WordPressBlockerMiddleware',  # Add this
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -80,8 +85,23 @@ WSGI_APPLICATION = 'data_warehouse.wsgi.application'
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 DATABASES = {
-    "default": dj_database_url.config(default=DATABASE_URL, conn_max_age=1800),
+    "default": dj_database_url.config(
+        default=DATABASE_URL, 
+        conn_max_age=1800,
+        conn_health_checks=True,  # Add health checks
+        options={
+            'MAX_CONNS': 20,  # Limit connection pool
+            'MIN_CONNS': 1,
+        }
+    ),
 }
+
+# Add database connection pooling for production
+if not DEBUG:
+    DATABASES['default']['OPTIONS'] = {
+        'MAX_CONNS': 20,
+        'MIN_CONNS': 1,
+    }
 
 # Password validation (optional for dev)
 AUTH_PASSWORD_VALIDATORS = []
@@ -120,9 +140,9 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
+# SQL Explorer Configuration
 EXPLORER_CONNECTIONS = {'Default': 'default'}
 EXPLORER_DEFAULT_CONNECTION = 'default'
-EXPLORER_SCHEMA_INCLUDE_TABLE_PREFIXES = "ingestion_"
 EXPLORER_DB_CONNECTIONS_ENABLED = True
 EXPLORER_USER_UPLOADS_ENABLED = True
 
@@ -154,6 +174,7 @@ EXPLORER_SQL_BLACKLIST = (
      'REVOKE',
  )
 
+# Genius API Configuration
 GENIUS_API_URL = config("GENIUS_API_URL")
 GENIUS_USERNAME = config("GENIUS_USERNAME")
 GENIUS_PASSWORD = config("GENIUS_PASSWORD")
@@ -163,3 +184,55 @@ HUBSPOT_API_TOKEN = config("HUBSPOT_API_TOKEN", default="")
 
 # Redirect users to SQL Explorer after login
 LOGIN_REDIRECT_URL = '/explorer/'  # Set SQL Explorer as the default page after login
+
+# Add logging configuration to track performance issues
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django.db.backends': {
+            'handlers': ['console'],
+            'level': 'WARNING',  # Only log slow queries
+            'propagate': False,
+        },
+        'ingestion': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# Optimize for production
+if not DEBUG:
+    # Reduce worker timeout issues
+    DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+    
+    # Cache configuration
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'unique-snowflake',
+            'TIMEOUT': 300,
+            'OPTIONS': {
+                'MAX_ENTRIES': 1000,
+            }
+        }
+    }
