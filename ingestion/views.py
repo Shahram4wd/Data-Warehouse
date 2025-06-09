@@ -333,9 +333,9 @@ class DatabaseTestView(views.APIView):
 
 
 def database_test_html(request):
-    """HTML version of database test for browser viewing - always renders"""
+    """HTML version of database test for browser viewing - renders immediately with start test option"""
     context = {
-        'status': 'TESTING',
+        'status': 'READY',
         'timestamp': time.strftime("%Y-%m-%d %H:%M:%S UTC"),
         'our_ip': 'Checking...',
         'host': 'Unknown',
@@ -347,6 +347,7 @@ def database_test_html(request):
         'db_name': None,
         'table_count': None,
         'connection_time': None,
+        'run_test': request.GET.get('run_test', False)
     }
     
     # Step 1: Get basic database config (this should always work)
@@ -367,41 +368,43 @@ def database_test_html(request):
     except Exception as e:
         context['our_ip'] = f"Could not determine: {str(e)}"
     
-    # Step 3: Test database connection with simple approach
-    try:
-        start_time = time.time()
-        
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT version()")
-            db_version = cursor.fetchone()
-            context['db_version'] = db_version[0] if db_version else "Unknown"
-            
-            cursor.execute("SELECT current_database()")
-            db_name = cursor.fetchone()
-            context['db_name'] = db_name[0] if db_name else "Unknown"
-            
-            cursor.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
-            table_count = cursor.fetchone()
-            context['table_count'] = table_count[0] if table_count else 0
-        
-        connection_time = (time.time() - start_time) * 1000
-        context.update({
-            'status': 'SUCCESS',
-            'connection_time': round(connection_time, 2),
-        })
-            
-    except Exception as e:
-        context.update({
-            'status': 'ERROR',
-            'error': str(e),
-            'error_type': type(e).__name__
-        })
-    finally:
-        # Always close the connection to prevent hanging
+    # Step 3: Only run database test if requested
+    if context['run_test']:
+        context['status'] = 'TESTING'
         try:
-            connection.close()
-        except:
-            pass
+            start_time = time.time()
+            
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT version()")
+                db_version = cursor.fetchone()
+                context['db_version'] = db_version[0] if db_version else "Unknown"
+                
+                cursor.execute("SELECT current_database()")
+                db_name = cursor.fetchone()
+                context['db_name'] = db_name[0] if db_name else "Unknown"
+                
+                cursor.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
+                table_count = cursor.fetchone()
+                context['table_count'] = table_count[0] if table_count else 0
+            
+            connection_time = (time.time() - start_time) * 1000
+            context.update({
+                'status': 'SUCCESS',
+                'connection_time': round(connection_time, 2),
+            })
+                
+        except Exception as e:
+            context.update({
+                'status': 'ERROR',
+                'error': str(e),
+                'error_type': type(e).__name__
+            })
+        finally:
+            # Always close the connection to prevent hanging
+            try:
+                connection.close()
+            except:
+                pass
     
     # Always render the template, regardless of database status
     return render(request, 'database_test.html', context)
