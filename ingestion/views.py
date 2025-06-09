@@ -367,56 +367,29 @@ def database_test_html(request):
     except Exception as e:
         context['our_ip'] = f"Could not determine: {str(e)}"
     
-    # Step 3: Test database connection with strict timeout
+    # Step 3: Test database connection with simple approach
     try:
-        # Set a very short timeout to prevent hanging
-        from django.db import connection
-        
-        # Force close any existing connections
-        connection.close()
-        
-        # Set connection timeout
         start_time = time.time()
         
-        # Use a timeout wrapper
-        import signal
-        
-        def timeout_handler(signum, frame):
-            raise TimeoutError("Database connection timeout")
-        
-        # Set 15 second timeout
-        signal.signal(signal.SIGALRM, timeout_handler)
-        signal.alarm(15)
-        
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT version()")
-                db_version = cursor.fetchone()
-                context['db_version'] = db_version[0] if db_version else "Unknown"
-                
-                cursor.execute("SELECT current_database()")
-                db_name = cursor.fetchone()
-                context['db_name'] = db_name[0] if db_name else "Unknown"
-                
-                cursor.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
-                table_count = cursor.fetchone()
-                context['table_count'] = table_count[0] if table_count else 0
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT version()")
+            db_version = cursor.fetchone()
+            context['db_version'] = db_version[0] if db_version else "Unknown"
             
-            connection_time = (time.time() - start_time) * 1000
-            context.update({
-                'status': 'SUCCESS',
-                'connection_time': round(connection_time, 2),
-            })
+            cursor.execute("SELECT current_database()")
+            db_name = cursor.fetchone()
+            context['db_name'] = db_name[0] if db_name else "Unknown"
             
-        finally:
-            signal.alarm(0)  # Disable the alarm
-            
-    except TimeoutError:
+            cursor.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
+            table_count = cursor.fetchone()
+            context['table_count'] = table_count[0] if table_count else 0
+        
+        connection_time = (time.time() - start_time) * 1000
         context.update({
-            'status': 'TIMEOUT',
-            'error': 'Database connection timed out after 15 seconds',
-            'error_type': 'TimeoutError'
+            'status': 'SUCCESS',
+            'connection_time': round(connection_time, 2),
         })
+            
     except Exception as e:
         context.update({
             'status': 'ERROR',
