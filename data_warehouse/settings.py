@@ -145,6 +145,11 @@ EXPLORER_USER_UPLOADS_ENABLED = True
 EXPLORER_PERMISSION_VIEW = lambda r: r.user.is_staff
 EXPLORER_PERMISSION_CHANGE = lambda r: r.user.is_staff
 
+# Only show tables that start with "ingestion_"
+EXPLORER_SCHEMA_INCLUDE_TABLE_PREFIXES = ['ingestion_']
+# Exclude tables that start with "explorer_"
+EXPLORER_SCHEMA_EXCLUDE_TABLE_PREFIXES = ['explorer_']
+
 EXPLORER_SQL_BLACKLIST = (
      # DML
      'COMMIT',
