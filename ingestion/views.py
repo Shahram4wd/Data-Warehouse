@@ -333,54 +333,102 @@ class DatabaseTestView(views.APIView):
 
 
 def database_test_html(request):
-    """HTML version of database test for browser viewing"""
+    """HTML version of database test for browser viewing - always renders"""
+    context = {
+        'status': 'TESTING',
+        'timestamp': time.strftime("%Y-%m-%d %H:%M:%S UTC"),
+        'our_ip': 'Checking...',
+        'host': 'Unknown',
+        'port': 'Unknown',
+        'engine': 'Unknown',
+        'error': None,
+        'error_type': None,
+        'db_version': None,
+        'db_name': None,
+        'table_count': None,
+        'connection_time': None,
+    }
+    
+    # Step 1: Get basic database config (this should always work)
     try:
-        # Test database connection
-        start_time = time.time()
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT version()")
-            db_version = cursor.fetchone()[0] if cursor.rowcount > 0 else "Unknown"
-            
-            cursor.execute("SELECT current_database()")
-            db_name = cursor.fetchone()[0] if cursor.rowcount > 0 else "Unknown"
-            
-            cursor.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
-            table_count = cursor.fetchone()[0] if cursor.rowcount > 0 else 0
-        
-        connection_time = (time.time() - start_time) * 1000
-        
-        # Get our IP for whitelist checking
-        try:
-            our_ip = requests.get('https://api.ipify.org', timeout=5).text.strip()
-        except:
-            our_ip = "Could not determine"
-        
-        context = {
-            'status': 'SUCCESS',
-            'db_version': db_version,
-            'db_name': db_name,
-            'table_count': table_count,
-            'connection_time': round(connection_time, 2),
-            'host': settings.DATABASES['default'].get('HOST', 'unknown'),
-            'port': settings.DATABASES['default'].get('PORT', 'unknown'),
-            'engine': settings.DATABASES['default'].get('ENGINE', 'unknown'),
-            'our_ip': our_ip,
-        }
-        
+        db_settings = settings.DATABASES.get('default', {})
+        context.update({
+            'host': db_settings.get('HOST', 'Not configured'),
+            'port': db_settings.get('PORT', 'Not configured'),
+            'engine': db_settings.get('ENGINE', 'Not configured'),
+        })
     except Exception as e:
-        # Try to get our IP even if DB connection fails
+        context['error'] = f"Settings error: {str(e)}"
+    
+    # Step 2: Get our outbound IP (independent of database)
+    try:
+        ip_response = requests.get('https://api.ipify.org', timeout=10)
+        context['our_ip'] = ip_response.text.strip()
+    except Exception as e:
+        context['our_ip'] = f"Could not determine: {str(e)}"
+    
+    # Step 3: Test database connection with strict timeout
+    try:
+        # Set a very short timeout to prevent hanging
+        from django.db import connection
+        
+        # Force close any existing connections
+        connection.close()
+        
+        # Set connection timeout
+        start_time = time.time()
+        
+        # Use a timeout wrapper
+        import signal
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Database connection timeout")
+        
+        # Set 15 second timeout
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(15)
+        
         try:
-            our_ip = requests.get('https://api.ipify.org', timeout=5).text.strip()
-        except:
-            our_ip = "Could not determine"
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT version()")
+                db_version = cursor.fetchone()
+                context['db_version'] = db_version[0] if db_version else "Unknown"
+                
+                cursor.execute("SELECT current_database()")
+                db_name = cursor.fetchone()
+                context['db_name'] = db_name[0] if db_name else "Unknown"
+                
+                cursor.execute("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public'")
+                table_count = cursor.fetchone()
+                context['table_count'] = table_count[0] if table_count else 0
             
-        context = {
+            connection_time = (time.time() - start_time) * 1000
+            context.update({
+                'status': 'SUCCESS',
+                'connection_time': round(connection_time, 2),
+            })
+            
+        finally:
+            signal.alarm(0)  # Disable the alarm
+            
+    except TimeoutError:
+        context.update({
+            'status': 'TIMEOUT',
+            'error': 'Database connection timed out after 15 seconds',
+            'error_type': 'TimeoutError'
+        })
+    except Exception as e:
+        context.update({
             'status': 'ERROR',
             'error': str(e),
-            'error_type': type(e).__name__,
-            'our_ip': our_ip,
-            'host': settings.DATABASES['default'].get('HOST', 'unknown'),
-            'port': settings.DATABASES['default'].get('PORT', 'unknown'),
-        }
+            'error_type': type(e).__name__
+        })
+    finally:
+        # Always close the connection to prevent hanging
+        try:
+            connection.close()
+        except:
+            pass
     
+    # Always render the template, regardless of database status
     return render(request, 'database_test.html', context)

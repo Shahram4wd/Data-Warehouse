@@ -7,12 +7,14 @@
         .success { color: green; }
         .error { color: red; }
         .warning { color: orange; }
+        .timeout { color: purple; }
         .info { background: #f0f0f0; padding: 10px; margin: 10px 0; }
         .whitelist-info { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 10px 0; }
+        .timeout-info { background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; margin: 10px 0; }
         table { border-collapse: collapse; width: 100%; }
         td, th { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
-        .copy-btn { margin-left: 10px; padding: 2px 8px; font-size: 12px; }
+        .copy-btn { margin-left: 10px; padding: 2px 8px; font-size: 12px; cursor: pointer; }
     </style>
     <script>
         function copyToClipboard(text) {
@@ -24,6 +26,7 @@
 </head>
 <body>
     <h1>Database Connection Test</h1>
+    <p><small>Test performed at: {{ timestamp }}</small></p>
     
     {% if status == 'SUCCESS' %}
         <h2 class="success">✅ Database Connection: SUCCESS</h2>
@@ -49,15 +52,39 @@
             <p class="success">This IP is successfully whitelisted in your database.</p>
         </div>
         
+    {% elif status == 'TIMEOUT' %}
+        <h2 class="timeout">⏱️ Database Connection: TIMEOUT</h2>
+        
+        <div class="timeout-info">
+            <h3>Connection Timeout</h3>
+            <p><strong>Error:</strong> {{ error }}</p>
+            <p>The database connection is taking too long to establish. This usually indicates:</p>
+            <ul>
+                <li>Network connectivity issues</li>
+                <li>IP address not whitelisted in database firewall</li>
+                <li>Database server is overloaded or not responding</li>
+                <li>Incorrect database host or port configuration</li>
+            </ul>
+        </div>
+        
+        <div class="whitelist-info">
+            <h3 class="warning">⚠️ IP Whitelist Check Required</h3>
+            <p><strong>Your Current Outbound IP:</strong> {{ our_ip }} 
+               <button class="copy-btn" onclick="copyToClipboard('{{ our_ip }}')">Copy</button>
+            </p>
+            <p class="error">This IP likely needs to be whitelisted in your database.</p>
+        </div>
+        
     {% else %}
         <h2 class="error">❌ Database Connection: FAILED</h2>
         
         <div class="info">
             <h3>Error Details</h3>
-            <p><strong>Error Type:</strong> {{ error_type }}</p>
-            <p><strong>Error Message:</strong> {{ error }}</p>
+            <p><strong>Error Type:</strong> {{ error_type|default:"Unknown" }}</p>
+            <p><strong>Error Message:</strong> {{ error|default:"Unknown error occurred" }}</p>
             <p><strong>Database Host:</strong> {{ host }}</p>
             <p><strong>Database Port:</strong> {{ port }}</p>
+            <p><strong>Database Engine:</strong> {{ engine }}</p>
         </div>
         
         <div class="whitelist-info">
@@ -68,26 +95,29 @@
             <p class="error">This IP may NOT be whitelisted in your database.</p>
             <p><strong>Action Required:</strong> Add this IP address to your database's whitelist/firewall rules.</p>
         </div>
-        
-        <h3>Troubleshooting Steps:</h3>
-        <ol>
-            <li><strong>Check IP Whitelist:</strong> Ensure {{ our_ip }} is added to your database whitelist</li>
-            <li><strong>Verify Database Server:</strong> Check if the database server is running</li>
-            <li><strong>Check Connection String:</strong> Verify the database connection string in your environment variables</li>
-            <li><strong>Test Network Connectivity:</strong> Ensure network connectivity between Render and your database</li>
-            <li><strong>Verify Credentials:</strong> Check if database credentials are correct</li>
-        </ol>
-        
-        <h3>Render.com Static IPs (add these to your whitelist):</h3>
+    {% endif %}
+    
+    <div class="info">
+        <h3>Configuration Details</h3>
+        <table>
+            <tr><th>Database Host</th><td>{{ host }}</td></tr>
+            <tr><th>Database Port</th><td>{{ port }}</td></tr>
+            <tr><th>Database Engine</th><td>{{ engine }}</td></tr>
+            <tr><th>Our Outbound IP</th><td>{{ our_ip }}</td></tr>
+        </table>
+    </div>
+    
+    <div class="info">
+        <h3>Render.com Static IPs (add ALL to your database whitelist):</h3>
         <ul>
             <li>3.95.140.172/30</li>
             <li>3.95.140.176/30</li>
             <li>44.194.54.40/30</li>
             <li>44.194.54.44/30</li>
         </ul>
-    {% endif %}
+        <p><small>Note: Add these IP ranges to your database whitelist, not just the current outbound IP.</small></p>
+    </div>
     
-    <p><a href="/api/test-db/">JSON API Version (Detailed Diagnostics)</a></p>
-    <p><small>Test performed at: {{ "now"|date:"Y-m-d H:i:s" }} UTC</small></p>
+    <p><a href="/api/test-db/">JSON API Version (if working)</a></p>
 </body>
 </html>
