@@ -16,15 +16,23 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.contrib.auth import views as auth_views
-from .views import dashboard
+from django.views.generic import RedirectView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # Include ingestion app URLs
+    path('', include('ingestion.urls')),
+    
+    # SQL Explorer URLs
+    path('explorer/', include('explorer.urls')),
+    
+    # API documentation redirect
     path('api/docs/', include('ingestion.urls')),
-    path('', include('explorer.urls')),
-    path('explorer/', include('explorer.urls')), 
-    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
-    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
-    path('dashboard/', dashboard, name='dashboard'),
+    
+    # Authentication URLs (if needed)
+    path('accounts/', include('django.contrib.auth.urls')),
+    
+    # Dashboard redirect to explorer
+    path('dashboard/', RedirectView.as_view(url='/explorer/', permanent=False), name='dashboard'),
 ]
