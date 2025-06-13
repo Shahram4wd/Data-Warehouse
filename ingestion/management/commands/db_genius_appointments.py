@@ -116,6 +116,15 @@ class Command(BaseCommand):
                 complete_outcome = appointment_outcomes.get(complete_outcome_id)
                 hubspot_id = hubspot_sources.get(third_party_source_id) if third_party_source_id is not None else None
 
+                # Skip records with missing required foreign keys
+                if not prospect:
+                    #self.stdout.write(self.style.WARNING(f"Skipping appointment {record_id}: prospect {prospect_id} not found"))
+                    continue
+                    
+                if not appointment_type:
+                    #self.stdout.write(self.style.WARNING(f"Skipping appointment {record_id}: appointment type {type_id} not found"))
+                    continue
+
                 # Process fields that need special handling
                 processed_data = self._process_field_values(
                     date, time, duration, add_date, assign_date, confirm_date, complete_date,
@@ -267,7 +276,7 @@ class Command(BaseCommand):
         """Save records to database with error handling."""
         try:
             if to_create:
-                Genius_Appointment.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+                Genius_Appointment.objects.bulk_create(to_create, batch_size=BATCH_SIZE, ignore_conflicts=True)
             
             if to_update:
                 Genius_Appointment.objects.bulk_update(
@@ -290,6 +299,14 @@ class Command(BaseCommand):
         """Fallback to individual saves when bulk operations fail."""
         for record in records:
             try:
+                # Additional validation before saving
+                if not record.prospect:
+                    self.stdout.write(self.style.WARNING(f"Skipping record {record.id}: missing prospect"))
+                    continue
+                if not record.type:
+                    self.stdout.write(self.style.WARNING(f"Skipping record {record.id}: missing appointment type"))
+                    continue
+                    
                 record.save()
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f"Error saving record {record.id}: {e}"))
