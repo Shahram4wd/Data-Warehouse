@@ -94,6 +94,20 @@ class BaseProcessor:
         for key, mapping in field_mappings.items():
             if mapping.model_field == 'id':
                 return key, 'id'
+        
+        # If no 'id' mapping found, look for any UUID field as fallback
+        for key, mapping in field_mappings.items():
+            if mapping.field_type == FieldType.UUID:
+                return key, mapping.model_field
+        
+        # If no UUID field found, use the first mapping as fallback
+        if field_mappings:
+            first_key = next(iter(field_mappings))
+            first_mapping = field_mappings[first_key]
+            return first_key, first_mapping.model_field
+        
+        # This should never happen, but provide a safe fallback
+        raise ValueError("No field mappings provided")
 
     def extract_data(self, entry: Dict[str, Any], field_mappings: Dict[str, FieldMapping]) -> Tuple[Optional[UUID], Dict[str, Any]]:
         """Extract and validate data from a dictionary entry."""
