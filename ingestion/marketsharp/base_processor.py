@@ -90,22 +90,17 @@ class BaseProcessor:
         return {field.name for field in model._meta.fields if not field.primary_key}
 
     def find_primary_key_mapping(self, field_mappings: Dict[str, FieldMapping]) -> Tuple[str, str]:
-        # Debug logging to see what's in field_mappings
-        #self.logger.info(f"Looking for primary key in field_mappings with keys: {list(field_mappings.keys())}")
-        for key, mapping in field_mappings.items():
-            #Sself.logger.info(f"  {key}: xml_field={mapping.xml_field}, model_field={mapping.model_field}")
-        
+        """Find the primary key mapping from field mappings."""
         # First check for a field with key 'id' (this is the primary identifier)
         if 'id' in field_mappings:
             mapping = field_mappings['id']
-            #self.logger.info(f"Found 'id' key mapping to model_field: {mapping.model_field}")
             return 'id', mapping.model_field
         
         # Fallback: look for fields mapped to 'id'
         for key, mapping in field_mappings.items():
             if mapping.model_field == 'id':
-                #self.logger.info(f"Found model_field 'id' with key: {key}")
-                return key, 'id'        
+                return key, 'id'
+        
         # If no 'id' mapping found, look for any UUID field as fallback
         for key, mapping in field_mappings.items():
             if mapping.field_type == FieldType.UUID:
@@ -167,13 +162,11 @@ class BaseProcessor:
         try:
             valid_records: List[Tuple[UUID, Dict[str, Any]]] = []
             record_ids: List[UUID] = []
-            
-            # Find primary key mapping with error handling
+              # Find primary key mapping with error handling
             try:
                 pk_key, pk_model_field = self.find_primary_key_mapping(field_mappings)
-                #self.logger.info(f"Using primary key mapping: {pk_key} -> {pk_model_field}")
             except Exception as e:
-                #self.logger.error(f"Failed to find primary key mapping: {str(e)}")
+                self.logger.error(f"Failed to find primary key mapping: {str(e)}")
                 return 0
 
             # Process entries in chunks for better memory management
@@ -195,9 +188,7 @@ class BaseProcessor:
             filter_kwargs = {f"{pk_model_field}__in": record_ids}
             existing_records = await sync_to_async(lambda: set(
                 model.objects.filter(**filter_kwargs).values_list(pk_model_field, flat=True)
-            ))()
-
-            # Prepare records for database operations
+            ))()            # Prepare records for database operations
             records_to_insert = []
             records_to_update = []
 
@@ -213,7 +204,7 @@ class BaseProcessor:
             result.successful = len(valid_records)
 
         except Exception as e:
-            #self.logger.error(f"Error processing entries: {str(e)}", exc_info=True)
+            self.logger.error(f"Error processing entries: {str(e)}", exc_info=True)
             result.errors.append(str(e))
             raise
 
@@ -224,7 +215,7 @@ class BaseProcessor:
         """Perform bulk database operations with improved error handling."""
         with transaction.atomic():
             if records_to_insert:
-                #self.logger.info(f"Inserting {len(records_to_insert)} new records")
+                self.logger.info(f"Inserting {len(records_to_insert)} new records")
                 model.objects.bulk_create(
                     records_to_insert,
                     batch_size=batch_size,
@@ -232,7 +223,7 @@ class BaseProcessor:
                 )
 
             if records_to_update:
-                #self.logger.info(f"Updating {len(records_to_update)} existing records")
+                self.logger.info(f"Updating {len(records_to_update)} existing records")
                 fields_to_update = list(self.get_model_fields(model))
                 model.objects.bulk_update(
                     records_to_update,

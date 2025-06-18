@@ -195,6 +195,11 @@ MARKETSHARP_API_URL = config("MARKETSHARP_API_URL", default="")
 MARKETSHARP_API_KEY = config("MARKETSHARP_API_KEY", default="")
 MARKETSHARP_COMPANY_ID = config("MARKETSHARP_COMPANY_ID", default="")
 
+# Arrivy API Configuration
+ARRIVY_API_KEY = config("ARRIVY_API_KEY", default="")
+ARRIVY_AUTH_KEY = config("ARRIVY_AUTH_KEY", default="")
+ARRIVY_API_URL = config("ARRIVY_API_URL", default="")
+
 # Genius Database Configuration
 GENIUS_DB_HOST = config("GENIUS_DB_HOST", default="")
 GENIUS_DB_NAME = config("GENIUS_DB_NAME", default="")
