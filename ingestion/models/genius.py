@@ -126,10 +126,10 @@ class Genius_AppointmentOutcome(models.Model):
 
 
 class Genius_Appointment(models.Model):
-    id = models.IntegerField(primary_key=True)
+    id = models.BigIntegerField(primary_key=True)
     prospect = models.ForeignKey('Genius_Prospect', on_delete=models.CASCADE, related_name='appointments')
     prospect_source = models.ForeignKey('Genius_ProspectSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
-    user_id = models.IntegerField(null=True, blank=True)
+    user_id = models.BigIntegerField(null=True, blank=True)
     type = models.ForeignKey('Genius_AppointmentType', on_delete=models.PROTECT, related_name='appointments')
     date = models.DateField(null=True, blank=True)
     time = models.TimeField(null=True, blank=True)
@@ -144,18 +144,18 @@ class Genius_Appointment(models.Model):
     add_user_id = models.IntegerField()
     add_date = models.DateTimeField(null=True, blank=True)
     assign_date = models.DateTimeField(null=True, blank=True)
-    confirm_user_id = models.IntegerField(null=True, blank=True)
+    confirm_user_id = models.BigIntegerField(null=True, blank=True)
     confirm_date = models.DateTimeField(null=True, blank=True)
     confirm_with = models.CharField(max_length=100, null=True, blank=True)
     spouses_present = models.IntegerField(default=0)
     is_complete = models.IntegerField(default=0)
     complete_outcome = models.ForeignKey('Genius_AppointmentOutcome', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
-    complete_user_id = models.IntegerField(null=True, blank=True)
+    complete_user_id = models.BigIntegerField(null=True, blank=True)
     complete_date = models.DateTimeField(null=True, blank=True)
     marketsharp_id = models.CharField(max_length=100, null=True, blank=True)
     marketsharp_appt_type = models.CharField(max_length=100, null=True, blank=True)
     leap_estimate_id = models.CharField(max_length=100, null=True, blank=True)
-    third_party_source_id = models.IntegerField(null=True, blank=True)
+    third_party_source_id = models.BigIntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"Appointment {self.id} for Prospect {self.prospect_id}"

@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from ingestion.models import ProspectSource, Prospect, MarketingSource
+from ingestion.models import Genius_ProspectSource, Genius_Prospect, Genius_MarketingSource
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import timezone as dt_timezone  # Import Python's datetime timezone
@@ -29,8 +29,8 @@ class Command(BaseCommand):
             cursor = connection.cursor()
 
             # Preload related data into dictionaries for quick lookups
-            prospects = {prospect.id: prospect for prospect in Prospect.objects.all()}
-            marketing_sources = {source.id: source for source in MarketingSource.objects.all()}
+            prospects = {prospect.id: prospect for prospect in Genius_Prospect.objects.all()}
+            marketing_sources = {source.id: source for source in Genius_MarketingSource.objects.all()}
 
             # Fetch total record count
             cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
@@ -60,7 +60,7 @@ class Command(BaseCommand):
         """Process a single batch of records."""
         to_create = []
         to_update = []
-        existing_records = ProspectSource.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
+        existing_records = Genius_ProspectSource.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
 
         for row in rows:
             (
@@ -86,7 +86,7 @@ class Command(BaseCommand):
                 record_instance.add_date = add_date
                 to_update.append(record_instance)
             else:
-                to_create.append(ProspectSource(
+                to_create.append(Genius_ProspectSource(
                     id=record_id,
                     prospect=prospect,
                     marketing_source=marketing_source,
@@ -98,9 +98,9 @@ class Command(BaseCommand):
 
         # Bulk create and update
         if to_create:
-            ProspectSource.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+            Genius_ProspectSource.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
         if to_update:
-            ProspectSource.objects.bulk_update(
+            Genius_ProspectSource.objects.bulk_update(
                 to_update,
                 ['prospect', 'marketing_source', 'source_date', 'notes', 'add_user_id', 'add_date'],
                 batch_size=BATCH_SIZE

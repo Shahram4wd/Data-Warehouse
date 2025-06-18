@@ -105,11 +105,23 @@ class BaseProcessor:
         for key, mapping in field_mappings.items():
             if mapping.model_field == 'id':
                 #self.logger.info(f"Found model_field 'id' with key: {key}")
-                return key, 'id'
+                return key, 'id'        
+        # If no 'id' mapping found, look for any UUID field as fallback
+        for key, mapping in field_mappings.items():
+            if mapping.field_type == FieldType.UUID:
+                self.logger.info(f"Using UUID field as primary key: {key} -> {mapping.model_field}")
+                return key, mapping.model_field
         
-        # If no primary key found, raise an error instead of returning None
-        self.logger.error(f"No primary key mapping found. Available mappings: {field_mappings}")
-        raise ValueError("No primary key mapping found. Expected a field with key 'id' in field_mappings")
+        # If no UUID field found, use the first mapping as fallback
+        if field_mappings:
+            first_key = next(iter(field_mappings))
+            first_mapping = field_mappings[first_key]
+            self.logger.warning(f"No primary key or UUID field found, using first mapping: {first_key} -> {first_mapping.model_field}")
+            return first_key, first_mapping.model_field
+        
+        # If no mappings provided at all, raise an error
+        self.logger.error(f"No field mappings provided. Available mappings: {field_mappings}")
+        raise ValueError("No field mappings provided")
 
     def extract_data(self, entry: Dict[str, Any], field_mappings: Dict[str, FieldMapping]) -> Tuple[Optional[UUID], Dict[str, Any]]:
         """Extract and validate data from a dictionary entry."""

@@ -26,6 +26,9 @@ from .salespro import SalesPro_Users
 # Import Hubspot models
 from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_SyncHistory  
 
+# Import Arrivy models
+from .arrivy import Arrivy_Customer, Arrivy_TeamMember, Arrivy_Booking, Arrivy_SyncHistory
+
 # Import MarketSharp models
 from .marketsharp import (
     MarketSharp_Activity, MarketSharp_ActivityReference, MarketSharp_ActivityResult,
@@ -48,6 +51,7 @@ __all__ = [
     'Genius_Service', 'Genius_Quote', 'Genius_MarketingSourceType', 'Genius_MarketingSource', 'Genius_AppointmentOutcomeType',
     'SalesPro_Users',
     'Hubspot_Contact', 'Hubspot_Deal', 'Hubspot_SyncHistory',
+    'Arrivy_Customer', 'Arrivy_TeamMember', 'Arrivy_Booking', 'Arrivy_SyncHistory',
     'MarketSharp_Activity', 'MarketSharp_ActivityReference', 'MarketSharp_ActivityResult',
     'MarketSharp_Address', 'MarketSharp_Appointment', 'MarketSharp_AppointmentResult',
     'MarketSharp_Company', 'MarketSharp_Contact', 'MarketSharp_ContactPhone',

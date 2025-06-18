@@ -19,9 +19,16 @@ class Command(BaseCommand):
             default="appointment",
             help="The name of the table to download data from. Defaults to 'appointment'."
         )
+        parser.add_argument(
+            "--start-offset",
+            type=int,
+            default=0,
+            help="The starting offset for processing records. Defaults to 0."
+        )
 
     def handle(self, *args, **options):
         table_name = options["table"]
+        start_offset = options["start_offset"]
         connection = None
 
         try:
@@ -37,8 +44,15 @@ class Command(BaseCommand):
             total_records = cursor.fetchone()[0]
             self.stdout.write(self.style.SUCCESS(f"Total records in table '{table_name}': {total_records}"))
             
-            for offset in tqdm(range(0, total_records, BATCH_SIZE), desc="Processing batches"):
-                self._process_batch_at_offset(cursor, table_name, offset, lookup_data)
+            # Process records in batches starting from the specified offset
+            for offset in tqdm(range(start_offset, total_records, BATCH_SIZE), desc="Processing batches"):
+                cursor.execute(f"""
+                    SELECT id, prospect_id, prospect_source_id, user_id, type_id, date, time, duration, address1, address2, city, state, zip, email, notes, add_user_id, add_date, assign_date, confirm_user_id, confirm_date, confirm_with, spouses_present, is_complete, complete_outcome_id, complete_user_id, complete_date, marketsharp_id, marketsharp_appt_type, leap_estimate_id, third_party_source_id
+                    FROM appointment
+                    LIMIT {BATCH_SIZE} OFFSET {offset}
+                """)
+                rows = cursor.fetchall()
+                self._process_batch(rows, **lookup_data)
                 
             self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
             
@@ -74,23 +88,6 @@ class Command(BaseCommand):
             'hubspot_sources': hubspot_sources
         }
     
-    def _process_batch_at_offset(self, cursor, table_name, offset, lookup_data):
-        """Process a batch of records starting at the specified offset."""
-        # Get the batch of records
-        cursor.execute(f"""
-            SELECT id, prospect_id, prospect_source_id, user_id, type_id, date, time, duration,
-                   address1, address2, city, state, zip, email, notes, add_user_id, add_date,
-                   assign_date, confirm_user_id, confirm_date, confirm_with, spouses_present,
-                   is_complete, complete_outcome_id, complete_user_id, complete_date,
-                   marketsharp_id, marketsharp_appt_type, leap_estimate_id, third_party_source_id
-            FROM {table_name}
-            LIMIT {BATCH_SIZE} OFFSET {offset}
-        """)
-        rows = cursor.fetchall()
-        
-        # Process the batch
-        self._process_batch(rows, **lookup_data)
-            
     def _process_batch(self, rows, prospects, prospect_sources, appointment_types, 
                       appointment_outcomes, hubspot_sources):
         """Process a batch of appointment records."""

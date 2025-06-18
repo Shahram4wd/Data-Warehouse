@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from ingestion.models import Genius_Prospect, Genius_Division
+from ingestion.models.genius import Genius_Prospect, Genius_Division
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 

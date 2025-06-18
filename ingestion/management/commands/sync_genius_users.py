@@ -1,6 +1,6 @@
 import requests
 from django.core.management.base import BaseCommand
-from ingestion.models import UserData
+from ingestion.models import Genius_UserData
 from ingestion.utils import parse_datetime_obj, process_batches
 from tqdm import tqdm
 
@@ -19,7 +19,7 @@ class Command(BaseCommand):
 
         users = response.json()
         user_ids = [user["id"] for user in users]
-        existing_users = UserData.objects.in_bulk(user_ids)
+        existing_users = Genius_UserData.objects.in_bulk(user_ids)
 
         to_create = []
         to_update = []
@@ -47,15 +47,15 @@ class Command(BaseCommand):
                     to_update.append(user_instance)
                 else:
                     fields["id"] = user_id
-                    to_create.append(UserData(**fields))
+                    to_create.append(Genius_UserData(**fields))
 
                 if len(to_update) >= BATCH_SIZE or len(to_create) >= BATCH_SIZE:
-                    process_batches(to_create, to_update, UserData, fields.keys(), BATCH_SIZE)
+                    process_batches(to_create, to_update, Genius_UserData, fields.keys(), BATCH_SIZE)
 
             except (ValueError, KeyError) as e:
                 self.stdout.write(self.style.WARNING(f"Skipping user due to error: {user}. Error: {e}"))
 
         # Final batch processing
-        process_batches(to_create, to_update, UserData, fields.keys(), BATCH_SIZE)
+        process_batches(to_create, to_update, Genius_UserData, fields.keys(), BATCH_SIZE)
 
         self.stdout.write(self.style.SUCCESS("User sync completed."))

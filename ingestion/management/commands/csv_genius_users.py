@@ -2,7 +2,7 @@ import csv
 import os
 from datetime import datetime
 from django.core.management.base import BaseCommand
-from ingestion.models.genius import UserData  # Updated import
+from ingestion.models.genius import Genius_UserData  # Updated import
 from tqdm import tqdm
 from django.db import transaction
 
@@ -33,7 +33,7 @@ class Command(BaseCommand):
             rows = list(reader)
 
         user_ids = [int(row["user_id"]) for row in rows if row.get("user_id")]
-        existing_users = UserData.objects.in_bulk(user_ids)
+        existing_users = Genius_UserData.objects.in_bulk(user_ids)
         to_create = []
         to_update = []
 
@@ -65,26 +65,26 @@ class Command(BaseCommand):
                     setattr(existing_users[user_id], attr, val)
                 to_update.append(existing_users[user_id])
             else:
-                to_create.append(UserData(id=user_id, **fields))
+                to_create.append(Genius_UserData(id=user_id, **fields))
 
             # Process in batches
             if len(to_update) >= BATCH_SIZE:
                 with transaction.atomic():
-                    UserData.objects.bulk_update(to_update, fields.keys())
+                    Genius_UserData.objects.bulk_update(to_update, fields.keys())
                 to_update.clear()
 
             if len(to_create) >= BATCH_SIZE:
                 with transaction.atomic():
-                    UserData.objects.bulk_create(to_create, ignore_conflicts=True)
+                    Genius_UserData.objects.bulk_create(to_create, ignore_conflicts=True)
                 to_create.clear()
 
         # Final batch
         if to_update:
             with transaction.atomic():
-                UserData.objects.bulk_update(to_update, fields.keys())
+                Genius_UserData.objects.bulk_update(to_update, fields.keys())
 
         if to_create:
             with transaction.atomic():
-                UserData.objects.bulk_create(to_create, ignore_conflicts=True)
+                Genius_UserData.objects.bulk_create(to_create, ignore_conflicts=True)
 
         self.stdout.write(self.style.SUCCESS("User import completed."))
