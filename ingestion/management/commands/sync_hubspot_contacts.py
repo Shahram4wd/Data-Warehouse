@@ -46,11 +46,16 @@ class Command(BaseCommand):
             default=5,
             help="Save progress to database after every N pages (default 5)"
         )
+        parser.add_argument(            "--lastmodifieddate",
+            type=str,
+            help="Filter contacts modified after this date (YYYY-MM-DD format)"
+        )
 
     def handle(self, *args, **options):
         full_sync = options.get("full")
         max_pages = options.get("pages", 0)
         checkpoint_interval = options.get("checkpoint", 5)
+        lastmodifieddate = options.get("lastmodifieddate")
         token = settings.HUBSPOT_API_TOKEN
 
         if not token:
@@ -60,7 +65,21 @@ class Command(BaseCommand):
         
         # Get the last sync time
         endpoint = "contacts"
-        last_sync = None if full_sync else self.get_last_sync(endpoint)
+        
+        # Priority: 1) --lastmodifieddate parameter, 2) database last sync, 3) full sync
+        if lastmodifieddate:
+            # Parse the provided date
+            try:
+                last_sync = datetime.strptime(lastmodifieddate, "%Y-%m-%d")
+                # Make it timezone aware
+                last_sync = timezone.make_aware(last_sync)
+                self.stdout.write(f"Using provided lastmodifieddate filter: {lastmodifieddate}")
+            except ValueError:
+                raise CommandError(f"Invalid date format for --lastmodifieddate. Use YYYY-MM-DD format.")
+        elif full_sync:
+            last_sync = None
+        else:
+            last_sync = self.get_last_sync(endpoint)
         
         if last_sync:
             self.stdout.write(f"Performing delta sync since {last_sync}")
@@ -86,8 +105,7 @@ class Command(BaseCommand):
                     self.stdout.write(f"Reached maximum page limit of {max_pages}")
                     break
 
-                # Fetch a single page
-                total_pages += 1
+                # Fetch a single page                total_pages += 1
                 self.stdout.write(f"Fetching page {total_pages}...")
 
                 # Log the parameters being sent

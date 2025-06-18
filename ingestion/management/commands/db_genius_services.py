@@ -1,6 +1,6 @@
 import os
 from django.core.management.base import BaseCommand
-from ingestion.models import Service
+from ingestion.models import Genius_Service
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 
@@ -54,7 +54,7 @@ class Command(BaseCommand):
         """Process a single batch of records."""
         to_create = []
         to_update = []
-        existing_records = Service.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
+        existing_records = Genius_Service.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
 
         for row in rows:
             (
@@ -69,7 +69,7 @@ class Command(BaseCommand):
                 record_instance.order_number = order_number
                 to_update.append(record_instance)
             else:
-                to_create.append(Service(
+                to_create.append(Genius_Service(
                     id=record_id,
                     label=label,
                     is_active=is_active,
@@ -79,9 +79,9 @@ class Command(BaseCommand):
 
         # Bulk create and update
         if to_create:
-            Service.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+            Genius_Service.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
         if to_update:
-            Service.objects.bulk_update(
+            Genius_Service.objects.bulk_update(
                 to_update,
                 ['label', 'is_active', 'is_lead_required', 'order_number'],
                 batch_size=BATCH_SIZE

@@ -1,6 +1,6 @@
 import requests
 from django.core.management.base import BaseCommand
-from ingestion.models import MarketingSourceType
+from ingestion.models import Genius_MarketingSourceType
 from ingestion.utils import parse_datetime_obj, process_batches
 from tqdm import tqdm
 
@@ -19,7 +19,7 @@ class Command(BaseCommand):
 
         source_types = response.json()
         type_ids = [source_type["id"] for source_type in source_types]
-        existing_types = MarketingSourceType.objects.in_bulk(type_ids)
+        existing_types = Genius_MarketingSourceType.objects.in_bulk(type_ids)
 
         to_create = []
         to_update = []
@@ -43,15 +43,15 @@ class Command(BaseCommand):
                     to_update.append(type_instance)
                 else:
                     fields["id"] = type_id
-                    to_create.append(MarketingSourceType(**fields))
+                    to_create.append(Genius_MarketingSourceType(**fields))
 
                 if len(to_update) >= BATCH_SIZE or len(to_create) >= BATCH_SIZE:
-                    process_batches(to_create, to_update, MarketingSourceType, fields.keys(), BATCH_SIZE)
+                    process_batches(to_create, to_update, Genius_MarketingSourceType, fields.keys(), BATCH_SIZE)
 
             except (ValueError, KeyError) as e:
                 self.stdout.write(self.style.WARNING(f"Skipping source type due to error: {source_type}. Error: {e}"))
 
         # Final batch processing
-        process_batches(to_create, to_update, MarketingSourceType, fields.keys(), BATCH_SIZE)
+        process_batches(to_create, to_update, Genius_MarketingSourceType, fields.keys(), BATCH_SIZE)
 
         self.stdout.write(self.style.SUCCESS("Marketing source type sync completed."))

@@ -34,54 +34,74 @@ class HubspotClient:
                 "hs_object_id"
             ]
             
-            params = {
-                "limit": 100,
-                "properties": properties
-            }
-            
-            # Add last_sync filter if provided
+            # If we need filtering, use the search API with POST
             if last_sync:
                 last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
                 print(f"Filtering by lastmodifieddate > {last_sync_str}")
                 
-                # Use the HubSpot filter syntax for lastmodifieddate
-                params["filterGroups"] = [{
-                    "filters": [{
-                        "propertyName": "lastmodifieddate",
-                        "operator": "GT",
-                        "value": last_sync_str
+                url = f"{self.BASE_URL}/crm/v3/objects/{endpoint}/search"
+                
+                # Build POST body for search API
+                search_body = {
+                    "limit": 100,
+                    "properties": properties,
+                    "filterGroups": [{
+                        "filters": [{
+                            "propertyName": "lastmodifieddate",
+                            "operator": "GT",
+                            "value": last_sync_str
+                        }]
                     }]
-                }]
-            
-            # Add page token if provided
-            if page_token:
-                params["after"] = page_token
-            
-            url = f"{self.BASE_URL}/crm/v3/objects/{endpoint}"
-            #print(f"Fetching page from {url} with params: {params}")
-            
-            try:
-                async with session.get(url, headers=self.headers, params=params, timeout=60) as response:
-                    status = response.status
-                    print(f"Response status: {status}")
-                    
-                    if status != 200:
-                        response_text = await response.text()
-                        print(f"Error response: {response_text[:500]}")
-                        return None, None
-                    
-                    data = await response.json()
-                    results = data.get("results", [])
-                    print(f"Got {len(results)} results")
-                    
-                    # Get next page token if available
-                    paging = data.get("paging", {})
-                    next_page = paging.get("next", {}).get("after")
-                    if next_page:
-                        print(f"Next page token: {next_page}")
-                    
-                    return results, next_page
-                    
-            except Exception as e:
-                print(f"Error fetching page: {str(e)}")
-                return None, None
+                }
+                
+                # Add page token if provided
+                if page_token:
+                    search_body["after"] = page_token
+                
+                try:
+                    async with session.post(url, headers=self.headers, json=search_body, timeout=60) as response:
+                        return await self._process_response(response)
+                except Exception as e:
+                    print(f"Error fetching page: {str(e)}")
+                    return None, None
+            else:
+                # Use regular GET API for no filtering
+                params = {
+                    "limit": 100,
+                    "properties": properties
+                }
+                
+                # Add page token if provided
+                if page_token:
+                    params["after"] = page_token
+                
+                url = f"{self.BASE_URL}/crm/v3/objects/{endpoint}"
+                
+                try:
+                    async with session.get(url, headers=self.headers, params=params, timeout=60) as response:
+                        return await self._process_response(response)
+                except Exception as e:
+                    print(f"Error fetching page: {str(e)}")
+                    return None, None
+
+    async def _process_response(self, response):
+        """Process the HTTP response and extract results and pagination info."""
+        status = response.status
+        print(f"Response status: {status}")
+        
+        if status != 200:
+            response_text = await response.text()
+            print(f"Error response: {response_text[:500]}")
+            return None, None
+        
+        data = await response.json()
+        results = data.get("results", [])
+        print(f"Got {len(results)} results")
+        
+        # Get next page token if available
+        paging = data.get("paging", {})
+        next_page = paging.get("next", {}).get("after")
+        if next_page:
+            print(f"Next page token: {next_page}")
+        
+        return results, next_page

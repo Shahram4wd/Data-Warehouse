@@ -2,7 +2,7 @@ import csv
 import os
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from ingestion.models import MarketingSourceType
+from ingestion.models.genius import Genius_MarketingSourceType
 from ingestion.utils import parse_datetime_obj, process_batches
 from tqdm import tqdm
 
@@ -36,7 +36,7 @@ class Command(BaseCommand):
             return
 
         type_ids = [int(row["id"]) for row in rows if row.get("id") and row["id"].isdigit()]
-        existing_types = MarketingSourceType.objects.in_bulk(type_ids)
+        existing_types = Genius_MarketingSourceType.objects.in_bulk(type_ids)
 
         to_create = []
         to_update = []
@@ -70,15 +70,15 @@ class Command(BaseCommand):
                     to_update.append(type_instance)
                 else:
                     fields["id"] = type_id
-                    to_create.append(MarketingSourceType(**fields))
+                    to_create.append(Genius_MarketingSourceType(**fields))
 
                 if len(to_update) >= BATCH_SIZE or len(to_create) >= BATCH_SIZE:
-                    process_batches(to_create, to_update, MarketingSourceType, update_fields, BATCH_SIZE)
+                    process_batches(to_create, to_update, Genius_MarketingSourceType, update_fields, BATCH_SIZE)
 
             except (ValueError, KeyError) as e:
                 self.stdout.write(self.style.WARNING(f"Skipping row due to error: {row}. Error: {e}"))
 
         # Final batch processing
-        process_batches(to_create, to_update, MarketingSourceType, update_fields, BATCH_SIZE)
+        process_batches(to_create, to_update, Genius_MarketingSourceType, update_fields, BATCH_SIZE)
 
         self.stdout.write(self.style.SUCCESS("Marketing source type import completed."))

@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from ingestion.models import MarketingSource
+from ingestion.models import Genius_MarketingSource
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import timezone as dt_timezone  # Import Python's datetime timezone
@@ -57,7 +57,7 @@ class Command(BaseCommand):
         """Process a single batch of records."""
         to_create = []
         to_update = []
-        existing_records = MarketingSource.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
+        existing_records = Genius_MarketingSource.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
 
         for row in rows:
             (
@@ -81,7 +81,7 @@ class Command(BaseCommand):
                 record_instance.is_allow_lead_modification = is_allow_lead_modification
                 to_update.append(record_instance)
             else:
-                to_create.append(MarketingSource(
+                to_create.append(Genius_MarketingSource(
                     id=record_id,
                     type_id=type_id,
                     label=label,
@@ -96,9 +96,9 @@ class Command(BaseCommand):
 
         # Bulk create and update
         if to_create:
-            MarketingSource.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+            Genius_MarketingSource.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
         if to_update:
-            MarketingSource.objects.bulk_update(
+            Genius_MarketingSource.objects.bulk_update(
                 to_update,
                 [
                     'type_id', 'label', 'description', 'start_date', 'end_date', 'add_user_id',

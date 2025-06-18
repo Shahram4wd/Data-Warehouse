@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from ingestion.models import Division, DivisionGroup
+from ingestion.models import Genius_Division, Genius_DivisionGroup
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import timezone as dt_timezone
@@ -46,7 +46,7 @@ class Command(BaseCommand):
     
     def _preload_division_groups(self):
         """Preload division groups for lookup."""
-        return {group.id: group for group in DivisionGroup.objects.all()}
+        return {group.id: group for group in Genius_DivisionGroup.objects.all()}
     
     def _process_all_records(self, cursor, table_name, division_groups):
         """Process all records in batches."""
@@ -77,7 +77,7 @@ class Command(BaseCommand):
         """Process a batch of division records."""
         to_create = []
         to_update = []
-        existing_records = Division.objects.in_bulk([row[0] for row in rows])
+        existing_records = Genius_Division.objects.in_bulk([row[0] for row in rows])
 
         for row in rows:
             try:
@@ -133,7 +133,7 @@ class Command(BaseCommand):
     def _create_record(self, record_id, group_id, region_id, label, abbreviation,
                       is_utility, is_corp, is_omniscient, is_inactive):
         """Create a new division record."""
-        return Division(
+        return Genius_Division(
             id=record_id,
             group_id=group_id,
             region_id=region_id,
@@ -149,10 +149,10 @@ class Command(BaseCommand):
         """Save records to database with error handling."""
         try:
             if to_create:
-                Division.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+                Genius_Division.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
             
             if to_update:
-                Division.objects.bulk_update(
+                Genius_Division.objects.bulk_update(
                     to_update,
                     [
                         'group_id', 'region_id', 'label', 'abbreviation',

@@ -2,7 +2,7 @@ import csv
 import os
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from ingestion.models import Appointment
+from ingestion.models.genius import Genius_Appointment
 from ingestion.utils import parse_datetime_obj, process_batches
 from tqdm import tqdm
 
@@ -36,7 +36,7 @@ class Command(BaseCommand):
             return
 
         appointment_ids = [int(row["id"]) for row in rows if row.get("id") and row["id"].isdigit()]
-        existing_appointments = Appointment.objects.in_bulk(appointment_ids)
+        existing_appointments = Genius_Appointment.objects.in_bulk(appointment_ids)
 
         to_create = []
         to_update = []
@@ -110,15 +110,15 @@ class Command(BaseCommand):
                     to_update.append(appointment_instance)
                 else:
                     fields["id"] = appointment_id
-                    to_create.append(Appointment(**fields))
+                    to_create.append(Genius_Appointment(**fields))
 
                 if len(to_update) >= BATCH_SIZE or len(to_create) >= BATCH_SIZE:
-                    process_batches(to_create, to_update, Appointment, update_fields, BATCH_SIZE)
+                    process_batches(to_create, to_update, Genius_Appointment, update_fields, BATCH_SIZE)
 
             except (ValueError, KeyError) as e:
                 self.stdout.write(self.style.WARNING(f"Skipping row due to error: {row}. Error: {e}"))
 
         # Final batch processing
-        process_batches(to_create, to_update, Appointment, update_fields, BATCH_SIZE)
+        process_batches(to_create, to_update, Genius_Appointment, update_fields, BATCH_SIZE)
 
         self.stdout.write(self.style.SUCCESS("Appointment import completed."))
