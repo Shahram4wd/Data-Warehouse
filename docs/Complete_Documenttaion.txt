@@ -1,0 +1,1759 @@
+================================================================================
+DATA WAREHOUSE PROJECT - COMPLETE DOCUMENTATION PACKAGE
+================================================================================
+Version: 2.0
+Created: June 15, 2025
+Purpose: Complete project rebuild from documentation
+
+This file contains all necessary documentation for AI agents to rebuild the
+Data Warehouse project from scratch.
+
+================================================================================
+FILE 1: docs/PROJECT_CONTEXT.md
+================================================================================
+
+# Data Warehouse Project Context
+**Always read this file first for complete project understanding**
+
+## Quick Reference Links
+- **Full Requirements**: [REQUIREMENTS.md](./REQUIREMENTS.md)
+- **Current Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md) 
+- **Implementation Status**: [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md)
+- **API Specifications**: [API_SPECIFICATIONS.md](./API_SPECIFICATIONS.md)
+- **Coding Standards**: [CODING_STANDARDS.md](./CODING_STANDARDS.md)
+
+## Project Overview
+A scalable, unified data synchronization platform that consolidates data from multiple CRM/marketing systems (Genius, HubSpot, MarketSharp, Active Prospect) into a centralized Django-based data warehouse with comprehensive monitoring, error handling, and flexible data access capabilities.
+
+## Key Design Principles
+1. **Unified Sync Engine**: Single abstract interface for all data sources
+2. **Multiple Data Input Methods**: API, Direct DB, CSV, Webhooks
+3. **Django ORM**: Scalable architecture with PostgreSQL
+4. **Comprehensive Error Handling**: Retry logic and failure recovery
+5. **Full Monitoring**: Complete observability and metrics
+6. **Configuration-Driven**: Dynamic settings management
+7. **User Data Access**: SQL Explorer and custom APIs
+8. **Real-time Updates**: Webhook support for live data
+
+## Current Development Status
+**Phase**: Initial Development
+**Priority**: Core Infrastructure Setup
+**Last Updated**: June 15, 2025
+
+## Data Sources Supported
+### Current (Phase 1)
+- ✅ Genius CRM (API, Direct DB, CSV)
+- ✅ HubSpot (API, Webhooks)
+- ✅ MarketSharp (XML/API, CSV)
+
+### Future (Phase 2)
+- 🔄 Active Prospect (API, Webhooks)
+- 🔄 Additional systems as needed
+
+## Core Features
+### Data Synchronization
+- **Incremental Sync**: Delta updates based on timestamps
+- **Full Sync**: Complete data refresh capabilities
+- **Real-time Updates**: Webhook-based instant updates
+- **Batch Processing**: Configurable batch sizes for performance
+- **Error Recovery**: Automatic retry with exponential backoff
+
+### Data Access
+- **SQL Explorer**: Direct SQL query interface for business users
+- **REST APIs**: Custom endpoints for application integration
+- **Django Admin**: Administrative interface for configuration
+- **Export Capabilities**: CSV/Excel export functionality
+
+### Monitoring & Operations
+- **Sync Monitoring**: Real-time sync status and metrics
+- **Error Tracking**: Comprehensive error logging and alerting
+- **Performance Metrics**: Sync duration, throughput, success rates
+- **Data Quality**: Validation and quality checks
+
+## Agent Instructions
+When working on this project:
+
+### 1. Always Start Here
+- Read this PROJECT_CONTEXT.md file
+- Review REQUIREMENTS.md for complete specifications
+- Check IMPLEMENTATION_STATUS.md for current progress
+- Follow CODING_STANDARDS.md for consistency
+
+### 2. Development Approach
+- Follow the unified sync engine pattern
+- Maintain consistency across all data sources
+- Implement comprehensive error handling
+- Include proper logging and monitoring
+- Write tests for all new functionality
+
+### 3. Architecture Compliance
+- Use Django ORM with proper models
+- Implement async processing with Celery
+- Follow the established database schema
+- Maintain scalability considerations
+
+### 4. Quality Standards
+- 90%+ test coverage for critical components
+- Comprehensive documentation
+- Type hints for all Python code
+- Proper error handling and logging
+
+## Next Steps for Agents
+1. Review the complete requirements in REQUIREMENTS.md
+2. Understand the architecture in ARCHITECTURE.md
+3. Check what's implemented in IMPLEMENTATION_STATUS.md
+4. Begin with Phase 1 tasks as outlined in the requirements
+5. Follow the coding standards and maintain consistency
+
+================================================================================
+FILE 2: docs/ARCHITECTURE.md
+================================================================================
+
+# System Architecture
+**Version**: 2.0  
+**Last Updated**: June 15, 2025  
+
+## High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           Data Warehouse System                                 │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                              API Gateway & Web Interface                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │ Django REST │  │ SQL Explorer│  │ Webhooks    │  │ Admin Interface         │ │
+│  │ Framework   │  │ Interface   │  │ Endpoints   │  │ (Django Admin)          │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                            Business Logic Layer                                 │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│  │                         Unified Sync Engine                                 │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │ │
+│  │  │ Genius      │  │ HubSpot     │  │ MarketSharp │  │ Active Prospect     │ │ │
+│  │  │ Sync Engine │  │ Sync Engine │  │ Sync Engine │  │ Sync Engine         │ │ │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘ │ │
+│  └─────────────────────────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                          Data Processing Layer                                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │ Celery      │  │ Data        │  │ Validation  │  │ Error Handling &        │ │
+│  │ Task Queue  │  │ Transform   │  │ Pipeline    │  │ Retry Logic             │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                            Data Sources Layer                                   │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │ REST APIs   │  │ Direct DB   │  │ CSV Files   │  │ Webhooks                │ │
+│  │ (HTTP/JSON) │  │ Connections │  │ Import      │  │ (Real-time Updates)     │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                            Data Storage Layer                                   │
+│  ┌─────────────────────────────────────────────────────────────────────────────┐ │
+│  │                           PostgreSQL Database                               │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │ │
+│  │  │ Contacts    │  │ Leads       │  │ Appointments│  │ Sync Metadata       │ │ │
+│  │  │ (Unified)   │  │ (Unified)   │  │ (Unified)   │  │ & Monitoring        │ │ │
+│  │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘ │ │
+│  └─────────────────────────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                         Infrastructure Layer                                    │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │ Redis       │  │ Monitoring  │  │ Logging     │  │ Configuration           │ │
+│  │ (Cache/Queue│  │ & Metrics   │  │ (ELK Stack) │  │ Management              │ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Component Responsibilities
+
+### API Gateway & Web Interface
+- **Django REST Framework**: Custom APIs for data access
+- **SQL Explorer**: Direct SQL query interface for users
+- **Webhooks**: Real-time data updates from external systems
+- **Admin Interface**: Configuration and monitoring dashboard
+
+### Business Logic Layer
+- **Unified Sync Engine**: Abstract base for all data source integrations
+- **Source-Specific Engines**: Genius, HubSpot, MarketSharp, Active Prospect
+- **Data Transformation**: Convert external formats to unified schema
+
+### Data Processing Layer
+- **Celery Task Queue**: Async processing for sync operations
+- **Validation Pipeline**: Data quality checks and cleaning
+- **Error Handling**: Retry logic and failure recovery
+
+### Data Storage Layer
+- **PostgreSQL**: Primary data warehouse with unified schema
+- **Indexing Strategy**: Optimized for query performance
+- **Partitioning**: For large datasets (future consideration)
+
+### Infrastructure Layer
+- **Redis**: Caching and Celery message broker
+- **Monitoring**: Application performance and sync metrics
+- **Configuration**: Dynamic settings and credentials management
+
+## Data Flow Patterns
+
+### 1. API-Based Sync Flow
+```
+External API → API Client → Sync Engine → Data Transform → Validation → Database
+     ↓
+Error Handling → Retry Logic → Monitoring → Alerts
+```
+
+### 2. Direct Database Sync Flow
+```
+External DB → DB Client → Sync Engine → Data Transform → Validation → Database
+     ↓
+Connection Pool → Query Optimization → Batch Processing → Monitoring
+```
+
+### 3. CSV Import Flow
+```
+CSV File → File Parser → Sync Engine → Data Transform → Validation → Database
+     ↓
+Field Mapping → Data Cleaning → Error Reporting → Success Metrics
+```
+
+### 4. Webhook Real-time Flow
+```
+External System → Webhook Endpoint → Signature Verify → Data Transform → Database
+     ↓
+Authentication → Rate Limiting → Error Handling → Response
+```
+
+## Technology Stack
+
+### Backend Framework
+- **Django 4.x+**: Web framework and ORM
+- **Django REST Framework**: API development
+- **PostgreSQL 13+**: Primary database
+- **Redis 6+**: Caching and message broker
+
+### Async Processing
+- **Celery 5+**: Task queue system
+- **Redis**: Message broker for Celery
+- **Kombu**: Message transport abstraction
+
+### API Integration
+- **aiohttp**: Async HTTP client
+- **requests**: Synchronous HTTP client (fallback)
+- **PyJWT**: JWT token handling
+
+### Data Processing
+- **Pandas**: Data transformation (when needed)
+- **Marshmallow**: Data serialization
+- **Cerberus**: Data validation
+
+### Monitoring & Logging
+- **Django-extensions**: Enhanced debugging
+- **django-debug-toolbar**: Development debugging
+- **Sentry**: Error tracking (production)
+- **Prometheus**: Metrics collection
+
+### Development Tools
+- **Black**: Code formatting
+- **isort**: Import sorting
+- **mypy**: Type checking
+- **pytest**: Testing framework
+
+## Security Architecture
+
+### Authentication & Authorization
+- **JWT Tokens**: API authentication
+- **Django Sessions**: Web interface
+- **Role-based Access**: Permission system
+- **API Key Management**: External service authentication
+
+### Data Protection
+- **Credential Encryption**: AES-256 for stored credentials
+- **TLS/SSL**: All external communications
+- **Database Encryption**: Sensitive field encryption
+- **Audit Logging**: Complete operation tracking
+
+### Network Security
+- **Webhook Signatures**: Verify incoming webhooks
+- **Rate Limiting**: Prevent abuse
+- **IP Whitelisting**: Restrict access where needed
+- **CORS Configuration**: Web API security
+
+## Scalability Design
+
+### Horizontal Scaling
+- **Stateless Applications**: Enable multiple instances
+- **Load Balancing**: Distribute traffic
+- **Database Connection Pooling**: Efficient DB usage
+- **Cache Distribution**: Redis clustering
+
+### Performance Optimization
+- **Database Indexing**: Query optimization
+- **Batch Processing**: Bulk operations
+- **Async Operations**: Non-blocking I/O
+- **Caching Strategy**: Multi-level caching
+
+### Data Management
+- **Partitioning Strategy**: Large table management
+- **Archive Policy**: Old data management
+- **Backup Strategy**: Data protection
+- **Replication**: High availability
+
+================================================================================
+FILE 3: docs/IMPLEMENTATION_STATUS.md
+================================================================================
+
+# Implementation Status
+**Version**: 2.0
+**Last Updated**: June 15, 2025
+
+## Project Initialization
+**Status**: 🔄 Ready for Agent Rebuild
+**Goal**: Complete system rebuild from documentation
+
+## Phase 1: Core Infrastructure ⏳ Ready for Implementation
+
+### 1.1 Base Models & Database Schema ⏳
+- [ ] TimestampedModel abstract base class
+- [ ] SourceTrackingModel with sync metadata
+- [ ] Unified Contact model
+- [ ] Unified Lead model  
+- [ ] Unified Appointment model
+- [ ] Configuration models (SyncConfiguration, APICredential)
+- [ ] Monitoring models (SyncJob, SyncMetrics, SyncError)
+- [ ] Database migrations
+
+### 1.2 Unified Sync Engine ⏳
+- [ ] BaseSyncEngine abstract class
+- [ ] SyncResult dataclass
+- [ ] SyncStatus enum
+- [ ] Error handling framework
+- [ ] Retry logic implementation
+
+### 1.3 Configuration Management ⏳
+- [ ] Dynamic configuration system
+- [ ] Credential encryption/decryption
+- [ ] Environment-based settings
+- [ ] Admin interface for configurations
+
+## Phase 2: Data Source Implementations ⏳ Pending
+
+### 2.1 Genius CRM Integration ⏳
+- [ ] GeniusSyncEngine implementation
+- [ ] API client for Genius
+- [ ] Direct DB connection handling
+- [ ] CSV import functionality
+- [ ] Data transformation pipelines
+
+### 2.2 HubSpot Integration ⏳
+- [ ] HubSpotSyncEngine implementation
+- [ ] OAuth2 authentication
+- [ ] Webhook endpoint handling
+- [ ] Pagination handling for large datasets
+- [ ] Rate limiting compliance
+
+### 2.3 MarketSharp Integration ⏳
+- [ ] MarketSharpSyncEngine implementation
+- [ ] XML data processing
+- [ ] Field mapping configuration
+- [ ] CSV import capabilities
+
+### 2.4 Active Prospect Integration ⏳
+- [ ] ActiveProspectSyncEngine implementation
+- [ ] API authentication setup
+- [ ] Webhook configuration
+- [ ] Data transformation rules
+
+## Phase 3: Processing & Monitoring ⏳ Pending
+
+### 3.1 Celery Task System ⏳
+- [ ] Celery configuration
+- [ ] Redis setup for message broker
+- [ ] Async sync task implementations
+- [ ] Scheduled sync tasks
+- [ ] Task monitoring and management
+
+### 3.2 Data Processing Pipeline ⏳
+- [ ] Data validation framework
+- [ ] Transformation pipeline
+- [ ] Duplicate detection and handling
+- [ ] Data quality checks
+
+### 3.3 Monitoring & Observability ⏳
+- [ ] Sync job tracking
+- [ ] Performance metrics collection
+- [ ] Error tracking and alerting
+- [ ] Dashboard for monitoring
+
+## Phase 4: User Interface & APIs ⏳ Pending
+
+### 4.1 SQL Explorer Integration ⏳
+- [ ] Django SQL Explorer setup
+- [ ] User permission system
+- [ ] Query templates for common use cases
+- [ ] Export functionality
+
+### 4.2 REST API Development ⏳
+- [ ] Django REST Framework setup
+- [ ] Custom API endpoints
+- [ ] Authentication and permissions
+- [ ] API documentation
+
+### 4.3 Webhook System ⏳
+- [ ] Webhook receiver endpoints
+- [ ] Signature verification
+- [ ] Real-time data processing
+- [ ] Webhook management interface
+
+### 4.4 Admin Interface ⏳
+- [ ] Django Admin customization
+- [ ] Sync configuration management
+- [ ] Monitoring dashboards
+- [ ] User management
+
+## Code Quality Metrics
+**Target**: 90%+ test coverage
+**Current**: 0% (Starting fresh)
+
+### Testing Strategy
+- [ ] Unit tests for sync engines
+- [ ] Integration tests for API clients
+- [ ] End-to-end sync testing
+- [ ] Performance testing
+- [ ] Data quality validation tests
+
+### Documentation
+- [ ] API documentation
+- [ ] User guides
+- [ ] Deployment guides
+- [ ] Troubleshooting guides
+
+## Development Environment Setup
+- [ ] Django project structure
+- [ ] Database setup (PostgreSQL)
+- [ ] Redis configuration
+- [ ] Celery worker setup
+- [ ] Environment configuration
+- [ ] Development dependencies
+
+## Known Requirements
+1. **Scalability**: Handle 100K+ records per sync
+2. **Reliability**: 99.9% sync success rate
+3. **Performance**: Support 10+ concurrent sync operations
+4. **Maintainability**: New data sources in <2 days
+5. **Security**: Encrypted credentials and audit logging
+
+## Agent Task Priority
+**Immediate**: Start with Phase 1.1 - Base Models & Database Schema
+**Next**: Phase 1.2 - Unified Sync Engine
+**Then**: Phase 2.1 - First data source implementation (Genius)
+
+## Success Criteria for Rebuild
+- [ ] All 3 primary data sources working (Genius, HubSpot, MarketSharp)
+- [ ] Celery tasks for automated sync
+- [ ] Webhook endpoints functional
+- [ ] SQL Explorer accessible to users
+- [ ] Basic admin interface operational
+- [ ] Error handling and retry logic working
+- [ ] Monitoring and logging functional
+
+================================================================================
+FILE 4: docs/CODING_STANDARDS.md
+================================================================================
+
+# Coding Standards & Best Practices
+**Version**: 2.0
+**Last Updated**: June 15, 2025
+
+## Python & Django Standards
+
+### Code Style
+- **PEP 8**: Follow Python style guidelines
+- **Line Length**: 88 characters (Black formatter)
+- **Imports**: Group by standard, third-party, local
+- **Type Hints**: Required for all function/method signatures
+- **Docstrings**: Google style for all classes and functions
+
+### Django Best Practices
+```python
+# Model Example
+class Contact(SourceTrackingModel):
+    """Unified contact model for all data sources.
+    
+    Attributes:
+        first_name: Contact's first name
+        last_name: Contact's last name
+        email: Primary email address
+    """
+    first_name = models.CharField(max_length=255, help_text="Contact's first name")
+    last_name = models.CharField(max_length=255, help_text="Contact's last name")
+    email = models.EmailField(null=True, blank=True, help_text="Primary email")
+    
+    class Meta:
+        db_table = 'warehouse_contacts'
+        indexes = [
+            models.Index(fields=['source_system', 'source_id']),
+            models.Index(fields=['email']),
+        ]
+        
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+```
+
+### Async/Await Patterns
+```python
+# Sync Engine Example
+class BaseSyncEngine(ABC):
+    """Abstract base class for all sync engines."""
+    
+    async def sync(self, incremental: bool = True) -> SyncResult:
+        """Execute sync operation with proper error handling."""
+        try:
+            async with self._get_session() as session:
+                data = await self.fetch_data(session, incremental)
+                transformed = await self.transform_data(data)
+                result = await self.save_data(transformed)
+                return result
+        except Exception as e:
+            logger.error(f"Sync failed: {e}", exc_info=True)
+            raise
+```
+
+## Directory Structure
+```
+data_warehouse/
+├── core/                           # Core application
+│   ├── models/                     # Database models
+│   │   ├── __init__.py
+│   │   ├── base.py                # Base model classes
+│   │   ├── entities.py            # Unified entity models
+│   │   ├── configuration.py       # Configuration models
+│   │   └── monitoring.py          # Monitoring models
+│   ├── sync/                       # Sync engine framework
+│   │   ├── __init__.py
+│   │   ├── base_sync.py           # Base sync engine
+│   │   ├── genius_sync.py         # Genius implementation
+│   │   ├── hubspot_sync.py        # HubSpot implementation
+│   │   ├── marketsharp_sync.py    # MarketSharp implementation
+│   │   └── activeprospect_sync.py # Active Prospect implementation
+│   ├── clients/                    # API clients
+│   │   ├── __init__.py
+│   │   ├── base_client.py         # Base API client
+│   │   ├── genius_client.py       # Genius API client
+│   │   ├── hubspot_client.py      # HubSpot API client
+│   │   └── marketsharp_client.py  # MarketSharp API client
+│   ├── validation/                 # Data validation
+│   │   ├── __init__.py
+│   │   ├── validators.py          # Validation framework
+│   │   └── rules.py               # Validation rules
+│   ├── management/                 # Django commands
+│   │   └── commands/
+│   │       ├── sync_data.py       # Unified sync command
+│   │       └── validate_config.py # Config validation
+│   ├── tasks.py                   # Celery tasks
+│   ├── views.py                   # API views
+│   ├── serializers.py             # DRF serializers
+│   └── admin.py                   # Django admin
+├── webhooks/                       # Webhook handling
+│   ├── __init__.py
+│   ├── views.py                   # Webhook endpoints
+│   ├── handlers.py                # Webhook processors
+│   └── utils.py                   # Webhook utilities
+├── config/                         # Project configuration
+│   ├── settings/
+│   │   ├── base.py                # Base settings
+│   │   ├── development.py         # Dev settings
+│   │   ├── production.py          # Prod settings
+│   │   └── testing.py             # Test settings
+│   ├── urls.py                    # URL configuration
+│   └── celery.py                  # Celery configuration
+├── requirements/                   # Dependencies
+│   ├── base.txt                   # Base requirements
+│   ├── development.txt            # Dev requirements
+│   └── production.txt             # Prod requirements
+├── tests/                          # Test suite
+│   ├── unit/                      # Unit tests
+│   ├── integration/               # Integration tests
+│   └── fixtures/                  # Test data
+├── docs/                          # Documentation
+└── manage.py                      # Django management
+```
+
+## Database Conventions
+
+### Naming
+- **Tables**: `warehouse_[entity_name]` (e.g., `warehouse_contacts`)
+- **Fields**: `snake_case`
+- **Indexes**: `idx_[table]_[fields]`
+- **Foreign Keys**: `[entity]_id`
+
+### Migrations
+```python
+# Migration naming: YYYY_MM_DD_HHMM_descriptive_name.py
+# Always include help_text for fields
+# Use db_index=True for frequently queried fields
+# Include proper Meta.indexes for composite indexes
+```
+
+## Error Handling
+
+### Exception Hierarchy
+```python
+class DataWarehouseException(Exception):
+    """Base exception for data warehouse operations."""
+    pass
+
+class SyncException(DataWarehouseException):
+    """Exception during sync operations."""
+    pass
+
+class ValidationException(DataWarehouseException):
+    """Exception during data validation."""
+    pass
+
+class APIException(DataWarehouseException):
+    """Exception during API operations."""
+    pass
+```
+
+### Logging Standards
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Log levels usage:
+# DEBUG: Detailed diagnostic info
+# INFO: General operational messages
+# WARNING: Something unexpected but not breaking
+# ERROR: Error occurred but app continues
+# CRITICAL: Serious error, app may stop
+
+# Example usage:
+logger.info(f"Starting sync for {source_system}", extra={
+    'source_system': source_system,
+    'sync_type': sync_type,
+    'user_id': user_id
+})
+```
+
+## Testing Standards
+
+### Test Structure
+```python
+# tests/unit/test_sync_engines.py
+import pytest
+from unittest.mock import Mock, patch
+from core.sync.genius_sync import GeniusSyncEngine
+
+class TestGeniusSyncEngine:
+    """Test suite for Genius sync engine."""
+    
+    @pytest.fixture
+    def sync_engine(self):
+        """Create sync engine instance for testing."""
+        config = {'api_key': 'test_key', 'base_url': 'https://api.test.com'}
+        return GeniusSyncEngine(config)
+    
+    @pytest.mark.asyncio
+    async def test_fetch_data_success(self, sync_engine):
+        """Test successful data fetch."""
+        with patch.object(sync_engine, '_make_request') as mock_request:
+            mock_request.return_value = {'data': [{'id': 1, 'name': 'Test'}]}
+            result = await sync_engine.fetch_data()
+            assert len(result) == 1
+            assert result[0]['id'] == 1
+```
+
+### Coverage Requirements
+- **Unit Tests**: 90%+ coverage for sync engines
+- **Integration Tests**: API client testing with mocks
+- **End-to-End Tests**: Full sync workflow testing
+- **Performance Tests**: Load testing for scalability
+
+## API Standards
+
+### REST API Design
+```python
+# views.py
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from rest_framework.decorators import action
+
+class ContactViewSet(viewsets.ModelViewSet):
+    """Contact management API."""
+    
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
+    
+    @action(detail=False, methods=['post'])
+    def sync(self, request):
+        """Trigger manual sync for contacts."""
+        source_system = request.data.get('source_system')
+        if not source_system:
+            return Response(
+                {'error': 'source_system is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Trigger sync task
+        sync_task.delay(source_system, 'contacts')
+        return Response({'message': 'Sync initiated'})
+```
+
+### Serializer Standards
+```python
+# serializers.py
+from rest_framework import serializers
+from .models import Contact
+
+class ContactSerializer(serializers.ModelSerializer):
+    """Contact serializer with validation."""
+    
+    class Meta:
+        model = Contact
+        fields = '__all__'
+        read_only_fields = ('created_at', 'updated_at', 'sync_hash')
+    
+    def validate_email(self, value):
+        """Validate email format."""
+        if value and '@' not in value:
+            raise serializers.ValidationError("Invalid email format")
+        return value
+```
+
+## Configuration Management
+
+### Settings Structure
+```python
+# config/settings/base.py
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Database
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'data_warehouse'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', ''),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '5432'),
+    }
+}
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+```
+
+### Environment Variables
+```bash
+# .env.example
+DB_NAME=data_warehouse
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_HOST=localhost
+DB_PORT=5432
+
+REDIS_URL=redis://localhost:6379/0
+
+# API Credentials (encrypted in database)
+GENIUS_API_KEY=encrypted_key
+HUBSPOT_API_KEY=encrypted_key
+MARKETSHARP_API_KEY=encrypted_key
+
+# Security
+SECRET_KEY=your_secret_key
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+# Monitoring
+SENTRY_DSN=your_sentry_dsn
+```
+
+## Security Standards
+
+### Credential Management
+```python
+# core/utils/encryption.py
+from cryptography.fernet import Fernet
+from django.conf import settings
+
+class CredentialManager:
+    """Manage encrypted credentials."""
+    
+    def __init__(self):
+        self.cipher = Fernet(settings.ENCRYPTION_KEY.encode())
+    
+    def encrypt(self, value: str) -> str:
+        """Encrypt credential value."""
+        return self.cipher.encrypt(value.encode()).decode()
+    
+    def decrypt(self, encrypted_value: str) -> str:
+        """Decrypt credential value."""
+        return self.cipher.decrypt(encrypted_value.encode()).decode()
+```
+
+### Input Validation
+```python
+# core/validation/validators.py
+from cerberus import Validator
+
+def validate_sync_config(config: dict) -> tuple[bool, list]:
+    """Validate sync configuration."""
+    schema = {
+        'source_system': {'type': 'string', 'required': True},
+        'entity_type': {'type': 'string', 'required': True},
+        'api_key': {'type': 'string', 'required': True},
+        'base_url': {'type': 'string', 'regex': r'^https?://.*'},
+        'batch_size': {'type': 'integer', 'min': 1, 'max': 1000}
+    }
+    
+    validator = Validator(schema)
+    is_valid = validator.validate(config)
+    errors = validator.errors if not is_valid else []
+    
+    return is_valid, errors
+```
+
+## Performance Standards
+
+### Database Optimization
+```python
+# models.py - Optimized model example
+class Contact(SourceTrackingModel):
+    """Optimized contact model."""
+    
+    email = models.EmailField(db_index=True)  # Frequently queried
+    phone = models.CharField(max_length=50, db_index=True)
+    
+    class Meta:
+        db_table = 'warehouse_contacts'
+        indexes = [
+            models.Index(fields=['source_system', 'source_id']),  # Composite
+            models.Index(fields=['last_synced']),  # Sync queries
+            models.Index(fields=['email', 'source_system']),  # Deduplication
+        ]
+```
+
+### Query Optimization
+```python
+# Use select_related for foreign keys
+contacts = Contact.objects.select_related('lead').all()
+
+# Use prefetch_related for reverse foreign keys
+contacts = Contact.objects.prefetch_related('appointments').all()
+
+# Use only() for specific fields
+contacts = Contact.objects.only('email', 'first_name', 'last_name').all()
+
+# Use bulk operations for performance
+Contact.objects.bulk_create(contact_list, batch_size=1000)
+Contact.objects.bulk_update(contact_list, ['email', 'phone'], batch_size=1000)
+```
+
+## Documentation Standards
+
+### Code Documentation
+```python
+def sync_data(
+    source_system: str, 
+    entity_type: str, 
+    incremental: bool = True
+) -> SyncResult:
+    """Synchronize data from external source.
+    
+    Args:
+        source_system: Name of the external system (genius, hubspot, etc.)
+        entity_type: Type of entity to sync (contacts, leads, appointments)
+        incremental: Whether to perform incremental sync (default: True)
+    
+    Returns:
+        SyncResult: Object containing sync statistics and status
+        
+    Raises:
+        SyncException: If sync operation fails
+        ValidationException: If configuration is invalid
+        
+    Example:
+        >>> result = sync_data('genius', 'contacts', incremental=True)
+        >>> print(f"Synced {result.records_processed} records")
+    """
+```
+
+### API Documentation
+```python
+# Use django-rest-swagger or drf-spectacular
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.openapi import OpenApiParameter
+
+class ContactViewSet(viewsets.ModelViewSet):
+    
+    @extend_schema(
+        summary="Sync contacts from external system",
+        description="Trigger manual synchronization of contacts",
+        parameters=[
+            OpenApiParameter(
+                name='source_system',
+                description='External system to sync from',
+                required=True,
+                type=str
+            )
+        ]
+    )
+    @action(detail=False, methods=['post'])
+    def sync(self, request):
+        """Trigger manual sync for contacts."""
+        pass
+```
+
+================================================================================
+FILE 5: docs/API_SPECIFICATIONS.md
+================================================================================
+
+# API Specifications
+**Version**: 2.0
+**Last Updated**: June 15, 2025
+
+## External API Integration Specifications
+
+This document defines how to integrate with each external API system and the expected data formats.
+
+### Genius CRM API
+
+#### Authentication
+```python
+# API Key based authentication
+headers = {
+    'Authorization': f'Bearer {api_key}',
+    'Content-Type': 'application/json'
+}
+```
+
+#### Endpoints
+```python
+BASE_URL = 'https://api.genius.com/v1'
+
+ENDPOINTS = {
+    'prospects': '/prospects',
+    'appointments': '/appointments', 
+    'users': '/users',
+    'divisions': '/divisions',
+    'marketing_sources': '/marketing_sources'
+}
+```
+
+#### Data Formats
+```python
+# Prospect/Contact Format
+{
+    "id": 12345,
+    "first_name": "John",
+    "last_name": "Doe", 
+    "email": "john.doe@example.com",
+    "phone": "+1234567890",
+    "address": "123 Main St",
+    "city": "Anytown",
+    "state": "CA",
+    "zip": "12345",
+    "created_date": "2025-06-15T10:30:00Z",
+    "modified_date": "2025-06-15T10:30:00Z",
+    "status": "active",
+    "source": "website"
+}
+
+# Appointment Format
+{
+    "id": 67890,
+    "prospect_id": 12345,
+    "user_id": 999,
+    "scheduled_date": "2025-06-20T14:00:00Z",
+    "status": "scheduled",
+    "type": "consultation",
+    "notes": "Initial consultation",
+    "created_date": "2025-06-15T10:30:00Z",
+    "modified_date": "2025-06-15T10:30:00Z"
+}
+```
+
+#### Pagination
+```python
+# Query parameters for pagination
+params = {
+    'page': 1,
+    'per_page': 100,
+    'modified_since': '2025-06-15T00:00:00Z'  # For incremental sync
+}
+```
+
+### HubSpot API
+
+#### Authentication
+```python
+# OAuth2 or API Key
+headers = {
+    'Authorization': f'Bearer {access_token}',
+    'Content-Type': 'application/json'
+}
+```
+
+#### Endpoints
+```python
+BASE_URL = 'https://api.hubapi.com'
+
+ENDPOINTS = {
+    'contacts': '/crm/v3/objects/contacts',
+    'deals': '/crm/v3/objects/deals',
+    'companies': '/crm/v3/objects/companies'
+}
+```
+
+#### Data Formats
+```python
+# Contact Format
+{
+    "id": "12345",
+    "properties": {
+        "firstname": "John",
+        "lastname": "Doe",
+        "email": "john.doe@example.com",
+        "phone": "+1234567890",
+        "address": "123 Main St",
+        "city": "Anytown",
+        "state": "California",
+        "zip": "12345",
+        "createdate": "2025-06-15T10:30:00.000Z",
+        "lastmodifieddate": "2025-06-15T10:30:00.000Z",
+        "hs_lead_status": "NEW"
+    },
+    "createdAt": "2025-06-15T10:30:00.000Z",
+    "updatedAt": "2025-06-15T10:30:00.000Z"
+}
+
+# Deal Format
+{
+    "id": "67890",
+    "properties": {
+        "dealname": "New Deal",
+        "amount": "5000",
+        "dealstage": "appointmentscheduled",
+        "closedate": "2025-06-30T00:00:00.000Z",
+        "createdate": "2025-06-15T10:30:00.000Z",
+        "hs_lastmodifieddate": "2025-06-15T10:30:00.000Z"
+    },
+    "associations": {
+        "contacts": {
+            "results": [{"id": "12345"}]
+        }
+    }
+}
+```
+
+#### Webhooks
+```python
+# Webhook payload format
+{
+    "eventId": "12345",
+    "subscriptionId": "67890", 
+    "portalId": "54321",
+    "appId": "98765",
+    "occurredAt": "2025-06-15T10:30:00.000Z",
+    "subscriptionType": "contact.propertyChange",
+    "attemptNumber": 1,
+    "objectId": "12345",
+    "changeSource": "CRM_UI",
+    "propertyName": "email",
+    "propertyValue": "newemail@example.com"
+}
+```
+
+### MarketSharp API
+
+#### Authentication
+```python
+# API Key based
+headers = {
+    'X-API-Key': api_key,
+    'Content-Type': 'application/xml'
+}
+```
+
+#### Endpoints
+```python
+BASE_URL = 'https://api.marketsharp.com'
+
+ENDPOINTS = {
+    'activities': '/activities',
+    'contacts': '/contacts', 
+    'jobs': '/jobs',
+    'leads': '/leads'
+}
+```
+
+#### Data Formats (XML)
+```xml
+<!-- Contact Format -->
+<Contact>
+    <ID>12345</ID>
+    <FirstName>John</FirstName>
+    <LastName>Doe</LastName>
+    <Email>john.doe@example.com</Email>
+    <Phone>+1234567890</Phone>
+    <Address>123 Main St</Address>
+    <City>Anytown</City>
+    <State>CA</State>
+    <ZipCode>12345</ZipCode>
+    <CreatedDate>2025-06-15T10:30:00Z</CreatedDate>
+    <ModifiedDate>2025-06-15T10:30:00Z</ModifiedDate>
+    <Status>Active</Status>
+</Contact>
+
+<!-- Lead Format -->
+<Lead>
+    <ID>67890</ID>
+    <ContactID>12345</ContactID>
+    <Source>Website</Source>
+    <Status>New</Status>
+    <Value>5000.00</Value>
+    <CreatedDate>2025-06-15T10:30:00Z</CreatedDate>
+    <ModifiedDate>2025-06-15T10:30:00Z</ModifiedDate>
+    <Notes>Initial inquiry</Notes>
+</Lead>
+```
+
+### Active Prospect API (Future Implementation)
+
+#### Authentication
+```python
+# API Key based
+headers = {
+    'Authorization': f'Bearer {api_key}',
+    'Content-Type': 'application/json'
+}
+```
+
+#### Endpoints
+```python
+BASE_URL = 'https://api.activeprospect.com/v1'
+
+ENDPOINTS = {
+    'leads': '/leads',
+    'events': '/events'
+}
+```
+
+## Internal REST API Specifications
+
+### Authentication
+```python
+# JWT Token based
+headers = {
+    'Authorization': f'Bearer {jwt_token}',
+    'Content-Type': 'application/json'
+}
+```
+
+### Endpoints
+
+#### Contacts API
+```python
+# GET /api/v1/contacts/
+# List contacts with filtering and pagination
+{
+    "count": 1000,
+    "next": "http://api.example.com/api/v1/contacts/?page=2",
+    "previous": null,
+    "results": [
+        {
+            "id": 1,
+            "first_name": "John",
+            "last_name": "Doe",
+            "email": "john.doe@example.com",
+            "phone": "+1234567890",
+            "source_system": "genius",
+            "source_id": "12345",
+            "created_at": "2025-06-15T10:30:00Z",
+            "updated_at": "2025-06-15T10:30:00Z",
+            "last_synced": "2025-06-15T10:30:00Z"
+        }
+    ]
+}
+
+# POST /api/v1/contacts/
+# Create new contact
+{
+    "first_name": "Jane",
+    "last_name": "Smith", 
+    "email": "jane.smith@example.com",
+    "phone": "+1987654321",
+    "source_system": "manual",
+    "source_id": "manual_001"
+}
+```
+
+#### Sync Management API
+```python
+# POST /api/v1/sync/
+# Trigger manual sync
+{
+    "source_system": "genius",
+    "entity_type": "contacts",
+    "sync_type": "incremental"
+}
+
+# Response
+{
+    "job_id": "sync_job_12345",
+    "status": "initiated", 
+    "message": "Sync job queued successfully"
+}
+
+# GET /api/v1/sync/jobs/{job_id}/
+# Get sync job status
+{
+    "id": "sync_job_12345",
+    "source_system": "genius",
+    "entity_type": "contacts",
+    "status": "running",
+    "started_at": "2025-06-15T10:30:00Z",
+    "records_processed": 150,
+    "records_created": 10,
+    "records_updated": 140,
+    "records_failed": 0,
+    "progress_percentage": 75
+}
+```
+
+#### Webhook API
+```python
+# POST /api/v1/webhooks/hubspot/
+# HubSpot webhook receiver
+{
+    "eventId": "12345",
+    "subscriptionId": "67890",
+    "portalId": "54321", 
+    "occurredAt": "2025-06-15T10:30:00.000Z",
+    "subscriptionType": "contact.propertyChange",
+    "objectId": "12345",
+    "propertyName": "email",
+    "propertyValue": "newemail@example.com"
+}
+
+# Response
+{
+    "status": "received",
+    "processed": true,
+    "message": "Webhook processed successfully"
+}
+```
+
+## Data Transformation Mappings
+
+### Genius to Unified Schema
+```python
+GENIUS_MAPPING = {
+    'id': 'source_id',
+    'first_name': 'first_name',
+    'last_name': 'last_name',
+    'email': 'email',
+    'phone': 'phone',
+    'created_date': 'source_created_at',
+    'modified_date': 'source_updated_at',
+    'status': 'status'
+}
+```
+
+### HubSpot to Unified Schema
+```python
+HUBSPOT_MAPPING = {
+    'id': 'source_id',
+    'properties.firstname': 'first_name',
+    'properties.lastname': 'last_name', 
+    'properties.email': 'email',
+    'properties.phone': 'phone',
+    'createdAt': 'source_created_at',
+    'updatedAt': 'source_updated_at',
+    'properties.hs_lead_status': 'status'
+}
+```
+
+### MarketSharp to Unified Schema
+```python
+MARKETSHARP_MAPPING = {
+    'ID': 'source_id',
+    'FirstName': 'first_name',
+    'LastName': 'last_name',
+    'Email': 'email', 
+    'Phone': 'phone',
+    'CreatedDate': 'source_created_at',
+    'ModifiedDate': 'source_updated_at',
+    'Status': 'status'
+}
+```
+
+## Rate Limiting & Best Practices
+
+### Genius API
+- **Rate Limit**: 1000 requests/hour
+- **Batch Size**: 100 records per request
+- **Retry Strategy**: Exponential backoff (1s, 2s, 4s, 8s)
+
+### HubSpot API
+- **Rate Limit**: 100 requests/10 seconds
+- **Batch Size**: 100 records per request  
+- **Retry Strategy**: Respect 429 status and Retry-After header
+
+### MarketSharp API
+- **Rate Limit**: 500 requests/hour
+- **Batch Size**: 50 records per request
+- **Retry Strategy**: Fixed 30-second delay on failures
+
+## Error Handling Standards
+
+### HTTP Status Codes
+```python
+# Success codes
+200: OK - Request successful
+201: Created - Resource created
+202: Accepted - Request accepted for processing
+
+# Client error codes  
+400: Bad Request - Invalid request data
+401: Unauthorized - Authentication required
+403: Forbidden - Insufficient permissions
+404: Not Found - Resource not found
+429: Too Many Requests - Rate limit exceeded
+
+# Server error codes
+500: Internal Server Error - Server error
+502: Bad Gateway - Upstream server error
+503: Service Unavailable - Service temporarily unavailable
+```
+
+### Error Response Format
+```python
+{
+    "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Invalid email format",
+        "details": {
+            "field": "email",
+            "value": "invalid-email", 
+            "constraint": "must be valid email format"
+        },
+        "timestamp": "2025-06-15T10:30:00Z",
+        "request_id": "req_12345"
+    }
+}
+```
+
+================================================================================
+FILE 6: docs/REQUIREMENTS.md
+================================================================================
+
+# Data Warehouse System Requirements Document
+
+## Project Overview
+A scalable, unified data synchronization platform that consolidates data from multiple CRM/marketing systems (Genius, HubSpot, MarketSharp) into a centralized Django-based data warehouse with comprehensive monitoring, error handling, and flexible sync capabilities.
+
+## System Architecture Requirements
+
+### 1. Core Framework
+- **Backend**: Django 4.x+ with Django REST Framework
+- **Database**: PostgreSQL with proper indexing for large datasets
+- **Task Queue**: Celery with Redis for async processing
+- **Caching**: Redis for performance optimization
+- **Configuration**: Django settings with environment-based configs
+
+### 2. Unified Sync Engine Architecture
+
+#### 2.1 Base Sync Interface
+```python
+# filepath: core/sync/base_sync.py
+from abc import ABC, abstractmethod
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass
+from enum import Enum
+
+class SyncStatus(Enum):
+    PENDING = "pending"
+    RUNNING = "running" 
+    SUCCESS = "success"
+    FAILED = "failed"
+    PARTIAL = "partial"
+
+@dataclass
+class SyncResult:
+    status: SyncStatus
+    records_processed: int
+    records_created: int
+    records_updated: int
+    records_failed: int
+    errors: List[str]
+    duration: float
+    last_sync_timestamp: Optional[datetime]
+
+class BaseSyncEngine(ABC):
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+        self.retry_count = config.get('retry_count', 3)
+        self.batch_size = config.get('batch_size', 100)
+        
+    @abstractmethod
+    async def fetch_data(self, last_sync: Optional[datetime]) -> List[Dict]:
+        """Fetch data from external source"""
+        pass
+        
+    @abstractmethod
+    async def transform_data(self, raw_data: List[Dict]) -> List[Dict]:
+        """Transform data to internal format"""
+        pass
+        
+    @abstractmethod
+    async def save_data(self, transformed_data: List[Dict]) -> SyncResult:
+        """Save data to warehouse"""
+        pass
+        
+    async def sync(self, incremental: bool = True) -> SyncResult:
+        """Main sync orchestration method"""
+        pass
+```
+
+#### 2.2 Specific Sync Implementations
+```python
+# filepath: core/sync/genius_sync.py
+class GeniusSyncEngine(BaseSyncEngine):
+    """Unified Genius API sync engine"""
+    
+# filepath: core/sync/hubspot_sync.py  
+class HubSpotSyncEngine(BaseSyncEngine):
+    """Unified HubSpot API sync engine"""
+    
+# filepath: core/sync/marketsharp_sync.py
+class MarketSharpSyncEngine(BaseSyncEngine):
+    """Unified MarketSharp XML/API sync engine"""
+```
+
+### 3. Data Models Architecture
+
+#### 3.1 Enhanced Base Models
+```python
+# filepath: core/models/base.py
+class TimestampedModel(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        abstract = True
+
+class SourceTrackingModel(TimestampedModel):
+    source_system = models.CharField(max_length=50)
+    source_id = models.CharField(max_length=255)
+    last_synced = models.DateTimeField(null=True)
+    sync_hash = models.CharField(max_length=64, null=True)  # For change detection
+    
+    class Meta:
+        abstract = True
+        indexes = [
+            models.Index(fields=['source_system', 'source_id']),
+            models.Index(fields=['last_synced']),
+        ]
+```
+
+#### 3.2 Unified Entity Models
+```python
+# filepath: core/models/entities.py
+class Contact(SourceTrackingModel):
+    """Unified contact model for all sources"""
+    first_name = models.CharField(max_length=255)
+    last_name = models.CharField(max_length=255)
+    email = models.EmailField(null=True, blank=True)
+    phone = models.CharField(max_length=50, null=True, blank=True)
+    # ... additional unified fields
+    
+class Lead(SourceTrackingModel):
+    """Unified lead model"""
+    contact = models.ForeignKey(Contact, on_delete=models.CASCADE)
+    status = models.CharField(max_length=100)
+    value = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+    # ... additional unified fields
+
+class Appointment(SourceTrackingModel):
+    """Unified appointment model"""
+    contact = models.ForeignKey(Contact, on_delete=models.CASCADE)
+    scheduled_date = models.DateTimeField()
+    status = models.CharField(max_length=100)
+    # ... additional unified fields
+```
+
+### 4. Configuration Management
+
+#### 4.1 Dynamic Configuration System
+```python
+# filepath: core/models/configuration.py
+class SyncConfiguration(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    source_system = models.CharField(max_length=50)
+    entity_type = models.CharField(max_length=50)
+    config = models.JSONField()  # Store API endpoints, credentials, etc.
+    is_active = models.BooleanField(default=True)
+    schedule = models.CharField(max_length=100)  # Cron expression
+    
+class APICredential(models.Model):
+    system_name = models.CharField(max_length=50)
+    credential_type = models.CharField(max_length=50)
+    encrypted_value = models.TextField()  # Encrypted credentials
+    is_active = models.BooleanField(default=True)
+```
+
+### 5. Error Handling & Retry Logic
+
+#### 5.1 Comprehensive Error Management
+```python
+# filepath: core/sync/error_handling.py
+class SyncErrorHandler:
+    def __init__(self, max_retries: int = 3):
+        self.max_retries = max_retries
+        
+    async def with_retry(self, func, *args, **kwargs):
+        """Execute function with exponential backoff retry"""
+        pass
+        
+    def categorize_error(self, error: Exception) -> str:
+        """Categorize errors for appropriate handling"""
+        pass
+
+class SyncError(models.Model):
+    sync_job = models.ForeignKey('SyncJob', on_delete=models.CASCADE)
+    error_type = models.CharField(max_length=100)
+    error_message = models.TextField()
+    stack_trace = models.TextField()
+    record_data = models.JSONField(null=True)
+    retry_count = models.IntegerField(default=0)
+    resolved = models.BooleanField(default=False)
+```
+
+### 6. Monitoring & Logging System
+
+#### 6.1 Comprehensive Sync Tracking
+```python
+# filepath: core/models/monitoring.py
+class SyncJob(TimestampedModel):
+    configuration = models.ForeignKey(SyncConfiguration, on_delete=models.CASCADE)
+    job_type = models.CharField(max_length=20)  # 'incremental' or 'full'
+    status = models.CharField(max_length=20)
+    started_at = models.DateTimeField()
+    completed_at = models.DateTimeField(null=True)
+    records_processed = models.IntegerField(default=0)
+    records_created = models.IntegerField(default=0)
+    records_updated = models.IntegerField(default=0)
+    records_failed = models.IntegerField(default=0)
+    last_processed_timestamp = models.DateTimeField(null=True)
+    
+class SyncMetrics(models.Model):
+    date = models.DateField()
+    source_system = models.CharField(max_length=50)
+    entity_type = models.CharField(max_length=50)
+    total_syncs = models.IntegerField(default=0)
+    successful_syncs = models.IntegerField(default=0)
+    failed_syncs = models.IntegerField(default=0)
+    avg_duration = models.FloatField(default=0)
+    total_records = models.IntegerField(default=0)
+```
+
+### 7. Scalability Requirements
+
+#### 7.1 Performance Optimizations
+- **Database Indexing**: Comprehensive indexes on frequently queried fields
+- **Batch Processing**: Configurable batch sizes for large datasets
+- **Connection Pooling**: Database connection pooling for high concurrency
+- **Caching Strategy**: Redis caching for frequently accessed data
+- **Async Processing**: Celery for background sync jobs
+
+#### 7.2 Horizontal Scaling
+- **Stateless Design**: All sync engines should be stateless
+- **Queue-based Architecture**: Support multiple worker processes
+- **Database Sharding**: Consider partitioning for very large datasets
+- **Load Balancing**: Support for multiple application instances
+
+### 8. API Integration Standards
+
+#### 8.1 Unified API Client Pattern
+```python
+# filepath: core/clients/base_client.py
+class BaseAPIClient(ABC):
+    def __init__(self, credentials: Dict[str, str]):
+        self.credentials = credentials
+        self.session = self._create_session()
+        
+    @abstractmethod
+    async def authenticate(self) -> bool:
+        """Handle authentication for the API"""
+        pass
+        
+    async def make_request(self, method: str, endpoint: str, **kwargs):
+        """Unified request method with retry and error handling"""
+        pass
+        
+    async def paginated_request(self, endpoint: str, **kwargs):
+        """Handle paginated API responses"""
+        pass
+```
+
+### 9. Data Validation Framework
+
+#### 9.1 Validation Pipeline
+```python
+# filepath: core/validation/validators.py
+class DataValidator:
+    def __init__(self, rules: Dict[str, Any]):
+        self.rules = rules
+        
+    def validate(self, data: Dict[str, Any]) -> Tuple[bool, List[str]]:
+        """Validate data against defined rules"""
+        pass
+        
+class SyncValidationRule(models.Model):
+    source_system = models.CharField(max_length=50)
+    entity_type = models.CharField(max_length=50)
+    field_name = models.CharField(max_length=100)
+    validation_type = models.CharField(max_length=50)
+    validation_config = models.JSONField()
+```
+
+### 10. Management Commands Structure
+
+#### 10.1 Unified Command Interface
+```python
+# filepath: core/management/commands/sync_base.py
+class BaseSyncCommand(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument('--source', required=True)
+        parser.add_argument('--entity', required=True)
+        parser.add_argument('--incremental', action='store_true')
+        parser.add_argument('--batch-size', type=int, default=100)
+        
+    def handle(self, *args, **options):
+        """Unified command handling"""
+        pass
+```
+
+### 11. Testing Requirements
+
+#### 11.1 Comprehensive Test Coverage
+- **Unit Tests**: 90%+ coverage for all sync engines
+- **Integration Tests**: End-to-end sync testing with mock APIs
+- **Performance Tests**: Load testing for scalability validation
+- **Data Quality Tests**: Validation of sync accuracy and completeness
+
+### 12. Deployment & DevOps
+
+#### 12.1 Infrastructure Requirements
+- **Containerization**: Docker containers for consistent deployment
+- **Environment Management**: Separate configs for dev/staging/prod
+- **Database Migrations**: Automated migration strategy
+- **Monitoring**: Application performance monitoring (APM)
+- **Logging**: Centralized logging with ELK stack or similar
+
+### 13. Security Requirements
+
+#### 13.1 Data Protection
+- **Credential Encryption**: All API credentials encrypted at rest
+- **Data Encryption**: Sensitive data encrypted in database
+- **Access Control**: Role-based access to sync configurations
+- **Audit Logging**: Complete audit trail of all sync operations
+
+## Implementation Priority
+
+### Phase 1: Core Infrastructure
+1. Base sync engine architecture
+2. Unified data models
+3. Configuration management system
+4. Basic error handling
+
+### Phase 2: API Integration
+1. Implement specific sync engines (Genius, HubSpot, MarketSharp)
+2. Data validation framework
+3. Comprehensive error handling and retry logic
+
+### Phase 3: Monitoring & Scalability
+1. Complete monitoring and metrics system
+2. Performance optimizations
+3. Horizontal scaling capabilities
+
+### Phase 4: Advanced Features
+1. Real-time sync capabilities
+2. Advanced conflict resolution
+3. Data quality monitoring
+4. Self-healing mechanisms
+
+## Success Criteria
+- **Reliability**: 99.9% sync success rate
+- **Performance**: Handle 100K+ records per sync job
+- **Scalability**: Support 10+ concurrent sync operations
+- **Maintainability**: New data sources can be added in <2 days
+- **Observability**: Complete visibility into sync performance and issues
+
+================================================================================
+FILE 7: docs/AGENT_PROMPTS.md
+================================================================================
+
+# Standard Agent Prompts
+
+## New Development Session
+```
+@workspace I'm starting work on the data warehouse project. Please review:
+1. docs/PROJECT_CONTEXT.md for project overview
+2. docs/REQUIREMENTS.md for complete requirements  
+3. docs/IMPLEMENTATION_STATUS.md for current status
+
+Based on this context, what should I work on next for [specific area]?
+```
+
+## Code Review Session
+```
+@workspace Review the current implementation against the requirements in docs/REQUIREMENTS.md. 
+Check specifically:
+- Does it follow the unified sync engine pattern?
+- Is error handling implemented per requirements?
+- Are we maintaining the scalability requirements?
+```
+
+## Architecture Decision
+```
+@workspace I need to make a decision about [topic]. Please reference:
+- docs/REQUIREMENTS.md section [X]
+- docs/ARCHITECTURE.md  
+- Current codebase patterns
+
+Provide recommendations that align with our unified approach.
+```
+
+## Bug Fix Session
+```
+@workspace There's an issue with [component]. Please:
+1. Review the requirements for this component in docs/REQUIREMENTS.md
+2. Check the expected behavior in docs/API_SPECIFICATIONS.md
+3. Suggest a fix that maintains our architectural principles
+```
+
+================================================================================
+END OF DOCUMENTATION PACKAGE
+================================================================================
+
+This complete documentation package provides everything needed for an AI agent 
+to rebuild the Data Warehouse project from scratch with all requirements,
+architecture decisions, coding standards, and implementation guidelines.
+
+To use this documentation:
+1. Save each section as the corresponding .md file in the docs/ folder
+2. Reference PROJECT_CONTEXT.md as the starting point for any agent
+3. Use IMPLEMENTATION_STATUS.md to track progress
+4. Follow CODING_STANDARDS.md for consistent implementation
+5. Use AGENT_PROMPTS.md for effective agent collaboration
+
+The agent can now rebuild the entire application following these specifications.

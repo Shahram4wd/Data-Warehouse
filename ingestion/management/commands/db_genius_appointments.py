@@ -174,9 +174,9 @@ class Command(BaseCommand):
         confirm_date = self._parse_datetime(confirm_date)
         complete_date = self._parse_datetime(complete_date)
         
-        # Process boolean fields as integers
-        spouses_present = int(spouses_present) if spouses_present is not None else 0
-        is_complete = int(is_complete) if is_complete is not None else 0
+        # Process boolean fields as integers with validation
+        spouses_present = self._safe_int_convert(spouses_present, 0)
+        is_complete = self._safe_int_convert(is_complete, 0)
         
         return {
             'date': date_val,
@@ -190,6 +190,22 @@ class Command(BaseCommand):
             'is_complete': is_complete
         }
     
+    def _safe_int_convert(self, value, default=None):
+        """Safely convert value to integer with range validation."""
+        if value is None:
+            return default
+        
+        try:
+            int_val = int(value)
+            # Check for reasonable integer ranges (PostgreSQL int4 range)
+            if int_val < -2147483648 or int_val > 2147483647:
+                self.stdout.write(self.style.WARNING(f"Integer out of range: {int_val}, using default {default}"))
+                return default
+            return int_val
+        except (ValueError, TypeError):
+            self.stdout.write(self.style.WARNING(f"Invalid integer value: {value}, using default {default}"))
+            return default
+
     def _update_record(self, record, prospect, prospect_source, user_id, appointment_type,
                       processed_data, address1, address2, city, state, zip, email, notes,
                       add_user_id, confirm_user_id, confirm_with, complete_outcome,
@@ -213,8 +229,8 @@ class Command(BaseCommand):
         record.spouses_present = processed_data['spouses_present']
         record.is_complete = processed_data['is_complete']
         
-        # Set other fields
-        record.user_id = user_id
+        # Set other fields with validation
+        record.user_id = self._safe_int_convert(user_id)
         record.address1 = address1
         record.address2 = address2
         record.city = city
@@ -222,14 +238,14 @@ class Command(BaseCommand):
         record.zip = zip
         record.email = email
         record.notes = notes
-        record.add_user_id = add_user_id
-        record.confirm_user_id = confirm_user_id
+        record.add_user_id = self._safe_int_convert(add_user_id)
+        record.confirm_user_id = self._safe_int_convert(confirm_user_id)
         record.confirm_with = confirm_with
-        record.complete_user_id = complete_user_id
+        record.complete_user_id = self._safe_int_convert(complete_user_id)
         record.marketsharp_id = marketsharp_id
         record.marketsharp_appt_type = marketsharp_appt_type
         record.leap_estimate_id = leap_estimate_id
-        record.third_party_source_id = hubspot_id
+        record.third_party_source_id = self._safe_int_convert(hubspot_id)
         
         return record
     
@@ -243,7 +259,7 @@ class Command(BaseCommand):
             id=record_id,
             prospect=prospect,
             prospect_source=prospect_source,
-            user_id=user_id,
+            user_id=self._safe_int_convert(user_id),
             type=appointment_type,
             date=processed_data['date'],
             time=processed_data['time'],
@@ -255,21 +271,21 @@ class Command(BaseCommand):
             zip=zip,
             email=email,
             notes=notes,
-            add_user_id=add_user_id,
+            add_user_id=self._safe_int_convert(add_user_id),
             add_date=processed_data['add_date'],
             assign_date=processed_data['assign_date'],
-            confirm_user_id=confirm_user_id,
+            confirm_user_id=self._safe_int_convert(confirm_user_id),
             confirm_date=processed_data['confirm_date'],
             confirm_with=confirm_with,
             spouses_present=processed_data['spouses_present'],
             is_complete=processed_data['is_complete'],
             complete_outcome=complete_outcome,
-            complete_user_id=complete_user_id,
+            complete_user_id=self._safe_int_convert(complete_user_id),
             complete_date=processed_data['complete_date'],
             marketsharp_id=marketsharp_id,
             marketsharp_appt_type=marketsharp_appt_type,
             leap_estimate_id=leap_estimate_id,
-            third_party_source_id=hubspot_id
+            third_party_source_id=self._safe_int_convert(hubspot_id)
         )
     
     def _save_records(self, to_create, to_update):
