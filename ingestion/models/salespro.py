@@ -21,6 +21,7 @@ class SalesPro_Users(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        db_table = 'ingestion_salespro_users'
         verbose_name = "SalesPro User"
         verbose_name_plural = "SalesPro Users"
 
@@ -49,15 +50,14 @@ class SalesPro_Appointment(models.Model):
     salesrep_email = models.EmailField(null=True, blank=True)  # salesrep.email
     salesrep_first_name = models.CharField(max_length=100, null=True, blank=True)  # salesrep.nameFirst
     salesrep_last_name = models.CharField(max_length=100, null=True, blank=True)  # salesrep.nameLast
-    
-    # Sale information
+      # Sale information
     sale_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  # saleAmount
     
     # Metadata
     imported_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        db_table = 'salespro_appointment'
+        db_table = 'ingestion_salespro_appointment'
         verbose_name = 'SalesPro Appointment'
         verbose_name_plural = 'SalesPro Appointments'
         ordering = ['-created_at']
@@ -81,7 +81,7 @@ class SalesPro_SyncHistory(models.Model):
     file_path = models.CharField(max_length=500, null=True, blank=True)  # For CSV imports
     
     class Meta:
-        db_table = 'salespro_sync_history'
+        db_table = 'ingestion_salespro_sync_history'
         verbose_name = 'SalesPro Sync History'
         verbose_name_plural = 'SalesPro Sync Histories'
         ordering = ['-started_at']
