@@ -115,13 +115,17 @@ class Command(BaseCommand):
                     break
 
                 page_data = page_result['data']
-                pagination = page_result.get('pagination', {})
+                pagination = page_result.get('pagination') or {}
                 
                 self.stdout.write(f"Retrieved {len(page_data)} customers")
                 all_customers.extend(page_data)
 
                 # Check if there are more pages
                 has_next = pagination.get('has_next', False)
+                  # If no pagination info, check if we got a full page
+                if not pagination:
+                    has_next = len(page_data) >= BATCH_SIZE
+                
                 page = pagination.get('next_page', page + 1)
 
                 # Save data if we've reached a checkpoint
@@ -222,8 +226,14 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 if customers_to_create:
-                    Arrivy_Customer.objects.bulk_create(customers_to_create, batch_size=BATCH_SIZE)
-                    created_count = len(customers_to_create)
+                    created_before = Arrivy_Customer.objects.count()
+                    Arrivy_Customer.objects.bulk_create(
+                        customers_to_create, 
+                        batch_size=BATCH_SIZE,
+                        ignore_conflicts=True
+                    )
+                    created_after = Arrivy_Customer.objects.count()
+                    created_count = created_after - created_before
 
                 if customers_to_update:
                     # Get the fields to update (exclude id and tracking fields)
@@ -253,9 +263,14 @@ class Command(BaseCommand):
 
     def update_last_sync(self, endpoint):
         """Update the last sync time for customers."""
-        history, created = Arrivy_SyncHistory.objects.get_or_create(endpoint=endpoint)
-        history.last_synced_at = timezone.now()
-        history.save()
+        now = timezone.now()
+        history, created = Arrivy_SyncHistory.objects.get_or_create(
+            endpoint=endpoint,
+            defaults={'last_synced_at': now}
+        )
+        if not created:
+            history.last_synced_at = now
+            history.save()
 
     def parse_datetime(self, value):
         """Parse a datetime string into a datetime object."""

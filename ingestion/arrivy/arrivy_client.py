@@ -1,5 +1,6 @@
 import logging
 import json
+import asyncio
 from datetime import datetime
 import aiohttp
 from django.conf import settings
@@ -16,8 +17,8 @@ class ArrivyClient:
         
         self.headers = {
             "Content-Type": "application/json",
-            "X-API-KEY": self.api_key,
-            "X-AUTH-KEY": self.auth_key
+            "X-Auth-Key": self.auth_key,
+            "X-Auth-Token": self.api_key
         }
         
         print(f"ArrivyClient initialized with API key: {self.api_key[:8]}...")
@@ -33,11 +34,10 @@ class ArrivyClient:
         if last_sync:
             # Convert datetime to Arrivy expected format
             last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
-            params["updated_after"] = last_sync_str
-        
+            params["updated_after"] = last_sync_str        
         return await self._make_request("customers", params)
     
-    async def get_team_members(self, page_size=100, page=1, last_sync=None):
+    async def get_team_members(self, page_size=100, page=1, last_sync=None, endpoint="team"):
         """Get team members from Arrivy API."""
         params = {
             "page_size": page_size,
@@ -49,7 +49,7 @@ class ArrivyClient:
             last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
             params["updated_after"] = last_sync_str
         
-        return await self._make_request("team", params)
+        return await self._make_request(endpoint, params)
     
     async def get_bookings(self, page_size=100, page=1, last_sync=None, start_date=None, end_date=None):
         """Get bookings from Arrivy API."""
@@ -62,39 +62,53 @@ class ArrivyClient:
         if last_sync:
             last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
             params["updated_after"] = last_sync_str
-        
-        # Add date range filters for bookings
+          # Add date range filters for bookings
         if start_date:
             params["start_date"] = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
-        
         if end_date:
             params["end_date"] = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         
         return await self._make_request("tasks", params)  # Arrivy calls bookings "tasks"
-    
+
     async def get_customer_by_id(self, customer_id):
         """Get a specific customer by ID."""
         return await self._make_request(f"customers/{customer_id}")
-    
+
     async def get_team_member_by_id(self, team_member_id):
         """Get a specific team member by ID."""
         return await self._make_request(f"team/{team_member_id}")
-    
+
     async def get_booking_by_id(self, booking_id):
         """Get a specific booking by ID."""
         return await self._make_request(f"tasks/{booking_id}")
-    
+
     async def _make_request(self, endpoint, params=None):
         """Make an HTTP request to the Arrivy API."""
         url = f"{self.base_url.rstrip('/')}/{endpoint}"
         
-        async with aiohttp.ClientSession() as session:
-            try:
+        logger.info(f"Making request to: {url}")
+        logger.info(f"Headers: {self.headers}")
+        logger.info(f"Params: {params}")
+        
+        try:
+            async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=self.headers, params=params, timeout=60) as response:
                     status = response.status
+                    response_text = await response.text()
+                    
+                    logger.info(f"Response status: {status}")
+                    logger.info(f"Response headers: {dict(response.headers)}")
+                    logger.info(f"Response body: {response_text[:500]}")
                     
                     if status == 200:
-                        data = await response.json()
+                        try:
+                            # Try to parse as JSON regardless of content type
+                            # since Arrivy API returns JSON with text/plain content type
+                            import json
+                            data = json.loads(response_text)
+                        except json.JSONDecodeError:
+                            logger.error(f"Failed to parse JSON response: {response_text}")
+                            return {'data': [], 'pagination': None}
                         
                         # Handle Arrivy's response format
                         if isinstance(data, dict):
@@ -127,17 +141,16 @@ class ArrivyClient:
                         raise Exception("Rate limit exceeded")
                     
                     else:
-                        response_text = await response.text()
                         logger.error(f"Arrivy API error {status}: {response_text[:500]}")
                         raise Exception(f"API request failed with status {status}")
                         
-            except aiohttp.ClientTimeout:
-                logger.error("Arrivy API request timed out")
-                raise Exception("Request timed out")
+        except asyncio.TimeoutError:
+            logger.error("Arrivy API request timed out")
+            raise Exception("Request timed out")
             
-            except Exception as e:
-                logger.error(f"Error making Arrivy API request: {str(e)}")
-                raise
+        except Exception as e:
+            logger.error(f"Error making Arrivy API request: {str(e)}")
+            raise
 
     async def test_connection(self):
         """Test the connection to Arrivy API."""

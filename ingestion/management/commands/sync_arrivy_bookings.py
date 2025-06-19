@@ -147,8 +147,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"Retrieved {len(page_data)} bookings")
                 all_bookings.extend(page_data)
 
-                has_next = pagination.get('has_next', False)
-                page = pagination.get('next_page', page + 1)
+                has_next = pagination.get('has_next', False) if pagination else len(page_data) >= BATCH_SIZE
+                page = pagination.get('next_page', page + 1) if pagination else page + 1
 
                 # Save data if we've reached a checkpoint
                 if len(all_bookings) >= BATCH_SIZE * 5:
@@ -285,7 +285,7 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 if bookings_to_create:
-                    Arrivy_Booking.objects.bulk_create(bookings_to_create, batch_size=BATCH_SIZE)
+                    Arrivy_Booking.objects.bulk_create(bookings_to_create, batch_size=BATCH_SIZE, ignore_conflicts=True)
                     created_count = len(bookings_to_create)
 
                 if bookings_to_update:
@@ -320,7 +320,10 @@ class Command(BaseCommand):
 
     def update_last_sync(self, endpoint):
         """Update the last sync time for bookings."""
-        history, created = Arrivy_SyncHistory.objects.get_or_create(endpoint=endpoint)
+        history, created = Arrivy_SyncHistory.objects.get_or_create(
+            endpoint=endpoint,
+            defaults={'last_synced_at': timezone.now()}
+        )
         history.last_synced_at = timezone.now()
         history.save()
 

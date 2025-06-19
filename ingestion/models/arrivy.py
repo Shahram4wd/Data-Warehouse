@@ -96,8 +96,10 @@ class Arrivy_Booking(models.Model):
     """Arrivy Booking model"""
     id = models.CharField(max_length=50, primary_key=True)
     external_id = models.CharField(max_length=255, null=True, blank=True)
-      # Customer relationship
+    
+    # Customer relationship
     customer = models.ForeignKey(Arrivy_Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='bookings')
+    customer_id_raw = models.CharField(max_length=50, null=True, blank=True, help_text="Raw customer ID from API for debugging")
     
     # Basic booking information
     title = models.CharField(max_length=500, null=True, blank=True)

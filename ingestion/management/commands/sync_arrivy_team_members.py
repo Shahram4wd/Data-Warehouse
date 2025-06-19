@@ -38,23 +38,29 @@ class Command(BaseCommand):
             "--pages",
             type=int,
             default=0,
-            help="Maximum number of pages to process (0 for unlimited)"
-        )
+            help="Maximum number of pages to process (0 for unlimited)"        )
         parser.add_argument(
             "--lastmodifieddate",
             type=str,
             help="Filter team members modified after this date (YYYY-MM-DD format)"
+        )
+        parser.add_argument(
+            "--endpoint",
+            type=str,
+            default="team",
+            help="API endpoint to try (team, users, staff, employees, workers)"
         )
 
     def handle(self, *args, **options):
         full_sync = options.get("full")
         max_pages = options.get("pages", 0)
         lastmodifieddate = options.get("lastmodifieddate")
+        api_endpoint = options.get("endpoint", "team")
 
         if not all([settings.ARRIVY_API_KEY, settings.ARRIVY_AUTH_KEY, settings.ARRIVY_API_URL]):
             raise CommandError("Arrivy API credentials are not properly configured in settings.")
 
-        self.stdout.write(self.style.SUCCESS("Starting Arrivy team members sync..."))
+        self.stdout.write(self.style.SUCCESS(f"Starting Arrivy team members sync using endpoint: {api_endpoint}..."))
         
         # Get the last sync time
         endpoint = "team_members"
@@ -100,7 +106,8 @@ class Command(BaseCommand):
                 page_result = asyncio.run(client.get_team_members(
                     page_size=BATCH_SIZE,
                     page=page,
-                    last_sync=last_sync
+                    last_sync=last_sync,
+                    endpoint=api_endpoint
                 ))
 
                 if not page_result or not page_result.get('data'):
@@ -108,12 +115,17 @@ class Command(BaseCommand):
                     break
 
                 page_data = page_result['data']
-                pagination = page_result.get('pagination', {})
+                pagination = page_result.get('pagination') or {}
                 
                 self.stdout.write(f"Retrieved {len(page_data)} team members")
                 all_team_members.extend(page_data)
 
                 has_next = pagination.get('has_next', False)
+                
+                # If no pagination info, check if we got a full page
+                if not pagination:
+                    has_next = len(page_data) >= BATCH_SIZE
+                
                 page = pagination.get('next_page', page + 1)
 
                 # Save data if we've reached a checkpoint
@@ -221,8 +233,14 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 if members_to_create:
-                    Arrivy_TeamMember.objects.bulk_create(members_to_create, batch_size=BATCH_SIZE)
-                    created_count = len(members_to_create)
+                    created_before = Arrivy_TeamMember.objects.count()
+                    Arrivy_TeamMember.objects.bulk_create(
+                        members_to_create, 
+                        batch_size=BATCH_SIZE,
+                        ignore_conflicts=True
+                    )
+                    created_after = Arrivy_TeamMember.objects.count()
+                    created_count = created_after - created_before
 
                 if members_to_update:
                     update_fields = [
@@ -253,9 +271,14 @@ class Command(BaseCommand):
 
     def update_last_sync(self, endpoint):
         """Update the last sync time for team members."""
-        history, created = Arrivy_SyncHistory.objects.get_or_create(endpoint=endpoint)
-        history.last_synced_at = timezone.now()
-        history.save()
+        now = timezone.now()
+        history, created = Arrivy_SyncHistory.objects.get_or_create(
+            endpoint=endpoint,
+            defaults={'last_synced_at': now}
+        )
+        if not created:
+            history.last_synced_at = now
+            history.save()
 
     def parse_datetime(self, value):
         """Parse a datetime string into a datetime object."""
