@@ -6,7 +6,7 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = "Sync all Arrivy data (customers, team members, and bookings)"
+    help = "Sync all Arrivy data using official API endpoints (customers, entities, groups, and bookings)"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -36,9 +36,14 @@ class Command(BaseCommand):
             help="Skip syncing customers"
         )
         parser.add_argument(
-            "--skip-team-members",
+            "--skip-entities",
             action="store_true",
-            help="Skip syncing team members"
+            help="Skip syncing entities (crew members)"
+        )
+        parser.add_argument(
+            "--skip-groups",
+            action="store_true",
+            help="Skip syncing groups (locations)"
         )
         parser.add_argument(
             "--skip-bookings",
@@ -62,7 +67,8 @@ class Command(BaseCommand):
         pages = options.get("pages", 0)
         lastmodifieddate = options.get("lastmodifieddate")
         skip_customers = options.get("skip_customers")
-        skip_team_members = options.get("skip_team_members")
+        skip_entities = options.get("skip_entities")
+        skip_groups = options.get("skip_groups")
         skip_bookings = options.get("skip_bookings")
         start_date = options.get("start_date")
         end_date = options.get("end_date")
@@ -102,20 +108,33 @@ class Command(BaseCommand):
                 if not options.get('continue_on_error'):
                     raise CommandError("Customers sync failed. Stopping.")
 
-        # 2. Sync Team Members
-        if not skip_team_members:
+        # 2. Sync Entities (crew members)
+        if not skip_entities:
             self.stdout.write("\n" + "="*60)
-            self.stdout.write("🔄 SYNCING TEAM MEMBERS")
+            self.stdout.write("🔄 SYNCING ENTITIES (CREW MEMBERS)")
             self.stdout.write("="*60)
             try:
-                call_command('sync_arrivy_team_members', *common_args, **common_kwargs)
-                sync_results['team_members'] = 'SUCCESS'
-                self.stdout.write(self.style.SUCCESS("✓ Team members sync completed"))
+                call_command('sync_arrivy_entities', *common_args, **common_kwargs)
+                sync_results['entities'] = 'SUCCESS'
+                self.stdout.write(self.style.SUCCESS("✓ Entities sync completed"))
             except Exception as e:
-                sync_results['team_members'] = f'FAILED: {str(e)}'
-                self.stdout.write(self.style.ERROR(f"✗ Team members sync failed: {str(e)}"))
+                sync_results['entities'] = f'FAILED: {str(e)}'
+                self.stdout.write(self.style.ERROR(f"✗ Entities sync failed: {str(e)}"))
 
-        # 3. Sync Bookings (after customers and team members)
+        # 3. Sync Groups (locations)
+        if not skip_groups:
+            self.stdout.write("\n" + "="*60)
+            self.stdout.write("🔄 SYNCING GROUPS (LOCATIONS)")
+            self.stdout.write("="*60)
+            try:
+                call_command('sync_arrivy_groups', *common_args, **common_kwargs)
+                sync_results['groups'] = 'SUCCESS'
+                self.stdout.write(self.style.SUCCESS("✓ Groups sync completed"))
+            except Exception as e:
+                sync_results['groups'] = f'FAILED: {str(e)}'
+                self.stdout.write(self.style.ERROR(f"✗ Groups sync failed: {str(e)}"))
+
+        # 4. Sync Bookings (after customers, entities, and groups)
         if not skip_bookings:
             self.stdout.write("\n" + "="*60)
             self.stdout.write("🔄 SYNCING BOOKINGS")

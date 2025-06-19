@@ -181,15 +181,7 @@ class Command(BaseCommand):
         # Get existing bookings
         booking_ids = [booking.get('id') for booking in bookings_data if booking.get('id')]
         existing_bookings = {
-            booking.id: booking 
-            for booking in Arrivy_Booking.objects.filter(id__in=booking_ids)
-        }
-
-        # Get existing customers for foreign key relationships
-        customer_ids = [booking.get('customer_id') for booking in bookings_data if booking.get('customer_id')]
-        existing_customers = {
-            customer.id: customer 
-            for customer in Arrivy_Customer.objects.filter(id__in=customer_ids)
+            booking.id: booking            for booking in Arrivy_Booking.objects.filter(id__in=booking_ids)
         }
 
         bookings_to_create = []
@@ -209,19 +201,16 @@ class Command(BaseCommand):
                 created_time = self.parse_datetime(booking_data.get('created_time'))
                 updated_time = self.parse_datetime(booking_data.get('updated_time'))
 
-                # Get customer relationship
+                # Get customer ID (no lookup needed - just store the ID)
                 customer_id = booking_data.get('customer_id')
-                customer = existing_customers.get(customer_id) if customer_id else None
 
                 # Handle team member assignments
                 assigned_team_members = booking_data.get('assigned_team_members', [])
-                team_member_ids = ",".join([str(tm_id) for tm_id in assigned_team_members if tm_id])
-
-                # Prepare booking fields
+                team_member_ids = ",".join([str(tm_id) for tm_id in assigned_team_members if tm_id])                # Prepare booking fields
                 booking_fields = {
                     'external_id': booking_data.get('external_id'),
                     'customer_id': customer_id,
-                    'customer': customer,
+                    'customer_id_raw': customer_id,  # Store raw customer ID for debugging
                     'title': booking_data.get('title'),
                     'description': booking_data.get('description'),
                     'details': booking_data.get('details'),
@@ -290,7 +279,7 @@ class Command(BaseCommand):
 
                 if bookings_to_update:
                     update_fields = [
-                        'external_id', 'customer_id', 'customer', 'title', 'description', 'details',
+                        'external_id', 'customer_id', 'customer_id_raw', 'title', 'description', 'details',
                         'start_datetime', 'end_datetime', 'start_datetime_original_iso_str',
                         'end_datetime_original_iso_str', 'timezone', 'status', 'status_id', 'task_type',
                         'address_line_1', 'address_line_2', 'city', 'state', 'country', 'zipcode',

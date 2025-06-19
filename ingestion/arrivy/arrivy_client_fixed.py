@@ -16,29 +16,15 @@ class ArrivyClient:
         self.base_url = api_url or settings.ARRIVY_API_URL
         
         self.headers = {
+            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "X-Auth-Key": self.auth_key,
-            "X-Auth-Token": self.api_key
+            "X-Auth-Token": self.auth_key
         }
         
-        print(f"ArrivyClient initialized with API key: {self.api_key[:8]}...")
+        logger.info(f"ArrivyClient initialized with API key: {self.api_key[:10]}...")
     
     async def get_customers(self, page_size=100, page=1, last_sync=None):
         """Get customers from Arrivy API."""
-        params = {
-            "page_size": page_size,
-            "page": page
-        }
-          # Add date filter if provided
-        if last_sync:
-            # Convert datetime to Arrivy expected format
-            last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
-            params["updated_after"] = last_sync_str
-        
-        return await self._make_request("customers", params)
-    
-    async def get_divisions(self, page_size=100, page=1, last_sync=None, endpoint="crews"):
-        """Get divisions from Arrivy API using crews endpoint."""
         params = {
             "page_size": page_size,
             "page": page
@@ -49,11 +35,21 @@ class ArrivyClient:
             last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
             params["updated_after"] = last_sync_str
         
-        return await self._make_request(endpoint, params)
-
-    async def get_crews(self, page_size=100, page=1, last_sync=None, endpoint="crews"):
-        """Get crews from Arrivy API - alias for get_divisions for backward compatibility."""
-        return await self.get_divisions(page_size, page, last_sync, endpoint)
+        return await self._make_request("customers", params)
+    
+    async def get_team_members(self, page_size=100, page=1, last_sync=None):
+        """Get team members from Arrivy API."""
+        params = {
+            "page_size": page_size,
+            "page": page
+        }
+        
+        # Add date filter if provided
+        if last_sync:
+            last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
+            params["updated_after"] = last_sync_str
+        
+        return await self._make_request("team", params)
     
     async def get_bookings(self, page_size=100, page=1, last_sync=None, start_date=None, end_date=None):
         """Get bookings from Arrivy API."""
@@ -61,7 +57,8 @@ class ArrivyClient:
             "page_size": page_size,
             "page": page
         }
-          # Add date filter if provided
+        
+        # Add date filter if provided
         if last_sync:
             last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
             params["updated_after"] = last_sync_str
@@ -69,6 +66,7 @@ class ArrivyClient:
         # Add date range filters for bookings
         if start_date:
             params["start_date"] = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        
         if end_date:
             params["end_date"] = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         
@@ -86,111 +84,17 @@ class ArrivyClient:
         """Get a specific booking by ID."""
         return await self._make_request(f"tasks/{booking_id}")
 
-    async def get_crew_singular(self, page_size=100, page=1, last_sync=None):
-        """Test the crew endpoint (singular) to see difference from crews."""
-        params = {
-            "page_size": page_size,
-            "page": page
-        }
-        
-        # Add date filter if provided
-        if last_sync:
-            last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
-            params["updated_after"] = last_sync_str
-        
-        return await self._make_request("crew", params)
-
-    async def get_all_crew_members(self, page_size=100, page=1, last_sync=None):
-        """Get all individual crew members from entities_data across all divisions."""
-        # Get all divisions first
-        divisions_result = await self.get_crews(page_size, page, last_sync)
-        
-        all_crew_members = []
-        divisions_data = divisions_result.get('data', [])
-        
-        for division in divisions_data:
-            division_name = division.get('name', 'Unknown Division')
-            division_id = division.get('id')
-            entities_data = division.get('entities_data', [])
-            
-            if isinstance(entities_data, list):
-                for crew_member in entities_data:
-                    # Add division context to each crew member
-                    crew_member_with_context = crew_member.copy()
-                    crew_member_with_context['division_id'] = division_id
-                    crew_member_with_context['division_name'] = division_name
-                    all_crew_members.append(crew_member_with_context)
-        
-        return {
-            'data': all_crew_members,
-            'pagination': divisions_result.get('pagination'),
-            'total_divisions': len(divisions_data),
-            'total_crew_members': len(all_crew_members)
-        }
-
-    async def get_entities(self, page_size=100, page=1, last_sync=None):
-        """Get entities (individual crew members) from Arrivy API."""
-        params = {
-            "page_size": page_size,
-            "page": page
-        }
-        
-        # Add date filter if provided
-        if last_sync:
-            last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
-            params["updated_after"] = last_sync_str
-        
-        return await self._make_request("entities", params)
-
-    async def get_entity_by_id(self, entity_id):
-        """Get a specific entity by ID."""
-        return await self._make_request(f"entities/{entity_id}")
-
-    async def get_groups(self, page_size=100, page=1, last_sync=None):
-        """Get groups from Arrivy API using official groups endpoint."""
-        params = {
-            "page_size": page_size,
-            "page": page
-        }
-        
-        # Add date filter if provided
-        if last_sync:
-            last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
-            params["updated_after"] = last_sync_str
-        
-        return await self._make_request("groups", params)
-
-    async def get_group_by_id(self, group_id):
-        """Get a specific group by ID."""
-        return await self._make_request(f"groups/{group_id}")
-
     async def _make_request(self, endpoint, params=None):
         """Make an HTTP request to the Arrivy API."""
         url = f"{self.base_url.rstrip('/')}/{endpoint}"
-        
-        logger.info(f"Making request to: {url}")
-        logger.info(f"Headers: {self.headers}")
-        logger.info(f"Params: {params}")
         
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, headers=self.headers, params=params, timeout=60) as response:
                     status = response.status
-                    response_text = await response.text()
-                    
-                    logger.info(f"Response status: {status}")
-                    logger.info(f"Response headers: {dict(response.headers)}")
-                    logger.info(f"Response body: {response_text[:500]}")
                     
                     if status == 200:
-                        try:
-                            # Try to parse as JSON regardless of content type
-                            # since Arrivy API returns JSON with text/plain content type
-                            import json
-                            data = json.loads(response_text)
-                        except json.JSONDecodeError:
-                            logger.error(f"Failed to parse JSON response: {response_text}")
-                            return {'data': [], 'pagination': None}
+                        data = await response.json()
                         
                         # Handle Arrivy's response format
                         if isinstance(data, dict):
@@ -223,6 +127,7 @@ class ArrivyClient:
                         raise Exception("Rate limit exceeded")
                     
                     else:
+                        response_text = await response.text()
                         logger.error(f"Arrivy API error {status}: {response_text[:500]}")
                         raise Exception(f"API request failed with status {status}")
                         
@@ -241,8 +146,3 @@ class ArrivyClient:
             return True, "Connection successful"
         except Exception as e:
             return False, str(e)
-
-    # Backward compatibility alias
-    async def get_team_members(self, page_size=100, page=1, last_sync=None, endpoint="crews"):
-        """Get team members from Arrivy API. (Deprecated: use get_crews instead)"""
-        return await self.get_crews(page_size, page, last_sync, endpoint)

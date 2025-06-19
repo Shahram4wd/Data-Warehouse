@@ -1,6 +1,6 @@
 # Arrivy Integration
 
-This package provides comprehensive integration with the Arrivy API for syncing customers, team members, and bookings data.
+This package provides comprehensive integration with the Arrivy API using official endpoints for syncing customers, entities (crew members), groups (locations), and bookings data.
 
 ## Configuration
 
@@ -18,21 +18,31 @@ ARRIVY_API_URL=https://api.arrivy.com/v1/
 - Stores customer information including contact details, addresses, and metadata
 - Primary key: `id` (Arrivy customer ID)
 - Includes fields for company name, personal details, address, timezone, and custom fields
+- Table: `ingestion_arrivy_customer`
 
-### Arrivy_TeamMember
-- Stores team member/employee information
-- Primary key: `id` (Arrivy team member ID)
-- Includes fields for personal details, role, permissions, group assignments, and skills
+### Arrivy_Entity
+- Stores individual crew member information from the official `/entities` endpoint
+- Primary key: `id` (Arrivy entity ID)
+- Includes fields for name, contact details, permissions, skills, and group assignments
+- Table: `ingestion_arrivy_entity`
+
+### Arrivy_Group
+- Stores group/location information from the official `/groups` endpoint
+- Primary key: `id` (Arrivy group ID)
+- Includes fields for name, address, contact information, and organizational data
+- Table: `ingestion_arrivy_group`
 
 ### Arrivy_Booking
 - Stores booking/appointment information (called "tasks" in Arrivy API)
 - Primary key: `id` (Arrivy booking ID)
-- Links to customers via foreign key relationship
+- References customers via `customer_id` field (string, not foreign key to allow importing all bookings)
 - Includes scheduling, location, team assignments, and status information
+- Table: `ingestion_arrivy_booking`
 
 ### Arrivy_SyncHistory
 - Tracks sync operations for each endpoint
 - Stores last sync timestamps and statistics
+- Table: `ingestion_arrivy_sync_history`
 
 ## Management Commands
 
@@ -44,7 +54,7 @@ python manage.py test_arrivy --endpoint customers --limit 5
 Test the API connection and fetch sample data.
 
 **Options:**
-- `--endpoint`: Which endpoint to test (customers, team_members, bookings)
+- `--endpoint`: Which endpoint to test (customers, entities, groups, bookings)
 - `--limit`: Number of records to fetch (default: 5)
 - `--output`: Save data to file
 
@@ -53,7 +63,7 @@ Test the API connection and fetch sample data.
 python manage.py sync_arrivy_customers
 ```
 
-Sync customer data from Arrivy.
+Sync customer data from Arrivy using the official `/customers` endpoint.
 
 **Options:**
 - `--full`: Perform full sync instead of incremental
@@ -61,12 +71,21 @@ Sync customer data from Arrivy.
 - `--lastmodifieddate`: Filter by modification date (YYYY-MM-DD)
 - `--debug`: Show debug output
 
-### Sync Team Members
+### Sync Entities (Crew Members)
 ```bash
-python manage.py sync_arrivy_team_members
+python manage.py sync_arrivy_entities
 ```
 
-Sync team member data from Arrivy.
+Sync individual crew member data from Arrivy using the official `/entities` endpoint.
+
+**Options:** Same as customers sync
+
+### Sync Groups (Locations)
+```bash
+python manage.py sync_arrivy_groups
+```
+
+Sync group/location data from Arrivy using the official `/groups` endpoint.
 
 **Options:** Same as customers sync
 
@@ -75,7 +94,7 @@ Sync team member data from Arrivy.
 python manage.py sync_arrivy_bookings
 ```
 
-Sync booking data from Arrivy.
+Sync booking data from Arrivy using the official `/tasks` endpoint.
 
 **Options:** Same as customers sync, plus:
 - `--start-date`: Filter bookings starting after date (YYYY-MM-DD)
@@ -86,11 +105,12 @@ Sync booking data from Arrivy.
 python manage.py sync_arrivy_all
 ```
 
-Sync all Arrivy data in the correct order (customers → team members → bookings).
+Sync all Arrivy data using official endpoints in the correct order (customers → entities → groups → bookings).
 
 **Options:** All options from individual commands, plus:
 - `--skip-customers`: Skip customer sync
-- `--skip-team-members`: Skip team member sync
+- `--skip-entities`: Skip entities (crew members) sync
+- `--skip-groups`: Skip groups (locations) sync
 - `--skip-bookings`: Skip booking sync
 
 ## Usage Examples
@@ -133,7 +153,7 @@ python manage.py migrate
 
 ## API Client
 
-The `ArrivyClient` class provides asynchronous methods for interacting with the Arrivy API:
+The `ArrivyClient` class provides asynchronous methods for interacting with the official Arrivy API endpoints:
 
 ```python
 from ingestion.arrivy.arrivy_client import ArrivyClient
@@ -144,13 +164,16 @@ client = ArrivyClient()
 # Test connection
 success, message = await client.test_connection()
 
-# Get customers
+# Get customers (official /customers endpoint)
 result = await client.get_customers(page_size=100, page=1)
 
-# Get team members
-result = await client.get_team_members(page_size=100, page=1)
+# Get entities/crew members (official /entities endpoint)
+result = await client.get_entities(page_size=100, page=1)
 
-# Get bookings
+# Get groups/locations (official /groups endpoint)
+result = await client.get_groups(page_size=100, page=1)
+
+# Get bookings (official /tasks endpoint)
 result = await client.get_bookings(
     page_size=100, 
     page=1,

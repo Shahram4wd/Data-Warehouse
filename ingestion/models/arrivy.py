@@ -30,7 +30,7 @@ class Arrivy_Customer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'arrivy_customer'
+        db_table = 'ingestion_arrivy_customer'
         verbose_name = 'Arrivy Customer'
         verbose_name_plural = 'Arrivy Customers'
 
@@ -40,65 +40,12 @@ class Arrivy_Customer(models.Model):
         return f"{self.first_name} {self.last_name} ({self.id})" if self.first_name or self.last_name else f"Customer {self.id}"
 
 
-class Arrivy_TeamMember(models.Model):
-    """Arrivy Team Member model"""
-    id = models.CharField(max_length=50, primary_key=True)
-    external_id = models.CharField(max_length=255, null=True, blank=True)
-    name = models.CharField(max_length=255, null=True, blank=True)
-    first_name = models.CharField(max_length=255, null=True, blank=True)
-    last_name = models.CharField(max_length=255, null=True, blank=True)
-    email = models.EmailField(null=True, blank=True)
-    phone = models.CharField(max_length=20, null=True, blank=True)
-    image_path = models.URLField(null=True, blank=True)
-    image_id = models.CharField(max_length=50, null=True, blank=True)
-    
-    # Profile information
-    username = models.CharField(max_length=255, null=True, blank=True)
-    role = models.CharField(max_length=100, null=True, blank=True)
-    permission = models.CharField(max_length=100, null=True, blank=True)
-    group_id = models.CharField(max_length=50, null=True, blank=True)
-    group_name = models.CharField(max_length=255, null=True, blank=True)
-    
-    # Location and timezone
-    timezone = models.CharField(max_length=50, null=True, blank=True)
-    address = models.TextField(null=True, blank=True)
-    
-    # Status and settings
-    is_active = models.BooleanField(default=True)
-    is_online = models.BooleanField(default=False)
-    can_turnon_location = models.BooleanField(default=False)
-    support_sms = models.BooleanField(default=True)
-    support_phone = models.BooleanField(default=True)
-    
-    # Timestamps
-    created_time = models.DateTimeField(null=True, blank=True)
-    updated_time = models.DateTimeField(null=True, blank=True)
-    last_location_time = models.DateTimeField(null=True, blank=True)
-    
-    # Extra fields and metadata
-    extra_fields = models.JSONField(null=True, blank=True)
-    skills = models.JSONField(null=True, blank=True)
-    
-    # Tracking fields
-    synced_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'arrivy_team_member'
-        verbose_name = 'Arrivy Team Member'
-        verbose_name_plural = 'Arrivy Team Members'
-
-    def __str__(self):
-        return f"{self.name or f'{self.first_name} {self.last_name}'} ({self.id})"
-
-
 class Arrivy_Booking(models.Model):
     """Arrivy Booking model"""
     id = models.CharField(max_length=50, primary_key=True)
     external_id = models.CharField(max_length=255, null=True, blank=True)
-    
-    # Customer relationship
-    customer = models.ForeignKey(Arrivy_Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='bookings')
+      # Customer relationship - no foreign key constraint
+    customer_id = models.CharField(max_length=50, null=True, blank=True, help_text="Customer ID from API - no foreign key constraint")
     customer_id_raw = models.CharField(max_length=50, null=True, blank=True, help_text="Raw customer ID from API for debugging")
     
     # Basic booking information
@@ -160,7 +107,7 @@ class Arrivy_Booking(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'arrivy_booking'
+        db_table = 'ingestion_arrivy_booking'
         verbose_name = 'Arrivy Booking'
         verbose_name_plural = 'Arrivy Bookings'
 
@@ -178,9 +125,164 @@ class Arrivy_SyncHistory(models.Model):
     notes = models.TextField(null=True, blank=True)
     
     class Meta:
-        db_table = 'arrivy_sync_history'
+        db_table = 'ingestion_arrivy_sync_history'
         verbose_name = 'Arrivy Sync History'
         verbose_name_plural = 'Arrivy Sync Histories'
 
     def __str__(self):
         return f"{self.endpoint} - {self.last_synced_at}"
+
+
+class Arrivy_Entity(models.Model):
+    """Arrivy Entity model - represents individual crew members from Arrivy entities endpoint"""
+    id = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    username = models.CharField(max_length=255, null=True, blank=True)
+    type = models.CharField(max_length=100, null=True, blank=True)
+    external_id = models.CharField(max_length=255, null=True, blank=True)
+    external_type = models.CharField(max_length=100, null=True, blank=True)
+    
+    # Contact information
+    email = models.EmailField(null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    
+    # Visual and identification
+    image_id = models.CharField(max_length=50, null=True, blank=True)
+    image_path = models.URLField(null=True, blank=True)
+    color = models.CharField(max_length=50, null=True, blank=True)
+    url_safe_id = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Status and permissions
+    is_active = models.BooleanField(default=True)
+    is_disabled = models.BooleanField(default=False)
+    is_default = models.BooleanField(default=False)
+    user_type = models.CharField(max_length=50, null=True, blank=True)
+    invite_status = models.CharField(max_length=50, null=True, blank=True)
+    
+    # Group and organizational structure
+    group_id = models.CharField(max_length=50, null=True, blank=True)
+    owner = models.CharField(max_length=50, null=True, blank=True)
+    additional_group_ids = models.JSONField(null=True, blank=True)
+    
+    # Location and address
+    address_line_1 = models.CharField(max_length=255, null=True, blank=True)
+    address_line_2 = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    zipcode = models.CharField(max_length=20, null=True, blank=True)
+    complete_address = models.TextField(null=True, blank=True)
+    exact_location = models.JSONField(null=True, blank=True)
+    is_address_geo_coded = models.BooleanField(default=False)
+    use_lat_lng_address = models.BooleanField(default=False)
+    
+    # Settings and preferences
+    allow_login_in_kiosk_mode_only = models.BooleanField(default=False)
+    can_turnoff_location = models.BooleanField(default=True)
+    can_view_customers_of_all_groups = models.BooleanField(default=False)
+    is_status_priority_notifications_disabled = models.BooleanField(default=False)
+    is_included_in_billing = models.BooleanField(default=True)
+    force_stop_billing = models.BooleanField(default=False)
+    
+    # Skills and capabilities
+    skill_ids = models.JSONField(null=True, blank=True)
+    skill_details = models.JSONField(null=True, blank=True)
+    
+    # Additional data
+    details = models.TextField(null=True, blank=True)
+    extra_fields = models.JSONField(null=True, blank=True)
+    visible_bookings = models.JSONField(null=True, blank=True)
+    visible_routing_forms = models.JSONField(null=True, blank=True)
+    notifications = models.JSONField(null=True, blank=True)
+    allow_status_notifications = models.JSONField(null=True, blank=True)
+    permission_groups = models.JSONField(null=True, blank=True)
+    template_id = models.CharField(max_length=50, null=True, blank=True)
+    template_extra_fields = models.JSONField(null=True, blank=True)
+    
+    # Audit trail
+    created_by = models.CharField(max_length=50, null=True, blank=True)
+    created_by_user = models.CharField(max_length=255, null=True, blank=True)
+    created_time = models.DateTimeField(null=True, blank=True)
+    updated_by = models.CharField(max_length=50, null=True, blank=True)
+    updated_by_user = models.CharField(max_length=255, null=True, blank=True)
+    updated_time = models.DateTimeField(null=True, blank=True)
+    joined_datetime = models.DateTimeField(null=True, blank=True)
+    
+    # Last location reading
+    last_reading = models.JSONField(null=True, blank=True)
+    
+    # SSO integration
+    okta_user_id = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Tracking fields
+    synced_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ingestion_arrivy_entity'
+        verbose_name = 'Arrivy Entity'
+        verbose_name_plural = 'Arrivy Entities'
+
+    def __str__(self):
+        return f"{self.name} ({self.type}) - {self.id}" if self.name and self.type else f"Entity {self.id}"
+
+
+class Arrivy_Group(models.Model):
+    """Arrivy Group model - represents groups/locations from official Arrivy groups endpoint"""
+    id = models.CharField(max_length=50, primary_key=True)
+    url_safe_id = models.CharField(max_length=255, null=True, blank=True)
+    owner = models.CharField(max_length=50, null=True, blank=True)
+    name = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    
+    # Contact information
+    email = models.EmailField(null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    mobile_number = models.CharField(max_length=20, null=True, blank=True)
+    website = models.URLField(null=True, blank=True)
+    emergency = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Address information
+    address_line_1 = models.CharField(max_length=255, null=True, blank=True)
+    address_line_2 = models.CharField(max_length=255, null=True, blank=True)
+    complete_address = models.TextField(null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    zipcode = models.CharField(max_length=20, null=True, blank=True)
+    exact_location = models.JSONField(null=True, blank=True)
+    use_lat_lng_address = models.BooleanField(default=False)
+    is_address_geo_coded = models.BooleanField(default=False)
+    timezone = models.CharField(max_length=50, null=True, blank=True)
+    
+    # Visual and organizational
+    image_id = models.CharField(max_length=50, null=True, blank=True)
+    image_path = models.URLField(null=True, blank=True)
+    
+    # Status and settings
+    is_default = models.BooleanField(default=False)
+    is_disabled = models.BooleanField(default=False)
+    is_implicit = models.BooleanField(default=False)
+    
+    # Additional data
+    social_links = models.JSONField(null=True, blank=True)
+    additional_addresses = models.JSONField(null=True, blank=True)
+    territory_ids = models.JSONField(null=True, blank=True)
+    extra_fields = models.JSONField(null=True, blank=True)
+    
+    # Audit trail
+    created_by = models.CharField(max_length=50, null=True, blank=True)
+    created_time = models.DateTimeField(null=True, blank=True)
+    updated_time = models.DateTimeField(null=True, blank=True)
+    
+    # Tracking fields
+    synced_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ingestion_arrivy_group'
+        verbose_name = 'Arrivy Group'
+        verbose_name_plural = 'Arrivy Groups'
+
+    def __str__(self):
+        return f"{self.name} ({self.id})" if self.name else f"Group {self.id}"
