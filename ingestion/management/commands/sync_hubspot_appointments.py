@@ -83,7 +83,7 @@ class Command(BaseCommand):
             self.stdout.write('Full sync (no previous sync found)')
         
         # Sync appointments
-        total_processed = await self._sync_appointments_pages(client, last_sync, options)
+        total_processed = await self._sync_appointments_chunked(client, last_sync, options)
           # Update sync history
         if not self.dry_run and total_processed > 0:
             await self._update_sync_history()
@@ -119,55 +119,21 @@ class Command(BaseCommand):
         except Exception:
             return None
 
-    async def _sync_appointments_pages(self, client, last_sync, options):
-        """Sync appointments with pagination"""
-        total_processed = 0
-        page_num = 1
-        page_token = None
-        max_pages = options['pages']
-        checkpoint_interval = options['checkpoint']
-        
-        while True:
-            self.stdout.write(f'Processing page {page_num}...')
-            
-            # Fetch page
-            appointments, next_page_token = await client.get_appointments_page(
-                last_sync=last_sync,
-                page_token=page_token,
-                limit=100
-            )
-            
-            if not appointments:
-                self.stdout.write('No more appointments found.')
-                break
-            
-            # Process appointments
-            processed_count = await self._process_appointments(appointments)
-            total_processed += processed_count
-            
-            self.stdout.write(
-                f'Page {page_num}: Processed {processed_count} appointments '
-                f'(Total: {total_processed})'
-            )
-            
-            # Checkpoint save
-            if not self.dry_run and page_num % checkpoint_interval == 0:
-                self._update_sync_history()
-                self.stdout.write(f'Checkpoint: Saved progress after page {page_num}')
-            
-            # Check if we should continue
-            if not next_page_token:
-                self.stdout.write('Reached end of data.')
-                break
-            
-            if max_pages > 0 and page_num >= max_pages:
-                self.stdout.write(f'Reached maximum pages limit ({max_pages}).')
-                break
-            
-            # Prepare for next page
-            page_token = next_page_token
-            page_num += 1        
-        return total_processed
+    async def _sync_appointments_chunked(self, client, last_sync, options):
+        """Sync appointments using HubspotClient.get_appointments_chunked (bypass 10k limit)"""
+        # Determine date range for full history
+        start_date = last_sync or datetime(2018, 1, 1, tzinfo=timezone.utc)
+        end_date = timezone.now()
+        self.stdout.write(f"Syncing appointments from {start_date} to {end_date} using chunked fetch...")
+        # Fetch all appointments in chunks via client
+        all_appointments = await client.get_appointments_chunked(
+            start_date=start_date,
+            end_date=end_date,
+            chunk_days=30
+        )
+        # Process and save all fetched appointments
+        processed_count = await self._process_appointments(all_appointments)
+        return processed_count
 
     async def _process_appointments(self, appointments):
         """Process appointments with improved batch processing"""
@@ -270,7 +236,8 @@ class Command(BaseCommand):
                 return int(int_str)
             except (ValueError, TypeError):
                 return None
-          # Map HubSpot properties to model fields
+        
+        # Map HubSpot properties to model fields
         appointment_fields = {
             'id': appointment_id,
             'appointment_id': properties.get('appointment_id'),
