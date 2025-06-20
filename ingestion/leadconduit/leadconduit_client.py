@@ -350,3 +350,85 @@ class LeadConduitClient:
         """
         response = self._make_request('POST', '/events', json_data=query_data)
         return response.json()
+
+    def get_leads_direct(self, limit: int = 100, after_id: Optional[str] = None,
+                        before_id: Optional[str] = None, start: Optional[datetime] = None,
+                        end: Optional[datetime] = None, sort: str = 'desc') -> List[Dict[str, Any]]:
+        """
+        Fetch leads directly from /leads endpoint
+        
+        Args:
+            limit: Maximum number of leads to return (1-1000)
+            after_id: Return leads created after this ID
+            before_id: Return leads created before this ID
+            start: Return leads created at or after this time
+            end: Return leads created at or before this time
+            sort: Sort order - 'asc' or 'desc'
+        """
+        params = {
+            'limit': min(limit, 1000),  # Cap at API maximum
+            'sort': sort
+        }
+        
+        if after_id:
+            params['after_id'] = after_id
+        if before_id:
+            params['before_id'] = before_id
+        if start:
+            params['start'] = start.isoformat()
+        if end:
+            params['end'] = end.isoformat()
+        
+        response = self._make_request('GET', '/leads', params=params)
+        return response.json()
+
+    def get_leads_direct_paginated(self, limit_per_page: int = 1000, max_total: Optional[int] = None,
+                                  start: Optional[datetime] = None, end: Optional[datetime] = None) -> List[Dict[str, Any]]:
+        """
+        Fetch all leads directly with automatic pagination
+        
+        Args:
+            limit_per_page: Number of leads per API call (max 1000)
+            max_total: Maximum total leads to fetch (None for unlimited)
+            start: Return leads created at or after this time
+            end: Return leads created at or before this time
+        """
+        all_leads = []
+        after_id = None
+        page = 1
+        
+        while True:
+            logger.info(f"Fetching leads page {page} (after_id: {after_id})")
+            
+            # Calculate how many to fetch this round
+            remaining = None
+            if max_total:
+                remaining = max_total - len(all_leads)
+                if remaining <= 0:
+                    break
+                limit_per_page = min(limit_per_page, remaining)
+            
+            leads = self.get_leads_direct(
+                limit=limit_per_page,
+                after_id=after_id,
+                start=start,
+                end=end,
+                sort='asc'  # Use ascending for pagination
+            )
+            
+            if not leads:
+                logger.info("No more leads found")
+                break
+            
+            all_leads.extend(leads)
+            logger.info(f"Fetched {len(leads)} leads (total: {len(all_leads)})")
+            
+            # Set up for next page
+            after_id = leads[-1]['id']
+            page += 1
+            
+            # Rate limiting - be nice to the API
+            time.sleep(0.1)
+        
+        logger.info(f"Completed leads pagination: {len(all_leads)} total leads")
+        return all_leads

@@ -96,7 +96,7 @@ class LeadConduit_Lead(models.Model):
     address_1 = models.CharField(max_length=255, null=True, blank=True)
     address_2 = models.CharField(max_length=255, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
-    state = models.CharField(max_length=10, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
     postal_code = models.CharField(max_length=20, null=True, blank=True)
     country = models.CharField(max_length=50, null=True, blank=True)
     
