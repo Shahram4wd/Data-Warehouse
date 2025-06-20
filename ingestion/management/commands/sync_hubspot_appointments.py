@@ -1,0 +1,442 @@
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+from django.db import transaction
+from datetime import datetime, timedelta
+import asyncio
+import logging
+from typing import Dict, Any
+from tqdm import tqdm
+from asgiref.sync import sync_to_async
+
+from ingestion.hubspot.hubspot_client import HubspotClient
+from ingestion.models.hubspot import Hubspot_Appointment, Hubspot_SyncHistory
+
+logger = logging.getLogger(__name__)
+
+
+class Command(BaseCommand):
+    help = "Sync appointments from HubSpot custom object 0-421"
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--full',
+            action='store_true',
+            help='Perform a full sync instead of incremental'
+        )
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Show debug output'
+        )
+        parser.add_argument(
+            '--pages',
+            type=int,
+            default=0,
+            help='Maximum number of pages to process (0 for unlimited)'
+        )
+        parser.add_argument(
+            '--checkpoint',
+            type=int,
+            default=5,
+            help='Save progress to database after every N pages (default 5)'
+        )
+        parser.add_argument(
+            '--lastmodifieddate',
+            type=str,
+            help='Filter appointments modified after this date (YYYY-MM-DD format)'
+        )
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Show what would be imported without saving to database'
+        )
+
+    def handle(self, *args, **options):
+        if options['debug']:
+            logging.getLogger('ingestion.hubspot').setLevel(logging.DEBUG)
+        
+        self.dry_run = options['dry_run']
+        
+        if self.dry_run:
+            self.stdout.write(self.style.WARNING('DRY RUN MODE - No data will be saved'))
+
+        # Run the async sync
+        try:
+            asyncio.run(self.sync_appointments(options))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Sync failed: {str(e)}'))
+            logger.error(f"HubSpot appointments sync failed: {str(e)}")
+
+    async def sync_appointments(self, options):
+        """Main sync logic"""
+        self.stdout.write('Starting HubSpot appointments sync...')
+        
+        # Initialize client
+        client = HubspotClient()
+        
+        # Determine last sync time
+        last_sync = self._get_last_sync_time(options)
+        
+        if last_sync:
+            self.stdout.write(f'Incremental sync from: {last_sync}')
+        else:
+            self.stdout.write('Full sync (no previous sync found)')
+        
+        # Sync appointments
+        total_processed = await self._sync_appointments_pages(client, last_sync, options)
+          # Update sync history
+        if not self.dry_run and total_processed > 0:
+            await self._update_sync_history()
+        
+        self.stdout.write(
+            self.style.SUCCESS(f'✓ Sync completed. Processed {total_processed} appointments.')
+        )
+
+    def _get_last_sync_time(self, options):
+        """Get the last sync time"""
+        if options['full']:
+            return None
+        
+        if options['lastmodifieddate']:
+            try:
+                return datetime.strptime(options['lastmodifieddate'], '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            except ValueError:
+                self.stdout.write(self.style.WARNING('Invalid date format. Using full sync.'))
+                return None
+        
+        # Get last sync from history - use sync method
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT last_synced_at FROM ingestion_hubspot_synchistory WHERE endpoint = %s",
+                    ['appointments']
+                )
+                row = cursor.fetchone()
+                if row:
+                    return row[0]
+                return None
+        except Exception:
+            return None
+
+    async def _sync_appointments_pages(self, client, last_sync, options):
+        """Sync appointments with pagination"""
+        total_processed = 0
+        page_num = 1
+        page_token = None
+        max_pages = options['pages']
+        checkpoint_interval = options['checkpoint']
+        
+        while True:
+            self.stdout.write(f'Processing page {page_num}...')
+            
+            # Fetch page
+            appointments, next_page_token = await client.get_appointments_page(
+                last_sync=last_sync,
+                page_token=page_token,
+                limit=100
+            )
+            
+            if not appointments:
+                self.stdout.write('No more appointments found.')
+                break
+            
+            # Process appointments
+            processed_count = await self._process_appointments(appointments)
+            total_processed += processed_count
+            
+            self.stdout.write(
+                f'Page {page_num}: Processed {processed_count} appointments '
+                f'(Total: {total_processed})'
+            )
+            
+            # Checkpoint save
+            if not self.dry_run and page_num % checkpoint_interval == 0:
+                self._update_sync_history()
+                self.stdout.write(f'Checkpoint: Saved progress after page {page_num}')
+            
+            # Check if we should continue
+            if not next_page_token:
+                self.stdout.write('Reached end of data.')
+                break
+            
+            if max_pages > 0 and page_num >= max_pages:
+                self.stdout.write(f'Reached maximum pages limit ({max_pages}).')
+                break
+            
+            # Prepare for next page
+            page_token = next_page_token
+            page_num += 1
+        
+        return total_processed
+
+    async def _process_appointments(self, appointments):
+        """Process a batch of appointments"""
+        processed_count = 0
+        
+        with tqdm(total=len(appointments), desc="Processing appointments") as pbar:
+            for appointment_data in appointments:
+                try:
+                    if self.dry_run:
+                        # Just show what would be processed
+                        appointment_name = appointment_data.get('properties', {}).get('hs_appointment_name', 'N/A')
+                        first_name = appointment_data.get('properties', {}).get('first_name', '')
+                        last_name = appointment_data.get('properties', {}).get('last_name', '')
+                        self.stdout.write(
+                            self.style.SUCCESS(f"Would process: {appointment_name} - {first_name} {last_name}")
+                        )
+                        processed_count += 1
+                    else:
+                        # Actually process the appointment
+                        await self._save_appointment(appointment_data)
+                        processed_count += 1
+                    
+                    pbar.update(1)
+                    
+                except Exception as e:
+                    appointment_id = appointment_data.get('id', 'unknown')
+                    logger.error(f"Failed to process appointment {appointment_id}: {str(e)}")
+                    pbar.update(1)
+        
+        return processed_count
+
+    async def _save_appointment(self, appointment_data):
+        """Save a single appointment to the database"""
+        appointment_id = appointment_data['id']
+        properties = appointment_data.get('properties', {})
+        
+        # Parse datetime fields
+        def parse_datetime(date_str):
+            if not date_str:
+                return None
+            try:
+                # HubSpot timestamps are usually in milliseconds
+                if date_str.isdigit():
+                    timestamp = int(date_str) / 1000
+                    return datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                else:
+                    return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            except (ValueError, TypeError):
+                return None
+        
+        def parse_date(date_str):
+            if not date_str:
+                return None
+            try:
+                return datetime.strptime(date_str, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                return None
+        
+        def parse_time(time_str):
+            if not time_str:
+                return None
+            try:
+                return datetime.strptime(time_str, '%H:%M:%S').time()
+            except (ValueError, TypeError):
+                return None
+        
+        def parse_boolean(bool_str):
+            if bool_str is None or bool_str == '':
+                return None
+            return str(bool_str).lower() in ['true', '1', 'yes']
+        
+        def parse_decimal(decimal_str):
+            if not decimal_str:
+                return None
+            try:
+                return float(decimal_str)
+            except (ValueError, TypeError):
+                return None
+        
+        def parse_int(int_str):
+            if not int_str:
+                return None
+            try:
+                return int(int_str)
+            except (ValueError, TypeError):
+                return None
+        
+        # Map HubSpot properties to model fields
+        appointment_fields = {
+            'id': appointment_id,
+            'appointment_id': properties.get('appointment_id'),
+            'genius_appointment_id': properties.get('genius_appointment_id'),
+            'marketsharp_id': properties.get('marketsharp_id'),
+              # HubSpot specific fields
+            'hs_appointment_name': properties.get('hs_appointment_name'),
+            'hs_appointment_start': parse_datetime(properties.get('hs_appointment_start')),
+            'hs_appointment_end': parse_datetime(properties.get('hs_appointment_end')),
+            'hs_duration': parse_int(properties.get('hs_duration')),
+            'hs_object_id': properties.get('hs_object_id'),
+            'hs_createdate': parse_datetime(properties.get('hs_createdate')),
+            'hs_lastmodifieddate': parse_datetime(properties.get('hs_lastmodifieddate')),
+            'hs_pipeline': properties.get('hs_pipeline'),
+            'hs_pipeline_stage': properties.get('hs_pipeline_stage'),
+            
+            # HubSpot system fields
+            'hs_all_accessible_team_ids': properties.get('hs_all_accessible_team_ids'),
+            'hs_all_assigned_business_unit_ids': properties.get('hs_all_assigned_business_unit_ids'),
+            'hs_all_owner_ids': properties.get('hs_all_owner_ids'),
+            'hs_all_team_ids': properties.get('hs_all_team_ids'),
+            'hs_created_by_user_id': properties.get('hs_created_by_user_id'),
+            'hs_merged_object_ids': properties.get('hs_merged_object_ids'),
+            'hs_object_source': properties.get('hs_object_source'),
+            'hs_object_source_detail_1': properties.get('hs_object_source_detail_1'),
+            'hs_object_source_detail_2': properties.get('hs_object_source_detail_2'),
+            'hs_object_source_detail_3': properties.get('hs_object_source_detail_3'),
+            'hs_object_source_id': properties.get('hs_object_source_id'),
+            'hs_object_source_label': properties.get('hs_object_source_label'),
+            'hs_object_source_user_id': properties.get('hs_object_source_user_id'),
+            'hs_owning_teams': properties.get('hs_owning_teams'),
+            'hs_read_only': parse_boolean(properties.get('hs_read_only')),
+            'hs_shared_team_ids': properties.get('hs_shared_team_ids'),
+            'hs_shared_user_ids': properties.get('hs_shared_user_ids'),
+            'hs_unique_creation_key': properties.get('hs_unique_creation_key'),
+            'hs_updated_by_user_id': properties.get('hs_updated_by_user_id'),
+            'hs_user_ids_of_all_notification_followers': properties.get('hs_user_ids_of_all_notification_followers'),
+            'hs_user_ids_of_all_notification_unfollowers': properties.get('hs_user_ids_of_all_notification_unfollowers'),
+            'hs_user_ids_of_all_owners': properties.get('hs_user_ids_of_all_owners'),
+            'hs_was_imported': parse_boolean(properties.get('hs_was_imported')),
+            
+            # Contact information
+            'first_name': properties.get('first_name'),
+            'last_name': properties.get('last_name'),
+            'email': properties.get('email'),
+            'phone1': properties.get('phone1'),
+            'phone2': properties.get('phone2'),
+            
+            # Address information
+            'address1': properties.get('address1'),
+            'address2': properties.get('address2'),
+            'city': properties.get('city'),
+            'state': properties.get('state'),
+            'zip': properties.get('zip'),
+            
+            # Appointment scheduling
+            'date': parse_date(properties.get('date')),
+            'time': parse_time(properties.get('time')),
+            'duration': parse_int(properties.get('duration')),
+            
+            # Appointment status
+            'appointment_status': properties.get('appointment_status'),
+            'appointment_response': properties.get('appointment_response'),
+            'is_complete': parse_boolean(properties.get('is_complete')),
+            
+            # Services and interests
+            'appointment_services': properties.get('appointment_services'),
+            'lead_services': properties.get('lead_services'),
+            'product_interest_primary': properties.get('product_interest_primary'),
+            'product_interest_secondary': properties.get('product_interest_secondary'),
+            
+            # User and assignment info
+            'user_id': properties.get('user_id'),
+            'canvasser': properties.get('canvasser'),
+            'canvasser_id': properties.get('canvasser_id'),
+            'canvasser_email': properties.get('canvasser_email'),
+            'hubspot_owner_id': properties.get('hubspot_owner_id'),
+            'hubspot_owner_assigneddate': parse_datetime(properties.get('hubspot_owner_assigneddate')),
+            'hubspot_team_id': properties.get('hubspot_team_id'),
+            
+            # Division info
+            'division_id': properties.get('division_id'),
+            
+            # Source tracking
+            'primary_source': properties.get('primary_source'),
+            'secondary_source': properties.get('secondary_source'),
+            'prospect_id': properties.get('prospect_id'),
+            'prospect_source_id': properties.get('prospect_source_id'),
+            'hscontact_id': properties.get('hscontact_id'),
+            
+            # Appointment type
+            'type_id': properties.get('type_id'),
+            'type_id_text': properties.get('type_id_text'),
+            'marketsharp_appt_type': properties.get('marketsharp_appt_type'),
+            
+            # Completion details
+            'complete_date': parse_datetime(properties.get('complete_date')),
+            'complete_outcome_id': properties.get('complete_outcome_id'),
+            'complete_outcome_id_text': properties.get('complete_outcome_id_text'),
+            'complete_user_id': properties.get('complete_user_id'),
+            
+            # Confirmation details
+            'confirm_date': parse_datetime(properties.get('confirm_date')),
+            'confirm_user_id': properties.get('confirm_user_id'),
+            'confirm_with': properties.get('confirm_with'),
+            
+            # Assignment details
+            'assign_date': parse_datetime(properties.get('assign_date')),
+            'add_date': parse_datetime(properties.get('add_date')),
+            'add_user_id': properties.get('add_user_id'),
+            
+            # Arrivy integration
+            'arrivy_appt_date': parse_datetime(properties.get('arrivy_appt_date')),
+            'arrivy_confirm_date': parse_datetime(properties.get('arrivy_confirm_date')),
+            'arrivy_confirm_user': properties.get('arrivy_confirm_user'),
+            'arrivy_created_by': properties.get('arrivy_created_by'),
+            'arrivy_object_id': properties.get('arrivy_object_id'),
+            'arrivy_status': properties.get('arrivy_status'),
+            'arrivy_user': properties.get('arrivy_user'),
+            'arrivy_user_divison_id': properties.get('arrivy_user_divison_id'),
+            'arrivy_user_external_id': properties.get('arrivy_user_external_id'),
+            'arrivy_username': properties.get('arrivy_username'),
+            
+            # SalesPro integration
+            'salespro_both_homeowners': parse_boolean(properties.get('salespro_both_homeowners')),
+            'salespro_deadline': parse_date(properties.get('salespro_deadline')),
+            'salespro_deposit_type': properties.get('salespro_deposit_type'),
+            'salespro_fileurl_contract': properties.get('salespro_fileurl_contract'),
+            'salespro_fileurl_estimate': properties.get('salespro_fileurl_estimate'),
+            'salespro_financing': properties.get('salespro_financing'),
+            'salespro_job_size': properties.get('salespro_job_size'),
+            'salespro_job_type': properties.get('salespro_job_type'),
+            'salespro_last_price_offered': parse_decimal(properties.get('salespro_last_price_offered')),
+            'salespro_notes': properties.get('salespro_notes'),
+            'salespro_one_year_price': parse_decimal(properties.get('salespro_one_year_price')),
+            'salespro_preferred_payment': properties.get('salespro_preferred_payment'),
+            'salespro_requested_start': parse_date(properties.get('salespro_requested_start')),
+            'salespro_result': properties.get('salespro_result'),
+            'salespro_result_notes': properties.get('salespro_result_notes'),
+            'salespro_result_reason_demo': properties.get('salespro_result_reason_demo'),
+            'salespro_result_reason_no_demo': properties.get('salespro_result_reason_no_demo'),
+            
+            # Additional fields
+            'notes': properties.get('notes'),
+            'log': properties.get('log'),
+            'title': properties.get('title'),
+            'marketing_task_id': properties.get('marketing_task_id'),
+            'leap_estimate_id': properties.get('leap_estimate_id'),
+            'spouses_present': parse_boolean(properties.get('spouses_present')),
+            'year_built': parse_int(properties.get('year_built')),
+            'error_details': properties.get('error_details'),
+            'tester_test': properties.get('tester_test'),
+        }
+        
+        # Save to database using sync_to_async
+        await self._save_appointment_sync(appointment_id, appointment_fields)
+
+    @sync_to_async
+    def _save_appointment_sync(self, appointment_id, appointment_fields):
+        """Synchronous database save wrapped for async"""
+        with transaction.atomic():
+            appointment, created = Hubspot_Appointment.objects.update_or_create(
+                id=appointment_id,
+                defaults=appointment_fields
+            )
+            
+            if created:
+                logger.info(f"Created new appointment: {appointment_id}")
+            else:
+                logger.info(f"Updated appointment: {appointment_id}")
+
+    @sync_to_async  
+    def _update_sync_history(self):
+        """Update the sync history record"""
+        sync_history, created = Hubspot_SyncHistory.objects.update_or_create(
+            endpoint='appointments',
+            defaults={'last_synced_at': timezone.now()}
+        )
+        
+        if created:
+            logger.info("Created new sync history record for appointments")
+        else:
+            logger.info("Updated sync history for appointments")
