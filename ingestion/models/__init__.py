@@ -46,6 +46,11 @@ from .activeprospect import (
     ActiveProspect_Event, ActiveProspect_Lead, ActiveProspect_SyncHistory
 )
 
+# Import LeadConduit models
+from .leadconduit import (
+    LeadConduit_Event, LeadConduit_Lead, LeadConduit_SyncHistory
+)
+
 # Import all models to maintain backwards compatibility
 # This allows existing code to continue using: from ingestion.models import X
 __all__ = [
@@ -59,10 +64,10 @@ __all__ = [
     'Arrivy_Customer', 'Arrivy_Entity', 'Arrivy_Group', 'Arrivy_Booking', 'Arrivy_SyncHistory',    'MarketSharp_Activity', 'MarketSharp_ActivityReference', 'MarketSharp_ActivityResult',
     'MarketSharp_Address', 'MarketSharp_Appointment', 'MarketSharp_AppointmentResult',
     'MarketSharp_Company', 'MarketSharp_Contact', 'MarketSharp_ContactPhone',
-    'MarketSharp_ContactType', 'MarketSharp_CustomField', 'MarketSharp_Customer',
-    'MarketSharp_Employee', 'MarketSharp_Inquiry', 'MarketSharp_InquirySourcePrimary',
+    'MarketSharp_ContactType', 'MarketSharp_CustomField', 'MarketSharp_Customer',    'MarketSharp_Employee', 'MarketSharp_Inquiry', 'MarketSharp_InquirySourcePrimary',
     'MarketSharp_InquirySourceSecondary', 'MarketSharp_InquiryStatus', 'MarketSharp_Job',
     'MarketSharp_Lead', 'MarketSharp_ProductDetail', 'MarketSharp_ProductInterest',
     'MarketSharp_ProductType', 'MarketSharp_Prospect',
-    'ActiveProspect_Event', 'ActiveProspect_Lead', 'ActiveProspect_SyncHistory'
+    'ActiveProspect_Event', 'ActiveProspect_Lead', 'ActiveProspect_SyncHistory',
+    'LeadConduit_Event', 'LeadConduit_Lead', 'LeadConduit_SyncHistory'
 ]
