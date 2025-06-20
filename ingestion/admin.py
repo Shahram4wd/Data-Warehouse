@@ -15,6 +15,7 @@ from .models import (
     Genius_MarketingSource,  # Updated import
 )
 from ingestion.models.hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_SyncHistory
+from ingestion.models.leadconduit import LeadConduit_Lead, LeadConduit_Event, LeadConduit_SyncHistory
 
 # Register models with the admin site
 admin.site.register(Genius_DivisionGroup)
@@ -137,3 +138,93 @@ class HubspotDealAdmin(admin.ModelAdmin):
         call_command('sync_hubspot_deals')
         self.message_user(request, "Delta sync for deals has been initiated.")
     trigger_sync.short_description = "Trigger sync for deals"
+
+# LeadConduit Admin Configuration
+
+@admin.register(LeadConduit_Lead)
+class LeadConduitLeadAdmin(admin.ModelAdmin):
+    list_display = ('lead_id', 'first_name', 'last_name', 'email', 'phone_1', 'campaign', 'utm_source', 'status', 'import_source', 'submission_timestamp')
+    search_fields = ('lead_id', 'first_name', 'last_name', 'email', 'phone_1', 'campaign')
+    list_filter = ('import_source', 'status', 'latest_outcome', 'utm_source', 'campaign', 'state', 'is_duplicate')
+    readonly_fields = ('lead_id', 'created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Lead Identification', {
+            'fields': ('lead_id', 'flow_id', 'flow_name', 'source_id', 'source_name', 'import_source')
+        }),
+        ('Contact Information', {
+            'fields': ('first_name', 'last_name', 'email', 'phone_1', 'phone_2')
+        }),
+        ('Address', {
+            'fields': ('address_1', 'address_2', 'city', 'state', 'postal_code', 'country')
+        }),
+        ('Marketing Data', {
+            'fields': ('campaign', 'ad_group', 'keyword', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term')
+        }),
+        ('Lead Quality & Scoring', {
+            'fields': ('quality_score', 'lead_score', 'is_duplicate', 'status', 'disposition')
+        }),
+        ('Technical Data', {
+            'fields': ('ip_address', 'user_agent', 'referring_url', 'landing_page')
+        }),
+        ('Timestamps & Events', {
+            'fields': ('submission_timestamp', 'latest_event_id', 'latest_outcome', 'created_at', 'updated_at')
+        }),
+        ('Additional Data', {
+            'fields': ('reference', 'full_data'),
+            'classes': ('collapse',)
+        }),
+    )
+
+@admin.register(LeadConduit_Event)
+class LeadConduitEventAdmin(admin.ModelAdmin):
+    list_display = ('id', 'outcome', 'event_type', 'start_datetime', 'ms', 'imported_at')
+    search_fields = ('id', 'outcome', 'event_type', 'host')
+    list_filter = ('outcome', 'event_type', 'cap_reached', 'ping_limit_reached', 'imported_at')
+    readonly_fields = ('id', 'start_datetime', 'end_datetime', 'imported_at', 'updated_at')
+    
+    fieldsets = (
+        ('Event Basic Info', {
+            'fields': ('id', 'outcome', 'reason', 'event_type', 'host')
+        }),
+        ('Timing & Performance', {
+            'fields': ('start_timestamp', 'end_timestamp', 'start_datetime', 'end_datetime', 'expires_at', 
+                      'ms', 'wait_ms', 'overhead_ms', 'lag_ms', 'total_ms')
+        }),
+        ('Data & Processing', {
+            'fields': ('vars_data', 'appended_data', 'request_data', 'response_data'),
+            'classes': ('collapse',)
+        }),
+        ('Version & Step Info', {
+            'fields': ('handler_version', 'version', 'package_version', 'step_count', 'module_id')
+        }),
+        ('Limits & Capacity', {
+            'fields': ('cap_reached', 'ping_limit_reached')
+        }),
+        ('Metadata', {
+            'fields': ('imported_at', 'updated_at')
+        }),
+    )
+
+@admin.register(LeadConduit_SyncHistory)
+class LeadConduitSyncHistoryAdmin(admin.ModelAdmin):
+    list_display = ('sync_type', 'started_at', 'completed_at', 'status', 'records_processed', 'records_created', 'records_updated')
+    search_fields = ('sync_type', 'api_endpoint')
+    list_filter = ('sync_type', 'status', 'started_at')
+    readonly_fields = ('started_at', 'completed_at')
+    
+    fieldsets = (
+        ('Sync Information', {
+            'fields': ('sync_type', 'api_endpoint', 'status')
+        }),
+        ('Timing', {
+            'fields': ('started_at', 'completed_at')
+        }),
+        ('Results', {
+            'fields': ('records_processed', 'records_created', 'records_updated', 'error_message')
+        }),
+        ('Parameters', {
+            'fields': ('query_params', 'start_id', 'end_id'),
+            'classes': ('collapse',)
+        }),
+    )

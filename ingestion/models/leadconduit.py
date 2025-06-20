@@ -78,11 +78,11 @@ class LeadConduit_Event(models.Model):
 
 
 class LeadConduit_Lead(models.Model):
-    """Model for LeadConduit lead data extracted from events"""
-    lead_id = models.CharField(max_length=24, primary_key=True)  # Extracted from vars or appended data
-    flow_id = models.CharField(max_length=24, null=True, blank=True)
+    """Model for LeadConduit lead data extracted from events and CSV imports"""
+    lead_id = models.CharField(max_length=50, primary_key=True)  # Increased length for various ID formats
+    flow_id = models.CharField(max_length=50, null=True, blank=True)
     flow_name = models.CharField(max_length=255, null=True, blank=True)
-    source_id = models.CharField(max_length=24, null=True, blank=True)
+    source_id = models.CharField(max_length=50, null=True, blank=True)
     source_name = models.CharField(max_length=255, null=True, blank=True)
     
     # Lead contact information
@@ -104,11 +104,65 @@ class LeadConduit_Lead(models.Model):
     reference = models.CharField(max_length=255, null=True, blank=True)
     submission_timestamp = models.DateTimeField(null=True, blank=True)
     
+    # Marketing and campaign information (common in LeadConduit exports)
+    campaign = models.CharField(max_length=255, null=True, blank=True)
+    ad_group = models.CharField(max_length=255, null=True, blank=True)
+    keyword = models.CharField(max_length=255, null=True, blank=True)
+    utm_source = models.CharField(max_length=255, null=True, blank=True)
+    utm_medium = models.CharField(max_length=255, null=True, blank=True)
+    utm_campaign = models.CharField(max_length=255, null=True, blank=True)
+    utm_content = models.CharField(max_length=255, null=True, blank=True)
+    utm_term = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Lead quality and scoring
+    quality_score = models.FloatField(null=True, blank=True)
+    lead_score = models.IntegerField(null=True, blank=True)
+    is_duplicate = models.BooleanField(default=False)
+    
+    # Geographic and demographic data
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    referring_url = models.URLField(max_length=500, null=True, blank=True)
+    landing_page = models.URLField(max_length=500, null=True, blank=True)
+      # Lead status and disposition
+    status = models.CharField(max_length=50, null=True, blank=True)
+    disposition = models.CharField(max_length=100, null=True, blank=True)
+      # HubSpot properties (when LeadConduit exports include HubSpot data)
+    hs_createdate = models.DateTimeField(null=True, blank=True)
+    hs_lastmodifieddate = models.DateTimeField(null=True, blank=True)
+    hs_object_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_lead_status = models.CharField(max_length=100, null=True, blank=True)
+    hs_lifecyclestage = models.CharField(max_length=100, null=True, blank=True)
+    hs_analytics_source = models.CharField(max_length=255, null=True, blank=True)
+    hs_analytics_source_data_1 = models.CharField(max_length=255, null=True, blank=True)
+    hs_analytics_source_data_2 = models.CharField(max_length=255, null=True, blank=True)
+    
+    # SalesRabbit integration fields (common in LeadConduit exports)
+    salesrabbit_lead_id = models.CharField(max_length=100, null=True, blank=True)
+    salesrabbit_rep_id = models.CharField(max_length=100, null=True, blank=True)
+    salesrabbit_rep_name = models.CharField(max_length=255, null=True, blank=True)
+    salesrabbit_area_id = models.CharField(max_length=100, null=True, blank=True)
+    salesrabbit_area_name = models.CharField(max_length=255, null=True, blank=True)
+    salesrabbit_status = models.CharField(max_length=100, null=True, blank=True)
+    salesrabbit_disposition = models.CharField(max_length=255, null=True, blank=True)
+    salesrabbit_notes = models.TextField(null=True, blank=True)
+    salesrabbit_created_at = models.DateTimeField(null=True, blank=True)
+    salesrabbit_updated_at = models.DateTimeField(null=True, blank=True)
+    salesrabbit_appointment_date = models.DateTimeField(null=True, blank=True)
+    salesrabbit_sale_amount = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    salesrabbit_commission = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    
+    # Import source tracking
+    import_source = models.CharField(max_length=50, default='api', choices=[
+        ('api', 'API Import'),
+        ('csv', 'CSV Import'),
+        ('events', 'Events Extract'),
+    ])
     # Full lead data (JSON)
     full_data = models.JSONField(null=True, blank=True)  # Complete lead variables
     
     # Latest event info
-    latest_event_id = models.CharField(max_length=24, null=True, blank=True)
+    latest_event_id = models.CharField(max_length=50, null=True, blank=True)
     latest_outcome = models.CharField(max_length=50, null=True, blank=True)
     
     # Metadata
@@ -126,6 +180,12 @@ class LeadConduit_Lead(models.Model):
             models.Index(fields=['state']),
             models.Index(fields=['submission_timestamp']),
             models.Index(fields=['latest_outcome']),
+            models.Index(fields=['import_source']),
+            models.Index(fields=['status']),
+            models.Index(fields=['campaign']),
+            models.Index(fields=['utm_source']),
+            models.Index(fields=['flow_name']),
+            models.Index(fields=['source_name']),
         ]
     
     def __str__(self):

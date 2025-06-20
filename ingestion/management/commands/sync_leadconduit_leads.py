@@ -524,11 +524,11 @@ class Command(BaseCommand, BaseLeadConduitProcessor):
                 combined_data.get('ref') or
                 combined_data.get('external_id') or
                 combined_data.get('id')
-            ),
-            'submission_timestamp': self._parse_submission_timestamp(event, combined_data),
+            ),            'submission_timestamp': self._parse_submission_timestamp(event, combined_data),
             'full_data': combined_data,
             'latest_event_id': event.get('id'),
             'latest_outcome': event.get('outcome'),
+            'import_source': 'events',  # Mark as imported from events extraction
         }
         
         return lead_data
@@ -653,10 +653,10 @@ class Command(BaseCommand, BaseLeadConduitProcessor):
             'postal_code': search_result.get('postal_code'),
             'country': None,  # Not in search results
             'reference': search_result.get('reference'),
-            'submission_timestamp': self._parse_submission_timestamp_from_search(search_result),
-            'full_data': search_result,  # Store the complete search result
+            'submission_timestamp': self._parse_submission_timestamp_from_search(search_result),            'full_data': search_result,  # Store the complete search result
             'latest_event_id': search_result.get('latest_event', {}).get('id'),
             'latest_outcome': search_result.get('latest_event', {}).get('outcome'),
+            'import_source': 'api',  # Mark as imported from search API
         }
         
         return lead_data
