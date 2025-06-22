@@ -3,6 +3,9 @@ import json
 import asyncio
 from datetime import datetime
 import aiohttp
+from aiohttp import BasicAuth
+import requests
+from requests.auth import HTTPBasicAuth
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -13,9 +16,11 @@ class ArrivyClient:
     def __init__(self, api_key=None, auth_key=None, api_url=None):
         self.api_key = api_key or settings.ARRIVY_API_KEY
         self.auth_key = auth_key or settings.ARRIVY_AUTH_KEY
-        self.base_url = api_url or settings.ARRIVY_API_URL
+        self.base_url = (api_url or settings.ARRIVY_API_URL).rstrip('/')
         
+        # Use header-based authentication for Arrivy API (not Basic Auth)
         self.headers = {
+            "Accept": "application/json",
             "Content-Type": "application/json",
             "X-Auth-Key": self.auth_key,
             "X-Auth-Token": self.api_key
@@ -72,7 +77,7 @@ class ArrivyClient:
         if end_date:
             params["end_date"] = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         
-        return await self._make_request("tasks", params)  # Arrivy calls bookings "tasks"
+        return await self._make_request("bookings", params)  # Use bookings endpoint instead of tasks
 
     async def get_customer_by_id(self, customer_id):
         """Get a specific customer by ID."""
@@ -165,12 +170,11 @@ class ArrivyClient:
         return await self._make_request(f"groups/{group_id}")
 
     async def _make_request(self, endpoint, params=None):
-        """Make an HTTP request to the Arrivy API."""
-        url = f"{self.base_url.rstrip('/')}/{endpoint}"
+        """Make an HTTP request to the Arrivy API using header authentication."""
+        url = f"{self.base_url}/{endpoint}"
         
         logger.info(f"Making request to: {url}")
-        logger.info(f"Headers: {self.headers}")
-        logger.info(f"Params: {params}")
+        logger.debug(f"Params: {params}")
         
         try:
             async with aiohttp.ClientSession() as session:
@@ -179,14 +183,10 @@ class ArrivyClient:
                     response_text = await response.text()
                     
                     logger.info(f"Response status: {status}")
-                    logger.info(f"Response headers: {dict(response.headers)}")
-                    logger.info(f"Response body: {response_text[:500]}")
+                    logger.debug(f"Response body: {response_text[:500]}")
                     
                     if status == 200:
                         try:
-                            # Try to parse as JSON regardless of content type
-                            # since Arrivy API returns JSON with text/plain content type
-                            import json
                             data = json.loads(response_text)
                         except json.JSONDecodeError:
                             logger.error(f"Failed to parse JSON response: {response_text}")
@@ -239,6 +239,20 @@ class ArrivyClient:
         try:
             result = await self.get_customers(page_size=1, page=1)
             return True, "Connection successful"
+        except Exception as e:
+            return False, str(e)
+
+    def test_connection_requests(self):
+        """Synchronous connectivity check using requests with header authentication."""
+        url = f"{self.base_url}/tasks"
+        try:
+            response = requests.get(
+                url,
+                headers=self.headers,
+                timeout=10
+            )
+            response.raise_for_status()
+            return True, response.json()
         except Exception as e:
             return False, str(e)
 
