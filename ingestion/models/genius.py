@@ -141,7 +141,7 @@ class Genius_Appointment(models.Model):
     zip = models.CharField(max_length=20, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
-    add_user_id = models.IntegerField()
+    add_user_id = models.BigIntegerField()
     add_date = models.DateTimeField(null=True, blank=True)
     assign_date = models.DateTimeField(null=True, blank=True)
     confirm_user_id = models.BigIntegerField(null=True, blank=True)
