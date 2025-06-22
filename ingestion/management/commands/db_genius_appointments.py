@@ -182,22 +182,41 @@ class Command(BaseCommand):
             'add_date': add_date,
             'assign_date': assign_date,
             'confirm_date': confirm_date,
-            'complete_date': complete_date,
-            'spouses_present': spouses_present,
+            'complete_date': complete_date,            'spouses_present': spouses_present,
             'is_complete': is_complete
         }
-    
-    def _safe_int_convert(self, value, default=None):
+
+    def _safe_string_convert(self, value, default=None):
+        """Safely convert value to string, handling large integers."""
+        if value is None:
+            return default
+        
+        try:
+            # Convert to string, handling large integers that might be too big for integer fields
+            return str(value)
+        except (ValueError, TypeError):
+            self.stdout.write(self.style.WARNING(f"Invalid string value: {value}, using default {default}"))
+            return default
+
+    def _safe_int_convert(self, value, default=None, is_bigint=False):
         """Safely convert value to integer with range validation."""
         if value is None:
             return default
         
         try:
             int_val = int(value)
-            # Check for reasonable integer ranges (PostgreSQL int4 range)
-            if int_val < -2147483648 or int_val > 2147483647:
-                self.stdout.write(self.style.WARNING(f"Integer out of range: {int_val}, using default {default}"))
-                return default
+            
+            if is_bigint:
+                # Check for PostgreSQL bigint range (-9223372036854775808 to 9223372036854775807)
+                if int_val < -9223372036854775808 or int_val > 9223372036854775807:
+                    self.stdout.write(self.style.WARNING(f"BigInteger out of range: {int_val}, using default {default}"))
+                    return default
+            else:
+                # Check for PostgreSQL int4 range
+                if int_val < -2147483648 or int_val > 2147483647:
+                    self.stdout.write(self.style.WARNING(f"Integer out of range: {int_val}, using default {default}"))
+                    return default
+            
             return int_val
         except (ValueError, TypeError):
             self.stdout.write(self.style.WARNING(f"Invalid integer value: {value}, using default {default}"))
@@ -227,7 +246,7 @@ class Command(BaseCommand):
         record.is_complete = processed_data['is_complete']
         
         # Set other fields with validation
-        record.user_id = self._safe_int_convert(user_id)
+        record.user_id = self._safe_int_convert(user_id, is_bigint=True)
         record.address1 = address1
         record.address2 = address2
         record.city = city
@@ -235,14 +254,14 @@ class Command(BaseCommand):
         record.zip = zip
         record.email = email
         record.notes = notes
-        record.add_user_id = self._safe_int_convert(add_user_id)
-        record.confirm_user_id = self._safe_int_convert(confirm_user_id)
+        record.add_user_id = self._safe_int_convert(add_user_id, is_bigint=True)
+        record.confirm_user_id = self._safe_int_convert(confirm_user_id, is_bigint=True)
         record.confirm_with = confirm_with
-        record.complete_user_id = self._safe_int_convert(complete_user_id)
+        record.complete_user_id = self._safe_int_convert(complete_user_id, is_bigint=True)
         record.marketsharp_id = marketsharp_id
         record.marketsharp_appt_type = marketsharp_appt_type
-        record.leap_estimate_id = leap_estimate_id
-        record.third_party_source_id = self._safe_int_convert(hubspot_id)
+        record.leap_estimate_id = self._safe_string_convert(leap_estimate_id)
+        record.third_party_source_id = self._safe_int_convert(hubspot_id, is_bigint=True)
         
         return record
     
@@ -256,7 +275,7 @@ class Command(BaseCommand):
             id=record_id,
             prospect=prospect,
             prospect_source=prospect_source,
-            user_id=self._safe_int_convert(user_id),
+            user_id=self._safe_int_convert(user_id, is_bigint=True),
             type=appointment_type,
             date=processed_data['date'],
             time=processed_data['time'],
@@ -268,21 +287,21 @@ class Command(BaseCommand):
             zip=zip,
             email=email,
             notes=notes,
-            add_user_id=self._safe_int_convert(add_user_id),
+            add_user_id=self._safe_int_convert(add_user_id, is_bigint=True),
             add_date=processed_data['add_date'],
             assign_date=processed_data['assign_date'],
-            confirm_user_id=self._safe_int_convert(confirm_user_id),
+            confirm_user_id=self._safe_int_convert(confirm_user_id, is_bigint=True),
             confirm_date=processed_data['confirm_date'],
             confirm_with=confirm_with,
             spouses_present=processed_data['spouses_present'],
             is_complete=processed_data['is_complete'],
             complete_outcome=complete_outcome,
-            complete_user_id=self._safe_int_convert(complete_user_id),
+            complete_user_id=self._safe_int_convert(complete_user_id, is_bigint=True),
             complete_date=processed_data['complete_date'],
             marketsharp_id=marketsharp_id,
             marketsharp_appt_type=marketsharp_appt_type,
-            leap_estimate_id=leap_estimate_id,
-            third_party_source_id=self._safe_int_convert(hubspot_id)
+            leap_estimate_id=self._safe_string_convert(leap_estimate_id),
+            third_party_source_id=self._safe_int_convert(hubspot_id, is_bigint=True)
         )
     
     def _save_records(self, to_create, to_update):
