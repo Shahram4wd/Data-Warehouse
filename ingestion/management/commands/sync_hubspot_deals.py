@@ -116,7 +116,9 @@ class Command(BaseCommand):
             history = Hubspot_SyncHistory.objects.get(endpoint=endpoint)
             return history.last_synced_at
         except Hubspot_SyncHistory.DoesNotExist:
-            return None    def update_last_sync(self, endpoint):
+            return None    
+    
+    def update_last_sync(self, endpoint):
         """Update the last sync time for deals."""
         history, _ = Hubspot_SyncHistory.objects.get_or_create(endpoint=endpoint)
         history.last_synced_at = timezone.now()
