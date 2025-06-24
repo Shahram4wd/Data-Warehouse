@@ -169,6 +169,61 @@ class ArrivyClient:
         """Get a specific group by ID."""
         return await self._make_request(f"groups/{group_id}")
 
+    async def get_tasks(self, page_size=100, page=1, last_sync=None):
+        """Fetch tasks from the Arrivy API."""
+        params = {
+            "page_size": page_size,
+            "page": page
+        }
+        if last_sync:
+            # Convert datetime to Arrivy expected format
+            last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
+            params["last_sync"] = last_sync_str
+
+        url = f"{self.base_url}/tasks"
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.get(url, params=params) as response:
+                if response.status != 200:
+                    logger.error(f"Failed to fetch tasks: {response.status} {await response.text()}")
+                    response.raise_for_status()
+                
+                # Get response text for parsing
+                response_text = await response.text()
+                  # Try to parse as JSON regardless of content type
+                try:
+                    import json
+                    data = json.loads(response_text)
+                    
+                    # Format response consistently with other methods
+                    if isinstance(data, list):
+                        # Direct list response - wrap in expected format
+                        return {'data': data, 'pagination': None}
+                    elif isinstance(data, dict):
+                        if 'results' in data:
+                            # Paginated response
+                            results = data.get('results', [])
+                            pagination = {
+                                'has_next': data.get('has_next', False),
+                                'next_page': data.get('next_page'),
+                                'total_count': data.get('total_count', 0),
+                                'current_page': data.get('current_page', 1),
+                                'page_size': data.get('page_size', 100)
+                            }
+                            return {'data': results, 'pagination': pagination}
+                        else:
+                            # Single item response or direct dict
+                            return {'data': data, 'pagination': None}
+                    else:
+                        return {'data': [], 'pagination': None}
+                        
+                except json.JSONDecodeError as e:
+                    # If JSON parsing fails, log the issue and raise an error
+                    logger.error(f"Failed to parse JSON response. Content-Type: {response.content_type}")
+                    logger.error(f"Response body: {response_text[:1000]}")  # Log first 1000 chars
+                    logger.error(f"JSON decode error: {str(e)}")
+                    raise aiohttp.ContentTypeError(response.request_info, response.history, 
+                                                 message=f"Invalid JSON response: {str(e)}")
+
     async def _make_request(self, endpoint, params=None):
         """Make an HTTP request to the Arrivy API using header authentication."""
         url = f"{self.base_url}/{endpoint}"
@@ -255,6 +310,22 @@ class ArrivyClient:
             return True, response.json()
         except Exception as e:
             return False, str(e)
+
+    def get_task_statuses(self):
+        """Get task statuses from Arrivy API (synchronous)."""
+        url = f"{self.base_url}/task-statuses"
+        response = requests.get(url, headers=self.headers, timeout=30)
+        if response.status_code != 200:
+            logger.error(f"Task statuses API error: {response.status_code} {response.text}")
+            response.raise_for_status()
+        if not response.text.strip():
+            logger.error("Task statuses API returned empty response body.")
+            return {"data": []}
+        try:
+            return response.json()
+        except Exception as e:
+            logger.error(f"Failed to parse JSON from task statuses API: {e}\nBody: {response.text}")
+            return {"data": []}
 
     # Backward compatibility alias
     async def get_team_members(self, page_size=100, page=1, last_sync=None, endpoint="crews"):

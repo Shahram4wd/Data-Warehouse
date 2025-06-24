@@ -27,7 +27,7 @@ from .salespro import SalesPro_Users, SalesPro_Appointment, SalesPro_SyncHistory
 from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_Appointment, Hubspot_SyncHistory
 
 # Import Arrivy models
-from .arrivy import Arrivy_Customer, Arrivy_Entity, Arrivy_Group, Arrivy_Booking, Arrivy_SyncHistory
+from .arrivy import Arrivy_Entity, Arrivy_Group, Arrivy_Task, Arrivy_TaskStatus, Arrivy_LocationReport
 
 # Import MarketSharp models
 from .marketsharp import (
@@ -61,7 +61,8 @@ __all__ = [
     'Genius_Service', 'Genius_Quote', 'Genius_MarketingSourceType', 'Genius_MarketingSource', 'Genius_AppointmentOutcomeType',
     'SalesPro_Users', 'SalesPro_Appointment', 'SalesPro_SyncHistory',
     'Hubspot_Contact', 'Hubspot_Deal', 'Hubspot_Appointment', 'Hubspot_SyncHistory',
-    'Arrivy_Customer', 'Arrivy_Entity', 'Arrivy_Group', 'Arrivy_Booking', 'Arrivy_SyncHistory',    'MarketSharp_Activity', 'MarketSharp_ActivityReference', 'MarketSharp_ActivityResult',
+    'Arrivy_Entity', 'Arrivy_Group', 'Arrivy_Task', 'Arrivy_TaskStatus', 'Arrivy_LocationReport',
+    'MarketSharp_Activity', 'MarketSharp_ActivityReference', 'MarketSharp_ActivityResult',
     'MarketSharp_Address', 'MarketSharp_Appointment', 'MarketSharp_AppointmentResult',
     'MarketSharp_Company', 'MarketSharp_Contact', 'MarketSharp_ContactPhone',
     'MarketSharp_ContactType', 'MarketSharp_CustomField', 'MarketSharp_Customer',    'MarketSharp_Employee', 'MarketSharp_Inquiry', 'MarketSharp_InquirySourcePrimary',

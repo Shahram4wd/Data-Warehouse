@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django.db import transaction
 from asgiref.sync import sync_to_async
-from ingestion.models import Arrivy_Group, Arrivy_SyncHistory
+from ingestion.models.arrivy import Arrivy_Group, Arrivy_SyncHistory
 from ingestion.arrivy.arrivy_client import ArrivyClient
 
 # Configure logging
@@ -78,7 +78,7 @@ class Command(BaseCommand):
         client = ArrivyClient()
         
         # Get the last sync time
-        endpoint = "groups"
+        sync_type = "groups"
         
         # Priority: 1) --lastmodifieddate parameter, 2) database last sync, 3) full sync
         if lastmodifieddate:
@@ -90,7 +90,7 @@ class Command(BaseCommand):
                 raise CommandError("Invalid date format. Use YYYY-MM-DD")
         elif not full_sync:
             try:
-                sync_history = await sync_to_async(Arrivy_SyncHistory.objects.get)(endpoint=endpoint)
+                sync_history = await sync_to_async(Arrivy_SyncHistory.objects.get)(sync_type=sync_type)
                 last_sync = sync_history.last_synced_at
                 self.stdout.write(f"Performing delta sync since {last_sync}")
             except Arrivy_SyncHistory.DoesNotExist:
@@ -111,7 +111,7 @@ class Command(BaseCommand):
             self.stdout.write("No groups retrieved from API")
 
         # Update sync history
-        await self.update_sync_history(endpoint, len(all_groups))
+        await self.update_sync_history(sync_type, len(all_groups))
         
         return len(all_groups)
 
@@ -313,25 +313,19 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f"Error parsing datetime {datetime_str}: {str(e)}"))
             return None
 
-    async def update_sync_history(self, endpoint, records_processed):
+    async def update_sync_history(self, sync_type, records_processed):
         """Update the sync history record."""
         try:
             def update_sync_history_sync():
                 sync_history, created = Arrivy_SyncHistory.objects.get_or_create(
-                    endpoint=endpoint,
+                    sync_type=sync_type,
                     defaults={
                         'last_synced_at': timezone.now(),
-                        'total_records': records_processed,
-                        'success_count': records_processed,
-                        'error_count': 0
                     }
                 )
                 
                 if not created:
                     sync_history.last_synced_at = timezone.now()
-                    sync_history.total_records = records_processed
-                    sync_history.success_count = records_processed
-                    sync_history.error_count = 0
                     sync_history.save()
                 
                 return sync_history
