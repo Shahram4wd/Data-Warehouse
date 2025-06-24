@@ -1,4 +1,3 @@
-docker-compose exec web python manage.py csv_arrivy_tasks ingestion/csv/arrivy_tasks.csvdocker-compose exec web python manage.py csv_arrivy_tasks ingestion/csv/arrivy_tasks.csvimport logging
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple, List, Dict, Any
