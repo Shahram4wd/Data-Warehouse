@@ -1,4 +1,4 @@
-import logging
+docker-compose exec web python manage.py csv_arrivy_tasks ingestion/csv/arrivy_tasks.csvdocker-compose exec web python manage.py csv_arrivy_tasks ingestion/csv/arrivy_tasks.csvimport logging
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple, List, Dict, Any
@@ -424,3 +424,105 @@ class HubspotClient:
             except Exception as e:
                 logger.error(f"Error fetching appointments for date range {start_date_str} to {end_date_str}: {str(e)}")
                 return [], None
+
+    async def fetch_appointments_in_batches(self, batch_size: int = 100):
+        """Fetch appointments in batches and process them efficiently."""
+        all_appointments = []
+        page_token = None
+        batch_num = 1
+
+        while True:
+            logger.info(f"Fetching batch {batch_num} with batch size {batch_size}")
+            appointments, next_page_token = await self.get_appointments_page(page_token=page_token, limit=batch_size)
+
+            if not appointments:
+                logger.info("No more appointments to fetch.")
+                break
+
+            all_appointments.extend(appointments)
+            logger.info(f"Batch {batch_num}: Fetched {len(appointments)} appointments (Total: {len(all_appointments)})")
+
+            if not next_page_token:
+                logger.info("Reached the end of pagination.")
+                break
+
+            page_token = next_page_token
+            batch_num += 1
+
+        logger.info(f"Completed fetching appointments. Total: {len(all_appointments)}")
+        return all_appointments
+
+    async def process_appointments_bulk(self, appointments: List[Dict[str, Any]]):
+        """Process appointments in bulk to optimize database operations."""
+        from ingestion.models.hubspot import HubspotAppointment  # Import model here to avoid circular imports
+        from django.db import transaction
+
+        BATCH_SIZE = 500  # Ensure a larger batch size for efficiency
+        to_create = []
+        to_update = []
+
+        existing_appointments = HubspotAppointment.objects.in_bulk([appt['hs_object_id'] for appt in appointments])
+
+        for appt in appointments:
+            appt_id = appt['hs_object_id']
+            if appt_id in existing_appointments:
+                # Update existing record
+                existing = existing_appointments[appt_id]
+                for field, value in appt.items():
+                    setattr(existing, field, value)
+                to_update.append(existing)
+            else:
+                # Create new record
+                to_create.append(HubspotAppointment(**appt))
+
+            # Process in larger batches
+            if len(to_create) >= BATCH_SIZE:
+                with transaction.atomic():
+                    HubspotAppointment.objects.bulk_create(to_create, ignore_conflicts=True)
+                to_create.clear()
+
+            if len(to_update) >= BATCH_SIZE:
+                with transaction.atomic():
+                    HubspotAppointment.objects.bulk_update(to_update, fields=appt.keys())
+                to_update.clear()
+
+        # Final batch processing
+        if to_create:
+            with transaction.atomic():
+                HubspotAppointment.objects.bulk_create(to_create, ignore_conflicts=True)
+
+        if to_update:
+            with transaction.atomic():
+                HubspotAppointment.objects.bulk_update(to_update, fields=appt.keys())
+
+        logger.info(f"Processed {len(appointments)} appointments in bulk.")
+
+    async def fetch_and_process_appointments(self, batch_size: int = 500):
+        """Fetch and process appointments in batches."""
+        all_appointments = []
+        page_token = None
+        batch_num = 1
+
+        while True:
+            logger.info(f"Fetching batch {batch_num} with batch size {batch_size}")
+            appointments, next_page_token = await self.get_appointments_page(page_token=page_token, limit=batch_size)
+
+            if not appointments:
+                logger.info("No more appointments to fetch.")
+                break
+
+            # Process the fetched appointments in bulk
+            await self.process_appointments_bulk(appointments)
+            all_appointments.extend(appointments)
+
+            logger.info(f"Batch {batch_num}: Processed {len(appointments)} appointments (Total: {len(all_appointments)})")
+
+            if not next_page_token:
+                logger.info("Reached the end of pagination.")
+                break
+
+            page_token = next_page_token
+            batch_num += 1
+
+        logger.info(f"Completed fetching and processing appointments. Total: {len(all_appointments)}")
+        return all_appointments
