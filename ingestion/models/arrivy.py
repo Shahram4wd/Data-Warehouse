@@ -365,5 +365,10 @@ class ArrivyTask(models.Model):
     resource_template_extra_field = models.TextField(null=True, blank=True)
     resource_extra_field = models.TextField(null=True, blank=True)
 
+    class Meta:
+        db_table = 'ingestion_arrivy_task'
+        verbose_name = 'Arrivy Task'
+        verbose_name_plural = 'Arrivy Tasks'
+
     def __str__(self):
         return f"{self.task_title} ({self.task_id})"
