@@ -121,11 +121,17 @@ class Command(BaseCommand):
                 all_customers.extend(page_data)
 
                 # Check if there are more pages
-                has_next = pagination.get('has_next', False)
-                  # If no pagination info, check if we got a full page
+                has_next = pagination.get('has_next', len(page_data) == BATCH_SIZE)
+
+                # Log pagination info for debugging
+                self.stdout.write(f"Pagination info: {pagination}")
+                logger.debug(f"Pagination info: {pagination}")
+
+                # If no pagination info, assume more pages if we got a full page
                 if not pagination:
-                    has_next = len(page_data) >= BATCH_SIZE
-                
+                    has_next = len(page_data) == BATCH_SIZE
+
+                # Update the page number for the next request
                 page = pagination.get('next_page', page + 1)
 
                 # Save data if we've reached a checkpoint
