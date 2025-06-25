@@ -304,8 +304,7 @@ class ArrivyClient:
             response = requests.get(
                 url,
                 headers=self.headers,
-                timeout=10
-            )
+                timeout=10            )
             response.raise_for_status()
             return True, response.json()
         except Exception as e:
@@ -313,19 +312,94 @@ class ArrivyClient:
 
     def get_task_statuses(self):
         """Get task statuses from Arrivy API (synchronous)."""
-        url = f"{self.base_url}/task-statuses"
-        response = requests.get(url, headers=self.headers, timeout=30)
-        if response.status_code != 200:
-            logger.error(f"Task statuses API error: {response.status_code} {response.text}")
-            response.raise_for_status()
-        if not response.text.strip():
-            logger.error("Task statuses API returned empty response body.")
-            return {"data": []}
-        try:
-            return response.json()
-        except Exception as e:
-            logger.error(f"Failed to parse JSON from task statuses API: {e}\nBody: {response.text}")
-            return {"data": []}
+        # Try different possible endpoints for task statuses
+        possible_endpoints = [
+            "task-statuses",
+            "task_statuses", 
+            "statuses",
+            "taskstatuses"
+        ]
+        
+        for endpoint in possible_endpoints:
+            url = f"{self.base_url}/{endpoint}"
+            try:
+                response = requests.get(url, headers=self.headers, timeout=30)
+                if response.status_code == 200 and response.text.strip():
+                    # Check if response is JSON, not HTML
+                    if response.headers.get('content-type', '').startswith('application/json'):
+                        data = response.json()
+                        # Ensure consistent format
+                        if isinstance(data, list):
+                            return {"data": data}
+                        elif isinstance(data, dict):
+                            return data if "data" in data else {"data": [data]}
+                        else:
+                            continue
+                    elif not response.text.startswith('<!DOCTYPE html>'):
+                        try:
+                            data = response.json()
+                            # Ensure consistent format
+                            if isinstance(data, list):
+                                return {"data": data}
+                            elif isinstance(data, dict):
+                                return data if "data" in data else {"data": [data]}
+                            else:
+                                continue
+                        except:
+                            continue
+                logger.debug(f"Endpoint {endpoint} returned: {response.status_code}")
+            except Exception as e:
+                logger.debug(f"Endpoint {endpoint} failed: {str(e)}")
+                continue
+        
+        logger.warning("No valid task statuses endpoint found")
+        return {"data": []}
+
+    def get_location_reports(self):
+        """Get location reports from Arrivy API (synchronous)."""
+        # Try different possible endpoints for location reports
+        possible_endpoints = [
+            "location-reports",
+            "location_reports", 
+            "reports",
+            "locationreports",
+            "tracking"
+        ]
+        
+        for endpoint in possible_endpoints:
+            url = f"{self.base_url}/{endpoint}"
+            try:
+                response = requests.get(url, headers=self.headers, timeout=30)
+                if response.status_code == 200 and response.text.strip():
+                    # Check if response is JSON, not HTML
+                    if response.headers.get('content-type', '').startswith('application/json'):
+                        data = response.json()
+                        # Ensure consistent format
+                        if isinstance(data, list):
+                            return {"data": data}
+                        elif isinstance(data, dict):
+                            return data if "data" in data else {"data": [data]}
+                        else:
+                            continue
+                    elif not response.text.startswith('<!DOCTYPE html>'):
+                        try:
+                            data = response.json()
+                            # Ensure consistent format
+                            if isinstance(data, list):
+                                return {"data": data}
+                            elif isinstance(data, dict):
+                                return data if "data" in data else {"data": [data]}
+                            else:
+                                continue
+                        except:
+                            continue
+                logger.debug(f"Endpoint {endpoint} returned: {response.status_code}")
+            except Exception as e:
+                logger.debug(f"Endpoint {endpoint} failed: {str(e)}")
+                continue
+        
+        logger.warning("No valid location reports endpoint found")
+        return {"data": []}
 
     # Backward compatibility alias
     async def get_team_members(self, page_size=100, page=1, last_sync=None, endpoint="crews"):

@@ -14,17 +14,21 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            self.stdout.write("Starting Arrivy location reports sync...")
-
-            # Fetch location reports from the API
+            self.stdout.write("Starting Arrivy location reports sync...")            # Fetch location reports from the API
             client = ArrivyClient()
             response = client.get_location_reports()
 
-            if not response or not response.get("data"):
+            # Handle both dictionary and list responses
+            if isinstance(response, dict):
+                reports = response.get("data", [])
+            elif isinstance(response, list):
+                reports = response
+            else:
+                reports = []
+
+            if not reports:
                 self.stdout.write("No location reports to process.")
                 return
-
-            reports = response["data"]
 
             # Process each location report
             with transaction.atomic():
@@ -38,12 +42,10 @@ class Command(BaseCommand):
                             "longitude": report.get("longitude"),
                             "timestamp": report.get("timestamp"),
                         },
-                    )
-
-            # Update sync history
+                    )            # Update sync history
             Arrivy_SyncHistory.objects.update_or_create(
-                endpoint="location_reports",
-                defaults={"last_synced_at": timezone.now(), "total_records": len(reports)},
+                sync_type="location_reports",
+                defaults={"last_synced_at": timezone.now()},
             )
 
             self.stdout.write(

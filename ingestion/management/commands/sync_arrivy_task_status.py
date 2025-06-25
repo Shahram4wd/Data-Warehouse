@@ -14,17 +14,21 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            self.stdout.write("Starting Arrivy task status sync...")
-
-            # Fetch task statuses from the API
+            self.stdout.write("Starting Arrivy task status sync...")            # Fetch task statuses from the API
             client = ArrivyClient()
             response = client.get_task_statuses()
 
-            if not response or not response.get("data"):
+            # Handle both dictionary and list responses
+            if isinstance(response, dict):
+                statuses = response.get("data", [])
+            elif isinstance(response, list):
+                statuses = response
+            else:
+                statuses = []
+
+            if not statuses:
                 self.stdout.write("No task statuses to process.")
                 return
-
-            statuses = response["data"]
 
             # Process each task status
             with transaction.atomic():
@@ -38,12 +42,10 @@ class Command(BaseCommand):
                             "created_time": status.get("created_time"),
                             "updated_time": status.get("updated_time"),
                         },
-                    )
-
-            # Update sync history
+                    )            # Update sync history
             Arrivy_SyncHistory.objects.update_or_create(
-                endpoint="task_statuses",
-                defaults={"last_synced_at": timezone.now(), "total_records": len(statuses)},
+                sync_type="task_statuses",
+                defaults={"last_synced_at": timezone.now()},
             )
 
             self.stdout.write(
