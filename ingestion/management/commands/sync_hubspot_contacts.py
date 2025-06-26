@@ -125,6 +125,15 @@ class Command(BaseCommand):
                 self.stdout.write(f"Retrieved {len(page_data)} contacts")
                 all_contacts.extend(page_data)
 
+                # Debug: Log retrieved contact IDs
+                self.stdout.write(f"Retrieved contact IDs: {[contact.get('id') for contact in page_data]}")
+                
+                # Check if the specific contact ID is in the retrieved data
+                if '128352605076' in [contact.get('id') for contact in page_data]:
+                    self.stdout.write("Contact ID 128352605076 found in the API response.")
+                else:
+                    self.stdout.write("Contact ID 128352605076 not found in the API response.")
+
                 # Save data if we've reached a checkpoint
                 if len(all_contacts) >= BATCH_SIZE:
                     self.stdout.write(f"Processing checkpoint at page {total_pages}...")

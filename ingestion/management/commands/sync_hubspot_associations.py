@@ -32,51 +32,52 @@ class Command(BaseCommand):
         self.stdout.write(f"Starting HubSpot associations sync")
         client = HubspotClient()
         created_count = 0
+        batch = []  # Initialize batch for collecting associations
+        
         # Sync associations per appointment
         appointment_ids = Hubspot_Appointment.objects.values_list('id', flat=True)
         appointment_ids = list(appointment_ids)  # Ensure it's a list
 
-        # Initialize batch
-        batch_size = 100
-        batch = []
-
-        for appt_id in appointment_ids:
-            page_token = None
-            while True:
-                try:
-                    results, page_token = asyncio.run(
-                        client.get_object_associations(
-                            from_object=from_object,
-                            object_id=appt_id,
-                            to_object=to_object,
-                            page_token=page_token,
-                            limit=100
-                        )
+        # Fetch associations in bulk
+        batch_size = 1000  # Adjust batch size for bulk fetching
+        for i in range(0, len(appointment_ids), batch_size):
+            batch_ids = appointment_ids[i:i + batch_size]
+            try:
+                results = asyncio.run(
+                    client.get_bulk_associations(
+                        from_object_type=from_object,
+                        to_object_type=to_object,
+                        inputs=batch_ids
                     )
-                except Exception as e:
-                    logger.exception(f"Error fetching associations for appointment {appt_id}")
-                    raise CommandError(f"Sync failed on {appt_id}: {e}")
+                )
+            except Exception as e:
+                logger.exception(f"Error fetching bulk associations for appointments {batch_ids}")
+                raise CommandError(f"Bulk sync failed on batch {batch_ids}: {e}")
 
-                if not results:
-                    break
-
-                for assoc in results:
-                    contact_id = assoc.get('id') or assoc.get('toObjectId')
+            for assoc in results:
+                # Parse the HubSpot API response structure
+                from_obj = assoc.get('from', {})
+                to_objects = assoc.get('to', [])
+                
+                appointment_id = from_obj.get('id')
+                if not appointment_id or not to_objects:
+                    continue
+                
+                # Process each associated contact
+                for to_obj in to_objects:
+                    contact_id = str(to_obj.get('toObjectId'))
                     if not contact_id:
                         continue
 
                     batch.append(Hubspot_AppointmentContactAssociation(
-                        appointment_id=appt_id,
+                        appointment_id=appointment_id,
                         contact_id=contact_id
                     ))
 
-                    if len(batch) >= batch_size:
-                        Hubspot_AppointmentContactAssociation.objects.bulk_create(batch, ignore_conflicts=True)
-                        created_count += len(batch)
-                        batch = []  # Reset batch
-
-                if not page_token:
-                    break
+                if len(batch) >= batch_size:
+                    Hubspot_AppointmentContactAssociation.objects.bulk_create(batch, ignore_conflicts=True)
+                    created_count += len(batch)
+                    batch = []  # Reset batch
 
         # Process any remaining associations in the batch
         if batch:

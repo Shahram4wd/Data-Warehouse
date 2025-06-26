@@ -568,3 +568,25 @@ class HubspotClient:
             except Exception as e:
                 logger.error(f"Error fetching object associations: {str(e)}")
                 return [], None
+    
+    async def get_bulk_associations(self, from_object_type: str, to_object_type: str, inputs: List[str]) -> List[Dict[str, Any]]:
+        """Fetch bulk associations between two object types using HubSpot API v4."""
+        url = f"{self.BASE_URL}/crm/v4/associations/{from_object_type}/{to_object_type}/batch/read"
+        payload = {"inputs": [{"id": obj_id} for obj_id in inputs]}
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, headers=self.headers, json=payload, timeout=60) as response:
+                    if response.status != 200:
+                        response_text = await response.text()
+                        logger.error(f"Error fetching bulk associations: {response_text[:500]}")
+                        return []
+
+                    data = await response.json()
+                    results = data.get("results", [])
+                    logger.info(f"Fetched {len(results)} associations.")
+                    return results
+
+            except Exception as e:
+                logger.error(f"Exception during bulk association fetch: {str(e)}")
+                return []
