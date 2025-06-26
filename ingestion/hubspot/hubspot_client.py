@@ -526,3 +526,45 @@ class HubspotClient:
 
         logger.info(f"Completed fetching and processing appointments. Total: {len(all_appointments)}")
         return all_appointments
+
+    async def get_associations(
+        self,
+        from_object: str,
+        to_object: str,
+        page_token: Optional[str] = None,
+        limit: int = 100
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        """List associations between two HubSpot object types using v3 API."""
+        # Use the v3 associations endpoint
+        url = f"{self.BASE_URL}/crm/v3/associations/{from_object}/{to_object}"
+        params = {"limit": str(limit)}
+        if page_token:
+            params["after"] = page_token
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(url, headers=self.headers, params=params, timeout=60) as response:
+                    return await self._process_response(response)
+            except Exception as e:
+                logger.error(f"Error fetching associations: {str(e)}")
+                return [], None
+    
+    async def get_object_associations(
+        self,
+        from_object: str,
+        object_id: str,
+        to_object: str,
+        page_token: Optional[str] = None,
+        limit: int = 100
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        """Fetch associations for a specific object via v3 associations endpoint."""
+        url = f"{self.BASE_URL}/crm/v3/objects/{from_object}/{object_id}/associations/{to_object}"
+        params = {"limit": str(limit)}
+        if page_token:
+            params["after"] = page_token
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(url, headers=self.headers, params=params, timeout=60) as response:
+                    return await self._process_response(response)
+            except Exception as e:
+                logger.error(f"Error fetching object associations: {str(e)}")
+                return [], None

@@ -269,3 +269,16 @@ class Hubspot_Appointment(models.Model):
             f"{self.state} {self.zip}".strip()
         ]
         return ", ".join(filter(None, parts))
+
+class Hubspot_AppointmentContactAssociation(models.Model):
+    """Direct mapping of appointment to contact associations"""
+    appointment_id = models.CharField(max_length=50, null=True, blank=True)
+    contact_id = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ingestion_hubspot_appointment_contact_assoc'
+        unique_together = ('appointment_id', 'contact_id')
+
+    def __str__(self):
+        return f"{self.appointment_id} -> {self.contact_id}"
