@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     
     # Custom apps
     'ingestion',
+    'reports',  # Add reports app here
     
     # Third-party apps
     'django_celery_beat',

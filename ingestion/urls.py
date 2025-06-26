@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -18,4 +18,7 @@ urlpatterns = [
 
     # Redirect root URL to API docs
     path('', RedirectView.as_view(url='/api/docs/', permanent=False), name='index'),
+
+    # Added URL patterns for the reports module
+    path('reports/', include('reports.urls')),
 ]

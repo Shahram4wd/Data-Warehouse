@@ -1,0 +1,8 @@
+{% for category in categories %}
+    <h2>{{ category.name }}</h2>
+    <ul>
+        {% for report in category.reports.all %}
+            <li><a href="{{ report.id }}/">{{ report.title }}</a></li>
+        {% endfor %}
+    </ul>
+{% endfor %}
