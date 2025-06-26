@@ -97,107 +97,157 @@ class Command(BaseCommand, BaseLeadConduitProcessor):
             # Fetch events
             self.stdout.write("Fetching events from LeadConduit...")
             
-            if limit <= 1000:
-                # Single request
-                events = client.get_events(
-                    limit=limit,
-                    start=start_dt,
-                    end=end_dt
-                )
-            else:
-                # Paginated request
-                events = client.get_events_paginated(
-                    limit_per_page=1000,
-                    max_total=limit,
-                    start=start_dt,
-                    end=end_dt
-                )
-
-            if not events:
-                self.stdout.write(self.style.WARNING("No events found"))
-                if not dry_run:
-                    self.complete_sync(0, 0, 0)
-                return
-
-            self.stdout.write(self.style.SUCCESS(f"Found {len(events)} events"))
-
-            if dry_run:
-                self.show_sample_events(events[:5])
-                return
-
-            # Process events
-            self.stdout.write("Processing events...")
-            
+            # Fetch and process events in pages
+            page_size = 1000
+            total_fetched = 0
             created_count = 0
             updated_count = 0
             leads_created = 0
             leads_updated = 0
-            
-            # Get existing event IDs for bulk operations
-            event_ids = [event['id'] for event in events]
-            existing_events = set(LeadConduit_Event.objects.filter(
-                id__in=event_ids
-            ).values_list('id', flat=True))
 
-            # Process in batches
-            batch_size = 100
-            for i in tqdm(range(0, len(events), batch_size), desc="Processing batches"):
-                batch = events[i:i + batch_size]
-                
-                with transaction.atomic():
-                    events_to_create = []
-                    events_to_update = []
-                    
-                    for event_data in batch:
-                        event_id = event_data['id']
-                        
-                        # Parse event fields
-                        parsed_event = self.parse_event_data(event_data)
-                        
-                        if event_id in existing_events:
-                            # Update existing
-                            try:
-                                event_obj = LeadConduit_Event.objects.get(id=event_id)
-                                for field, value in parsed_event.items():
-                                    setattr(event_obj, field, value)
-                                events_to_update.append(event_obj)
-                            except LeadConduit_Event.DoesNotExist:
-                                # Create new if not found
+            for page_events in client.get_events_paginated(
+                limit_per_page=page_size,
+                max_total=limit,
+                start=start_dt,
+                end=end_dt
+            ):
+                if not page_events:
+                    break
+
+                # Handle case where page_events is a dictionary
+                if isinstance(page_events, dict):
+                    if 'data' in page_events:
+                        page_events = page_events['data']
+                    elif 'results' in page_events:
+                        page_events = page_events['results']
+                    elif 'items' in page_events:
+                        page_events = page_events['items']
+                    elif 'id' in page_events:
+                        # Detected a single event record, wrap into list
+                        logger.info(f"Single event record detected for page_events, wrapping into list: {page_events.get('id')}")
+                        page_events = [page_events]
+                    else:
+                        logger.error(f"Unexpected dictionary format for page_events: {page_events}")
+                        self.stdout.write(self.style.ERROR("Unexpected dictionary format for page_events. Skipping page."))
+                        continue
+
+                # Debug: Inspect the structure of page_events
+                if not isinstance(page_events, list):
+                    logger.error(f"Unexpected data format for page_events: {type(page_events)}")
+                    self.stdout.write(self.style.ERROR("Unexpected data format for page_events. Skipping page."))
+                    continue
+
+                # Validate each event in page_events
+                valid_events = []
+                for event in page_events:
+                    if not isinstance(event, dict):
+                        logger.warning(f"Skipping invalid event: {event}")
+                        continue
+                    valid_events.append(event)
+
+                if not valid_events:
+                    self.stdout.write(self.style.WARNING("No valid events found on this page. Skipping."))
+                    continue
+
+                self.stdout.write(f"Processing page with {len(valid_events)} valid events...")
+
+                # Get existing event IDs for bulk operations
+                event_ids = [event['id'] for event in valid_events]
+                existing_events = set(LeadConduit_Event.objects.filter(
+                    id__in=event_ids
+                ).values_list('id', flat=True))
+
+                # Process in batches
+                batch_size = 100
+                for i in tqdm(range(0, len(valid_events), batch_size), desc="Processing batches"):
+                    batch = valid_events[i:i + batch_size]
+
+                    with transaction.atomic():
+                        events_to_create = []
+                        events_to_update = []
+
+                        for event_data in batch:
+                            event_id = event_data['id']
+
+                            # Handle missing event_type
+                            event_type = event_data.get('type', 'unknown')  # Default to 'unknown' if missing
+                            if not event_type:
+                                logger.warning(f"Missing event_type for event ID {event_data.get('id')}")
+                                event_type = 'unknown'
+
+                            # Parse event fields
+                            parsed_event = {
+                                'outcome': event_data.get('outcome', ''),
+                                'reason': event_data.get('reason'),
+                                'event_type': event_type,  # Use the default or provided value
+                                'host': event_data.get('host'),
+                                'start_timestamp': event_data.get('start_timestamp'),
+                                'end_timestamp': event_data.get('end_timestamp'),
+                                'expires_at': self.parse_iso_datetime(event_data.get('expires_at')),
+                                'ms': event_data.get('ms'),
+                                'wait_ms': event_data.get('wait_ms'),
+                                'overhead_ms': event_data.get('overhead_ms'),
+                                'lag_ms': event_data.get('lag_ms'),
+                                'total_ms': event_data.get('total_ms'),
+                                'vars_data': event_data.get('vars'),
+                                'appended_data': event_data.get('appended'),
+                                'handler_version': event_data.get('handler_version'),
+                                'version': event_data.get('version'),
+                                'package_version': event_data.get('package_version'),
+                                'cap_reached': event_data.get('cap_reached', False),
+                                'ping_limit_reached': event_data.get('ping_limit_reached', False),
+                                'step_count': event_data.get('step_count'),
+                                'module_id': event_data.get('module_id'),
+                                'request_data': event_data.get('request'),
+                                'response_data': event_data.get('response'),
+                            }
+
+                            if event_id in existing_events:
+                                # Update existing
+                                try:
+                                    event_obj = LeadConduit_Event.objects.get(id=event_id)
+                                    for field, value in parsed_event.items():
+                                        setattr(event_obj, field, value)
+                                    events_to_update.append(event_obj)
+                                except LeadConduit_Event.DoesNotExist:
+                                    # Create new if not found
+                                    events_to_create.append(LeadConduit_Event(id=event_id, **parsed_event))
+                            else:
+                                # Create new
                                 events_to_create.append(LeadConduit_Event(id=event_id, **parsed_event))
-                        else:
-                            # Create new
-                            events_to_create.append(LeadConduit_Event(id=event_id, **parsed_event))
 
-                    # Bulk operations
-                    if events_to_create:
-                        LeadConduit_Event.objects.bulk_create(events_to_create, ignore_conflicts=True)
-                        created_count += len(events_to_create)
-                    
-                    if events_to_update:
-                        update_fields = ['outcome', 'reason', 'event_type', 'vars_data', 'appended_data',
-                                       'start_timestamp', 'end_timestamp', 'ms', 'updated_at']
-                        LeadConduit_Event.objects.bulk_update(events_to_update, update_fields)
-                        updated_count += len(events_to_update)
+                        # Bulk operations
+                        if events_to_create:
+                            LeadConduit_Event.objects.bulk_create(events_to_create, ignore_conflicts=True)
+                            created_count += len(events_to_create)
 
-                    # Process leads if requested
-                    if update_leads:
-                        lead_results = self.process_leads_from_events(batch)
-                        leads_created += lead_results['created']
-                        leads_updated += lead_results['updated']
+                        if events_to_update:
+                            update_fields = ['outcome', 'reason', 'event_type', 'vars_data', 'appended_data',
+                                             'start_timestamp', 'end_timestamp', 'ms', 'updated_at']
+                            LeadConduit_Event.objects.bulk_update(events_to_update, update_fields)
+                            updated_count += len(events_to_update)
+
+                        # Process leads if requested
+                        if update_leads:
+                            lead_results = self.process_leads_from_events(batch)
+                            leads_created += lead_results['created']
+                            leads_updated += lead_results['updated']
+
+                total_fetched += len(page_events)
 
             # Complete sync
             self.complete_sync(
-                records_processed=len(events),
+                records_processed=total_fetched,
                 records_created=created_count,
                 records_updated=updated_count
             )
 
             # Show results
             self.stdout.write(self.style.SUCCESS("Sync completed successfully!"))
-            self.stdout.write(f"📊 Events processed: {len(events)}")
+            self.stdout.write(f"📊 Events processed: {total_fetched}")
             self.stdout.write(f"✅ Events created: {created_count}")
             self.stdout.write(f"🔄 Events updated: {updated_count}")
-            
+
             if update_leads:
                 self.stdout.write(f"👤 Leads created: {leads_created}")
                 self.stdout.write(f"👤 Leads updated: {leads_updated}")
