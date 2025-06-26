@@ -23,6 +23,9 @@ from .genius import (
 # Import SalesPro models
 from .salespro import SalesPro_Users, SalesPro_Appointment, SalesPro_SyncHistory
 
+# Import SalesRabbit models
+from .salesrabbit import SalesRabbit_Lead, SalesRabbit_SyncHistory
+
 # Import Hubspot models
 from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_Appointment, Hubspot_SyncHistory
 
@@ -69,5 +72,6 @@ __all__ = [
     'MarketSharp_Lead', 'MarketSharp_ProductDetail', 'MarketSharp_ProductInterest',
     'MarketSharp_ProductType', 'MarketSharp_Prospect',
     'ActiveProspect_Event', 'ActiveProspect_Lead', 'ActiveProspect_SyncHistory',
-    'LeadConduit_Event', 'LeadConduit_Lead', 'LeadConduit_SyncHistory'
+    'LeadConduit_Event', 'LeadConduit_Lead', 'LeadConduit_SyncHistory',
+    'SalesRabbit_Lead', 'SalesRabbit_SyncHistory'
 ]

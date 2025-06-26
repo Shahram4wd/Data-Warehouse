@@ -206,6 +206,10 @@ GENIUS_DB_NAME = config("GENIUS_DB_NAME", default="")
 GENIUS_DB_USER = config("GENIUS_DB_USER", default="")
 GENIUS_DB_PASSWORD = config("GENIUS_DB_PASSWORD", default="")
 
+# SalesRabbit API Configuration
+SALESRABBIT_API_TOKEN = config('SALESRABBIT_API_TOKEN', default='')
+SALESRABBIT_API_URL = config('SALESRABBIT_API_URL', default='https://api.salesrabbit.com')
+
 # Redirect users to SQL Explorer after login
 LOGIN_REDIRECT_URL = '/explorer/'  # Set SQL Explorer as the default page after login
 
