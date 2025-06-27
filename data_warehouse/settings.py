@@ -214,6 +214,9 @@ SALESRABBIT_API_URL = config('SALESRABBIT_API_URL', default='https://api.salesra
 # Redirect users to SQL Explorer after login
 LOGIN_REDIRECT_URL = '/explorer/'  # Set SQL Explorer as the default page after login
 
+# Redirect unauthenticated users to the login page
+LOGIN_URL = '/accounts/login/'
+
 # Add logging configuration to track performance issues
 LOGGING = {
     'version': 1,

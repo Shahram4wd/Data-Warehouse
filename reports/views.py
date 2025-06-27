@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.management import call_command
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
@@ -11,10 +12,12 @@ import os
 from datetime import datetime
 import subprocess
 
+@login_required
 def report_list(request):
     categories = ReportCategory.objects.prefetch_related('reports').all()
     return render(request, 'reports/simple_report_list.html', {'categories': categories})
 
+@login_required
 def report_detail(request, report_id):
     report = get_object_or_404(Report, id=report_id)
     
@@ -28,6 +31,7 @@ def report_detail(request, report_id):
     
     return render(request, 'reports/report_detail.html', {'report': report})
 
+@login_required
 def duplicated_genius_prospects_detail(request, report):
     """Special view for the duplicated genius prospects report"""
     
@@ -82,6 +86,7 @@ def duplicated_genius_prospects_detail(request, report):
     
     return render(request, 'reports/duplicated_genius_prospects.html', context)
 
+@login_required
 def duplicated_hubspot_appointments_detail(request, report):
     """Special view for the duplicated hubspot appointments report"""
     
@@ -137,6 +142,7 @@ def duplicated_hubspot_appointments_detail(request, report):
     return render(request, 'reports/duplicated_hubspot_appointments.html', context)
 
 @csrf_exempt
+@login_required
 def run_duplicate_detection(request):
     """AJAX endpoint to run the duplicate detection script"""
     if request.method == 'POST':
@@ -196,6 +202,7 @@ def run_duplicate_detection(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 @csrf_exempt
+@login_required
 def load_report_file(request, filename):
     """AJAX endpoint to load a specific report file"""
     if request.method == 'GET':
@@ -222,6 +229,7 @@ def load_report_file(request, filename):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
+@login_required
 @csrf_exempt
 def check_detection_progress(request):
     """AJAX endpoint to check the progress of duplicate detection"""
@@ -251,6 +259,7 @@ def check_detection_progress(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
+@login_required
 @csrf_exempt
 def cancel_detection(request):
     """AJAX endpoint to cancel running duplicate detection"""
@@ -290,6 +299,7 @@ def cancel_detection(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
+@login_required
 @csrf_exempt
 def export_duplicates_csv(request):
     """Export duplicate detection results to CSV"""
@@ -375,6 +385,7 @@ def export_duplicates_csv(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
+@login_required
 @csrf_exempt
 def run_hubspot_duplicate_detection(request):
     """AJAX endpoint to run the HubSpot appointment duplicate detection script"""
@@ -434,6 +445,7 @@ def run_hubspot_duplicate_detection(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
+@login_required
 @csrf_exempt
 def check_hubspot_detection_progress(request):
     """AJAX endpoint to check HubSpot detection progress"""
@@ -463,6 +475,7 @@ def check_hubspot_detection_progress(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
+@login_required
 @csrf_exempt
 def cancel_hubspot_detection(request):
     """AJAX endpoint to cancel HubSpot detection"""
@@ -502,6 +515,7 @@ def cancel_hubspot_detection(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 @csrf_exempt
+@login_required
 def load_hubspot_report_file(request, filename):
     """AJAX endpoint to load a specific HubSpot report file"""
     if request.method == 'GET':
@@ -534,6 +548,7 @@ def load_hubspot_report_file(request, filename):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
+@login_required
 @csrf_exempt 
 def export_hubspot_duplicates_csv(request):
     """Export HubSpot appointment duplicates to CSV"""
