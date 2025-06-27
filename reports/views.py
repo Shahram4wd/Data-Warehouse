@@ -224,60 +224,21 @@ def sales_rep_division_mismatch_detail(request, report):
 @csrf_exempt
 @login_required
 def run_duplicate_detection(request):
-    """AJAX endpoint to run the duplicate detection script"""
+    """Start the duplicate detection process"""
     if request.method == 'POST':
         try:
-            # Check if detection is already running
-            progress_file = os.path.join(settings.BASE_DIR, 'reports', 'data', 'duplicated_genius_prospects', 'detection_progress.json')
-            if os.path.exists(progress_file):
-                return JsonResponse({
-                    'status': 'already_running',
-                    'message': 'Duplicate detection is already running. Please wait for it to complete.'
-                })
+            limit = request.POST.get('limit')
+            threshold = request.POST.get('threshold', 80)
             
-            # Run the management command in the background using subprocess
-            import threading
-            import sys
+            # Build command arguments
+            cmd_args = ['dedup_genius_prospects', f'--threshold={threshold}', f'--limit={limit}' if limit else '--limit=None']
             
-            def run_detection():
-                try:
-                    # Use subprocess to run the management command with a reasonable limit for demo
-                    result = subprocess.run([
-                        sys.executable, 'manage.py', 'detect_genius_duplicates', '--limit', '5000'
-                    ], capture_output=True, text=True, cwd=settings.BASE_DIR)
-                    
-                except Exception as e:
-                    # If there's an error, create an error progress file
-                    error_progress = {
-                        'percent': 0,
-                        'status': 'Error',
-                        'details': f'Failed to run detection: {str(e)}',
-                        'timestamp': datetime.now().isoformat(),
-                        'completed': True,
-                        'error': True
-                    }
-                    try:
-                        os.makedirs(os.path.dirname(progress_file), exist_ok=True)
-                        with open(progress_file, 'w', encoding='utf-8') as f:
-                            json.dump(error_progress, f, indent=2)
-                    except:
-                        pass
+            # Run the command in background
+            call_command('dedup_genius_prospects', f'--threshold={threshold}', f'--limit={limit}' if limit else '--limit=None')
             
-            # Start the detection in a separate thread
-            detection_thread = threading.Thread(target=run_detection)
-            detection_thread.daemon = True
-            detection_thread.start()
-            
-            return JsonResponse({
-                'status': 'started',
-                'message': 'Duplicate detection started! Check progress for updates.'
-            })
-            
+            return JsonResponse({'status': 'success', 'message': 'Detection started successfully'})
         except Exception as e:
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Error starting duplicate detection: {str(e)}'
-            })
+            return JsonResponse({'status': 'error', 'message': str(e)})
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
@@ -487,7 +448,7 @@ def run_hubspot_duplicate_detection(request):
                 try:
                     # Use subprocess to run the management command with a reasonable limit for demo
                     result = subprocess.run([
-                        sys.executable, 'manage.py', 'detect_hubspot_duplicates', '--limit', '5000'
+                        sys.executable, 'manage.py', 'dedup_hubspot_appointments', '--limit', '5000'
                     ], capture_output=True, text=True, cwd=settings.BASE_DIR)
                     
                 except Exception as e:
