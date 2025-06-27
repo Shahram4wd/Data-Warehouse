@@ -1,7 +1,7 @@
 {
-  "percent": 21,
-  "status": "Detecting duplicates...",
-  "details": "Processed 5801 of 192557 prospects",
-  "timestamp": "2025-06-27T06:49:41.387219",
-  "completed": false
+  "percent": 100,
+  "status": "Complete!",
+  "details": "Found 0 duplicate groups",
+  "timestamp": "2025-06-27T07:43:05.578445",
+  "completed": true
 }

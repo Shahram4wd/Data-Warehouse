@@ -1,0 +1,5552 @@
+{
+  "report_type": "duplicated_genius_prospects",
+  "generated_at": "2025-06-27T07:10:00.206888",
+  "parameters": {
+    "similarity_threshold": 80,
+    "total_prospects_analyzed": 10000,
+    "fields_compared": [
+      "first_name",
+      "last_name",
+      "phone1",
+      "email",
+      "zip"
+    ],
+    "limit_used": 10000
+  },
+  "summary": {
+    "total_duplicate_groups": 140,
+    "total_duplicate_prospects": 286,
+    "percentage_duplicates": 2.86
+  },
+  "duplicate_groups": [
+    {
+      "group_id": 1,
+      "group_display_name": "Victoria Thigpen (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142566,
+          "first_name": "Victoria",
+          "last_name": "Thigpen",
+          "phone1": "910-690-7764",
+          "email": "thigpenvd@gmail.com",
+          "zip": "27376",
+          "add_date": "2024-11-30 08:45:59+00:00",
+          "division_id": 709055522,
+          "division__label": "Charlotte"
+        },
+        {
+          "id": 142549,
+          "first_name": "Victoria",
+          "last_name": "Thigpen",
+          "phone1": "910-690-7764",
+          "email": "thigpenvd@gmail.com",
+          "zip": "27376",
+          "add_date": "2024-11-30 08:05:38+00:00",
+          "division_id": 709055520,
+          "division__label": "Raleigh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 2,
+      "group_display_name": "Damon Dampus (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142449,
+          "first_name": "Damon",
+          "last_name": "Damous",
+          "phone1": "614-687-5659",
+          "email": "",
+          "zip": "44507",
+          "add_date": "2024-11-29 11:40:44+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 129368,
+          "first_name": "Damon",
+          "last_name": "Dampus",
+          "phone1": "614-687-5659",
+          "email": "",
+          "zip": "44507",
+          "add_date": "2024-09-12 16:30:46+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 94.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 3,
+      "group_display_name": "yvonne hall (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142385,
+          "first_name": "Yvonee",
+          "last_name": "Hall",
+          "phone1": "724-833-1207",
+          "email": "",
+          "zip": "15329",
+          "add_date": "2024-11-29 06:45:43+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 142023,
+          "first_name": "yvonne",
+          "last_name": "hall",
+          "phone1": "724-833-1207",
+          "email": "",
+          "zip": "15329",
+          "add_date": "2024-11-26 10:31:06+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 94.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 4,
+      "group_display_name": "Judith Henry (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142237,
+          "first_name": "Judith",
+          "last_name": "Henry",
+          "phone1": "347-513-7893",
+          "email": "henryjudith18@gmail.com",
+          "zip": "07111",
+          "add_date": "2024-11-27 05:58:57+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 142234,
+          "first_name": "Judith",
+          "last_name": "Henry",
+          "phone1": "347-513-7893",
+          "email": "henryjudith18@gmail.com",
+          "zip": "07111",
+          "add_date": "2024-11-27 05:58:56+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 5,
+      "group_display_name": "Ryan Byler (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142238,
+          "first_name": "Ryan",
+          "last_name": "Byler",
+          "phone1": "717-224-7441",
+          "email": "ryancbyler@gmail.com",
+          "zip": "08053",
+          "add_date": "2024-11-27 05:58:57+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 142235,
+          "first_name": "Ryan",
+          "last_name": "Byler",
+          "phone1": "717-224-7441",
+          "email": "ryancbyler@gmail.com",
+          "zip": "08053",
+          "add_date": "2024-11-27 05:58:56+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 6,
+      "group_display_name": "Steven Gray (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142189,
+          "first_name": "Steven",
+          "last_name": "Gray",
+          "phone1": "410-370-2018",
+          "email": "",
+          "zip": "21122",
+          "add_date": "2024-11-26 16:13:55+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 142182,
+          "first_name": "Steven",
+          "last_name": "Gray",
+          "phone1": "410-370-2018",
+          "email": "",
+          "zip": "21122",
+          "add_date": "2024-11-26 16:10:28+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 7,
+      "group_display_name": "Larissa Childs (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142190,
+          "first_name": "Larissa",
+          "last_name": "Childs",
+          "phone1": "440-554-5435",
+          "email": "childs.larissa@gmail.com",
+          "zip": "44134",
+          "add_date": "2024-11-26 16:13:55+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 142183,
+          "first_name": "Larissa",
+          "last_name": "Childs",
+          "phone1": "440-554-5435",
+          "email": "childs.larissa@gmail.com",
+          "zip": "44134",
+          "add_date": "2024-11-26 16:10:28+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 8,
+      "group_display_name": "Henry Wright (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142105,
+          "first_name": "Henry",
+          "last_name": "Wright",
+          "phone1": "724-986-2100",
+          "email": "",
+          "zip": "15314",
+          "add_date": "2024-11-26 13:13:06+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 142104,
+          "first_name": "Henry",
+          "last_name": "Wright",
+          "phone1": "724-986-2100",
+          "email": "",
+          "zip": "15314",
+          "add_date": "2024-11-26 13:10:47+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 9,
+      "group_display_name": "Tina Brown (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142099,
+          "first_name": "Tina",
+          "last_name": "Brown",
+          "phone1": "609-457-4407",
+          "email": "tcanesi.tc@gmail.com",
+          "zip": "08225",
+          "add_date": "2024-11-26 13:03:56+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 142097,
+          "first_name": "Tina",
+          "last_name": "Brown",
+          "phone1": "609-457-4407",
+          "email": "tcanesi.tc@gmail.com",
+          "zip": "08225",
+          "add_date": "2024-11-26 13:02:28+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 10,
+      "group_display_name": "Constance Harrell (3 duplicates)",
+      "total_duplicates": 3,
+      "prospects": [
+        {
+          "id": 142098,
+          "first_name": "Constance",
+          "last_name": "Harrell",
+          "phone1": "208-818-7038",
+          "email": "reb60@hotmail.com",
+          "zip": "27958",
+          "add_date": "2024-11-26 13:02:28+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 142092,
+          "first_name": "Constance",
+          "last_name": "Harrell",
+          "phone1": "208-818-7038",
+          "email": "reb60@hotmail.com",
+          "zip": "27958",
+          "add_date": "2024-11-26 12:47:52+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 142088,
+          "first_name": "Constance",
+          "last_name": "Harrell",
+          "phone1": "208-818-7038",
+          "email": "reb60@hotmail.com",
+          "zip": "27958",
+          "add_date": "2024-11-26 12:45:57+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 11,
+      "group_display_name": "Xavier Sanchez (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142094,
+          "first_name": "Xavier",
+          "last_name": "Sanchez",
+          "phone1": "856-621-9044",
+          "email": "",
+          "zip": "08069",
+          "add_date": "2024-11-26 12:47:53+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 142090,
+          "first_name": "Xavier",
+          "last_name": "Sanchez",
+          "phone1": "856-621-9044",
+          "email": "",
+          "zip": "08069",
+          "add_date": "2024-11-26 12:45:58+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 12,
+      "group_display_name": "Richard & Anita Portas (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142093,
+          "first_name": "Richard & Anita",
+          "last_name": "Portas",
+          "phone1": "973-729-8002",
+          "email": "rpmohawk@aol.com",
+          "zip": "07871",
+          "add_date": "2024-11-26 12:47:52+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 142089,
+          "first_name": "Richard & Anita",
+          "last_name": "Portas",
+          "phone1": "973-729-8002",
+          "email": "rpmohawk@aol.com",
+          "zip": "07871",
+          "add_date": "2024-11-26 12:45:58+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 13,
+      "group_display_name": "Carole Clarkewhite (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142042,
+          "first_name": "Carol",
+          "last_name": "Clockwhite",
+          "phone1": "732-281-4577",
+          "email": "",
+          "zip": "08005",
+          "add_date": "2024-11-26 11:15:56+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 142033,
+          "first_name": "Carole",
+          "last_name": "Clarkewhite",
+          "phone1": "732-281-4577",
+          "email": "",
+          "zip": "08005",
+          "add_date": "2024-11-26 10:48:00+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 89.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 14,
+      "group_display_name": "esther hicks (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 142005,
+          "first_name": "Esther",
+          "last_name": "Hicks",
+          "phone1": "814-442-1424",
+          "email": "hicks913@comcast.net",
+          "zip": "15963",
+          "add_date": "2024-11-26 09:26:05+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        },
+        {
+          "id": 141990,
+          "first_name": "esther",
+          "last_name": "hicks",
+          "phone1": "814-442-1424",
+          "email": "",
+          "zip": "15963",
+          "add_date": "2024-11-26 08:11:08+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 15,
+      "group_display_name": "Luis Renta (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141986,
+          "first_name": "Luis",
+          "last_name": "Renta",
+          "phone1": "216-854-1468",
+          "email": "luisrenta63@gmail.com",
+          "zip": "44134",
+          "add_date": "2024-11-26 07:55:46+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 141985,
+          "first_name": "Luis",
+          "last_name": "Renta",
+          "phone1": "216-854-1468",
+          "email": "luisrenta63@gmail.com",
+          "zip": "44134",
+          "add_date": "2024-11-26 07:55:45+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 16,
+      "group_display_name": "Tyler Orall (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141923,
+          "first_name": "Tyler",
+          "last_name": "Orall",
+          "phone1": "330-447-3247",
+          "email": "",
+          "zip": "44647",
+          "add_date": "2024-11-24 16:56:52+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 141924,
+          "first_name": "Tyler",
+          "last_name": "Orall",
+          "phone1": "330-447-3247",
+          "email": "",
+          "zip": "44647",
+          "add_date": "2024-11-24 16:56:52+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 17,
+      "group_display_name": "Jake Daugherty (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141922,
+          "first_name": "Jake",
+          "last_name": "Daugherty",
+          "phone1": "330-559-7191",
+          "email": "",
+          "zip": "44483",
+          "add_date": "2024-11-24 16:56:50+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 141919,
+          "first_name": "Jake",
+          "last_name": "Daugherty",
+          "phone1": "330-559-7191",
+          "email": "",
+          "zip": "44483",
+          "add_date": "2024-11-24 16:55:49+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 18,
+      "group_display_name": "Colin Hedrick (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141901,
+          "first_name": "Colin",
+          "last_name": "Hedrick",
+          "phone1": "610-984-4538",
+          "email": "",
+          "zip": "19609",
+          "add_date": "2024-11-24 14:10:44+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 141897,
+          "first_name": "Colin",
+          "last_name": "Hedrick",
+          "phone1": "610-984-4538",
+          "email": "",
+          "zip": "19609",
+          "add_date": "2024-11-24 14:05:10+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 19,
+      "group_display_name": "Kathy J Hogan (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141889,
+          "first_name": "Kathy J",
+          "last_name": "Hogan",
+          "phone1": "724-570-7663",
+          "email": "kjphoganrxpert@yahoo.com",
+          "zip": "15370",
+          "add_date": "2024-11-24 13:30:51+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 141888,
+          "first_name": "Kathy J",
+          "last_name": "Hogan",
+          "phone1": "724-570-7663",
+          "email": "kjphoganrxpert@yahoo.com",
+          "zip": "15370",
+          "add_date": "2024-11-24 13:30:30+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 20,
+      "group_display_name": "Diane Gatley (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141884,
+          "first_name": "Diana",
+          "last_name": "Gatley",
+          "phone1": "267-614-1769",
+          "email": "Dilaffin1@gmail.com",
+          "zip": "18974",
+          "add_date": "2024-11-24 13:06:59+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 141685,
+          "first_name": "Diane",
+          "last_name": "Gatley",
+          "phone1": "267-614-1769",
+          "email": "",
+          "zip": "18974",
+          "add_date": "2024-11-23 08:50:57+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 93.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 21,
+      "group_display_name": "Ray Shupak (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141800,
+          "first_name": "Ray",
+          "last_name": "Shupak",
+          "phone1": "862-266-7039",
+          "email": "rshupak@aol.com",
+          "zip": "07871",
+          "add_date": "2024-11-24 06:35:38+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 141802,
+          "first_name": "Ray",
+          "last_name": "Shupak",
+          "phone1": "862-266-7039",
+          "email": "rshupak@aol.com",
+          "zip": "07871",
+          "add_date": "2024-11-24 06:35:38+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 22,
+      "group_display_name": "Kim Rees (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141769,
+          "first_name": "Kim",
+          "last_name": "Rees",
+          "phone1": "440-655-5179",
+          "email": "ksreez@mac.com",
+          "zip": "44140",
+          "add_date": "2024-11-23 14:43:13+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 141767,
+          "first_name": "Kim",
+          "last_name": "Rees",
+          "phone1": "440-655-5179",
+          "email": "ksreez@mac.com",
+          "zip": "44140",
+          "add_date": "2024-11-23 14:40:37+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 23,
+      "group_display_name": "Susan Mulloy (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141734,
+          "first_name": "Susan",
+          "last_name": "Mulloy",
+          "phone1": "301-843-3632",
+          "email": "susan@mulloy.org",
+          "zip": "20601",
+          "add_date": "2024-11-23 12:06:40+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 141733,
+          "first_name": "Susan",
+          "last_name": "Mulloy",
+          "phone1": "301-843-3632",
+          "email": "susan@mulloy.org",
+          "zip": "20601",
+          "add_date": "2024-11-23 12:06:36+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 24,
+      "group_display_name": "Kerrie Hockin (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141712,
+          "first_name": "Kerrie",
+          "last_name": "Hockin",
+          "phone1": "610-597-1405",
+          "email": "kerriehockin@gmail.com",
+          "zip": "18020",
+          "add_date": "2024-11-23 10:26:23+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 141708,
+          "first_name": "Kerrie",
+          "last_name": "Hockin",
+          "phone1": "610-597-1405",
+          "email": "kerriehockin@gmail.com",
+          "zip": "18020",
+          "add_date": "2024-11-23 10:25:48+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 25,
+      "group_display_name": "Keith Hall (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141713,
+          "first_name": "Keith",
+          "last_name": "Hall",
+          "phone1": "440-668-7505",
+          "email": "keith.hall2860@gmail.com",
+          "zip": "44024",
+          "add_date": "2024-11-23 10:26:23+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 141709,
+          "first_name": "Keith",
+          "last_name": "Hall",
+          "phone1": "440-668-7505",
+          "email": "keith.hall2860@gmail.com",
+          "zip": "44024",
+          "add_date": "2024-11-23 10:25:59+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 26,
+      "group_display_name": "Carin Perry (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141689,
+          "first_name": "Carin",
+          "last_name": "Perry",
+          "phone1": "267-622-7380",
+          "email": "chamlet123@gmail.com",
+          "zip": "18974",
+          "add_date": "2024-11-23 09:10:45+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 141687,
+          "first_name": "Carin",
+          "last_name": "Perry",
+          "phone1": "267-622-7380",
+          "email": "chamlet123@gmail.com",
+          "zip": "18974",
+          "add_date": "2024-11-23 09:10:43+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 27,
+      "group_display_name": "Elaine Stansbury (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141666,
+          "first_name": "Elaine",
+          "last_name": "Stansbury",
+          "phone1": "412-241-3973",
+          "email": "",
+          "zip": "15218",
+          "add_date": "2024-11-23 08:02:53+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 141662,
+          "first_name": "Elaine",
+          "last_name": "Stansbury",
+          "phone1": "412-241-3973",
+          "email": "",
+          "zip": "15218",
+          "add_date": "2024-11-23 08:01:48+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 28,
+      "group_display_name": "Joey & Tina Collins (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141625,
+          "first_name": "Joey & Tina",
+          "last_name": "Collins",
+          "phone1": "804-926-8950",
+          "email": "brojoeycollins@gmail.com",
+          "zip": "23842",
+          "add_date": "2024-11-23 04:45:33+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 141317,
+          "first_name": "Joey & Tina",
+          "last_name": "Collins",
+          "phone1": "804-926-8950",
+          "email": "brojoeycollins@gmail.com",
+          "zip": "23842",
+          "add_date": "2024-11-20 08:01:19+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 29,
+      "group_display_name": "Paul Hickin (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141623,
+          "first_name": "Paul",
+          "last_name": "Hickin",
+          "phone1": "330-608-3278",
+          "email": "hickinpaul@sbcglobal.net",
+          "zip": "44262",
+          "add_date": "2024-11-23 03:46:18+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 141622,
+          "first_name": "Paul",
+          "last_name": "Hickin",
+          "phone1": "330-608-3278",
+          "email": "hickinpaul@sbcglobal.net",
+          "zip": "44262",
+          "add_date": "2024-11-23 03:45:41+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 30,
+      "group_display_name": "Jorge Huertas (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141502,
+          "first_name": "Jorge",
+          "last_name": "Huertas",
+          "phone1": "908-892-9009",
+          "email": "jorgelhuertas53@gmail.com",
+          "zip": "08865",
+          "add_date": "2024-11-22 09:25:54+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 141498,
+          "first_name": "Jorge",
+          "last_name": "Huertas",
+          "phone1": "908-892-9009",
+          "email": "jorgelhuertas53@gmail.com",
+          "zip": "08865",
+          "add_date": "2024-11-22 09:01:05+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 31,
+      "group_display_name": "Nancy Rademacher (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141487,
+          "first_name": "Nancy",
+          "last_name": "Rademacher",
+          "phone1": "732-269-6022",
+          "email": "",
+          "zip": "08721",
+          "add_date": "2024-11-22 05:36:21+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 141486,
+          "first_name": "Nancy",
+          "last_name": "Rademacher",
+          "phone1": "732-269-6022",
+          "email": "",
+          "zip": "08721",
+          "add_date": "2024-11-22 05:36:17+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 32,
+      "group_display_name": "Jaqueline Smith (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141482,
+          "first_name": "Jaqueline",
+          "last_name": "Smith",
+          "phone1": "609-457-1117",
+          "email": "",
+          "zip": "08087",
+          "add_date": "2024-11-22 05:17:36+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 141353,
+          "first_name": "Jacqueline",
+          "last_name": "Smith",
+          "phone1": "609-457-1117",
+          "email": "pompanopine@yahoo.com",
+          "zip": "08087",
+          "add_date": "2024-11-20 11:25:17+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 98.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 33,
+      "group_display_name": "Sunae Pletcher (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141457,
+          "first_name": "Sunae",
+          "last_name": "Pletcher",
+          "phone1": "434-547-5482",
+          "email": "sunaepletcher@yahoo.com",
+          "zip": "23901",
+          "add_date": "2024-11-21 05:36:05+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 141455,
+          "first_name": "Sunae",
+          "last_name": "Pletcher",
+          "phone1": "434-547-5482",
+          "email": "sunaepletcher@yahoo.com",
+          "zip": "23901",
+          "add_date": "2024-11-21 05:35:47+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 34,
+      "group_display_name": "Asif Chowdhury (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141456,
+          "first_name": "Asif",
+          "last_name": "Chowdhury",
+          "phone1": "703-786-6733",
+          "email": "asif.chowdhu@gmail.com",
+          "zip": "20111",
+          "add_date": "2024-11-21 05:36:04+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 141454,
+          "first_name": "Asif",
+          "last_name": "Chowdhury",
+          "phone1": "703-786-6733",
+          "email": "asif.chowdhu@gmail.com",
+          "zip": "20111",
+          "add_date": "2024-11-21 05:35:47+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 35,
+      "group_display_name": "Sandra Seagraves (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141284,
+          "first_name": "Sandy",
+          "last_name": "Cseagrave",
+          "phone1": "609-970-4343",
+          "email": "SSeagrave3@verizon.net",
+          "zip": "08312",
+          "add_date": "2024-11-19 15:01:50+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 141236,
+          "first_name": "Sandra",
+          "last_name": "Seagraves",
+          "phone1": "609-970-4343",
+          "email": "SSeagrave3@verizon.net",
+          "zip": "08312",
+          "add_date": "2024-11-19 13:05:59+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 87.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 36,
+      "group_display_name": "Ann Pileto (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141178,
+          "first_name": "Ann",
+          "last_name": "Pileto",
+          "phone1": "609-575-5875",
+          "email": "",
+          "zip": "08690",
+          "add_date": "2024-11-19 09:02:45+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 141175,
+          "first_name": "Ann",
+          "last_name": "Pileto",
+          "phone1": "609-575-5875",
+          "email": "",
+          "zip": "08690",
+          "add_date": "2024-11-19 08:45:30+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 37,
+      "group_display_name": "Betty Clemons (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141145,
+          "first_name": "Betty",
+          "last_name": "Clemons",
+          "phone1": "330-390-1695",
+          "email": "clemonsbetty709@gmail.com",
+          "zip": "43917",
+          "add_date": "2024-11-19 05:25:51+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 140955,
+          "first_name": "Betty",
+          "last_name": "Clemons",
+          "phone1": "330-390-1695",
+          "email": "clemonsbetty709@gmail.com",
+          "zip": "43917",
+          "add_date": "2024-11-18 05:55:46+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 38,
+      "group_display_name": "Eddie Short (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 141111,
+          "first_name": "Eddie",
+          "last_name": "Short",
+          "phone1": "347-728-3671",
+          "email": "ededzo302@msn.com",
+          "zip": "18466",
+          "add_date": "2024-11-18 15:00:37+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 140448,
+          "first_name": "Eddie",
+          "last_name": "Short",
+          "phone1": "347-728-3671",
+          "email": "ededzo302@msn.com",
+          "zip": "18466",
+          "add_date": "2024-11-15 05:30:56+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 39,
+      "group_display_name": "Robert & Angela Wright (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140903,
+          "first_name": "Robert & Angela",
+          "last_name": "Wright",
+          "phone1": "202-696-0771",
+          "email": "ecowright@gmail.com",
+          "zip": "22405",
+          "add_date": "2024-11-17 15:25:23+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 140373,
+          "first_name": "Robert & Angela",
+          "last_name": "Wright",
+          "phone1": "202-696-0771",
+          "email": "ecowright@gmail.com",
+          "zip": "22405",
+          "add_date": "2024-11-14 12:05:55+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 40,
+      "group_display_name": "carolyn hunter (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140757,
+          "first_name": "Carolyn",
+          "last_name": "Hunter",
+          "phone1": "614-975-7979",
+          "email": "",
+          "zip": "43065",
+          "add_date": "2024-11-16 13:55:53+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        },
+        {
+          "id": 140637,
+          "first_name": "carolyn",
+          "last_name": "hunter",
+          "phone1": "614-975-7979",
+          "email": "",
+          "zip": "43065",
+          "add_date": "2024-11-16 06:35:50+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 41,
+      "group_display_name": "Bronetta Beasley (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140692,
+          "first_name": "Bronetta",
+          "last_name": "Beasley",
+          "phone1": "440-654-6818",
+          "email": "bronettabeasley@yahoo.com",
+          "zip": "44055",
+          "add_date": "2024-11-16 09:40:52+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 139957,
+          "first_name": "Bronetta",
+          "last_name": "Beasley",
+          "phone1": "440-654-6818",
+          "email": "bronettabeasley@yahoo.com",
+          "zip": "44055",
+          "add_date": "2024-11-12 08:15:48+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 42,
+      "group_display_name": "Robert John (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140609,
+          "first_name": "Robert",
+          "last_name": "John",
+          "phone1": "419-564-1545",
+          "email": "trirtool@yahoo.com",
+          "zip": "44903",
+          "add_date": "2024-11-15 16:20:56+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 140576,
+          "first_name": "Robert",
+          "last_name": "John",
+          "phone1": "419-564-1545",
+          "email": "trirtool@yahoo.com",
+          "zip": "44903",
+          "add_date": "2024-11-15 14:11:04+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 43,
+      "group_display_name": "Walter Garrett (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140599,
+          "first_name": "Walter",
+          "last_name": "Garrett",
+          "phone1": "703-940-6555",
+          "email": "cardenasreyes166@gmail.com",
+          "zip": "23086",
+          "add_date": "2024-11-15 15:50:53+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 140457,
+          "first_name": "Walter",
+          "last_name": "Garrett",
+          "phone1": "703-940-6555",
+          "email": "cardenasreyes166@gmail.com",
+          "zip": "23086",
+          "add_date": "2024-11-15 06:05:54+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 44,
+      "group_display_name": "Regina Peter (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140591,
+          "first_name": "Regina",
+          "last_name": "Peter",
+          "phone1": "908-705-7710",
+          "email": "rpeter@newmarkeducation.com",
+          "zip": "07756",
+          "add_date": "2024-11-15 14:50:55+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 140493,
+          "first_name": "Regina",
+          "last_name": "Peter",
+          "phone1": "908-705-7710",
+          "email": "rpeter@newmarkeducation.com",
+          "zip": "07756",
+          "add_date": "2024-11-15 09:41:06+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 45,
+      "group_display_name": "Joshua Tomlin (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140530,
+          "first_name": "Joshua",
+          "last_name": "Tomlin",
+          "phone1": "856-254-9678",
+          "email": "",
+          "zip": "08097",
+          "add_date": "2024-11-15 12:31:17+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 140392,
+          "first_name": "Joshua",
+          "last_name": "Tomlin",
+          "phone1": "856-254-9678",
+          "email": "jdtomlin15@gamil.com",
+          "zip": "08097",
+          "add_date": "2024-11-14 13:26:02+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 46,
+      "group_display_name": "Erin Ferrara (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140513,
+          "first_name": "Erin",
+          "last_name": "Ferrara",
+          "phone1": "732-492-9928",
+          "email": "erindferrara@gmail.com",
+          "zip": "08619",
+          "add_date": "2024-11-15 11:25:57+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 138710,
+          "first_name": "Erin",
+          "last_name": "Ferrara",
+          "phone1": "732-492-9928",
+          "email": "erindferrara@gmail.com",
+          "zip": "08619",
+          "add_date": "2024-11-04 12:56:01+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 47,
+      "group_display_name": "Mike Osoba (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140447,
+          "first_name": "Mike",
+          "last_name": "Osoba",
+          "phone1": "703-856-0911",
+          "email": "michaelosoba@verizon.net",
+          "zip": "20175",
+          "add_date": "2024-11-15 05:16:01+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 140445,
+          "first_name": "Mike",
+          "last_name": "Osoba",
+          "phone1": "703-856-0911",
+          "email": "michaelosoba@verizon.net",
+          "zip": "20175",
+          "add_date": "2024-11-15 05:15:08+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 48,
+      "group_display_name": "walter moser (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140446,
+          "first_name": "Walter",
+          "last_name": "Moser",
+          "phone1": "609-971-8684",
+          "email": "",
+          "zip": "08731",
+          "add_date": "2024-11-15 05:15:08+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 140413,
+          "first_name": "walter",
+          "last_name": "moser",
+          "phone1": "609-971-8684",
+          "email": "",
+          "zip": "08731",
+          "add_date": "2024-11-14 13:55:58+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 49,
+      "group_display_name": "Marisa Efaw (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140442,
+          "first_name": "Marisa",
+          "last_name": "Efaw",
+          "phone1": "540-841-3610",
+          "email": "marisaefaw@gmail.com",
+          "zip": "22701",
+          "add_date": "2024-11-14 15:56:04+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 140211,
+          "first_name": "Marisa",
+          "last_name": "Efaw",
+          "phone1": "540-841-3610",
+          "email": "marisaefaw@gmail.com",
+          "zip": "22701",
+          "add_date": "2024-11-13 11:55:50+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 50,
+      "group_display_name": "Kim Wright (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140441,
+          "first_name": "Kim",
+          "last_name": "Wright",
+          "phone1": "804-615-2732",
+          "email": "",
+          "zip": "23219",
+          "add_date": "2024-11-14 15:56:03+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 140354,
+          "first_name": "Kim",
+          "last_name": "Wright",
+          "phone1": "804-615-2732",
+          "email": "",
+          "zip": "23219",
+          "add_date": "2024-11-14 10:20:57+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 51,
+      "group_display_name": "Edward Bigelow (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140330,
+          "first_name": "Edward",
+          "last_name": "Bigelow",
+          "phone1": "804-928-1738",
+          "email": "ebigelow85@gmail.com",
+          "zip": "23234",
+          "add_date": "2024-11-14 08:18:53+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 140132,
+          "first_name": "Edward",
+          "last_name": "Bigelow",
+          "phone1": "804-928-1738",
+          "email": "ebigelow85@gmail.com",
+          "zip": "23234",
+          "add_date": "2024-11-13 05:20:31+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 52,
+      "group_display_name": "Timothy Ward (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140311,
+          "first_name": "Timothy",
+          "last_name": "Ward",
+          "phone1": "202-422-2774",
+          "email": "2923oakley@gmail.com",
+          "zip": "21215",
+          "add_date": "2024-11-14 05:40:54+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 140309,
+          "first_name": "Timothy",
+          "last_name": "Ward",
+          "phone1": "202-422-2774",
+          "email": "2923oakley@gmail.com",
+          "zip": "21215",
+          "add_date": "2024-11-14 05:40:04+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 53,
+      "group_display_name": "Lin Zhang (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140310,
+          "first_name": "Lin",
+          "last_name": "Zhang",
+          "phone1": "301-968-5969",
+          "email": "alanzhang20874@yahoo.com",
+          "zip": "20878",
+          "add_date": "2024-11-14 05:40:05+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 140307,
+          "first_name": "Lin",
+          "last_name": "Zhang",
+          "phone1": "301-968-5969",
+          "email": "alanzhang20874@yahoo.com",
+          "zip": "20878",
+          "add_date": "2024-11-14 05:35:35+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 54,
+      "group_display_name": "Pete Saunders (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140282,
+          "first_name": "Pete",
+          "last_name": "Saunders",
+          "phone1": "856-308-0946",
+          "email": "zep1144@aol.com",
+          "zip": "18426",
+          "add_date": "2024-11-13 14:55:51+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 140154,
+          "first_name": "Pete",
+          "last_name": "Saunders",
+          "phone1": "856-308-0946",
+          "email": "zep1144@aol.com",
+          "zip": "18426",
+          "add_date": "2024-11-13 07:56:07+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 55,
+      "group_display_name": "Dale Costello (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140175,
+          "first_name": "Dale",
+          "last_name": "Costello",
+          "phone1": "330-304-5558",
+          "email": "dalecostello58@yahoo.com",
+          "zip": "44301",
+          "add_date": "2024-11-13 09:16:10+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 140172,
+          "first_name": "Dale",
+          "last_name": "Costello",
+          "phone1": "330-304-5558",
+          "email": "dalecostello58@yahoo.com",
+          "zip": "44301",
+          "add_date": "2024-11-13 09:16:08+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 56,
+      "group_display_name": "Dave Hempke (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 140103,
+          "first_name": "Dave",
+          "last_name": "Hemke",
+          "phone1": "412-759-1671",
+          "email": "",
+          "zip": "15057",
+          "add_date": "2024-11-12 16:20:47+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 140044,
+          "first_name": "Dave",
+          "last_name": "Hempke",
+          "phone1": "412-759-1671",
+          "email": "",
+          "zip": "15057",
+          "add_date": "2024-11-12 13:02:27+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 97.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 57,
+      "group_display_name": "Tiffany Cobb (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139918,
+          "first_name": "Tiffany",
+          "last_name": "Cobb",
+          "phone1": "856-628-1062",
+          "email": "tiffyh21@gmail.com",
+          "zip": "08090",
+          "add_date": "2024-11-11 14:45:48+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 139889,
+          "first_name": "Tiffany",
+          "last_name": "Cobb",
+          "phone1": "856-628-1062",
+          "email": "",
+          "zip": "08090",
+          "add_date": "2024-11-11 13:50:49+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 58,
+      "group_display_name": "John Grabowski (5 duplicates)",
+      "total_duplicates": 5,
+      "prospects": [
+        {
+          "id": 139811,
+          "first_name": "John",
+          "last_name": "Grabowski",
+          "phone1": "412-523-5159",
+          "email": "giovannihv1943@gmail.com",
+          "zip": "15068",
+          "add_date": "2024-11-11 09:05:42+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 139807,
+          "first_name": "John",
+          "last_name": "Grabowski",
+          "phone1": "412-523-5159",
+          "email": "giovannihv1943@gmail.com",
+          "zip": "15068",
+          "add_date": "2024-11-11 09:05:41+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 139808,
+          "first_name": "John",
+          "last_name": "Grabowski",
+          "phone1": "412-523-5159",
+          "email": "giovannihv1943@gmail.com",
+          "zip": "15068",
+          "add_date": "2024-11-11 09:05:41+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 139809,
+          "first_name": "John",
+          "last_name": "Grabowski",
+          "phone1": "412-523-5159",
+          "email": "giovannihv1943@gmail.com",
+          "zip": "15068",
+          "add_date": "2024-11-11 09:05:41+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 139810,
+          "first_name": "John",
+          "last_name": "Grabowski",
+          "phone1": "412-523-5159",
+          "email": "giovannihv1943@gmail.com",
+          "zip": "15068",
+          "add_date": "2024-11-11 09:05:41+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 59,
+      "group_display_name": "Yuling Dai (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139696,
+          "first_name": "Yuling",
+          "last_name": "Dai",
+          "phone1": "205-862-2604",
+          "email": "yuling8599@gmail.com",
+          "zip": "20874",
+          "add_date": "2024-11-10 10:40:48+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 139697,
+          "first_name": "Yuling",
+          "last_name": "Dai",
+          "phone1": "205-862-2604",
+          "email": "yuling8599@gmail.com",
+          "zip": "20874",
+          "add_date": "2024-11-10 10:40:48+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 60,
+      "group_display_name": "Kamisha Lewis (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139646,
+          "first_name": "Kamisha",
+          "last_name": "Lewis",
+          "phone1": "646-457-5959",
+          "email": "",
+          "zip": "08046",
+          "add_date": "2024-11-10 05:55:11+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 139275,
+          "first_name": "Kamisha",
+          "last_name": "Lewis",
+          "phone1": "646-457-5959",
+          "email": "",
+          "zip": "08046",
+          "add_date": "2024-11-07 14:40:52+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 61,
+      "group_display_name": "Tanjong Jingwa (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139644,
+          "first_name": "tanjoe",
+          "last_name": "jingwa",
+          "phone1": "614-316-1962",
+          "email": "",
+          "zip": "43068",
+          "add_date": "2024-11-09 23:55:42+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        },
+        {
+          "id": 131280,
+          "first_name": "Tanjong",
+          "last_name": "Jingwa",
+          "phone1": "614-316-1962",
+          "email": "tanjongvalentine40@gmail.com",
+          "zip": "43068",
+          "add_date": "2024-09-23 13:56:03+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 92.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 62,
+      "group_display_name": "Matt Engelbert (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139641,
+          "first_name": "Matt",
+          "last_name": "Englebert",
+          "phone1": "917-691-9687",
+          "email": "mje1975@gmail.com",
+          "zip": "10707",
+          "add_date": "2024-11-09 18:00:20+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 138522,
+          "first_name": "Matt",
+          "last_name": "Engelbert",
+          "phone1": "917-691-9687",
+          "email": "mje1975@gmail.com",
+          "zip": "10707",
+          "add_date": "2024-11-03 10:15:50+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 96.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 63,
+      "group_display_name": "Pamaa Handelman (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139447,
+          "first_name": "Pamela",
+          "last_name": "Handleman",
+          "phone1": "202-352-8576",
+          "email": "pghtam1@verizon.com",
+          "zip": "15216",
+          "add_date": "2024-11-08 13:55:55+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 129525,
+          "first_name": "Pamaa",
+          "last_name": "Handelman",
+          "phone1": "202-352-8576",
+          "email": "",
+          "zip": "15216",
+          "add_date": "2024-09-13 13:41:12+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 87.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 64,
+      "group_display_name": "Herbert Morgan (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139345,
+          "first_name": "Herbert",
+          "last_name": "Morgan",
+          "phone1": "434-532-3830",
+          "email": "herbertmorgan43@gmail.com",
+          "zip": "23868",
+          "add_date": "2024-11-08 06:31:02+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 130747,
+          "first_name": "Herbert",
+          "last_name": "Morgan",
+          "phone1": "434-532-3830",
+          "email": "herbertmorgan43@gmail.com",
+          "zip": "23868",
+          "add_date": "2024-09-20 08:05:54+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 65,
+      "group_display_name": "Andrew Baserp (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139235,
+          "first_name": "Andrew",
+          "last_name": "Baserap",
+          "phone1": "804-229-3757",
+          "email": "voc79@aol.com",
+          "zip": "23116",
+          "add_date": "2024-11-07 13:31:21+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 139136,
+          "first_name": "Andrew",
+          "last_name": "Baserp",
+          "phone1": "804-229-3757",
+          "email": "",
+          "zip": "23116",
+          "add_date": "2024-11-07 06:10:43+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 97.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 66,
+      "group_display_name": "Glen Vosgerichian (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139100,
+          "first_name": "Glen",
+          "last_name": "Vosgerichian",
+          "phone1": "856-220-0255",
+          "email": "",
+          "zip": "08053",
+          "add_date": "2024-11-06 15:55:51+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 138527,
+          "first_name": "Glen",
+          "last_name": "Vosgerichian",
+          "phone1": "856-220-0255",
+          "email": "",
+          "zip": "08053",
+          "add_date": "2024-11-03 10:50:43+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 67,
+      "group_display_name": "Aj Patel (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 139096,
+          "first_name": "Aj",
+          "last_name": "Patel",
+          "phone1": "856-761-4664",
+          "email": "",
+          "zip": "08034",
+          "add_date": "2024-11-06 15:10:44+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 138906,
+          "first_name": "Aj",
+          "last_name": "Patel",
+          "phone1": "856-761-4664",
+          "email": "",
+          "zip": "08034",
+          "add_date": "2024-11-05 14:15:55+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 68,
+      "group_display_name": "Jelissa E Summers (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 138954,
+          "first_name": "Jelissa",
+          "last_name": "Summers",
+          "phone1": "731-227-1963",
+          "email": "",
+          "zip": "23150",
+          "add_date": "2024-11-05 17:45:49+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 138902,
+          "first_name": "Jelissa E",
+          "last_name": "Summers",
+          "phone1": "731-227-1963",
+          "email": "",
+          "zip": "23150",
+          "add_date": "2024-11-05 14:01:15+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 96.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 69,
+      "group_display_name": "Angela Lipscomb (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 138765,
+          "first_name": "Angela",
+          "last_name": "Lipscomb",
+          "phone1": "305-797-5812",
+          "email": "al@lipscombpartners.com",
+          "zip": "44124",
+          "add_date": "2024-11-04 15:45:39+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 138766,
+          "first_name": "Angela",
+          "last_name": "Lipscomb",
+          "phone1": "305-797-5812",
+          "email": "al@lipscombpartners.com",
+          "zip": "44124",
+          "add_date": "2024-11-04 15:45:39+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 70,
+      "group_display_name": "Anton Valderrama (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 138698,
+          "first_name": "Anton",
+          "last_name": "Valderrama",
+          "phone1": "804-332-9439",
+          "email": "anton_valderrama@yahoo.com",
+          "zip": "23111",
+          "add_date": "2024-11-04 12:31:00+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 138671,
+          "first_name": "Anton",
+          "last_name": "Valderrama",
+          "phone1": "804-332-9439",
+          "email": "anton_valderrama@yahoo.com",
+          "zip": "23111",
+          "add_date": "2024-11-04 11:31:13+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 71,
+      "group_display_name": "Philip Wagner (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 138434,
+          "first_name": "Philip",
+          "last_name": "Wagner",
+          "phone1": "567-289-1034",
+          "email": "",
+          "zip": "43055",
+          "add_date": "2024-11-02 13:05:48+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        },
+        {
+          "id": 138353,
+          "first_name": "philip",
+          "last_name": "wagner",
+          "phone1": "567-289-1034",
+          "email": "",
+          "zip": "43055",
+          "add_date": "2024-11-02 07:25:41+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 72,
+      "group_display_name": "Joe Vitelli (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 138045,
+          "first_name": "Joe",
+          "last_name": "Vitelli",
+          "phone1": "757-285-4862",
+          "email": "joe.vitelli3@gmail.com",
+          "zip": "23456",
+          "add_date": "2024-10-31 11:20:55+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 138043,
+          "first_name": "Joe",
+          "last_name": "Vitelli",
+          "phone1": "757-285-4862",
+          "email": "joe.vitelli3@gmail.com",
+          "zip": "23456",
+          "add_date": "2024-10-31 11:20:55+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 73,
+      "group_display_name": "rene jimenez (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 138019,
+          "first_name": "Rene",
+          "last_name": "Jimenez",
+          "phone1": "609-547-9340",
+          "email": "",
+          "zip": "08081",
+          "add_date": "2024-10-31 10:05:46+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 138018,
+          "first_name": "rene",
+          "last_name": "jimenez",
+          "phone1": "609-547-9340",
+          "email": "",
+          "zip": "08081",
+          "add_date": "2024-10-31 09:56:01+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 74,
+      "group_display_name": "Cory Stevens (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 137861,
+          "first_name": "Cory",
+          "last_name": "Stevens",
+          "phone1": "330-936-3340",
+          "email": "",
+          "zip": "44710",
+          "add_date": "2024-10-30 12:55:49+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 137860,
+          "first_name": "Cory",
+          "last_name": "Stevens",
+          "phone1": "330-936-3340",
+          "email": "",
+          "zip": "44710",
+          "add_date": "2024-10-30 12:55:48+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 75,
+      "group_display_name": "Mohsen Mahoor (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 137846,
+          "first_name": "Mohsen",
+          "last_name": "Mahoor",
+          "phone1": "720-949-5791",
+          "email": "",
+          "zip": "23059",
+          "add_date": "2024-10-30 12:30:49+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 137753,
+          "first_name": "Mohsen",
+          "last_name": "Mahoor",
+          "phone1": "720-949-5791",
+          "email": "",
+          "zip": "23236",
+          "add_date": "2024-10-30 05:10:51+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 76,
+      "group_display_name": "Zachary Chubbuck (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 137776,
+          "first_name": "Zachary",
+          "last_name": "Chubbuck",
+          "phone1": "330-998-2777",
+          "email": "Zchubbuck@gmail.com",
+          "zip": "44221",
+          "add_date": "2024-10-30 06:54:58+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 137775,
+          "first_name": "Zachary",
+          "last_name": "Chubbuck",
+          "phone1": "330-998-2777",
+          "email": "Zchubbuck@gmail.com",
+          "zip": "44221",
+          "add_date": "2024-10-30 06:54:50+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 77,
+      "group_display_name": "Renee Virgulti (3 duplicates)",
+      "total_duplicates": 3,
+      "prospects": [
+        {
+          "id": 137769,
+          "first_name": "Renee",
+          "last_name": "Virgulti",
+          "phone1": "215-932-7219",
+          "email": "rvirgulti1@gmail.com",
+          "zip": "19007",
+          "add_date": "2024-10-30 06:20:46+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 137771,
+          "first_name": "Renee",
+          "last_name": "Virgulti",
+          "phone1": "215-932-7219",
+          "email": "rvirgulti1@gmail.com",
+          "zip": "19007",
+          "add_date": "2024-10-30 06:20:46+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 137772,
+          "first_name": "Renee",
+          "last_name": "Virgulti",
+          "phone1": "215-932-7219",
+          "email": "rvirgulti1@gmail.com",
+          "zip": "19007",
+          "add_date": "2024-10-30 06:20:46+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 78,
+      "group_display_name": "Charles Hughes (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 137732,
+          "first_name": "Charles",
+          "last_name": "Hughes",
+          "phone1": "609-575-8396",
+          "email": "",
+          "zip": "08638",
+          "add_date": "2024-10-29 17:00:52+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 137482,
+          "first_name": "Charles",
+          "last_name": "Hughes",
+          "phone1": "609-575-8396",
+          "email": "",
+          "zip": "08638",
+          "add_date": "2024-10-28 13:45:53+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 79,
+      "group_display_name": "Tiffany Johnson (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 137413,
+          "first_name": "Tiffany",
+          "last_name": "Johnson",
+          "phone1": "443-224-3383",
+          "email": "",
+          "zip": "21206",
+          "add_date": "2024-10-28 09:06:06+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 137414,
+          "first_name": "Tiffany",
+          "last_name": "Johnson",
+          "phone1": "443-224-3383",
+          "email": "",
+          "zip": "21206",
+          "add_date": "2024-10-28 09:06:06+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 80,
+      "group_display_name": "David & Susan Edquest (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 137400,
+          "first_name": "David & Susan",
+          "last_name": "Edquest",
+          "phone1": "804-337-7007",
+          "email": "bluefish23225@yahoo.com",
+          "zip": "23188",
+          "add_date": "2024-10-28 08:26:09+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 137369,
+          "first_name": "David & Susan",
+          "last_name": "Edquest",
+          "phone1": "804-337-7007",
+          "email": "bluefish23225@yahoo.com",
+          "zip": "23188",
+          "add_date": "2024-10-28 05:15:49+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 81,
+      "group_display_name": "William Hopkins (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 137167,
+          "first_name": "William",
+          "last_name": "Hopkins",
+          "phone1": "570-460-9999",
+          "email": "",
+          "zip": "18326",
+          "add_date": "2024-10-26 07:10:45+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 136987,
+          "first_name": "William",
+          "last_name": "Hopkins",
+          "phone1": "570-460-9999",
+          "email": "buckhill301@gmail.com",
+          "zip": "18326",
+          "add_date": "2024-10-25 10:55:53+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 82,
+      "group_display_name": "David Deleon-Harris (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 137166,
+          "first_name": "David",
+          "last_name": "Deleon-Harris",
+          "phone1": "914-619-1579",
+          "email": "",
+          "zip": "07208",
+          "add_date": "2024-10-26 07:05:43+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 137163,
+          "first_name": "David",
+          "last_name": "Deleon-Harris",
+          "phone1": "914-619-1579",
+          "email": "d.harris1911@gmail.com",
+          "zip": "07208",
+          "add_date": "2024-10-26 06:45:43+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 83,
+      "group_display_name": "Mildred Glasphy (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 133107,
+          "first_name": "Mildred",
+          "last_name": "Glasphy",
+          "phone1": "216-644-5069",
+          "email": "",
+          "zip": "44117",
+          "add_date": "2024-10-03 15:40:49+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 116581,
+          "first_name": "Mildred",
+          "last_name": "Glaspy",
+          "phone1": "216-644-5069",
+          "email": "",
+          "zip": "44117",
+          "add_date": "2024-07-17 14:55:23+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 97.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 84,
+      "group_display_name": "Florangel Benitez (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132826,
+          "first_name": "Florangel",
+          "last_name": "Benitez",
+          "phone1": "347-272-6166",
+          "email": "florangelb@yahoo.com",
+          "zip": "07011",
+          "add_date": "2024-10-02 09:25:56+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 132412,
+          "first_name": "Florangel",
+          "last_name": "Benitez",
+          "phone1": "347-272-6166",
+          "email": "florangelb@yahoo.com",
+          "zip": "07011",
+          "add_date": "2024-09-30 09:26:11+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 85,
+      "group_display_name": "Steff Antaki (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132804,
+          "first_name": "Steff",
+          "last_name": "Antaki",
+          "phone1": "412-535-3848",
+          "email": "househunter9@verizon.net",
+          "zip": "15143",
+          "add_date": "2024-10-02 07:40:48+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 132803,
+          "first_name": "Steff",
+          "last_name": "Antaki",
+          "phone1": "412-535-3848",
+          "email": "househunter9@verizon.net",
+          "zip": "15143",
+          "add_date": "2024-10-02 07:40:47+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 86,
+      "group_display_name": "Ted Brackett (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132590,
+          "first_name": "Ted",
+          "last_name": "Brackett",
+          "phone1": "412-377-0170",
+          "email": "tedbrackett412@gmail.com",
+          "zip": "15210",
+          "add_date": "2024-10-01 08:16:25+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 132587,
+          "first_name": "Ted",
+          "last_name": "Brackett",
+          "phone1": "412-377-0170",
+          "email": "tedbrackett412@gmail.com",
+          "zip": "15210",
+          "add_date": "2024-10-01 08:16:06+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 87,
+      "group_display_name": "Lynn Lewis (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132591,
+          "first_name": "Lynn",
+          "last_name": "Lewis",
+          "phone1": "804-539-5453",
+          "email": "meriwether22@comcast.net",
+          "zip": "23451",
+          "add_date": "2024-10-01 08:16:25+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 132588,
+          "first_name": "Lynn",
+          "last_name": "Lewis",
+          "phone1": "804-539-5453",
+          "email": "meriwether22@comcast.net",
+          "zip": "23451",
+          "add_date": "2024-10-01 08:16:07+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 88,
+      "group_display_name": "Chase Decandia (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132582,
+          "first_name": "Chase",
+          "last_name": "Decandia",
+          "phone1": "860-933-6290",
+          "email": "Chasedecandia@gmail.com",
+          "zip": "22701",
+          "add_date": "2024-10-01 07:26:20+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 132302,
+          "first_name": "Chase",
+          "last_name": "Decandia",
+          "phone1": "860-933-6290",
+          "email": "chasedecandia@gmail.com",
+          "zip": "22701",
+          "add_date": "2024-09-29 15:10:37+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 89,
+      "group_display_name": "Clara Bartunek (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132518,
+          "first_name": "Clara",
+          "last_name": "Bartunek",
+          "phone1": "845-774-6004",
+          "email": "clara.bartunek@gmail.com",
+          "zip": "18337",
+          "add_date": "2024-09-30 15:15:52+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 131937,
+          "first_name": "Clara",
+          "last_name": "Bartunek",
+          "phone1": "845-774-6004",
+          "email": "clara.bartunek@gmail.com",
+          "zip": "18337",
+          "add_date": "2024-09-27 07:30:58+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 90,
+      "group_display_name": "Reginald Jones (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132503,
+          "first_name": "Reginald",
+          "last_name": "Jones",
+          "phone1": "804-481-2693",
+          "email": "Reginaldjonesjr84@gmail.com",
+          "zip": "23834",
+          "add_date": "2024-09-30 14:50:50+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 132345,
+          "first_name": "Reginald",
+          "last_name": "Jones",
+          "phone1": "804-481-2693",
+          "email": "reginaldjonesjr84@gmail.com",
+          "zip": "23834",
+          "add_date": "2024-09-30 05:20:46+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 91,
+      "group_display_name": "BIENVIENIDA Ware (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132432,
+          "first_name": "BIENVIENIDA",
+          "last_name": "Ware",
+          "phone1": "609-248-5476",
+          "email": "",
+          "zip": "08068",
+          "add_date": "2024-09-30 11:16:08+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 132415,
+          "first_name": "BIENVIENIDA",
+          "last_name": "Ware",
+          "phone1": "609-248-5476",
+          "email": "",
+          "zip": "08068",
+          "add_date": "2024-09-30 09:40:57+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 92,
+      "group_display_name": "Robert Armswood (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132404,
+          "first_name": "Robert",
+          "last_name": "Armswood",
+          "phone1": "908-216-3688",
+          "email": "robertarmswood@gmail.com",
+          "zip": "07719",
+          "add_date": "2024-09-30 09:16:18+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 132355,
+          "first_name": "Robert",
+          "last_name": "Armswood",
+          "phone1": "908-216-3688",
+          "email": "robertarmswood@gmail.com",
+          "zip": "07719",
+          "add_date": "2024-09-30 05:50:40+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 93,
+      "group_display_name": "Susan Schneiderlevin (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132344,
+          "first_name": "Susan",
+          "last_name": "Schneiderlevin",
+          "phone1": "570-665-1016",
+          "email": "",
+          "zip": "18464",
+          "add_date": "2024-09-30 04:45:42+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 132159,
+          "first_name": "Susan",
+          "last_name": "Schneiderlevin",
+          "phone1": "570-665-1016",
+          "email": "susan.levin1209@gmail.com",
+          "zip": "18464",
+          "add_date": "2024-09-28 10:30:41+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 94,
+      "group_display_name": "Daniel Hernandez (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132309,
+          "first_name": "Daniel",
+          "last_name": "Hernandez",
+          "phone1": "540-850-8084",
+          "email": "",
+          "zip": "23060",
+          "add_date": "2024-09-29 17:05:29+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 131735,
+          "first_name": "Daniel",
+          "last_name": "Hernandez",
+          "phone1": "540-850-8084",
+          "email": "",
+          "zip": "23060",
+          "add_date": "2024-09-26 06:45:52+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 95,
+      "group_display_name": "Matt Douglas (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 132218,
+          "first_name": "Matt",
+          "last_name": "Douglas",
+          "phone1": "804-501-6684",
+          "email": "douglasmatt2001@yahoo.com",
+          "zip": "23112",
+          "add_date": "2024-09-28 17:45:46+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 132156,
+          "first_name": "Matt",
+          "last_name": "Douglas",
+          "phone1": "804-501-6684",
+          "email": "douglasmatt2001@yahoo.com",
+          "zip": "23112",
+          "add_date": "2024-09-28 10:20:24+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 96,
+      "group_display_name": "Daniel Reukauf (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131973,
+          "first_name": "Daniel ",
+          "last_name": "Reukauf",
+          "phone1": "757-646-0708",
+          "email": "dreuk123@yahoo.com",
+          "zip": "23454",
+          "add_date": "2024-09-27 11:28:50+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 131922,
+          "first_name": "Daniel ",
+          "last_name": "Reukauf",
+          "phone1": "757-646-0708",
+          "email": "dreuk123@yahoo.com",
+          "zip": "23454",
+          "add_date": "2024-09-26 18:26:17+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 97,
+      "group_display_name": "Jeffrey Luke (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131968,
+          "first_name": "Jeffrey",
+          "last_name": "Luke",
+          "phone1": "202-415-4849",
+          "email": "",
+          "zip": "20902",
+          "add_date": "2024-09-27 10:41:07+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 131908,
+          "first_name": "Jeffrey",
+          "last_name": "Luke",
+          "phone1": "202-415-4849",
+          "email": "",
+          "zip": "20902",
+          "add_date": "2024-09-26 17:21:06+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 98,
+      "group_display_name": "John Walker (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131943,
+          "first_name": "John",
+          "last_name": "Walker",
+          "phone1": "757-667-9945",
+          "email": "walkerjohn3@yahoo.com",
+          "zip": "23434",
+          "add_date": "2024-09-27 07:51:00+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 131942,
+          "first_name": "John",
+          "last_name": "Walker",
+          "phone1": "757-667-9945",
+          "email": "walkerjohn3@yahoo.com",
+          "zip": "23434",
+          "add_date": "2024-09-27 07:40:39+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 99,
+      "group_display_name": "Shawn Schultz (3 duplicates)",
+      "total_duplicates": 3,
+      "prospects": [
+        {
+          "id": 131887,
+          "first_name": "Shawn",
+          "last_name": "Schultz",
+          "phone1": "951-691-2700",
+          "email": "shawnschultz1959@gmail.com",
+          "zip": "15902",
+          "add_date": "2024-09-26 16:11:00+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        },
+        {
+          "id": 130967,
+          "first_name": "Shawn",
+          "last_name": "Schultz",
+          "phone1": "951-691-2700",
+          "email": "shawnschultz1959@gmail.com",
+          "zip": "15902",
+          "add_date": "2024-09-21 10:40:31+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 130938,
+          "first_name": "Shawn",
+          "last_name": "Schultz",
+          "phone1": "951-691-2700",
+          "email": "shawnschultz1959@gmail.com",
+          "zip": "15902",
+          "add_date": "2024-09-21 08:40:18+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 100,
+      "group_display_name": "Domonique Parham (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131859,
+          "first_name": "Domonique",
+          "last_name": "Parham",
+          "phone1": "804-386-6577",
+          "email": "parhamdomonique@yahoo.com",
+          "zip": "23220",
+          "add_date": "2024-09-26 15:01:04+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 131754,
+          "first_name": "Domonique",
+          "last_name": "Parham",
+          "phone1": "804-386-6577",
+          "email": "parhamdomonique@yahoo.com",
+          "zip": "23220",
+          "add_date": "2024-09-26 08:40:54+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 101,
+      "group_display_name": "CATHERINE BESTEDER (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131785,
+          "first_name": "CATHERINE",
+          "last_name": "BESTEDER",
+          "phone1": "301-944-4638",
+          "email": "",
+          "zip": "20855",
+          "add_date": "2024-09-26 11:15:55+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 131782,
+          "first_name": "cathrine",
+          "last_name": "Besteder",
+          "phone1": "301-944-4638",
+          "email": "",
+          "zip": "20855",
+          "add_date": "2024-09-26 11:06:13+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 98.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 102,
+      "group_display_name": "Martin Martinez (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131758,
+          "first_name": "Martin",
+          "last_name": "Martinez",
+          "phone1": "856-794-9497",
+          "email": "",
+          "zip": "08361",
+          "add_date": "2024-09-26 09:10:44+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 131323,
+          "first_name": "Martin",
+          "last_name": "Martinez",
+          "phone1": "856-794-9497",
+          "email": "",
+          "zip": "08361",
+          "add_date": "2024-09-23 15:35:45+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 103,
+      "group_display_name": "Larry Harris (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131732,
+          "first_name": "Larry",
+          "last_name": "Harris",
+          "phone1": "703-628-0508",
+          "email": "Larrydharris51@yahoo.com",
+          "zip": "22405",
+          "add_date": "2024-09-26 06:25:27+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 131721,
+          "first_name": "Larry",
+          "last_name": "Harris",
+          "phone1": "703-628-0508",
+          "email": "larrydharris51@yahoo.com",
+          "zip": "22405",
+          "add_date": "2024-09-26 05:15:40+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 104,
+      "group_display_name": "christopher cadwallader (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131401,
+          "first_name": "Christopher",
+          "last_name": "Cadwallader",
+          "phone1": "724-221-2589",
+          "email": "",
+          "zip": "15650",
+          "add_date": "2024-09-24 10:25:53+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 131400,
+          "first_name": "christopher",
+          "last_name": "cadwallader",
+          "phone1": "724-221-2589",
+          "email": "",
+          "zip": "15650",
+          "add_date": "2024-09-24 10:15:54+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 105,
+      "group_display_name": "Nicholas Santoro (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131152,
+          "first_name": "Nicholas",
+          "last_name": "Santoro",
+          "phone1": "973-219-3187",
+          "email": "nnicksway@yahoo.com",
+          "zip": "18337",
+          "add_date": "2024-09-23 05:15:43+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 131062,
+          "first_name": "Nicholas",
+          "last_name": "Santoro",
+          "phone1": "973-219-3187",
+          "email": "nnicksway@yahoo.com",
+          "zip": "18337",
+          "add_date": "2024-09-22 10:25:58+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 106,
+      "group_display_name": "Alex D'angelo (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131038,
+          "first_name": "Alex",
+          "last_name": "D'angelo",
+          "phone1": "440-463-6446",
+          "email": "Alexdlo6446@gmail.com",
+          "zip": "44202",
+          "add_date": "2024-09-22 05:30:30+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 130976,
+          "first_name": "Alex",
+          "last_name": "D'angelo",
+          "phone1": "440-463-6446",
+          "email": "Alexdlo6446@gmail.com",
+          "zip": "44202",
+          "add_date": "2024-09-21 11:05:44+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 107,
+      "group_display_name": "Everline Sykes (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 131028,
+          "first_name": "Everline",
+          "last_name": "Sykes",
+          "phone1": "804-306-4060",
+          "email": "ehs223@yahoo.com",
+          "zip": "23227",
+          "add_date": "2024-09-21 16:25:43+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 130939,
+          "first_name": "Everline",
+          "last_name": "Sykes",
+          "phone1": "804-306-4060",
+          "email": "ehs223@yahoo.com",
+          "zip": "23227",
+          "add_date": "2024-09-21 08:40:18+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 108,
+      "group_display_name": "Keyonna Morgan (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130706,
+          "first_name": "Keyonna",
+          "last_name": "Morgan",
+          "phone1": "804-368-4799",
+          "email": "Keyonnamorgan@gmail.com",
+          "zip": "23223",
+          "add_date": "2024-09-19 17:15:45+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 130640,
+          "first_name": "Keyonna",
+          "last_name": "Morgan",
+          "phone1": "804-368-4799",
+          "email": "Keyonnamorgan@gmail.com",
+          "zip": "23223",
+          "add_date": "2024-09-19 15:05:34+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 109,
+      "group_display_name": "Edwin Davis (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130642,
+          "first_name": "Edwin",
+          "last_name": "Davis",
+          "phone1": "267-882-7867",
+          "email": "josephbear838@gmail.com",
+          "zip": "19720",
+          "add_date": "2024-09-19 15:10:43+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 129870,
+          "first_name": "Edwin",
+          "last_name": "Davis",
+          "phone1": "267-882-7867",
+          "email": "josephbear838@gmail.com",
+          "zip": "19801",
+          "add_date": "2024-09-16 08:30:52+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 110,
+      "group_display_name": "Laura Simek (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130574,
+          "first_name": "Laura",
+          "last_name": "Simek",
+          "phone1": "732-618-1837",
+          "email": "lsimek195@comcast.net",
+          "zip": "07753",
+          "add_date": "2024-09-19 12:10:53+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 130569,
+          "first_name": "Laura",
+          "last_name": "Simek",
+          "phone1": "732-618-1837",
+          "email": "lsimek195@comcast.net",
+          "zip": "07753",
+          "add_date": "2024-09-19 11:40:49+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 111,
+      "group_display_name": "Linda & Dennis Stone (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130541,
+          "first_name": "Linda & Dennis",
+          "last_name": "Stone",
+          "phone1": "804-350-9779",
+          "email": "stoneagent@verizon.net",
+          "zip": "23236",
+          "add_date": "2024-09-19 07:51:03+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 130382,
+          "first_name": "Linda & Dennis",
+          "last_name": "Stone",
+          "phone1": "804-350-9779",
+          "email": "stoneagent@verizon.net",
+          "zip": "23236",
+          "add_date": "2024-09-18 13:01:30+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 112,
+      "group_display_name": "Savannah Hemling (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130520,
+          "first_name": "Savannah",
+          "last_name": "Hemling",
+          "phone1": "410-698-3004",
+          "email": "shemling12@gmail.com",
+          "zip": "23454",
+          "add_date": "2024-09-19 06:10:43+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 130509,
+          "first_name": "Savannah",
+          "last_name": "Hemling",
+          "phone1": "410-698-3004",
+          "email": "shemling12@gmail.com",
+          "zip": "23454",
+          "add_date": "2024-09-19 05:15:42+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 113,
+      "group_display_name": "Kim Caison (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130426,
+          "first_name": "Kim",
+          "last_name": "Caison",
+          "phone1": "757-630-0758",
+          "email": "kbcaison2005@gmail.com",
+          "zip": "23310",
+          "add_date": "2024-09-18 14:40:44+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 130403,
+          "first_name": "Kim",
+          "last_name": "Caison",
+          "phone1": "757-630-0758",
+          "email": "kbcaison2005@gmail.com",
+          "zip": "23310",
+          "add_date": "2024-09-18 13:50:57+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 114,
+      "group_display_name": "Eric Josil (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130418,
+          "first_name": "Eric",
+          "last_name": "Josil",
+          "phone1": "609-554-9043",
+          "email": "ericjosil@gmail.com",
+          "zip": "08619",
+          "add_date": "2024-09-18 14:25:45+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 130414,
+          "first_name": "Eric",
+          "last_name": "Josil",
+          "phone1": "609-554-9043",
+          "email": "ericjosil@gmail.com",
+          "zip": "08619",
+          "add_date": "2024-09-18 14:10:46+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 115,
+      "group_display_name": "carl hale (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130376,
+          "first_name": "Carl",
+          "last_name": "Hale",
+          "phone1": "724-351-1433",
+          "email": "",
+          "zip": "15014",
+          "add_date": "2024-09-18 12:40:53+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 130270,
+          "first_name": "carl",
+          "last_name": "hale",
+          "phone1": "724-351-1433",
+          "email": "",
+          "zip": "15014",
+          "add_date": "2024-09-17 16:55:51+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 116,
+      "group_display_name": "Feyi Adewodu (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130363,
+          "first_name": "Feyi",
+          "last_name": "Adewodu",
+          "phone1": "757-822-9266",
+          "email": "fadewodu@aol.com",
+          "zip": "23456",
+          "add_date": "2024-09-18 12:06:01+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 130286,
+          "first_name": "Feyi",
+          "last_name": "Adewodu",
+          "phone1": "757-822-9266",
+          "email": "fadewodu@aol.com",
+          "zip": "23456",
+          "add_date": "2024-09-18 05:15:45+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 117,
+      "group_display_name": "Jenifer Mostard (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130361,
+          "first_name": "Jenifer",
+          "last_name": "Mostard",
+          "phone1": "412-956-2312",
+          "email": "",
+          "zip": "16137",
+          "add_date": "2024-09-18 11:56:12+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 130359,
+          "first_name": "Jenifer",
+          "last_name": "Mostard",
+          "phone1": "412-956-2312",
+          "email": "",
+          "zip": "16137",
+          "add_date": "2024-09-18 11:56:06+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 118,
+      "group_display_name": "Nimer Elder (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130332,
+          "first_name": "Nimer",
+          "last_name": "Elder",
+          "phone1": "440-506-9941",
+          "email": "phonesngames@yahoo.com",
+          "zip": "44070",
+          "add_date": "2024-09-18 09:41:01+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 130314,
+          "first_name": "Nimer",
+          "last_name": "Elder",
+          "phone1": "440-506-9941",
+          "email": "phonesngames@yahoo.com",
+          "zip": "44070",
+          "add_date": "2024-09-18 08:10:49+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 119,
+      "group_display_name": "Michelle Simpson (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130122,
+          "first_name": "Michelle",
+          "last_name": "Simpson",
+          "phone1": "412-815-8834",
+          "email": "simpsonmichelle67@gmail.com",
+          "zip": "15206",
+          "add_date": "2024-09-17 12:16:12+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 130119,
+          "first_name": "Michelle",
+          "last_name": "Simpson",
+          "phone1": "412-815-8834",
+          "email": "simpsonmichelle67@gmail.com",
+          "zip": "15206",
+          "add_date": "2024-09-17 12:15:49+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 120,
+      "group_display_name": "Ron Fortunato (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130072,
+          "first_name": "Ron",
+          "last_name": "Fortunato",
+          "phone1": "412-512-5027",
+          "email": "",
+          "zip": "15226",
+          "add_date": "2024-09-17 07:50:53+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 130016,
+          "first_name": "Ron",
+          "last_name": "Fortunato",
+          "phone1": "412-512-5027",
+          "email": "",
+          "zip": "15226",
+          "add_date": "2024-09-16 16:20:50+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 121,
+      "group_display_name": "Aimee Snow (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130059,
+          "first_name": "Aimee",
+          "last_name": "Snow",
+          "phone1": "440-204-9919",
+          "email": "",
+          "zip": "44035",
+          "add_date": "2024-09-17 06:50:48+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 130060,
+          "first_name": "Aimee",
+          "last_name": "Snow",
+          "phone1": "440-204-9919",
+          "email": "",
+          "zip": "44035",
+          "add_date": "2024-09-17 06:50:48+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 122,
+      "group_display_name": "Samyse Romain (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130054,
+          "first_name": "Samyse",
+          "last_name": "Romain",
+          "phone1": "678-939-2883",
+          "email": "sromain35@hotmail.com",
+          "zip": "18328",
+          "add_date": "2024-09-17 06:30:54+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 130051,
+          "first_name": "Samyse",
+          "last_name": "Romain",
+          "phone1": "678-939-2883",
+          "email": "sromain35@hotmail.com",
+          "zip": "18328",
+          "add_date": "2024-09-17 05:50:34+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 123,
+      "group_display_name": "Pasja Fisher (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 130052,
+          "first_name": "Pasja",
+          "last_name": "Fisher",
+          "phone1": "917-743-7777",
+          "email": "megaalfa999@gmail.com",
+          "zip": "07726",
+          "add_date": "2024-09-17 06:15:52+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 130045,
+          "first_name": "Pasja",
+          "last_name": "Fisher",
+          "phone1": "917-743-7777",
+          "email": "megaalfa999@gmail.com",
+          "zip": "07726",
+          "add_date": "2024-09-17 05:25:46+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 124,
+      "group_display_name": "Heather Dils (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129905,
+          "first_name": "Heather",
+          "last_name": "dils",
+          "phone1": "716-609-6060",
+          "email": "",
+          "zip": "16066",
+          "add_date": "2024-09-16 11:46:01+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 129904,
+          "first_name": "Heather",
+          "last_name": "Dils",
+          "phone1": "717-609-6060",
+          "email": "hdils40@gmail.com",
+          "zip": "16066",
+          "add_date": "2024-09-16 11:41:11+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "optimized_blocking",
+        "average_similarity_score": 96.67,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "zip"
+        ],
+        "block_key": "soundex_htr0_dls0"
+      }
+    },
+    {
+      "group_id": 125,
+      "group_display_name": "Robert Mast (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129869,
+          "first_name": "Robert",
+          "last_name": "Mast",
+          "phone1": "951-294-7555",
+          "email": "chopperob@gmail.com",
+          "zip": "18328",
+          "add_date": "2024-09-16 08:30:51+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 129865,
+          "first_name": "Robert",
+          "last_name": "Mast",
+          "phone1": "951-294-7555",
+          "email": "chopperob@gmail.com",
+          "zip": "18328",
+          "add_date": "2024-09-16 08:11:05+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 126,
+      "group_display_name": "Gunvantrai Patel (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129848,
+          "first_name": "Gunvantrai",
+          "last_name": "Patel",
+          "phone1": "570-677-3053",
+          "email": "gunvantpatel27@gmail.com",
+          "zip": "18505",
+          "add_date": "2024-09-16 06:20:41+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 129423,
+          "first_name": "Gunvantrai",
+          "last_name": "Patel",
+          "phone1": "570-677-3053",
+          "email": "gunvantpatel27@gmail.com",
+          "zip": "18505",
+          "add_date": "2024-09-13 05:50:48+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 127,
+      "group_display_name": "Koa HOANG (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129706,
+          "first_name": "Koa",
+          "last_name": "Houng",
+          "phone1": "814-270-6400",
+          "email": "",
+          "zip": "15904",
+          "add_date": "2024-09-14 16:40:45+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        },
+        {
+          "id": 128956,
+          "first_name": "Koa",
+          "last_name": "HOANG",
+          "phone1": "814-270-6400",
+          "email": "",
+          "zip": "15904",
+          "add_date": "2024-09-11 06:40:56+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 93.33,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 128,
+      "group_display_name": "Ally Kaufman (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129655,
+          "first_name": "Ally",
+          "last_name": "Kaufman",
+          "phone1": "908-566-5283",
+          "email": "",
+          "zip": "18301",
+          "add_date": "2024-09-14 10:40:49+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 129647,
+          "first_name": "Ally",
+          "last_name": "Kaufman",
+          "phone1": "908-566-5283",
+          "email": "",
+          "zip": "18301",
+          "add_date": "2024-09-14 09:55:42+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 129,
+      "group_display_name": "Tiffany Taulton (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129521,
+          "first_name": "Tiffany",
+          "last_name": "Taulton",
+          "phone1": "646-721-3910",
+          "email": "TIFFANY.TAULTON@GMAIL.COM",
+          "zip": "15207",
+          "add_date": "2024-09-13 13:31:02+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 129476,
+          "first_name": "Tiffany",
+          "last_name": "Taulton",
+          "phone1": "646-721-3910",
+          "email": "TIFFANY.TAULTON@GMAIL.COM",
+          "zip": "15207",
+          "add_date": "2024-09-13 10:26:02+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 130,
+      "group_display_name": "Fred Frey (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129516,
+          "first_name": "Fred",
+          "last_name": "Frey",
+          "phone1": "732-713-9403",
+          "email": "fdfrey50@gmail.com",
+          "zip": "08810",
+          "add_date": "2024-09-13 13:25:53+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 129509,
+          "first_name": "Fred",
+          "last_name": "Frey",
+          "phone1": "732-713-9403",
+          "email": "fdfrey50@gmail.com",
+          "zip": "08810",
+          "add_date": "2024-09-13 12:55:58+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 131,
+      "group_display_name": "John Finamore (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129493,
+          "first_name": "John",
+          "last_name": "Finamore",
+          "phone1": "609-333-1100",
+          "email": "nifj26@gmail.com",
+          "zip": "08558",
+          "add_date": "2024-09-13 12:10:44+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 129489,
+          "first_name": "John",
+          "last_name": "Finamore",
+          "phone1": "609-333-1100",
+          "email": "nifj26@gmail.com",
+          "zip": "08558",
+          "add_date": "2024-09-13 11:50:49+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 132,
+      "group_display_name": "Vahe Hov Hovsepyan (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129488,
+          "first_name": "Vahe Hoy",
+          "last_name": "Hovsepyan",
+          "phone1": "347-447-7497",
+          "email": "xtazlove@gmail.com",
+          "zip": "07751",
+          "add_date": "2024-09-13 11:40:48+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 129177,
+          "first_name": "Vahe Hov",
+          "last_name": "Hovsepyan",
+          "phone1": "347-447-7497",
+          "email": "xtazlove@gmail.com",
+          "zip": "07751",
+          "add_date": "2024-09-12 05:45:46+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 96.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 133,
+      "group_display_name": "Guian Backus (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129475,
+          "first_name": "Guian ",
+          "last_name": "Backus",
+          "phone1": "347-525-5310",
+          "email": "guianb@yahoo.com",
+          "zip": "08510",
+          "add_date": "2024-09-13 10:26:01+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 129470,
+          "first_name": "Guian",
+          "last_name": "Backus",
+          "phone1": "347-525-5310",
+          "email": "guianb@yahoo.com",
+          "zip": "08510",
+          "add_date": "2024-09-13 10:11:26+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 134,
+      "group_display_name": "Deniza Gertsberg (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129463,
+          "first_name": "Deniza",
+          "last_name": "Gertsberg",
+          "phone1": "732-743-5118",
+          "email": "samv28256@gmail.com",
+          "zip": "08816",
+          "add_date": "2024-09-13 09:30:42+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 129453,
+          "first_name": "Deniza",
+          "last_name": "Gertsberg",
+          "phone1": "732-743-5118",
+          "email": "samv28256@gmail.com",
+          "zip": "08816",
+          "add_date": "2024-09-13 08:10:38+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 135,
+      "group_display_name": "Hermon Carter (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129450,
+          "first_name": "Hermon",
+          "last_name": "Carter",
+          "phone1": "703-973-1999",
+          "email": "",
+          "zip": "22554",
+          "add_date": "2024-09-13 07:45:52+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 129449,
+          "first_name": "Hermon",
+          "last_name": "Carter",
+          "phone1": "703-973-1999",
+          "email": "",
+          "zip": "22554",
+          "add_date": "2024-09-13 07:45:51+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 136,
+      "group_display_name": "Latasha Chatman (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129441,
+          "first_name": "Latasha",
+          "last_name": "Chatman",
+          "phone1": "718-772-7309",
+          "email": "chatman2436@gmail.com",
+          "zip": "23602",
+          "add_date": "2024-09-13 07:10:53+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 129431,
+          "first_name": "Latasha",
+          "last_name": "Chatman",
+          "phone1": "718-772-7309",
+          "email": "chatman2436@gmail.com",
+          "zip": "23602",
+          "add_date": "2024-09-13 06:35:44+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 137,
+      "group_display_name": "Jenny Baughman (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129407,
+          "first_name": "Jenny",
+          "last_name": "Baughman",
+          "phone1": "740-390-0504",
+          "email": "",
+          "zip": "43003",
+          "add_date": "2024-09-12 21:50:40+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        },
+        {
+          "id": 129224,
+          "first_name": "Jenny",
+          "last_name": "Baughman",
+          "phone1": "740-390-0504",
+          "email": "baughmanjenny@hotmail.com",
+          "zip": "43003",
+          "add_date": "2024-09-12 10:02:42+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 138,
+      "group_display_name": "Patrick Weiss (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129302,
+          "first_name": "Patrick",
+          "last_name": "Weiss",
+          "phone1": "908-698-2643",
+          "email": "",
+          "zip": "18045",
+          "add_date": "2024-09-12 14:40:57+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 129300,
+          "first_name": "Patrick",
+          "last_name": "Weiss",
+          "phone1": "908-698-2643",
+          "email": "",
+          "zip": "18045",
+          "add_date": "2024-09-12 14:36:02+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 139,
+      "group_display_name": "Diane Cricchio (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 129181,
+          "first_name": "Diane",
+          "last_name": "Cricchio",
+          "phone1": "908-637-8922",
+          "email": "bondgirl10021@gmail.com",
+          "zip": "07840",
+          "add_date": "2024-09-12 06:20:43+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 129174,
+          "first_name": "Diane",
+          "last_name": "Cricchio",
+          "phone1": "908-637-8922",
+          "email": "",
+          "zip": "07840",
+          "add_date": "2024-09-12 05:30:36+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    },
+    {
+      "group_id": 140,
+      "group_display_name": "Isabel Bailey (2 duplicates)",
+      "total_duplicates": 2,
+      "prospects": [
+        {
+          "id": 111166,
+          "first_name": "Isabel",
+          "last_name": "Bailey",
+          "phone1": "330-880-1603",
+          "email": "",
+          "zip": "44266",
+          "add_date": "2024-06-18 16:31:27+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 111165,
+          "first_name": "Isabel",
+          "last_name": "Bailey",
+          "phone1": "330-880-1603",
+          "email": "",
+          "zip": "44266",
+          "add_date": "2024-06-18 16:30:27+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "exact_match_optimization",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "phone1",
+          "first_name",
+          "last_name"
+        ]
+      }
+    }
+  ]
+}

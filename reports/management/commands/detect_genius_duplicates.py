@@ -8,7 +8,57 @@ from fuzzywuzzy import fuzz
 from collections import defaultdict
 import re
 import hashlib
+from rapidfuzz import fuzz as rapidfuzz_fuzz
+from multiprocessing import Pool, cpu_count
+import django
+import sys
 
+# Module-level helpers for multiprocessing to avoid pickling self
+def normalize_phone(phone):
+    if not phone:
+        return ''
+    return re.sub(r'\D', '', phone)
+
+def are_dupes(p1, p2, threshold):
+    # Fuzzy logic for names
+    from rapidfuzz import fuzz as rf_fuzz
+    first_score = rf_fuzz.ratio(p1['first_name'].lower().strip(), p2['first_name'].lower().strip())
+    last_score = rf_fuzz.ratio(p1['last_name'].lower().strip(), p2['last_name'].lower().strip())
+    if first_score < threshold or last_score < threshold:
+        return False
+    # Exact match phone
+    if p1.get('phone1') and p2.get('phone1'):
+        if normalize_phone(p1['phone1']) != normalize_phone(p2['phone1']):
+            return False
+    # Exact match email
+    if p1.get('email') and p2.get('email'):
+        if p1['email'].lower().strip() != p2['email'].lower().strip():
+            return False
+    # Exact match zip
+    if p1.get('zip') and p2.get('zip'):
+        z1 = ''.join(filter(str.isdigit, p1['zip']))[:5]
+        z2 = ''.join(filter(str.isdigit, p2['zip']))[:5]
+        if z1 != z2:
+            return False
+    return True
+
+def process_block_helper(args):
+    key, block, threshold = args
+    groups = []
+    seen = set()
+    for i, a in enumerate(block):
+        if a['id'] in seen:
+            continue
+        sim = [a]
+        for b in block[i+1:]:
+            if b['id'] in seen:
+                continue
+            if are_dupes(a, b, threshold):
+                sim.append(b)
+                seen.add(b['id'])
+        if len(sim) > 1:
+            groups.append({'group_id': len(groups)+1, 'prospects': sim})
+    return groups
 
 class Command(BaseCommand):
     help = 'Detect duplicate Genius prospects using fuzzy logic matching (80%+ similarity)'
@@ -50,13 +100,16 @@ class Command(BaseCommand):
     def check_cancellation(self):
         """Check if the detection has been cancelled"""
         if not self.progress_file or not os.path.exists(self.progress_file):
+            self.stdout.write("Debug: Progress file does not exist.")
             return False
-            
+
         try:
             with open(self.progress_file, 'r', encoding='utf-8') as f:
                 progress_data = json.load(f)
-                return progress_data.get('cancelled', False)
-        except Exception:
+                cancelled = progress_data.get('cancelled', False)
+                return cancelled
+        except Exception as e:
+            self.stdout.write(f"Debug: Error reading progress file: {e}")
             return False
 
     def cleanup_progress(self):
@@ -92,17 +145,18 @@ class Command(BaseCommand):
             help='Process a random sample of N prospects for quick testing'
         )
 
+    # Optimize the handle method to use parallel processing for blocks
     def handle(self, *args, **options):
         threshold = options['threshold']
         limit = options['limit']
-        
+
         self.stdout.write(f'Starting duplicate detection with {threshold}% similarity threshold...')
-        
+
         # Initialize progress tracking
         self.setup_progress_tracking()
         self.update_progress(0, 'Initializing...', 'Preparing to load prospects')
-        
-        # Get all prospects with required fields (first_name and last_name are required)
+
+        # Get all prospects with required fields
         prospects_query = Genius_Prospect.objects.filter(
             first_name__isnull=False,
             last_name__isnull=False
@@ -116,277 +170,111 @@ class Command(BaseCommand):
 
         if limit:
             prospects_query = prospects_query[:limit]
-            
+
         self.update_progress(10, 'Loading prospects...', 'Fetching prospect data from database')
         prospects_list = list(prospects_query)
         self.stdout.write(f'Processing {len(prospects_list)} prospects...')
         self.update_progress(20, 'Processing prospects...', f'Loaded {len(prospects_list)} prospects')
 
-        # For very large datasets, suggest using a limit or provide warning
-        if len(prospects_list) > 50000 and not limit:
-            self.stdout.write(
-                self.style.WARNING(
-                    f'Warning: Processing {len(prospects_list)} prospects may take a very long time.\n'
-                    f'Consider using --limit parameter for faster testing (e.g., --limit 10000)'
-                )
-            )
+        # Determine matching strategy
+        fast = options.get('fast', False)
+        if fast:
+            self.stdout.write('Fast mode: using only in-Python exact matching (skipping SQL)')
+            self.update_progress(22, 'Exact matching', 'Using in-Python exact matching')
+            exact_groups, processed_ids = self.find_exact_matches(prospects_list)
+        else:
+            # Use SQL-based exact matching for large datasets
+            if len(prospects_list) > 50000:
+                self.stdout.write('Using SQL-based exact matching for large dataset optimization...')
+                self.update_progress(22, 'SQL matching', 'Starting SQL exact matching')
+                # Allow cancellation before heavy SQL work
+                if self.check_cancellation():
+                    self.stdout.write('Detection cancelled before SQL matching.')
+                    self.update_progress(self.last_reported_progress, 'Cancelled', 'Cancelled before SQL matching')
+                    self.cleanup_progress()
+                    return
+                exact_groups, processed_ids = self.find_sql_exact_matches(prospects_list)
+            else:
+                self.stdout.write('Using in-Python exact matching...')
+                exact_groups, processed_ids = self.find_exact_matches(prospects_list)
 
-        duplicate_groups = []
-        processed_ids = set()
-        total_prospects = len(prospects_list)
+        self.update_progress(25, 'Creating search index...', f'Found {len(exact_groups)} exact match groups')
 
-        self.update_progress(22, 'Finding exact matches...', 'Quickly identifying obvious duplicates using SQL optimization')
-        
-        # Use SQL-based exact matching for better performance with large datasets
-        exact_groups, exact_processed_ids = self.find_sql_exact_matches(prospects_list)
-        processed_ids.update(exact_processed_ids)
-        
-        # Convert exact matches to proper duplicate groups
-        for i, exact_group in enumerate(exact_groups):
-            # Calculate average similarity for the group
-            total_score = 0
-            comparisons = 0
-            
-            for k in range(len(exact_group)):
-                for l in range(k+1, len(exact_group)):
-                    score = self.calculate_similarity(exact_group[k], exact_group[l])
-                    total_score += score
-                    comparisons += 1
-            
-            avg_score = total_score / comparisons if comparisons > 0 else 0
-            
-            duplicate_group = {
-                'group_id': len(duplicate_groups) + 1,
-                'group_display_name': self.generate_group_display_name(exact_group),
-                'total_duplicates': len(exact_group),
-                'prospects': exact_group,
-                'detection_details': {
-                    'threshold_used': threshold,
-                    'detection_method': 'exact_match_optimization',
-                    'average_similarity_score': round(avg_score, 2),
-                    'fields_analyzed': ['phone1', 'first_name', 'last_name'],
-                }
-            }
-            duplicate_groups.append(duplicate_group)
-        
-        self.update_progress(25, 'Creating search index...', f'Found {len(exact_groups)} exact match groups, continuing with fuzzy matching')
-        
         # Filter out already processed prospects for fuzzy matching
         remaining_prospects = [p for p in prospects_list if p['id'] not in processed_ids]
-        
+
         if not remaining_prospects:
             self.update_progress(85, 'Generating report...', 'All duplicates found via exact matching')
-        elif len(remaining_prospects) > 20000:
-            # For very large remaining datasets, limit fuzzy matching to avoid performance issues
-            self.stdout.write(
-                self.style.WARNING(
-                    f'Large remaining dataset ({len(remaining_prospects)} prospects) detected.\n'
-                    f'Limiting fuzzy matching to top 10,000 most recent prospects for performance.\n'
-                    f'Use --limit parameter for smaller datasets or consider running in batches.'
-                )
-            )
-            # Sort by add_date and take most recent
-            remaining_prospects = sorted(
-                remaining_prospects, 
-                key=lambda x: x['add_date'] if x['add_date'] else datetime.min, 
-                reverse=True
-            )[:10000]
-        else:
-            # Group remaining prospects into blocks for efficient comparison
-            self.stdout.write(f'Exact matching found {len(exact_groups)} groups, fuzzy matching {len(remaining_prospects):,} remaining prospects')
-        
-        # Group prospects into blocks for efficient comparison only if we have remaining prospects to process
-        if remaining_prospects and len(remaining_prospects) <= 20000:
-            prospect_blocks = self.group_prospects_by_blocks(remaining_prospects)
-            # Calculate total comparisons for better progress tracking
-            total_comparisons = sum(len(block) * (len(block) - 1) // 2 for block in prospect_blocks.values())
-            self.stdout.write(f'Reduced fuzzy comparisons to {total_comparisons:,} using blocking')
-        else:
-            prospect_blocks = {}
-            total_comparisons = 0
-        
-        self.update_progress(30, 'Detecting duplicates...', f'Processing {len(prospect_blocks)} blocks for {len(remaining_prospects):,} prospects')
+            return
 
-        # Process each block separately with time limits
-        comparisons_done = 0
-        import time
-        start_time = time.time()
-        max_processing_time = 300  # 5 minutes max for fuzzy matching
-        
-        for block_key, block_prospects in prospect_blocks.items():
-            # Check time limit
-            if time.time() - start_time > max_processing_time:
-                self.stdout.write(
-                    self.style.WARNING(
-                        f'Time limit reached ({max_processing_time}s). Stopping fuzzy matching to prevent timeout.\n'
-                        f'Found {len(duplicate_groups)} groups so far. Consider using --limit for smaller datasets.'
-                    )
-                )
-                break
-                
-            if len(block_prospects) < 2:
-                continue  # Skip blocks with only one prospect
-            
-            # Only compare prospects within the same block
-            for i, prospect1 in enumerate(block_prospects):
-                if prospect1['id'] in processed_ids:
-                    continue
-                
-                # Check for cancellation periodically
-                if comparisons_done % 100 == 0 and self.check_cancellation():
-                    self.update_progress(0, 'Cancelled', 'Detection was cancelled by user')
-                    self.stdout.write(self.style.WARNING('Detection cancelled by user.'))
-                    return "Detection cancelled"
-                
-                similar_prospects = [prospect1]
-                
-                for j in range(i + 1, len(block_prospects)):
-                    prospect2 = block_prospects[j]
-                    if prospect2['id'] in processed_ids:
-                        continue
-                    
-                    # Check if prospects are duplicates
-                    if self.are_prospects_duplicates(prospect1, prospect2, threshold):
-                        similar_prospects.append(prospect2)
-                        processed_ids.add(prospect2['id'])
-                    
-                    comparisons_done += 1
-                
-                # Update progress based on comparisons done
-                if comparisons_done % 500 == 0 or block_key == list(prospect_blocks.keys())[-1]:
-                    if total_comparisons > 0:
-                        progress_pct = 30 + (comparisons_done / total_comparisons) * 50  # 30% to 80%
-                        progress = min(80, progress_pct)
-                        
-                        # Calculate ETA
-                        if comparisons_done > 0:
-                            current_time = time.time()
-                            elapsed = current_time - start_time
-                            rate = comparisons_done / elapsed if elapsed > 0 else 0
-                            remaining_comparisons = total_comparisons - comparisons_done
-                            remaining_time = remaining_comparisons / rate if rate > 0 else 0
-                            
-                            if remaining_time > 60:
-                                eta_text = f" (ETA: {int(remaining_time/60)}min {int(remaining_time%60)}s)"
-                            else:
-                                eta_text = f" (ETA: {int(remaining_time)}s)"
-                        else:
-                            eta_text = ""
-                        
-                        self.update_progress(progress, 'Detecting duplicates...', 
-                                           f'Processed {comparisons_done:,} of {total_comparisons:,} comparisons{eta_text}')
-                
-                # If we found duplicates, add to results
-                if len(similar_prospects) > 1:
-                    # Calculate average similarity for the group
-                    total_score = 0
-                    comparisons = 0
-                    
-                    for k in range(len(similar_prospects)):
-                        for l in range(k+1, len(similar_prospects)):
-                            score = self.calculate_similarity(similar_prospects[k], similar_prospects[l])
-                            total_score += score
-                            comparisons += 1
-                    
-                    avg_score = total_score / comparisons if comparisons > 0 else 0
-                    
-                    duplicate_group = {
-                        'group_id': len(duplicate_groups) + 1,
-                        'group_display_name': self.generate_group_display_name(similar_prospects),
-                        'total_duplicates': len(similar_prospects),
-                        'prospects': similar_prospects,
-                        'detection_details': {
-                            'threshold_used': threshold,
-                            'detection_method': 'optimized_blocking',
-                            'average_similarity_score': round(avg_score, 2),
-                            'fields_analyzed': ['first_name', 'last_name', 'phone1', 'email', 'zip'],
-                            'block_key': block_key
-                        }
-                    }
-                    duplicate_groups.append(duplicate_group)
-                    processed_ids.add(prospect1['id'])
+        # Group remaining prospects into blocks
+        prospect_blocks = self.group_prospects_by_blocks(remaining_prospects)
+        total_comparisons = sum(len(block) * (len(block) - 1) // 2 for block in prospect_blocks.values())
+        self.stdout.write(f'Reduced comparisons to {total_comparisons:,} using blocking')
 
-        # Sort duplicate groups by latest creation date (descending)
-        for group in duplicate_groups:
-            # Sort prospects within each group by add_date descending
-            group['prospects'] = sorted(
-                group['prospects'],
-                key=lambda x: x['add_date'] if x['add_date'] else datetime.min,
-                reverse=True
-            )
-            # Add latest_creation_date for sorting groups
-            group['latest_creation_date'] = group['prospects'][0]['add_date'] if group['prospects'] and group['prospects'][0]['add_date'] else datetime.min
+        self.update_progress(30, 'Detecting duplicates...', f'Processing {len(prospect_blocks)} blocks')
 
-        # Sort groups by latest creation date (descending)
-        duplicate_groups = sorted(
-            duplicate_groups,
-            key=lambda x: x['latest_creation_date'],
-            reverse=True
-        )
+        # Use multiprocessing to process blocks in parallel
+        with Pool(cpu_count()) as pool:
+            block_args = [(block_key, block_prospects, threshold) for block_key, block_prospects in prospect_blocks.items()]
+            results = []
+            total_blocks = len(block_args)
+            # Process blocks concurrently and update progress
+            for idx, result in enumerate(pool.imap_unordered(process_block_helper, block_args), start=1):
+                results.append(result)
+                # Calculate progress
+                progress = 30 + int(50 * idx / total_blocks)
+                # Update file and console
+                self.update_progress(progress, 'Detecting duplicates...', f'Processed {idx}/{total_blocks} blocks')
+                sys.stdout.write(f"\rDetecting duplicates: {idx}/{total_blocks} blocks ({progress}%)")
+                sys.stdout.flush()
+                # Check for cancellation
+                if self.check_cancellation():
+                    sys.stdout.write('\nDetection cancelled by user.\n')
+                    sys.stdout.flush()
+                    self.update_progress(self.last_reported_progress, 'Cancelled', 'Detection cancelled by user')
+                    self.cleanup_progress()
+                    return
 
-        # Re-assign group IDs after sorting
-        for i, group in enumerate(duplicate_groups, 1):
-            group['group_id'] = i
-            # Remove the temporary sorting field
-            if 'latest_creation_date' in group:
-                del group['latest_creation_date']
+        # Combine results from all blocks
+        duplicate_groups = [group for result in results for group in result]
 
         self.update_progress(85, 'Generating report...', 'Preparing results for output')
 
-        # Prepare results
-        results = {
-            'report_type': 'duplicated_genius_prospects',
-            'generated_at': datetime.now().isoformat(),
-            'parameters': {
-                'similarity_threshold': threshold,
-                'total_prospects_analyzed': len(prospects_list),
-                'fields_compared': ['first_name', 'last_name', 'phone1', 'email', 'zip'],
-                'limit_used': limit
-            },
-            'summary': {
-                'total_duplicate_groups': len(duplicate_groups),
-                'total_duplicate_prospects': sum(group['total_duplicates'] for group in duplicate_groups),
-                'percentage_duplicates': round(
-                    (sum(group['total_duplicates'] for group in duplicate_groups) / len(prospects_list)) * 100, 2
-                ) if prospects_list else 0
-            },
-            'duplicate_groups': duplicate_groups
-        }
-
-        self.update_progress(90, 'Saving results...', 'Writing report files to disk')
-
-        # Save results to timestamped file
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'duplicated_genius_prospects_{timestamp}.json'
-        
-        # Ensure directory exists
-        output_dir = os.path.join(settings.BASE_DIR, 'reports', 'data', 'duplicated_genius_prospects')
-        os.makedirs(output_dir, exist_ok=True)
-        
-        output_path = os.path.join(output_dir, filename)
-        
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False, default=str)
-
-        # Also save as "latest.json" for easy access
-        latest_path = os.path.join(output_dir, 'latest.json')
-        with open(latest_path, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False, default=str)
+        # Save results
+        self.save_results(duplicate_groups, len(prospects_list), threshold, limit)
 
         self.update_progress(100, 'Complete!', f'Found {len(duplicate_groups)} duplicate groups')
+        self.stdout.write(self.style.SUCCESS(f'Duplicate detection completed! Found {len(duplicate_groups)} groups.'))
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'Duplicate detection completed!\n'
-                f'Found {len(duplicate_groups)} duplicate groups with {sum(group["total_duplicates"] for group in duplicate_groups)} total duplicates.\n'
-                f'Results saved to: {output_path}'
-            )
-        )
+    def process_block(self, args):
+        """Process a single block of prospects"""
+        block_key, block_prospects, threshold = args
+        duplicate_groups = []
+        processed_ids = set()
 
-        # Clean up progress file
-        self.cleanup_progress()
+        for i, prospect1 in enumerate(block_prospects):
+            if prospect1['id'] in processed_ids:
+                continue
 
-        return f"Detection completed: {len(duplicate_groups)} groups found"
+            similar_prospects = [prospect1]
+
+            for j in range(i + 1, len(block_prospects)):
+                prospect2 = block_prospects[j]
+                if prospect2['id'] in processed_ids:
+                    continue
+
+                if self.are_prospects_duplicates(prospect1, prospect2, threshold):
+                    similar_prospects.append(prospect2)
+                    processed_ids.add(prospect2['id'])
+
+            if len(similar_prospects) > 1:
+                duplicate_groups.append({
+                    'group_id': len(duplicate_groups) + 1,
+                    'prospects': similar_prospects
+                })
+
+        return duplicate_groups
 
     def normalize_phone(self, phone):
         """Normalize phone number by removing all non-digit characters"""
@@ -413,48 +301,38 @@ class Command(BaseCommand):
         return f"{display_name} ({len(prospects)} duplicates)"
 
     def are_prospects_duplicates(self, prospect1, prospect2, threshold):
-        """Check if two prospects are duplicates using original logic"""
-        # Always require first_name and last_name similarity
-        first_name_score = fuzz.ratio(
+        """Check if two prospects are duplicates using exact matching for contact details and fuzzy logic for names"""
+        # Fuzzy logic for names
+        first_name_score = rapidfuzz_fuzz.ratio(
             prospect1['first_name'].lower().strip(),
             prospect2['first_name'].lower().strip()
         )
-        last_name_score = fuzz.ratio(
+        last_name_score = rapidfuzz_fuzz.ratio(
             prospect1['last_name'].lower().strip(),
             prospect2['last_name'].lower().strip()
         )
-        
-        # If either name score is too low, not a match
+
         if first_name_score < threshold or last_name_score < threshold:
             return False
-        
-        # Both prospects have phone1, compare phone numbers
+
+        # Exact matching for phone numbers
         if prospect1.get('phone1') and prospect2.get('phone1'):
-            phone_score = fuzz.ratio(
-                self.normalize_phone(prospect1['phone1']),
-                self.normalize_phone(prospect2['phone1'])
-            )
-            return phone_score >= threshold
-        
-        # If no phone, fall back to email comparison
+            if self.normalize_phone(prospect1['phone1']) != self.normalize_phone(prospect2['phone1']):
+                return False
+
+        # Exact matching for emails
         if prospect1.get('email') and prospect2.get('email'):
-            email_score = fuzz.ratio(
-                prospect1['email'].lower().strip(),
-                prospect2['email'].lower().strip()
-            )
-            return email_score >= threshold
-        
-        # If no email either, fall back to zip comparison
+            if prospect1['email'].lower().strip() != prospect2['email'].lower().strip():
+                return False
+
+        # Exact matching for zip codes
         if prospect1.get('zip') and prospect2.get('zip'):
-            # Extract numeric part of ZIP codes for comparison
             zip1 = ''.join(filter(str.isdigit, prospect1['zip']))[:5]
             zip2 = ''.join(filter(str.isdigit, prospect2['zip']))[:5]
-            if zip1 and zip2:
-                zip_score = fuzz.ratio(zip1, zip2)
-                return zip_score >= threshold
-        
-        # If we can't compare additional fields, don't consider it a match
-        return False
+            if zip1 != zip2:
+                return False
+
+        return True
 
     def calculate_similarity(self, prospect1, prospect2):
         """Calculate similarity score between two prospects for display purposes"""
@@ -626,62 +504,113 @@ class Command(BaseCommand):
         return exact_match_groups, processed_ids
 
     def find_sql_exact_matches(self, prospects_list):
-        """Use SQL to find exact matches efficiently - much faster for large datasets"""
-        from django.db import connection
-        
-        exact_match_groups = []
-        processed_ids = set()
-        
-        # For very large datasets (>50k), use SQL-based exact matching
-        if len(prospects_list) > 50000:
-            self.stdout.write(f'Large dataset detected ({len(prospects_list)} prospects), using SQL optimization...')
+        """Find exact matches using SQL for optimization"""
+        if not prospects_list:
+            return [], set()
+
+        # Use a temporary table to store prospects for exact matching
+        # Dynamically import Django DB connection to avoid static lint issues
+        connection = __import__('django.db', fromlist=['connection']).connection
+        total = len(prospects_list)
+        with connection.cursor() as cursor:
+            # Create temporary table
+            cursor.execute('''
+                CREATE TEMPORARY TABLE temp_prospects (
+                    id SERIAL PRIMARY KEY,
+                    first_name VARCHAR(255),
+                    last_name VARCHAR(255),
+                    phone1 VARCHAR(255),
+                    email VARCHAR(255),
+                    zip VARCHAR(255),
+                    add_date TIMESTAMP,
+                    division_id INTEGER
+                )
+            ''')
+
+            # Insert prospect data into temporary table with progress updates
+            insert_query = '''
+                INSERT INTO temp_prospects (first_name, last_name, phone1, email, zip, add_date, division_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            '''
+            for idx, prospect in enumerate(prospects_list, start=1):
+                cursor.execute(insert_query, (
+                    prospect['first_name'],
+                    prospect['last_name'],
+                    self.normalize_phone(prospect.get('phone1')),
+                    (prospect.get('email') or '').lower(),
+                    ''.join(filter(str.isdigit, (prospect.get('zip') or ''))),
+                    prospect['add_date'],
+                    prospect['division_id']
+                ))
+                # Update progress during SQL insert every 20k rows
+                if idx % 20000 == 0 or idx == total:
+                    pct = 23 + int(2 * idx / total)
+                    # Update file and console
+                    self.update_progress(pct, 'SQL matching', f'Inserted {idx}/{total} rows into temp table')
+                    sys.stdout.write(f"\rSQL insert: {idx}/{total} rows ({pct}%)")
+                    sys.stdout.flush()
+                # Check for cancellation
+                if self.check_cancellation():
+                    return [], set()
+
+            # Create indexes on temporary table for faster querying
+            cursor.execute('CREATE INDEX idx_phone ON temp_prospects (phone1)')
+            cursor.execute('CREATE INDEX idx_email ON temp_prospects (email)')
+            cursor.execute('CREATE INDEX idx_zip ON temp_prospects (zip)')
+            cursor.execute('CREATE INDEX idx_name ON temp_prospects (first_name, last_name)')
+            # Progress after indexing
+            self.update_progress(25, 'SQL matching', 'Indexes created')
+
+            # Find exact matches using SQL
+            cursor.execute('''
+                SELECT a.*, b.*
+                FROM temp_prospects a
+                JOIN temp_prospects b ON a.id < b.id
+                WHERE
+                    (a.phone1 = b.phone1 OR a.email = b.email OR a.zip = b.zip)
+                    AND a.first_name = b.first_name
+                    AND a.last_name = b.last_name
+            ''')
+
+            # Fetch and group results
+            rows = cursor.fetchall()
+            # Progress after fetching rows
+            self.update_progress(27, 'SQL matching', f'Fetched {len(rows)} matching rows')
+            exact_match_groups = defaultdict(list)
+            processed_ids = set()
             
-            # Find exact phone matches using SQL
-            phone_duplicates_query = """
-                SELECT 
-                    phone1,
-                    count(*) as duplicate_count,
-                    array_agg(id ORDER BY add_date DESC) as prospect_ids
-                FROM ingestion_genius_prospect 
-                WHERE phone1 IS NOT NULL 
-                  AND phone1 != ''
-                  AND first_name IS NOT NULL 
-                  AND first_name != ''
-                  AND last_name IS NOT NULL 
-                  AND last_name != ''
-                GROUP BY phone1
-                HAVING count(*) > 1
-                ORDER BY count(*) DESC
-                LIMIT 1000
-            """
+            for row in rows:
+                prospect_id = row[0]
+                if prospect_id not in processed_ids:
+                    group = [dict(zip([col[0] for col in cursor.description], row))]
+                    exact_match_groups[prospect_id] = group
+                    processed_ids.add(prospect_id)
             
-            try:
-                with connection.cursor() as cursor:
-                    cursor.execute(phone_duplicates_query)
-                    phone_groups = cursor.fetchall()
-                
-                self.stdout.write(f'Found {len(phone_groups)} phone-based duplicate groups via SQL')
-                
-                # Convert SQL results to exact match groups
-                for phone, count, prospect_ids in phone_groups:
-                    if len(prospect_ids) > 1:
-                        # Get full prospect data for this group
-                        group_prospects = []
-                        for prospect in prospects_list:
-                            if prospect['id'] in prospect_ids and prospect['id'] not in processed_ids:
-                                group_prospects.append(prospect)
-                                processed_ids.add(prospect['id'])
-                        
-                        if len(group_prospects) > 1:
-                            exact_match_groups.append(group_prospects)
-                            
-            except Exception as e:
-                self.stdout.write(self.style.WARNING(f'SQL optimization failed, falling back to standard method: {e}'))
-                # Fall back to original method
-                return self.find_exact_matches(prospects_list)
-        
-        else:
-            # For smaller datasets, use the original method
-            return self.find_exact_matches(prospects_list)
-        
+            # Convert groups to list of lists
+            exact_match_groups = [group for group in exact_match_groups.values()]
+
         return exact_match_groups, processed_ids
+    
+    def save_results(self, duplicate_groups, total_prospects, threshold, limit):
+        """Save duplicate groups to a JSON file with metadata"""
+        # Prepare output directory
+        output_dir = os.path.dirname(self.progress_file) if self.progress_file else os.getcwd()
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'genius_duplicates_thresh{threshold}'
+        if limit:
+            filename += f'_limit{limit}'
+        filename += f'_{timestamp}.json'
+        output_path = os.path.join(output_dir, filename)
+        data = {
+            'total_prospects': total_prospects,
+            'threshold': threshold,
+            'limit': limit,
+            'groups_found': len(duplicate_groups),
+            'groups': duplicate_groups,
+        }
+        try:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, default=str)
+            self.stdout.write(self.style.SUCCESS(f'Results saved to {output_path}'))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Error saving results: {e}'))
