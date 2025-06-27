@@ -1,0 +1,916 @@
+{% extends "base.html" %}
+
+{% block title %}{{ report.title }} - Data Warehouse{% endblock %}
+
+{% block header %}🔍 {{ report.title }}{% endblock %}
+
+{% block content %}
+<style>
+.report-header {
+    background: var(--gradient-card);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.report-title {
+    font-size: 2.5rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+}
+
+.report-description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.report-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.status-message {
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+    border-radius: 8px;
+    border-left: 4px solid;
+    font-weight: 500;
+}
+
+.status-message.success {
+    background: rgba(124, 176, 171, 0.15);
+    color: var(--accent-success);
+    border-left-color: var(--accent-success);
+}
+
+.status-message.error {
+    background: rgba(198, 115, 115, 0.15);
+    color: var(--accent-danger);
+    border-left-color: var(--accent-danger);
+}
+
+.status-message.info {
+    background: rgba(90, 154, 149, 0.15);
+    color: var(--accent-primary);
+    border-left-color: var(--accent-primary);
+}
+
+.progress-container {
+    background: var(--surface-secondary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border: 1px solid var(--border-color);
+    display: none;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: var(--surface-tertiary);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--gradient-primary);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.progress-status {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.progress-percent {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: var(--text-on-primary);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.progress-details {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+.summary-section {
+    background: var(--gradient-card);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.metric-card {
+    background: var(--bg-primary);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-primary);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+}
+
+.metadata {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.duplicate-groups {
+    margin-top: 2rem;
+}
+
+.duplicate-group {
+    background: var(--gradient-card);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.duplicate-group:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.group-header {
+    background: linear-gradient(135deg, rgba(90, 154, 149, 0.1), rgba(124, 176, 171, 0.1));
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.group-header:hover {
+    background: linear-gradient(135deg, rgba(90, 154, 149, 0.15), rgba(124, 176, 171, 0.15));
+}
+
+.group-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.group-summary {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.group-details {
+    padding: 1.5rem;
+    display: none;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.appointment-item {
+    background: var(--surface-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.appointment-item:hover {
+    background: var(--surface-tertiary);
+    transform: translateX(5px);
+}
+
+.appointment-header {
+    display: flex;
+    justify-content: between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.appointment-info {
+    flex: 1;
+}
+
+.appointment-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    font-size: 1rem;
+}
+
+.appointment-datetime {
+    color: var(--accent-primary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.appointment-id {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.appointment-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.meta-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.meta-value {
+    color: var(--text-primary);
+}
+
+.expand-icon {
+    transition: transform 0.3s ease;
+    font-size: 0.8rem;
+    margin-left: auto;
+}
+
+.expanded .expand-icon {
+    transform: rotate(90deg);
+}
+
+.pagination-container {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.pagination {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.pagination a, .pagination span {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.pagination a {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.pagination a:hover {
+    background: var(--accent-primary);
+    color: var(--text-on-primary);
+    transform: translateY(-1px);
+}
+
+.pagination .current {
+    background: var(--accent-primary);
+    color: var(--text-on-primary);
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-secondary);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.previous-reports {
+    background: var(--gradient-card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.previous-reports h3 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.reports-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.report-file {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--surface-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.report-file:hover {
+    background: var(--surface-tertiary);
+    transform: translateX(5px);
+}
+
+.report-filename {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.report-timestamp {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.btn-secondary {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.btn-secondary:hover {
+    background: var(--surface-tertiary);
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    background: var(--accent-danger);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-danger:hover {
+    background: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-success {
+    background: var(--accent-success);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-success:hover {
+    background: #4caf50;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 768px) {
+    .report-actions {
+        flex-direction: column;
+    }
+    
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .metadata {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .appointment-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .appointment-meta {
+        grid-template-columns: 1fr;
+    }
+    
+    .pagination {
+        flex-wrap: wrap;
+    }
+}
+</style>
+
+<div class="report-header">
+    <h1 class="report-title">{{ report.title }}</h1>
+    <p class="report-description">{{ report.description }}</p>
+    
+    <div class="report-actions">
+        <button id="runDetectionBtn" class="btn-primary">
+            <i class="fas fa-play"></i> Run Duplicate Detection
+        </button>
+        
+        {% if results %}
+        <button id="exportCsvBtn" class="btn-success">
+            <i class="fas fa-download"></i> Export to CSV
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Status Messages -->
+<div id="statusMessages"></div>
+
+<!-- Progress Container -->
+<div id="progressContainer" class="progress-container">
+    <div class="progress-text">
+        <span id="progressStatus" class="progress-status">Initializing...</span>
+        <span id="progressPercent" class="progress-percent">0%</span>
+    </div>
+    <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+    </div>
+    <div id="progressDetails" class="progress-details"></div>
+    <div style="margin-top: 1rem;">
+        <button id="cancelDetectionBtn" class="btn-danger">
+            <i class="fas fa-stop"></i> Cancel Detection
+        </button>
+    </div>
+</div>
+
+<!-- Previous Reports -->
+{% if available_files %}
+<div class="previous-reports">
+    <h3><i class="fas fa-history"></i> Previous Reports</h3>
+    <div class="reports-list">
+        {% for file in available_files %}
+        <div class="report-file">
+            <div>
+                <div class="report-filename">{{ file.display_name }}</div>
+                <div class="report-timestamp">{{ file.filename }}</div>
+            </div>
+            <button class="btn-secondary load-report-btn" data-filename="{{ file.filename }}">
+                Load Report
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Results Summary -->
+{% if results %}
+<div class="summary-section">
+    <h2><i class="fas fa-chart-bar"></i> Detection Summary</h2>
+    
+    <div class="summary-cards">
+        <div class="metric-card">
+            <div class="metric-label">Total Groups Found</div>
+            <div class="metric-value">{{ results.summary.total_duplicate_groups_found|default:0 }}</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-label">Groups Displayed</div>
+            <div class="metric-value">{{ results.summary.total_duplicate_groups_displayed|default:0 }}</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-label">Duplicate Appointments</div>
+            <div class="metric-value">{{ results.summary.total_duplicate_appointments|default:0 }}</div>
+        </div>
+        
+        <div class="metric-card">
+            <div class="metric-label">Duplicate Rate</div>
+            <div class="metric-value">{{ results.summary.percentage_duplicates|floatformat:1|default:0 }}%</div>
+        </div>
+    </div>
+    
+    {% if results.summary.output_limited %}
+    <div class="status-message info">
+        <i class="fas fa-info-circle"></i>
+        <strong>Results Limited:</strong> Showing top {{ results.summary.total_duplicate_groups_displayed }} groups out of {{ results.summary.total_duplicate_groups_found }} total groups found (limited for performance).
+    </div>
+    {% endif %}
+    
+    <div class="metadata">
+        <div><strong>Generated:</strong> {{ results.generated_at|date:"M d, Y H:i" }}</div>
+        <div><strong>Appointments Analyzed:</strong> {{ results.parameters.total_appointments_analyzed|default:0|floatformat:0 }}</div>
+        <div><strong>Similarity Threshold:</strong> {{ results.parameters.similarity_threshold|default:80 }}%</div>
+        <div><strong>Fields Compared:</strong> {{ results.parameters.fields_compared|join:", " }}</div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Duplicate Groups -->
+{% if paginated_groups %}
+<div class="duplicate-groups">
+    <h2><i class="fas fa-users"></i> Duplicate Groups ({{ paginated_groups.paginator.count }} total)</h2>
+    
+    {% for group in paginated_groups %}
+    <div class="duplicate-group">
+        <div class="group-header" onclick="toggleGroup({{ group.group_id }})">
+            <div class="group-title">
+                <span>Group #{{ group.group_id }}: {{ group.group_display_name }}</span>
+                <span class="expand-icon">▶</span>
+            </div>
+            <div class="group-summary">
+                <span><strong>{{ group.total_duplicates }}</strong> duplicate appointments</span>
+                <span><strong>{{ group.detection_details.average_similarity_score }}%</strong> avg similarity</span>
+                <span><strong>{{ group.detection_details.detection_method|title }}</strong> detection</span>
+            </div>
+        </div>
+        
+        <div id="group-{{ group.group_id }}" class="group-details">
+            {% for appointment in group.appointments %}
+            <div class="appointment-item">
+                <div class="appointment-header">
+                    <div class="appointment-info">
+                        <div class="appointment-name">
+                            {{ appointment.contact_firstname|default:"" }} {{ appointment.contact_lastname|default:"" }}
+                        </div>
+                        <div class="appointment-datetime">
+                            📅 {{ appointment.hs_appointment_start|date:"M d, Y" }} at {{ appointment.time }}
+                        </div>
+                        <div class="appointment-id">ID: {{ appointment.id }}</div>
+                    </div>
+                </div>
+                
+                <div class="appointment-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Contact Email</span>
+                        <span class="meta-value">{{ appointment.contact_email|default:"N/A" }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Contact Phone</span>
+                        <span class="meta-value">{{ appointment.contact_phone|default:"N/A" }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Appointment Email</span>
+                        <span class="meta-value">{{ appointment.appointment_email|default:"N/A" }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Appointment Phone</span>
+                        <span class="meta-value">{{ appointment.appointment_phone|default:"N/A" }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Status</span>
+                        <span class="meta-value">{{ appointment.appointment_status|default:"N/A" }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Created</span>
+                        <span class="meta-value">{{ appointment.hs_createdate|date:"M d, Y H:i"|default:"N/A" }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+    
+    <!-- Pagination -->
+    {% if paginated_groups.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if paginated_groups.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ paginated_groups.previous_page_number }}">previous</a>
+            {% endif %}
+            
+            <span class="current">
+                Page {{ paginated_groups.number }} of {{ paginated_groups.paginator.num_pages }}
+            </span>
+            
+            {% if paginated_groups.has_next %}
+                <a href="?page={{ paginated_groups.next_page_number }}">next</a>
+                <a href="?page={{ paginated_groups.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% elif results %}
+<div class="empty-state">
+    <div class="empty-state-icon">🎉</div>
+    <h3>No Duplicate Appointments Found!</h3>
+    <p>The analysis didn't find any duplicate HubSpot appointments in your database.</p>
+</div>
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">📊</div>
+    <h3>No Results Yet</h3>
+    <p>Click "Run Duplicate Detection" to analyze your HubSpot appointments for duplicates.</p>
+</div>
+{% endif %}
+
+<script>
+// Global variables for progress tracking
+let progressInterval = null;
+let isDetectionRunning = false;
+
+// Toggle group details
+function toggleGroup(groupId) {
+    const details = document.getElementById(`group-${groupId}`);
+    const header = details.previousElementSibling;
+    const icon = header.querySelector('.expand-icon');
+    
+    if (details.style.display === 'none' || details.style.display === '') {
+        details.style.display = 'block';
+        header.classList.add('expanded');
+    } else {
+        details.style.display = 'none';
+        header.classList.remove('expanded');
+    }
+}
+
+// Show status message
+function showMessage(type, message) {
+    const container = document.getElementById('statusMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `status-message ${type}`;
+    messageDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+    
+    container.innerHTML = '';
+    container.appendChild(messageDiv);
+    
+    // Auto-hide after 5 seconds for success messages
+    if (type === 'success') {
+        setTimeout(() => {
+            messageDiv.remove();
+        }, 5000);
+    }
+}
+
+// Update progress bar
+function updateProgress(data) {
+    const container = document.getElementById('progressContainer');
+    const fill = document.getElementById('progressFill');
+    const status = document.getElementById('progressStatus');
+    const percent = document.getElementById('progressPercent');
+    const details = document.getElementById('progressDetails');
+    
+    container.style.display = 'block';
+    fill.style.width = `${data.percent}%`;
+    status.textContent = data.status;
+    percent.textContent = `${data.percent}%`;
+    details.textContent = data.details;
+    
+    if (data.completed) {
+        isDetectionRunning = false;
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            progressInterval = null;
+        }
+        
+        if (data.cancelled) {
+            showMessage('info', 'Detection was cancelled.');
+        } else if (data.error) {
+            showMessage('error', data.details);
+        } else {
+            showMessage('success', 'Detection completed! Reloading page...');
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        }
+        
+        setTimeout(() => {
+            container.style.display = 'none';
+        }, 3000);
+    }
+}
+
+// Check detection progress
+function checkProgress() {
+    fetch('/reports/api/check-hubspot-detection-progress/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'running') {
+                updateProgress(data.progress);
+            } else if (data.status === 'not_running') {
+                if (isDetectionRunning) {
+                    // Detection just finished
+                    showMessage('success', 'Detection completed! Reloading page...');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+                isDetectionRunning = false;
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                document.getElementById('progressContainer').style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error checking progress:', error);
+        });
+}
+
+// Run duplicate detection
+document.getElementById('runDetectionBtn').addEventListener('click', function() {
+    if (isDetectionRunning) {
+        showMessage('info', 'Detection is already running. Please wait for it to complete.');
+        return;
+    }
+    
+    fetch('/reports/api/run-hubspot-duplicate-detection/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'started') {
+            isDetectionRunning = true;
+            showMessage('success', data.message);
+            
+            // Start checking progress
+            progressInterval = setInterval(checkProgress, 1000);
+            checkProgress(); // Check immediately
+        } else if (data.status === 'already_running') {
+            showMessage('info', data.message);
+            isDetectionRunning = true;
+            progressInterval = setInterval(checkProgress, 1000);
+            checkProgress();
+        } else {
+            showMessage('error', data.message);
+        }
+    })
+    .catch(error => {
+        showMessage('error', 'Network error occurred while starting detection.');
+        console.error('Error:', error);
+    });
+});
+
+// Cancel detection
+document.getElementById('cancelDetectionBtn').addEventListener('click', function() {
+    fetch('/reports/api/cancel-hubspot-detection/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        showMessage('info', data.message);
+    })
+    .catch(error => {
+        showMessage('error', 'Error cancelling detection.');
+        console.error('Error:', error);
+    });
+});
+
+// Export CSV
+{% if results %}
+document.getElementById('exportCsvBtn').addEventListener('click', function() {
+    window.location.href = '/reports/api/export-hubspot-duplicates-csv/';
+});
+{% endif %}
+
+// Load previous reports
+document.querySelectorAll('.load-report-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const filename = this.getAttribute('data-filename');
+        
+        fetch(`/reports/api/load-hubspot-report-file/${filename}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showMessage('success', data.message + ' Reloading page...');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showMessage('error', data.message);
+                }
+            })
+            .catch(error => {
+                showMessage('error', 'Error loading report file.');
+                console.error('Error:', error);
+            });
+    });
+});
+
+// Check if detection is running on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkProgress();
+});
+</script>
+
+{% endblock %}

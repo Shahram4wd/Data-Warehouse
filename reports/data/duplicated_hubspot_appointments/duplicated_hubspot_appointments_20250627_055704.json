@@ -1,0 +1,24 @@
+{
+  "report_type": "duplicated_hubspot_appointments",
+  "generated_at": "2025-06-27T05:57:04.525644",
+  "parameters": {
+    "similarity_threshold": 80,
+    "total_appointments_analyzed": 1000,
+    "fields_compared": [
+      "appointment_date",
+      "appointment_time",
+      "contact_firstname",
+      "contact_lastname"
+    ],
+    "limit_used": 1000,
+    "output_limit_used": null
+  },
+  "summary": {
+    "total_duplicate_groups_found": 0,
+    "total_duplicate_groups_displayed": 0,
+    "output_limited": false,
+    "total_duplicate_appointments": 0,
+    "percentage_duplicates": 0.0
+  },
+  "duplicate_groups": []
+}

@@ -135,10 +135,10 @@ class Command(BaseCommand):
         processed_ids = set()
         total_prospects = len(prospects_list)
 
-        self.update_progress(22, 'Finding exact matches...', 'Quickly identifying obvious duplicates')
+        self.update_progress(22, 'Finding exact matches...', 'Quickly identifying obvious duplicates using SQL optimization')
         
-        # First, find exact matches (much faster)
-        exact_groups, exact_processed_ids = self.find_exact_matches(prospects_list)
+        # Use SQL-based exact matching for better performance with large datasets
+        exact_groups, exact_processed_ids = self.find_sql_exact_matches(prospects_list)
         processed_ids.update(exact_processed_ids)
         
         # Convert exact matches to proper duplicate groups
@@ -176,30 +176,54 @@ class Command(BaseCommand):
         
         if not remaining_prospects:
             self.update_progress(85, 'Generating report...', 'All duplicates found via exact matching')
+        elif len(remaining_prospects) > 20000:
+            # For very large remaining datasets, limit fuzzy matching to avoid performance issues
+            self.stdout.write(
+                self.style.WARNING(
+                    f'Large remaining dataset ({len(remaining_prospects)} prospects) detected.\n'
+                    f'Limiting fuzzy matching to top 10,000 most recent prospects for performance.\n'
+                    f'Use --limit parameter for smaller datasets or consider running in batches.'
+                )
+            )
+            # Sort by add_date and take most recent
+            remaining_prospects = sorted(
+                remaining_prospects, 
+                key=lambda x: x['add_date'] if x['add_date'] else datetime.min, 
+                reverse=True
+            )[:10000]
         else:
             # Group remaining prospects into blocks for efficient comparison
+            self.stdout.write(f'Exact matching found {len(exact_groups)} groups, fuzzy matching {len(remaining_prospects):,} remaining prospects')
+        
+        # Group prospects into blocks for efficient comparison only if we have remaining prospects to process
+        if remaining_prospects and len(remaining_prospects) <= 20000:
             prospect_blocks = self.group_prospects_by_blocks(remaining_prospects)
-            
             # Calculate total comparisons for better progress tracking
             total_comparisons = sum(len(block) * (len(block) - 1) // 2 for block in prospect_blocks.values())
-            self.stdout.write(f'Exact matching found {len(exact_groups)} groups, fuzzy matching {len(remaining_prospects):,} remaining prospects')
             self.stdout.write(f'Reduced fuzzy comparisons to {total_comparisons:,} using blocking')
+        else:
+            prospect_blocks = {}
+            total_comparisons = 0
         
-        # Group prospects into blocks for efficient comparison
-        prospect_blocks = self.group_prospects_by_blocks(prospects_list)
-        
-        # Calculate total comparisons for better progress tracking
-        total_comparisons = sum(len(block) * (len(block) - 1) // 2 for block in prospect_blocks.values())
-        self.stdout.write(f'Reduced comparisons from {total_prospects * (total_prospects - 1) // 2:,} to {total_comparisons:,} using blocking')
-        
-        self.update_progress(30, 'Detecting duplicates...', f'Processing {len(prospect_blocks)} blocks instead of {total_prospects:,} individual comparisons')
+        self.update_progress(30, 'Detecting duplicates...', f'Processing {len(prospect_blocks)} blocks for {len(remaining_prospects):,} prospects')
 
-        # Process each block separately
+        # Process each block separately with time limits
         comparisons_done = 0
         import time
         start_time = time.time()
+        max_processing_time = 300  # 5 minutes max for fuzzy matching
         
         for block_key, block_prospects in prospect_blocks.items():
+            # Check time limit
+            if time.time() - start_time > max_processing_time:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f'Time limit reached ({max_processing_time}s). Stopping fuzzy matching to prevent timeout.\n'
+                        f'Found {len(duplicate_groups)} groups so far. Consider using --limit for smaller datasets.'
+                    )
+                )
+                break
+                
             if len(block_prospects) < 2:
                 continue  # Skip blocks with only one prospect
             
@@ -598,5 +622,66 @@ class Command(BaseCommand):
                     
                     if len(filtered_prospects) > 1:
                         exact_match_groups.append(filtered_prospects)
+        
+        return exact_match_groups, processed_ids
+
+    def find_sql_exact_matches(self, prospects_list):
+        """Use SQL to find exact matches efficiently - much faster for large datasets"""
+        from django.db import connection
+        
+        exact_match_groups = []
+        processed_ids = set()
+        
+        # For very large datasets (>50k), use SQL-based exact matching
+        if len(prospects_list) > 50000:
+            self.stdout.write(f'Large dataset detected ({len(prospects_list)} prospects), using SQL optimization...')
+            
+            # Find exact phone matches using SQL
+            phone_duplicates_query = """
+                SELECT 
+                    phone1,
+                    count(*) as duplicate_count,
+                    array_agg(id ORDER BY add_date DESC) as prospect_ids
+                FROM ingestion_genius_prospect 
+                WHERE phone1 IS NOT NULL 
+                  AND phone1 != ''
+                  AND first_name IS NOT NULL 
+                  AND first_name != ''
+                  AND last_name IS NOT NULL 
+                  AND last_name != ''
+                GROUP BY phone1
+                HAVING count(*) > 1
+                ORDER BY count(*) DESC
+                LIMIT 1000
+            """
+            
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute(phone_duplicates_query)
+                    phone_groups = cursor.fetchall()
+                
+                self.stdout.write(f'Found {len(phone_groups)} phone-based duplicate groups via SQL')
+                
+                # Convert SQL results to exact match groups
+                for phone, count, prospect_ids in phone_groups:
+                    if len(prospect_ids) > 1:
+                        # Get full prospect data for this group
+                        group_prospects = []
+                        for prospect in prospects_list:
+                            if prospect['id'] in prospect_ids and prospect['id'] not in processed_ids:
+                                group_prospects.append(prospect)
+                                processed_ids.add(prospect['id'])
+                        
+                        if len(group_prospects) > 1:
+                            exact_match_groups.append(group_prospects)
+                            
+            except Exception as e:
+                self.stdout.write(self.style.WARNING(f'SQL optimization failed, falling back to standard method: {e}'))
+                # Fall back to original method
+                return self.find_exact_matches(prospects_list)
+        
+        else:
+            # For smaller datasets, use the original method
+            return self.find_exact_matches(prospects_list)
         
         return exact_match_groups, processed_ids
