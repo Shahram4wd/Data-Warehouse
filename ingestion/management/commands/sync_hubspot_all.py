@@ -13,6 +13,8 @@ class Command(BaseCommand):
             'sync_hubspot_deals',
             'sync_hubspot_appointments',
             'sync_hubspot_divisions',
+            'sync_hubspot_appointment_contact_assoc',
+            'sync_hubspot_contact_division_assoc',
         ]
 
         self.stdout.write(self.style.NOTICE('Starting full HubSpot sync sequence...'))

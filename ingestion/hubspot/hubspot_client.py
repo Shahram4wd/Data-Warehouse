@@ -707,3 +707,57 @@ class HubspotClient:
             except Exception as e:
                 logger.error(f"Exception during custom object fetch: {str(e)}")
                 return [], None
+
+    async def get_associations_page(
+        self, 
+        from_object_type: str,
+        to_object_type: str,
+        page_token: Optional[str] = None,
+        batch_size: int = 100
+    ) -> Dict[str, Any]:
+        """
+        Fetch a single page of associations between two object types from HubSpot API.
+        
+        Args:
+            from_object_type: Source object type (e.g., 'contacts')
+            to_object_type: Target object type (e.g., '2-37778609' for divisions)
+            page_token: Pagination token for next page
+            batch_size: Number of associations per page
+            
+        Returns:
+            Dictionary containing results and pagination info
+        """
+        async with aiohttp.ClientSession() as session:
+            try:
+                # Use the associations API endpoint
+                url = f"{self.BASE_URL}/crm/v4/associations/{from_object_type}/{to_object_type}/batch/read"
+                
+                payload = {
+                    "inputs": [],  # Empty inputs means get all associations
+                    "limit": batch_size
+                }
+                
+                if page_token:
+                    payload["after"] = page_token
+                
+                logger.info(f"Fetching associations from {from_object_type} to {to_object_type}")
+                logger.debug(f"Associations payload: {json.dumps(payload, indent=2)}")
+                
+                async with session.post(url, headers=self.headers, json=payload, timeout=120) as response:
+                    status = response.status
+                    logger.info(f"Associations response status: {status}")
+                    
+                    if status != 200:
+                        response_text = await response.text()
+                        logger.error(f"Error response: {response_text[:500]}")
+                        return {"results": [], "paging": {}}
+                    
+                    data = await response.json()
+                    results = data.get("results", [])
+                    logger.info(f"Got {len(results)} association results")
+                    
+                    return data
+                    
+            except Exception as e:
+                logger.error(f"Exception during associations fetch: {str(e)}")
+                return {"results": [], "paging": {}}

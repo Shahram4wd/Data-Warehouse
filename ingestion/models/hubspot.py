@@ -283,6 +283,19 @@ class Hubspot_AppointmentContactAssociation(models.Model):
     def __str__(self):
         return f"{self.appointment_id} -> {self.contact_id}"
 
+class Hubspot_ContactDivisionAssociation(models.Model):
+    """Direct mapping of contact to division associations via custom object 2-37778609"""
+    contact_id = models.CharField(max_length=50, null=True, blank=True)
+    division_id = models.CharField(max_length=50, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ingestion_hubspot_contact_division_assoc'
+        unique_together = ('contact_id', 'division_id')
+
+    def __str__(self):
+        return f"{self.contact_id} -> {self.division_id}"
+
 class Hubspot_Division(models.Model):
     """HubSpot Division model for custom object 2-37778609"""
     id = models.CharField(max_length=50, primary_key=True)  # hs_object_id
