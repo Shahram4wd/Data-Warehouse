@@ -1,0 +1,174 @@
+{
+  "report_type": "duplicated_genius_prospects",
+  "generated_at": "2025-06-27T01:19:05.811522",
+  "parameters": {
+    "similarity_threshold": 80,
+    "total_prospects_analyzed": 500,
+    "fields_compared": [
+      "first_name",
+      "last_name",
+      "phone1"
+    ],
+    "limit_used": 500
+  },
+  "summary": {
+    "total_duplicate_groups": 3,
+    "total_duplicate_prospects": 6,
+    "percentage_duplicates": 1.2
+  },
+  "duplicate_groups": [
+    {
+      "group_id": 1,
+      "group_display_name": "Barbara Nelloms (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "5138844528",
+      "prospects": [
+        {
+          "id": 171018,
+          "first_name": "Barbara",
+          "last_name": "Nelloms",
+          "phone1": "513-884-4528",
+          "email": "",
+          "address1": "4528 Mellwood Ave",
+          "city": "Cincinnati",
+          "state": "OH",
+          "zip": "45232",
+          "add_date": "2025-04-16 17:56:06+00:00",
+          "division_id": 709055521,
+          "division__label": "Cincinnati"
+        },
+        {
+          "id": 170828,
+          "first_name": "Barbara",
+          "last_name": "Nelloms",
+          "phone1": "513-884-4528",
+          "email": "",
+          "address1": "4528 Mellwood Ave",
+          "city": "Cincinnati",
+          "state": "OH",
+          "zip": "45232",
+          "add_date": "2025-04-16 12:12:54+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 90.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 2,
+      "group_display_name": "Ian Mooney (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7322451813",
+      "prospects": [
+        {
+          "id": 170819,
+          "first_name": "Ian",
+          "last_name": "Mooney",
+          "phone1": "732-245-1813",
+          "email": "imooney824@gmail.com",
+          "address1": "915 Curtis Ave",
+          "city": "Wall Township",
+          "state": "NJ",
+          "zip": "07719",
+          "add_date": "2025-04-16 11:38:02+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 170816,
+          "first_name": "Ian",
+          "last_name": "Mooney",
+          "phone1": "732-245-1813",
+          "email": "imooney824@gmail.com",
+          "address1": "915 Curtis Ave",
+          "city": "Wall Township",
+          "state": "NJ",
+          "zip": "07719",
+          "add_date": "2025-04-16 11:36:03+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 3,
+      "group_display_name": "Rod Smay (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7177155445",
+      "prospects": [
+        {
+          "id": 170740,
+          "first_name": "Rod",
+          "last_name": "Smay",
+          "phone1": "717-715-5445",
+          "email": "rodsmay@comcast.net",
+          "address1": "75 Stone Hill Rd",
+          "city": "Conestoga",
+          "state": "PA",
+          "zip": "17516",
+          "add_date": "2025-04-16 06:41:11+00:00",
+          "division_id": 709055519,
+          "division__label": "Harrisburg"
+        },
+        {
+          "id": 170725,
+          "first_name": "Rod",
+          "last_name": "Smay",
+          "phone1": "717-715-5445",
+          "email": "rodsmay@comcast.net",
+          "address1": "75 Stone Hill Rd Conestoga",
+          "city": "Conestoga",
+          "state": "PA",
+          "zip": "17516",
+          "add_date": "2025-04-16 05:41:03+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 98.08,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    }
+  ]
+}

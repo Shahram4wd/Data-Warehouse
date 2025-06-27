@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Data Warehouse{% endblock %}
+
+{% block header %}📋 Reports Dashboard{% endblock %}
+
+{% block content %}
+<style>
+.reports-hero {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2rem 0;
+}
+
+.reports-hero h1 {
+    font-size: 3rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+}
+
+.reports-hero p {
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.category-grid {
+    display: grid;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.category-card {
+    background: var(--gradient-card);
+    border-radius: 16px;
+    padding: 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.category-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+}
+
+.category-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--accent-primary);
+}
+
+.category-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.category-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--gradient-primary);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.category-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+}
+
+.report-card {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.report-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--gradient-primary);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.report-card:hover::before {
+    transform: scaleX(1);
+}
+
+.report-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent-primary);
+}
+
+.report-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.report-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--accent-primary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.report-content {
+    flex: 1;
+}
+
+.report-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+
+.report-title a {
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.report-title a:hover {
+    color: var(--accent-primary);
+}
+
+.report-description {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.report-stats {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.stat-icon {
+    color: var(--accent-primary);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.no-reports-message {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    border: 1px solid var(--border-color);
+}
+</style>
+
+<div class="reports-hero">
+    <h1>📊 Data Warehouse Reports</h1>
+    <p>Comprehensive analytics and data insights organized by category for efficient data management and decision making.</p>
+</div>
+
+{% if categories %}
+    <div class="category-grid">
+        {% for category in categories %}
+            <div class="category-card">
+                <div class="category-header">
+                    <div class="category-icon">
+                        🧹
+                    </div>
+                    <h2 class="category-title">{{ category.name }}</h2>
+                </div>
+                
+                <div class="reports-grid">
+                    {% for report in category.reports.all %}
+                        <div class="report-card">
+                            <div class="report-header">
+                                <div class="report-icon">
+                                    📋
+                                </div>
+                                <div class="report-content">
+                                    <h3 class="report-title">
+                                        <a href="{{ report.id }}/">{{ report.title }}</a>
+                                    </h3>
+                                    {% if report.description %}
+                                        <p class="report-description">{{ report.description }}</p>
+                                    {% else %}
+                                        <p class="report-description">Advanced data analysis and duplicate detection for maintaining data quality.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="report-stats">
+                                <div class="stat-item">
+                                    <span class="stat-icon">⚡</span>
+                                    <span>Real-time</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-icon">🎯</span>
+                                    <span>High Accuracy</span>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="no-reports-message">
+                            <span>📝 No reports available in this category yet.</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <h3>No Report Categories Available</h3>
+        <p>No report categories have been configured yet. Contact your administrator to set up data analysis reports.</p>
+    </div>
+{% endif %}
+{% endblock %}

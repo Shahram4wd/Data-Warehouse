@@ -1,0 +1,20 @@
+{
+  "report_type": "duplicated_genius_prospects",
+  "generated_at": "2025-06-27T01:10:28.743509",
+  "parameters": {
+    "similarity_threshold": 80,
+    "total_prospects_analyzed": 100,
+    "fields_compared": [
+      "first_name",
+      "last_name",
+      "phone1"
+    ],
+    "limit_used": 100
+  },
+  "summary": {
+    "total_duplicate_groups": 0,
+    "total_duplicate_prospects": 0,
+    "percentage_duplicates": 0.0
+  },
+  "duplicate_groups": []
+}

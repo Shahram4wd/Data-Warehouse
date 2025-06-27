@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Reports</h1>
+<ul>
+    {% for category in categories %}
+    <li>
+        <h2>{{ category.name }}</h2>
+        <p>{{ category.description }}</p>
+        <ul>
+            {% for report in category.reports.all %}
+            <li><a href="{{ report.id }}/">{{ report.name }}</a></li>
+            {% endfor %}
+        </ul>
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}

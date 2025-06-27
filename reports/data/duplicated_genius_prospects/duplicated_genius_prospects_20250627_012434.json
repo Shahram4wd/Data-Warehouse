@@ -1,0 +1,531 @@
+{
+  "report_type": "duplicated_genius_prospects",
+  "generated_at": "2025-06-27T01:24:34.716635",
+  "parameters": {
+    "similarity_threshold": 80,
+    "total_prospects_analyzed": 1000,
+    "fields_compared": [
+      "first_name",
+      "last_name",
+      "phone1"
+    ],
+    "limit_used": 1000
+  },
+  "summary": {
+    "total_duplicate_groups": 10,
+    "total_duplicate_prospects": 20,
+    "percentage_duplicates": 2.0
+  },
+  "duplicate_groups": [
+    {
+      "group_id": 1,
+      "group_display_name": "Beata Nicpon (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "9142557222",
+      "prospects": [
+        {
+          "id": 171768,
+          "first_name": "Beata",
+          "last_name": "Nicpon",
+          "phone1": "914-255-7222",
+          "email": "",
+          "address1": "318 Warren Ave",
+          "city": "Mamaroneck",
+          "state": "NY",
+          "zip": "10543",
+          "add_date": "2025-04-19 07:01:00+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 171766,
+          "first_name": "Beata",
+          "last_name": "Nicpon",
+          "phone1": "914-255-7222",
+          "email": "",
+          "address1": "318 Warren Ave",
+          "city": "Mamaroneck",
+          "state": "NY",
+          "zip": "10543",
+          "add_date": "2025-04-19 07:00:41+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 90.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 2,
+      "group_display_name": "Christine Fetter (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "9089928405",
+      "prospects": [
+        {
+          "id": 171683,
+          "first_name": "Christine",
+          "last_name": "Fetter",
+          "phone1": "908-992-8405",
+          "email": "cmeaton3@msn.com",
+          "address1": "244 Mercer St",
+          "city": "Phillipsburg",
+          "state": "NJ",
+          "zip": "08865",
+          "add_date": "2025-04-18 17:11:03+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 170739,
+          "first_name": "Christine",
+          "last_name": "Fetter",
+          "phone1": "908-992-8405",
+          "email": "cmeaton3@msn.com",
+          "address1": "244 Mercer St",
+          "city": "Phillipsburg",
+          "state": "NJ",
+          "zip": "08865",
+          "add_date": "2025-04-16 06:36:22+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 3,
+      "group_display_name": "Rafaela Beniquez (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7328010175",
+      "prospects": [
+        {
+          "id": 171289,
+          "first_name": "Rafaela",
+          "last_name": "Beniquez",
+          "phone1": "732-801-0175",
+          "email": "hita1024@yahoo.com",
+          "address1": "258 Vineyard Ave",
+          "city": "South Amboy",
+          "state": "NJ",
+          "zip": "08879",
+          "add_date": "2025-04-17 15:11:44+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 171288,
+          "first_name": "Rafaela",
+          "last_name": "Beniquez",
+          "phone1": "732-801-0175",
+          "email": "hita1024@yahoo.com",
+          "address1": "258 Vineyard Ave",
+          "city": "South Amboy",
+          "state": "NJ",
+          "zip": "08879",
+          "add_date": "2025-04-17 15:11:41+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 4,
+      "group_display_name": "Taylor Anderson (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "4129693721",
+      "prospects": [
+        {
+          "id": 171286,
+          "first_name": "Taylor",
+          "last_name": "Anderson",
+          "phone1": "412-969-3721",
+          "email": "",
+          "address1": "8608 Westwood Road",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15235",
+          "add_date": "2025-04-17 15:11:39+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 171287,
+          "first_name": "Taylor",
+          "last_name": "Anderson",
+          "phone1": "412-969-3721",
+          "email": "",
+          "address1": "8608 Westwood Road",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15235",
+          "add_date": "2025-04-17 15:11:39+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 90.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 5,
+      "group_display_name": "Joshua Turner (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "2342637384",
+      "prospects": [
+        {
+          "id": 171285,
+          "first_name": "Joshua",
+          "last_name": "Turner",
+          "phone1": "234-263-7384",
+          "email": "",
+          "address1": "2459 8Th Street",
+          "city": "Cuyahoga Falls",
+          "state": "OH",
+          "zip": "44221",
+          "add_date": "2025-04-17 15:11:38+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 171283,
+          "first_name": "Joshua",
+          "last_name": "Turner",
+          "phone1": "234-263-7384",
+          "email": "",
+          "address1": "2459 8Th Street",
+          "city": "Cuyahoga Falls",
+          "state": "OH",
+          "zip": "44221",
+          "add_date": "2025-04-17 15:11:35+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 90.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 6,
+      "group_display_name": "Eric/ Faith Henn (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7248936946",
+      "prospects": [
+        {
+          "id": 171282,
+          "first_name": "Eric/ Faith",
+          "last_name": "Henn",
+          "phone1": "724-893-6946",
+          "email": "e.d.henn12@gmail.com",
+          "address1": "311 S Pitt St",
+          "city": "Mercer",
+          "state": "PA",
+          "zip": "16137",
+          "add_date": "2025-04-17 15:11:33+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 171281,
+          "first_name": "Eric/ Faith",
+          "last_name": "Henn",
+          "phone1": "724-893-6946",
+          "email": "e.d.henn12@gmail.com",
+          "address1": "311 S Pitt St",
+          "city": "Mercer",
+          "state": "PA",
+          "zip": "16137",
+          "add_date": "2025-04-17 15:11:32+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 7,
+      "group_display_name": "Charlene Dones (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "5703502004",
+      "prospects": [
+        {
+          "id": 171221,
+          "first_name": "Charlene",
+          "last_name": "Dones",
+          "phone1": "570-350-2004",
+          "email": "cha107@ptd.net",
+          "address1": "61 Beaver Drive",
+          "city": "Albrightsville",
+          "state": "PA",
+          "zip": "18210",
+          "add_date": "2025-04-17 13:16:20+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 171211,
+          "first_name": "Charlene",
+          "last_name": "Dones",
+          "phone1": "570-350-2004",
+          "email": "cha107@ptd.net",
+          "address1": "61 Beaver Drive",
+          "city": "Albrightsville",
+          "state": "PA",
+          "zip": "18210",
+          "add_date": "2025-04-17 12:45:24+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 8,
+      "group_display_name": "Barbara Nelloms (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "5138844528",
+      "prospects": [
+        {
+          "id": 171018,
+          "first_name": "Barbara",
+          "last_name": "Nelloms",
+          "phone1": "513-884-4528",
+          "email": "",
+          "address1": "4528 Mellwood Ave",
+          "city": "Cincinnati",
+          "state": "OH",
+          "zip": "45232",
+          "add_date": "2025-04-16 17:56:06+00:00",
+          "division_id": 709055521,
+          "division__label": "Cincinnati"
+        },
+        {
+          "id": 170828,
+          "first_name": "Barbara",
+          "last_name": "Nelloms",
+          "phone1": "513-884-4528",
+          "email": "",
+          "address1": "4528 Mellwood Ave",
+          "city": "Cincinnati",
+          "state": "OH",
+          "zip": "45232",
+          "add_date": "2025-04-16 12:12:54+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 90.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 9,
+      "group_display_name": "Ian Mooney (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7322451813",
+      "prospects": [
+        {
+          "id": 170819,
+          "first_name": "Ian",
+          "last_name": "Mooney",
+          "phone1": "732-245-1813",
+          "email": "imooney824@gmail.com",
+          "address1": "915 Curtis Ave",
+          "city": "Wall Township",
+          "state": "NJ",
+          "zip": "07719",
+          "add_date": "2025-04-16 11:38:02+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 170816,
+          "first_name": "Ian",
+          "last_name": "Mooney",
+          "phone1": "732-245-1813",
+          "email": "imooney824@gmail.com",
+          "address1": "915 Curtis Ave",
+          "city": "Wall Township",
+          "state": "NJ",
+          "zip": "07719",
+          "add_date": "2025-04-16 11:36:03+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 10,
+      "group_display_name": "Rod Smay (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7177155445",
+      "prospects": [
+        {
+          "id": 170740,
+          "first_name": "Rod",
+          "last_name": "Smay",
+          "phone1": "717-715-5445",
+          "email": "rodsmay@comcast.net",
+          "address1": "75 Stone Hill Rd",
+          "city": "Conestoga",
+          "state": "PA",
+          "zip": "17516",
+          "add_date": "2025-04-16 06:41:11+00:00",
+          "division_id": 709055519,
+          "division__label": "Harrisburg"
+        },
+        {
+          "id": 170725,
+          "first_name": "Rod",
+          "last_name": "Smay",
+          "phone1": "717-715-5445",
+          "email": "rodsmay@comcast.net",
+          "address1": "75 Stone Hill Rd Conestoga",
+          "city": "Conestoga",
+          "state": "PA",
+          "zip": "17516",
+          "add_date": "2025-04-16 05:41:03+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 98.08,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    }
+  ]
+}

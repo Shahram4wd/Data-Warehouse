@@ -1,0 +1,2571 @@
+{
+  "report_type": "duplicated_genius_prospects",
+  "generated_at": "2025-06-27T01:28:29.287136",
+  "parameters": {
+    "similarity_threshold": 80,
+    "total_prospects_analyzed": 1000,
+    "fields_compared": [
+      "first_name",
+      "last_name",
+      "phone1"
+    ],
+    "limit_used": 1000
+  },
+  "summary": {
+    "total_duplicate_groups": 50,
+    "total_duplicate_prospects": 100,
+    "percentage_duplicates": 10.0
+  },
+  "duplicate_groups": [
+    {
+      "group_id": 1,
+      "group_display_name": "Robert Brubaker (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_names": "robert_brubaker",
+      "prospects": [
+        {
+          "id": 190763,
+          "first_name": "Robert",
+          "last_name": "Brubaker",
+          "phone1": "330-606-3971",
+          "email": "r.brujr@gmail.com",
+          "address1": "2241 Bailey Rd",
+          "city": "Cuyahoga Falls",
+          "state": "OH",
+          "zip": "44221",
+          "add_date": "2025-06-16 01:17:20+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 190331,
+          "first_name": "Robert",
+          "last_name": "Brubaker",
+          "phone1": "330-606-6267",
+          "email": "r.brujr@gmail.com",
+          "address1": "2241 Bailey Rd",
+          "city": "Cuyahoga Falls",
+          "state": "OH",
+          "zip": "44221",
+          "add_date": "2025-06-09 17:06:14+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 90.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 2,
+      "group_display_name": "Richard Smith (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "8452229174",
+      "prospects": [
+        {
+          "id": 190731,
+          "first_name": "Richard",
+          "last_name": "Smith",
+          "phone1": "845-222-9174",
+          "email": "smitty26179@msn.com",
+          "address1": "27 Rela Avenue",
+          "city": "Haverstraw",
+          "state": "NY",
+          "zip": "10927",
+          "add_date": "2025-06-15 23:20:24+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 190677,
+          "first_name": "Richard",
+          "last_name": "Smith",
+          "phone1": "845-222-9174",
+          "email": null,
+          "address1": "27 rela avenue",
+          "city": "Haverstraw",
+          "state": "NY",
+          "zip": "10927",
+          "add_date": "2025-06-14 01:25:03+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 3,
+      "group_display_name": "Nona Grover (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_names": "nona_grover",
+      "prospects": [
+        {
+          "id": 190717,
+          "first_name": "Nona",
+          "last_name": "Grover",
+          "phone1": "740-277-7654",
+          "email": "nfgrover@yahoo.com",
+          "address1": "1629 Beacon St",
+          "city": "Lancaster",
+          "state": "OH",
+          "zip": "43130",
+          "add_date": "2025-06-15 16:29:02+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        },
+        {
+          "id": 190573,
+          "first_name": "Nona",
+          "last_name": "Grover",
+          "phone1": "740-503-7885",
+          "email": "rlnotestone@aol.com",
+          "address1": "1629 BEACON ST",
+          "city": "LANCASTER",
+          "state": "OH",
+          "zip": "43130",
+          "add_date": "2025-06-12 21:20:56+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 80.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 4,
+      "group_display_name": "Dione Jones (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "3019438000",
+      "prospects": [
+        {
+          "id": 190707,
+          "first_name": "Dione",
+          "last_name": "Jones",
+          "phone1": "301-943-8000",
+          "email": "dionneerj@aol.com",
+          "address1": "17309 clairfield lane",
+          "city": "Upper Marlboro",
+          "state": "MD",
+          "zip": "20772",
+          "add_date": "2025-06-15 00:23:12+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 190706,
+          "first_name": "Dione",
+          "last_name": "Jones",
+          "phone1": "301-943-8000",
+          "email": "dionneerj@aol.com",
+          "address1": "17309 clairfield lane",
+          "city": "Upper Marlboro",
+          "state": "MD",
+          "zip": "20772",
+          "add_date": "2025-06-15 00:21:25+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 5,
+      "group_display_name": "Dorothy Riffert (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "5702847476",
+      "prospects": [
+        {
+          "id": 190703,
+          "first_name": "Dorthy",
+          "last_name": "Riffert",
+          "phone1": "570-284-7476",
+          "email": null,
+          "address1": "1137 Scott St",
+          "city": "Kulpmont",
+          "state": "PA",
+          "zip": "17834",
+          "add_date": "2025-06-14 22:42:44+00:00",
+          "division_id": 709055519,
+          "division__label": "Harrisburg"
+        },
+        {
+          "id": 190700,
+          "first_name": "Dorothy",
+          "last_name": "Riffert",
+          "phone1": "570-284-7476",
+          "email": null,
+          "address1": "1137 Scott Street",
+          "city": "Kulpmont",
+          "state": "PA",
+          "zip": "17834",
+          "add_date": "2025-06-14 22:02:09+00:00",
+          "division_id": 709055519,
+          "division__label": "Harrisburg"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 97.33,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 6,
+      "group_display_name": "Deeann Slover (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7578688625",
+      "prospects": [
+        {
+          "id": 190687,
+          "first_name": "Deeann",
+          "last_name": "slover",
+          "phone1": "757-868-8625",
+          "email": null,
+          "address1": "36 Ferguson st",
+          "city": "poquoson",
+          "state": "VA",
+          "zip": "23662",
+          "add_date": "2025-06-14 14:29:44+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 190162,
+          "first_name": "Deeann",
+          "last_name": "Slover",
+          "phone1": "757-868-8625",
+          "email": "family.slover@gmail.com",
+          "address1": "36 Ferguson St",
+          "city": "Poquoson",
+          "state": "VA",
+          "zip": "23662",
+          "add_date": "2025-06-09 13:46:31+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 7,
+      "group_display_name": "Josh Williams (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7134172549",
+      "prospects": [
+        {
+          "id": 190686,
+          "first_name": "Josh",
+          "last_name": "Williams",
+          "phone1": "713-417-2549",
+          "email": "jwilliams1822@gmail.com",
+          "address1": "2103 windham place",
+          "city": "Silver spring",
+          "state": "MD",
+          "zip": "20902",
+          "add_date": "2025-06-14 05:34:43+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 190685,
+          "first_name": "Josh",
+          "last_name": "Williams",
+          "phone1": "713-417-2549",
+          "email": "jwilliams1822@gmail.com",
+          "address1": "2103 windham place",
+          "city": "Silver spring",
+          "state": "MD",
+          "zip": "20902",
+          "add_date": "2025-06-14 05:32:52+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 8,
+      "group_display_name": "Richard Kline (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "8145713164",
+      "prospects": [
+        {
+          "id": 190673,
+          "first_name": "Rick",
+          "last_name": "Kline",
+          "phone1": "814-571-3164",
+          "email": "8145713164@gmail.com",
+          "address1": "182 Dannley Dr",
+          "city": "Pine Grove Mills",
+          "state": "PA",
+          "zip": "16868",
+          "add_date": "2025-06-14 00:15:19+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        },
+        {
+          "id": 190546,
+          "first_name": "Richard",
+          "last_name": "Kline",
+          "phone1": "814-571-3164",
+          "email": null,
+          "address1": "182 Dannley Drive",
+          "city": "Pine Grove Mills",
+          "state": "PA",
+          "zip": "16868",
+          "add_date": "2025-06-12 19:01:45+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 85.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 9,
+      "group_display_name": "Arthur Beaver (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "4125080100",
+      "prospects": [
+        {
+          "id": 190668,
+          "first_name": "Arthur",
+          "last_name": "Beaver",
+          "phone1": "412-508-0100",
+          "email": "artb@ssasecurity.com",
+          "address1": "4790 school rd. so.export pa 15632",
+          "city": "Export",
+          "state": "PA",
+          "zip": "15632",
+          "add_date": "2025-06-14 00:14:07+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 190468,
+          "first_name": "Arthur",
+          "last_name": "Beaver",
+          "phone1": "412-508-0100",
+          "email": "artb@ssasecurity.com",
+          "address1": "4790 School Rd. South",
+          "city": "Export",
+          "state": "PA",
+          "zip": "15632",
+          "add_date": "2025-06-12 01:05:30+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 10,
+      "group_display_name": "Michael Williams (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "5164772103",
+      "prospects": [
+        {
+          "id": 190666,
+          "first_name": "Michael",
+          "last_name": "Williams",
+          "phone1": "516-477-2103",
+          "email": "rhawilliams58@gmail.com",
+          "address1": "114 Chamberlain Dr",
+          "city": "East Stroudsburg",
+          "state": "PA",
+          "zip": "18302",
+          "add_date": "2025-06-14 00:13:59+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 190446,
+          "first_name": "Michael",
+          "last_name": "Williams",
+          "phone1": "516-477-2103",
+          "email": null,
+          "address1": "114 chamberlain drive",
+          "city": "east Stroudsburg",
+          "state": "PA",
+          "zip": "18302",
+          "add_date": "2025-06-11 22:46:58+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 11,
+      "group_display_name": "Wesley Newcome (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "5712422182",
+      "prospects": [
+        {
+          "id": 190665,
+          "first_name": "Wes",
+          "last_name": "Newcome",
+          "phone1": "571-242-2182",
+          "email": "wesleynewcome@gmail.com",
+          "address1": "9026 Coolwater Lane",
+          "city": "Mechanicsville",
+          "state": "VA",
+          "zip": "23116",
+          "add_date": "2025-06-14 00:13:55+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 190486,
+          "first_name": "Wesley",
+          "last_name": "Newcome",
+          "phone1": "571-242-2182",
+          "email": "wesleynewcome@gmail.com",
+          "address1": "9026 coolwater ln",
+          "city": "mechanicsville",
+          "state": "VA",
+          "zip": "23116",
+          "add_date": "2025-06-12 02:26:29+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 89.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 12,
+      "group_display_name": "Wesley Williams (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "8034099397",
+      "prospects": [
+        {
+          "id": 190664,
+          "first_name": "Wes",
+          "last_name": "Williams",
+          "phone1": "803-409-9397",
+          "email": "mrweswilliams@aol.com",
+          "address1": "2815 Berkhamstead Cir",
+          "city": "Concord",
+          "state": "NC",
+          "zip": "28027",
+          "add_date": "2025-06-14 00:13:51+00:00",
+          "division_id": 709055522,
+          "division__label": "Charlotte"
+        },
+        {
+          "id": 190552,
+          "first_name": "Wesley",
+          "last_name": "Williams",
+          "phone1": "803-409-9397",
+          "email": "mrweswilliams@aol.com",
+          "address1": "2815 Berkhamstead Cir",
+          "city": "Concord",
+          "state": "NC",
+          "zip": "28027",
+          "add_date": "2025-06-12 22:18:51+00:00",
+          "division_id": 709055522,
+          "division__label": "Charlotte"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 89.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 13,
+      "group_display_name": "Ed Knepp (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "8145923386",
+      "prospects": [
+        {
+          "id": 190662,
+          "first_name": "Ed",
+          "last_name": "Knepp",
+          "phone1": "814-592-3386",
+          "email": "8145923386@gmail.com",
+          "address1": "420 7Th Street",
+          "city": "Philipsburg",
+          "state": "PA",
+          "zip": "16866",
+          "add_date": "2025-06-14 00:13:41+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        },
+        {
+          "id": 190320,
+          "first_name": "Ed",
+          "last_name": "Knepp",
+          "phone1": "814-592-3386",
+          "email": "",
+          "address1": "420 7Th Street",
+          "city": "Philipsburg",
+          "state": "PA",
+          "zip": "16866",
+          "add_date": "2025-06-09 16:51:18+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 14,
+      "group_display_name": "Emily Breece (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "6145951138",
+      "prospects": [
+        {
+          "id": 190661,
+          "first_name": "Brooke",
+          "last_name": "Breece",
+          "phone1": "614-595-1138",
+          "email": "b96ross@gmail.com",
+          "address1": "5780 Cr-20",
+          "city": "Mount Gilead",
+          "state": "OH",
+          "zip": "43338",
+          "add_date": "2025-06-14 00:06:20+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        },
+        {
+          "id": 190427,
+          "first_name": "Emily",
+          "last_name": "Breece",
+          "phone1": "614-595-1138",
+          "email": "breeceemily@yahoo.com",
+          "address1": "5780 county road 20",
+          "city": "Mount Gilead",
+          "state": "OH",
+          "zip": "43338",
+          "add_date": "2025-06-11 04:16:29+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 80.67,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 15,
+      "group_display_name": "Travis White (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "3024827761",
+      "prospects": [
+        {
+          "id": 190658,
+          "first_name": "Travis",
+          "last_name": "White",
+          "phone1": "302-482-7761",
+          "email": "traviswhitebaritone@gmail.com",
+          "address1": "2531 Wonderland Trl",
+          "city": "Lenoir",
+          "state": "NC",
+          "zip": "28645",
+          "add_date": "2025-06-13 23:47:46+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 190335,
+          "first_name": "Travis",
+          "last_name": "White",
+          "phone1": "302-482-7761",
+          "email": "traviswhitebaritone@gmail.com",
+          "address1": "2531 Wonderland Trl",
+          "city": "Lenoir",
+          "state": "NC",
+          "zip": "28645",
+          "add_date": "2025-06-09 17:16:18+00:00",
+          "division_id": 709055522,
+          "division__label": "Charlotte"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 16,
+      "group_display_name": "Matt & Adrienne Caldwell (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "4129136254",
+      "prospects": [
+        {
+          "id": 190653,
+          "first_name": "Matt",
+          "last_name": "Caldwell",
+          "phone1": "412-913-6254",
+          "email": "caldwellms@gmail.com",
+          "address1": "7093 Leechburg Rd",
+          "city": "New Kensington",
+          "state": "PA",
+          "zip": "15068",
+          "add_date": "2025-06-13 23:46:18+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 190310,
+          "first_name": "Matt & Adrienne",
+          "last_name": "Caldwell",
+          "phone1": "412-913-6254",
+          "email": "caldwellms@gmail.com",
+          "address1": "7093 Leechburg Rd",
+          "city": "New Kensington",
+          "state": "PA",
+          "zip": "15068",
+          "add_date": "2025-06-09 16:36:17+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 80.67,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 17,
+      "group_display_name": "Steven Hazlett (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7245499173",
+      "prospects": [
+        {
+          "id": 190634,
+          "first_name": "Steven",
+          "last_name": "Hazlett",
+          "phone1": "724-549-9173",
+          "email": "7245499173@gmail.com",
+          "address1": "38 Dolly Ave",
+          "city": "Jeannette",
+          "state": "PA",
+          "zip": "15644",
+          "add_date": "2025-06-13 17:26:16+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 190372,
+          "first_name": "Steven",
+          "last_name": "Hazlett",
+          "phone1": "724-549-9173",
+          "email": "",
+          "address1": "38 Dolly Ave",
+          "city": "Jeannette",
+          "state": "PA",
+          "zip": "15644",
+          "add_date": "2025-06-09 17:51:04+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 18,
+      "group_display_name": "Nick Vecere (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "6106091701",
+      "prospects": [
+        {
+          "id": 190632,
+          "first_name": "Nick",
+          "last_name": "Vecere",
+          "phone1": "610-609-1701",
+          "email": "6106091701@gmail.com",
+          "address1": "1545 Sickles Dr",
+          "city": "Aston",
+          "state": "PA",
+          "zip": "19014",
+          "add_date": "2025-06-13 17:26:15+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 190273,
+          "first_name": "Nick",
+          "last_name": "Vecere",
+          "phone1": "610-609-1701",
+          "email": "",
+          "address1": "1545 Sickles Dr",
+          "city": "Aston",
+          "state": "PA",
+          "zip": "19014",
+          "add_date": "2025-06-09 15:46:19+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 19,
+      "group_display_name": "Dave Fevers (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7243097968",
+      "prospects": [
+        {
+          "id": 190630,
+          "first_name": "Dave",
+          "last_name": "Fevers",
+          "phone1": "724-309-7968",
+          "email": "7243097968@gmail.com",
+          "address1": "21 Miller Dr",
+          "city": "Blairsville",
+          "state": "PA",
+          "zip": "15717",
+          "add_date": "2025-06-13 17:26:13+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        },
+        {
+          "id": 190308,
+          "first_name": "Dave",
+          "last_name": "Fevers",
+          "phone1": "724-309-7968",
+          "email": "davefevers@yahoo.com",
+          "address1": "21 Miller Dr",
+          "city": "Blairsville",
+          "state": "PA",
+          "zip": "15717",
+          "add_date": "2025-06-09 16:36:16+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 20,
+      "group_display_name": "Daniel schaffa (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "2482249082",
+      "prospects": [
+        {
+          "id": 190617,
+          "first_name": "Daniel",
+          "last_name": "Schaffa",
+          "phone1": "248-224-9082",
+          "email": "2482249082@gmail.com",
+          "address1": "8009 River Rd",
+          "city": "Henrico",
+          "state": "VA",
+          "zip": "23229",
+          "add_date": "2025-06-13 17:25:50+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        },
+        {
+          "id": 190235,
+          "first_name": "Daniel",
+          "last_name": "schaffa",
+          "phone1": "248-224-9082",
+          "email": "",
+          "address1": "8009 River Rd",
+          "city": "Henrico",
+          "state": "VA",
+          "zip": "23229",
+          "add_date": "2025-06-09 15:06:05+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 21,
+      "group_display_name": "Zach Johnson (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7578141487",
+      "prospects": [
+        {
+          "id": 190615,
+          "first_name": "Zach",
+          "last_name": "Johnson",
+          "phone1": "757-814-1487",
+          "email": "johnsonzachary01@gmail.com",
+          "address1": "4788 Bishops Gate Way",
+          "city": "Provdence Frg",
+          "state": "VA",
+          "zip": "23140",
+          "add_date": "2025-06-13 17:25:47+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 190212,
+          "first_name": "Zach",
+          "last_name": "Johnson",
+          "phone1": "757-814-1487",
+          "email": "johnsonzachary01@gmail.com",
+          "address1": "4788 Bishops Gate Way",
+          "city": "Provdence Frg",
+          "state": "VA",
+          "zip": "23140",
+          "add_date": "2025-06-09 14:56:23+00:00",
+          "division_id": 709055513,
+          "division__label": "Richmond"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 22,
+      "group_display_name": "Marry luzbacher (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "4128890487",
+      "prospects": [
+        {
+          "id": 190608,
+          "first_name": "Mary",
+          "last_name": "Luxbacher",
+          "phone1": "412-889-0487",
+          "email": "4128890487@gmail.com",
+          "address1": "71 Dinsmore Ave",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15205",
+          "add_date": "2025-06-13 17:25:33+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 190286,
+          "first_name": "Marry",
+          "last_name": "luzbacher",
+          "phone1": "412-889-0487",
+          "email": "",
+          "address1": "71 Dinsmore Ave",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15205",
+          "add_date": "2025-06-09 15:56:27+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 92.67,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 23,
+      "group_display_name": "Susan Ciesielczyk (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "3303244137",
+      "prospects": [
+        {
+          "id": 190603,
+          "first_name": "Susan",
+          "last_name": "Ciesielczyk",
+          "phone1": "330-324-4137",
+          "email": "jbmczyk@yahoo.com",
+          "address1": "244 East York Street",
+          "city": "Akron",
+          "state": "OH",
+          "zip": "44310",
+          "add_date": "2025-06-13 17:25:16+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 189844,
+          "first_name": "Susan",
+          "last_name": "Ciesielczyk",
+          "phone1": "330-324-4137",
+          "email": "",
+          "address1": "244 E York St",
+          "city": "Akron",
+          "state": "OH",
+          "zip": "44310",
+          "add_date": "2025-06-08 11:46:11+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 24,
+      "group_display_name": "Tim Lester (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7033573797",
+      "prospects": [
+        {
+          "id": 190599,
+          "first_name": "Tim & Denise",
+          "last_name": "Lester",
+          "phone1": "703-357-3797",
+          "email": "tscottlestr@gmail.com",
+          "address1": "15320 Gull Court",
+          "city": "Woodbridge",
+          "state": "VA",
+          "zip": "22191",
+          "add_date": "2025-06-13 17:25:03+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 190202,
+          "first_name": "Tim",
+          "last_name": "Lester",
+          "phone1": "703-357-3797",
+          "email": "tscottlestr@gmail.com",
+          "address1": "15320 Gull Ct",
+          "city": "Woodbridge",
+          "state": "VA",
+          "zip": "22191",
+          "add_date": "2025-06-09 14:51:17+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 80.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 25,
+      "group_display_name": "dan palopoli (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7175075983",
+      "prospects": [
+        {
+          "id": 190593,
+          "first_name": "Dan",
+          "last_name": "Palopoli",
+          "phone1": "717-507-5983",
+          "email": "7175075983@gmail.com",
+          "address1": "247 Tanbark Dr",
+          "city": "Lewiston",
+          "state": "PA",
+          "zip": "17044",
+          "add_date": "2025-06-13 17:24:46+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        },
+        {
+          "id": 190324,
+          "first_name": "dan",
+          "last_name": "palopoli",
+          "phone1": "717-507-5983",
+          "email": "palopolis@gmail.com",
+          "address1": "247 Tan Bark Dr",
+          "city": "Lewistown",
+          "state": "PA",
+          "zip": "17044",
+          "add_date": "2025-06-09 16:51:19+00:00",
+          "division_id": 709055518,
+          "division__label": "Altoona"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 26,
+      "group_display_name": "ALAN NELSON (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_names": "alan_nelson",
+      "prospects": [
+        {
+          "id": 190574,
+          "first_name": "ALAN",
+          "last_name": "NELSON",
+          "phone1": "248-506-2154",
+          "email": "lisahalleck1961@gmail.com",
+          "address1": "752 E MEYERS AVE",
+          "city": "HAZEL PARK",
+          "state": "MI",
+          "zip": "48038",
+          "add_date": "2025-06-13 05:05:21+00:00",
+          "division_id": 709055525,
+          "division__label": "Detroit"
+        },
+        {
+          "id": 190558,
+          "first_name": "Alan",
+          "last_name": "Nelson",
+          "phone1": "248-692-3210",
+          "email": null,
+          "address1": "752 E Meyers Ave",
+          "city": "Hazel Park",
+          "state": "MI",
+          "zip": "48030",
+          "add_date": "2025-06-13 00:49:59+00:00",
+          "division_id": 709055525,
+          "division__label": "Detroit"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 86.67,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 27,
+      "group_display_name": "Donald Bishop (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7579127422",
+      "prospects": [
+        {
+          "id": 190544,
+          "first_name": "Donald",
+          "last_name": "Bishop",
+          "phone1": "757-912-7422",
+          "email": "7579127422@gmail.com",
+          "address1": "2204 N Mallory St",
+          "city": "Hampton",
+          "state": "VA",
+          "zip": "23664",
+          "add_date": "2025-06-12 18:15:03+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        },
+        {
+          "id": 190165,
+          "first_name": "Donald",
+          "last_name": "Bishop",
+          "phone1": "757-912-7422",
+          "email": "yukon4b@yahoo.com",
+          "address1": "2204 N Mallory St",
+          "city": "Hampton",
+          "state": "VA",
+          "zip": "23664",
+          "add_date": "2025-06-09 13:51:25+00:00",
+          "division_id": 709055510,
+          "division__label": "Tidewater"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 28,
+      "group_display_name": "Paul Stark (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7242214584",
+      "prospects": [
+        {
+          "id": 190543,
+          "first_name": "Paul",
+          "last_name": "Stark",
+          "phone1": "724-221-4584",
+          "email": "7242214584@gmail.com",
+          "address1": "37 Dolly Ave",
+          "city": "Jeannette",
+          "state": "PA",
+          "zip": "15644",
+          "add_date": "2025-06-12 18:15:02+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 190346,
+          "first_name": "Paul",
+          "last_name": "Stark",
+          "phone1": "724-221-4584",
+          "email": "",
+          "address1": "37 Dolly Ave",
+          "city": "Jeannette",
+          "state": "PA",
+          "zip": "15644",
+          "add_date": "2025-06-09 17:26:01+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 29,
+      "group_display_name": "Shelia Jones (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7407773923",
+      "prospects": [
+        {
+          "id": 190542,
+          "first_name": "Shelia",
+          "last_name": "M. Jones",
+          "phone1": "740-777-3923",
+          "email": "gumpyboy2020@gmail.com",
+          "address1": "2102 West Rushville Rd Ne",
+          "city": "Lancaster",
+          "state": "OH",
+          "zip": "43130",
+          "add_date": "2025-06-12 18:15:01+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        },
+        {
+          "id": 190425,
+          "first_name": "Shelia",
+          "last_name": "Jones",
+          "phone1": "740-777-3923",
+          "email": null,
+          "address1": "2102 west rushville rd ne",
+          "city": "Lancaster",
+          "state": "OH",
+          "zip": "43120",
+          "add_date": "2025-06-11 03:53:41+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 92.33,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 30,
+      "group_display_name": "Brent Kiser (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "5135965537",
+      "prospects": [
+        {
+          "id": 190540,
+          "first_name": "Brent",
+          "last_name": "Kiser",
+          "phone1": "513-596-5537",
+          "email": "5135965537@gmail.com",
+          "address1": "5729 Auberger Dr",
+          "city": "Fairfield",
+          "state": "OH",
+          "zip": "45014",
+          "add_date": "2025-06-12 18:14:46+00:00",
+          "division_id": 709055521,
+          "division__label": "Cincinnati"
+        },
+        {
+          "id": 190217,
+          "first_name": "Brent",
+          "last_name": "Kiser",
+          "phone1": "513-596-5537",
+          "email": "",
+          "address1": "5729 Auberger Dr",
+          "city": "Fairfield",
+          "state": "OH",
+          "zip": "45014",
+          "add_date": "2025-06-09 14:56:24+00:00",
+          "division_id": 709055521,
+          "division__label": "Cincinnati"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 31,
+      "group_display_name": "Ahmed Alshindi (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "5139729793",
+      "prospects": [
+        {
+          "id": 190538,
+          "first_name": "Ahmed",
+          "last_name": "Alshindi",
+          "phone1": "513-972-9793",
+          "email": "5139729793@gmail.com",
+          "address1": "3271 Orangeburg Ct",
+          "city": "Cincinnati",
+          "state": "OH",
+          "zip": "45251",
+          "add_date": "2025-06-12 17:26:51+00:00",
+          "division_id": 709055521,
+          "division__label": "Cincinnati"
+        },
+        {
+          "id": 190220,
+          "first_name": "Ahmed",
+          "last_name": "Alshindi",
+          "phone1": "513-972-9793",
+          "email": "",
+          "address1": "3271 Orangeburg Ct",
+          "city": "Cincinnati",
+          "state": "OH",
+          "zip": "45251",
+          "add_date": "2025-06-09 14:56:26+00:00",
+          "division_id": 709055521,
+          "division__label": "Cincinnati"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 32,
+      "group_display_name": "Doug Yarabinetz (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "4129530911",
+      "prospects": [
+        {
+          "id": 190529,
+          "first_name": "Doog",
+          "last_name": "Yarabinetz",
+          "phone1": "412-953-0911",
+          "email": "yarby40@gmail.com",
+          "address1": "5069 Northlawn Circle",
+          "city": "Murrysville",
+          "state": "PA",
+          "zip": "15668",
+          "add_date": "2025-06-12 14:29:41+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 190271,
+          "first_name": "Doug",
+          "last_name": "Yarabinetz",
+          "phone1": "412-953-0911",
+          "email": "yarby40@gmail.com",
+          "address1": "5079 Northlawn Cir",
+          "city": "Murrysville",
+          "state": "PA",
+          "zip": "15668",
+          "add_date": "2025-06-09 15:46:18+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 91.67,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 33,
+      "group_display_name": "Jennifer Clark (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7242170930",
+      "prospects": [
+        {
+          "id": 190528,
+          "first_name": "Frank",
+          "last_name": "Clark",
+          "phone1": "724-217-0930",
+          "email": "7242170930@gmail.com",
+          "address1": "12 Dolly Ave",
+          "city": "Jeannette",
+          "state": "PA",
+          "zip": "15644",
+          "add_date": "2025-06-12 14:29:34+00:00",
+          "division_id": 709055516,
+          "division__label": "Long Island"
+        },
+        {
+          "id": 190394,
+          "first_name": "Jennifer",
+          "last_name": "Clark",
+          "phone1": "724-217-0930",
+          "email": "",
+          "address1": "12 Dolly Ave",
+          "city": "Jeannette",
+          "state": "PA",
+          "zip": "15644",
+          "add_date": "2025-06-09 19:26:09+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 83.67,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 34,
+      "group_display_name": "George Risser (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "2236661751",
+      "prospects": [
+        {
+          "id": 190521,
+          "first_name": "George",
+          "last_name": "Risser",
+          "phone1": "223-666-1751",
+          "email": "2236661751@gmail.com",
+          "address1": "207 Adelia St",
+          "city": "Middletown",
+          "state": "PA",
+          "zip": "17057",
+          "add_date": "2025-06-12 14:19:32+00:00",
+          "division_id": 709055519,
+          "division__label": "Harrisburg"
+        },
+        {
+          "id": 190351,
+          "first_name": "George",
+          "last_name": "Risser",
+          "phone1": "223-666-1751",
+          "email": "",
+          "address1": "207 Adelia St",
+          "city": "Middletown",
+          "state": "PA",
+          "zip": "17057",
+          "add_date": "2025-06-09 17:31:18+00:00",
+          "division_id": 709055519,
+          "division__label": "Harrisburg"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 35,
+      "group_display_name": "Gilbert Velez (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7323767047",
+      "prospects": [
+        {
+          "id": 190518,
+          "first_name": "Gilbert",
+          "last_name": "Velez",
+          "phone1": "732-376-7047",
+          "email": "7323767047@gmail.com",
+          "address1": "313 Oak Ave",
+          "city": "Woodbridge",
+          "state": "NJ",
+          "zip": "07095",
+          "add_date": "2025-06-12 14:19:30+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        },
+        {
+          "id": 190319,
+          "first_name": "Gilbert",
+          "last_name": "Velez",
+          "phone1": "732-376-7047",
+          "email": "",
+          "address1": "313 Oak Ave",
+          "city": "Woodbridge",
+          "state": "NJ",
+          "zip": "07095",
+          "add_date": "2025-06-09 16:51:17+00:00",
+          "division_id": 709055501,
+          "division__label": "New Jersey"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 36,
+      "group_display_name": "Achmad Siregar (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "8622168734",
+      "prospects": [
+        {
+          "id": 190517,
+          "first_name": "Achmad",
+          "last_name": "Siregar",
+          "phone1": "862-216-8734",
+          "email": "8622168734@gmail.com",
+          "address1": "921 Hetrick Ave",
+          "city": "Palmyra",
+          "state": "PA",
+          "zip": "17078",
+          "add_date": "2025-06-12 14:19:30+00:00",
+          "division_id": 709055519,
+          "division__label": "Harrisburg"
+        },
+        {
+          "id": 190363,
+          "first_name": "Achmad",
+          "last_name": "Siregar",
+          "phone1": "862-216-8734",
+          "email": "",
+          "address1": "921 Hetrick Ave",
+          "city": "Palmyra",
+          "state": "PA",
+          "zip": "17078",
+          "add_date": "2025-06-09 17:36:12+00:00",
+          "division_id": 709055519,
+          "division__label": "Harrisburg"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 37,
+      "group_display_name": "Deron Scott (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "5712330947",
+      "prospects": [
+        {
+          "id": 190508,
+          "first_name": "Deron",
+          "last_name": "Scott",
+          "phone1": "571-233-0947",
+          "email": "5712330947@gmail.com",
+          "address1": "106 Star Fort Dr",
+          "city": "Winchester",
+          "state": "VA",
+          "zip": "22601",
+          "add_date": "2025-06-12 14:09:13+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        },
+        {
+          "id": 190157,
+          "first_name": "Deron",
+          "last_name": "Scott",
+          "phone1": "571-233-0947",
+          "email": "",
+          "address1": "106 Star Fort Dr",
+          "city": "Winchester",
+          "state": "VA",
+          "zip": "22601",
+          "add_date": "2025-06-09 13:36:31+00:00",
+          "division_id": 709055460,
+          "division__label": "Mid-Atlantic"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 38,
+      "group_display_name": "Nancy Harris (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "3303470522",
+      "prospects": [
+        {
+          "id": 190473,
+          "first_name": "Nancy",
+          "last_name": "Harris",
+          "phone1": "330-347-0522",
+          "email": "3303470522@gmail.com",
+          "address1": "922 Marilyn Dr",
+          "city": "Wooster",
+          "state": "OH",
+          "zip": "44691",
+          "add_date": "2025-06-12 01:10:17+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 189946,
+          "first_name": "Nancy",
+          "last_name": "Harris",
+          "phone1": "330-347-0522",
+          "email": "",
+          "address1": "922 Marilyn Dr",
+          "city": "Wooster",
+          "state": "OH",
+          "zip": "44691",
+          "add_date": "2025-06-08 17:01:12+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 39,
+      "group_display_name": "Debbie Higgins (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "3145413137",
+      "prospects": [
+        {
+          "id": 190448,
+          "first_name": "Debbie",
+          "last_name": "Higgins",
+          "phone1": "314-541-3137",
+          "email": "debbie@carsonstrong.org",
+          "address1": "3004 Preakness Dr",
+          "city": "Stow",
+          "state": "OH",
+          "zip": "44224",
+          "add_date": "2025-06-11 23:13:02+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        },
+        {
+          "id": 190447,
+          "first_name": "Debbie",
+          "last_name": "Higgins",
+          "phone1": "314-541-3137",
+          "email": null,
+          "address1": "3004 Preakness Dr",
+          "city": "Stow",
+          "state": "OH",
+          "zip": "44224",
+          "add_date": "2025-06-11 23:07:06+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 40,
+      "group_display_name": "Angela Price (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_names": "angela_price",
+      "prospects": [
+        {
+          "id": 190441,
+          "first_name": "Angela",
+          "last_name": "Price",
+          "phone1": "614-449-9616",
+          "email": "aprice1622@yahoo.com",
+          "address1": "1622 Oakwood Avenue",
+          "city": "Columbus",
+          "state": "OH",
+          "zip": "43207",
+          "add_date": "2025-06-11 21:04:03+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        },
+        {
+          "id": 190432,
+          "first_name": "Angela",
+          "last_name": "Price",
+          "phone1": "614-989-6356",
+          "email": "aprice1622@yahoo.com",
+          "address1": "1622 Oakwood ave",
+          "city": "Columbus",
+          "state": "OH",
+          "zip": "43207",
+          "add_date": "2025-06-11 18:21:27+00:00",
+          "division_id": 709055515,
+          "division__label": "Columbus"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 90.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 41,
+      "group_display_name": "Cassandra L Swann (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "4122775057",
+      "prospects": [
+        {
+          "id": 190421,
+          "first_name": "Sandy",
+          "last_name": "Swann",
+          "phone1": "412-277-5057",
+          "email": "swancl@upmc.edu",
+          "address1": "1132 Downlook St",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15201",
+          "add_date": "2025-06-11 02:34:36+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 190254,
+          "first_name": "Cassandra",
+          "last_name": "L Swann",
+          "phone1": "412-277-5057",
+          "email": "swancl@upmc.edu",
+          "address1": "1132 Downlook Street",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15201",
+          "add_date": "2025-06-09 15:21:16+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 80.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 42,
+      "group_display_name": "Ronald Reese (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "6109748970",
+      "prospects": [
+        {
+          "id": 190420,
+          "first_name": "Ronald",
+          "last_name": "Reese",
+          "phone1": "610-974-8970",
+          "email": "6109748970@gmail.com",
+          "address1": "529 Frederick St",
+          "city": "Fountain Hill",
+          "state": "PA",
+          "zip": "18015",
+          "add_date": "2025-06-11 02:32:42+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 190203,
+          "first_name": "Ronald",
+          "last_name": "Reese",
+          "phone1": "610-974-8970",
+          "email": "",
+          "address1": "529 Frederick St",
+          "city": "Fountain Hill",
+          "state": "PA",
+          "zip": "18015",
+          "add_date": "2025-06-09 14:51:17+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 43,
+      "group_display_name": "Lisa and James Lyons (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7246894321",
+      "prospects": [
+        {
+          "id": 190417,
+          "first_name": "Lisa",
+          "last_name": "Lyons",
+          "phone1": "724-689-4321",
+          "email": "7246894321@gmail.com",
+          "address1": "9 Dell Ave",
+          "city": "Jeannette",
+          "state": "PA",
+          "zip": "15644",
+          "add_date": "2025-06-11 02:15:16+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        },
+        {
+          "id": 190194,
+          "first_name": "Lisa and James",
+          "last_name": "Lyons",
+          "phone1": "724-689-4321",
+          "email": "",
+          "address1": "9 Dell Ave",
+          "city": "Jeannette",
+          "state": "PA",
+          "zip": "15644",
+          "add_date": "2025-06-09 14:41:20+00:00",
+          "division_id": 709055503,
+          "division__label": "Pittsburgh"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 81.33,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 44,
+      "group_display_name": "Miguel (Mickey) Carr (Carrasquillo) (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "4843301153",
+      "prospects": [
+        {
+          "id": 190412,
+          "first_name": "Mickey",
+          "last_name": "Carr",
+          "phone1": "484-330-1153",
+          "email": "mmickey5j@gmail.com",
+          "address1": "W Greenleaf St",
+          "city": "Allentown",
+          "state": "PA",
+          "zip": "18102",
+          "add_date": "2025-06-10 17:27:38+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 190052,
+          "first_name": "Miguel (Mickey)",
+          "last_name": "Carr (Carrasquillo)",
+          "phone1": "484-330-1153",
+          "email": "mmickey5j@gmail.com",
+          "address1": "837 W Greenleaf St",
+          "city": "Allentown",
+          "state": "PA",
+          "zip": "18102",
+          "add_date": "2025-06-09 08:34:32+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 81.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 45,
+      "group_display_name": "edwin rivria (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "6105153889",
+      "prospects": [
+        {
+          "id": 190410,
+          "first_name": "Edwin",
+          "last_name": "Rivera",
+          "phone1": "610-515-3889",
+          "email": "6105153889@gmail.com",
+          "address1": "568 S Benner Ave",
+          "city": "Bethlehem",
+          "state": "PA",
+          "zip": "18015",
+          "add_date": "2025-06-10 15:38:01+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 190128,
+          "first_name": "edwin",
+          "last_name": "rivria",
+          "phone1": "610-515-3889",
+          "email": "",
+          "address1": "568 S Benner Ave",
+          "city": "Bethlehem",
+          "state": "PA",
+          "zip": "18015",
+          "add_date": "2025-06-09 12:54:29+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 94.33,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 46,
+      "group_display_name": "George Tann (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "9376302323",
+      "prospects": [
+        {
+          "id": 190408,
+          "first_name": "George",
+          "last_name": "Tann",
+          "phone1": "937-630-2323",
+          "email": "tanngeorge289@gmail.com",
+          "address1": "103 Victory Dr",
+          "city": "Dayton",
+          "state": "OH",
+          "zip": "45417",
+          "add_date": "2025-06-10 15:37:41+00:00",
+          "division_id": 709055521,
+          "division__label": "Cincinnati"
+        },
+        {
+          "id": 190357,
+          "first_name": "George",
+          "last_name": "Tann",
+          "phone1": "937-630-2323",
+          "email": "",
+          "address1": "103 Victory Dr",
+          "city": "Dayton",
+          "state": "OH",
+          "zip": "45417",
+          "add_date": "2025-06-09 17:31:20+00:00",
+          "division_id": 709055521,
+          "division__label": "Cincinnati"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 47,
+      "group_display_name": "Tom Leighton (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7348555285",
+      "prospects": [
+        {
+          "id": 190350,
+          "first_name": "Tom",
+          "last_name": "Leighton",
+          "phone1": "734-855-5285",
+          "email": null,
+          "address1": "12125 Hines Ct",
+          "city": "Plymouth",
+          "state": "MI",
+          "zip": "48170",
+          "add_date": "2025-06-10 00:30:50+00:00",
+          "division_id": 709055525,
+          "division__label": "Detroit"
+        },
+        {
+          "id": 190352,
+          "first_name": "Tom",
+          "last_name": "Leighton",
+          "phone1": "734-855-5285",
+          "email": "lordleighton58@gmail.com",
+          "address1": "12125 Hines Ct",
+          "city": "Plymouth",
+          "state": "MI",
+          "zip": "48170",
+          "add_date": "2025-06-09 17:31:19+00:00",
+          "division_id": 709055525,
+          "division__label": "Detroit"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 48,
+      "group_display_name": "Deborah Kostecki (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "2168708843",
+      "prospects": [
+        {
+          "id": 190302,
+          "first_name": "Debbie",
+          "last_name": "Kostecki",
+          "phone1": "216-870-8843",
+          "email": "dkostecki1955@gmail.com",
+          "address1": "6163 Zehman Dr",
+          "city": "Brookpark",
+          "state": "OH",
+          "zip": "44142",
+          "add_date": "2025-06-09 16:26:22+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 190187,
+          "first_name": "Deborah",
+          "last_name": "Kostecki",
+          "phone1": "216-870-8843",
+          "email": "dkostecki1955@gmail.com",
+          "address1": "7312 Ivandale Independence",
+          "city": "Independence",
+          "state": "OH",
+          "zip": "44131",
+          "add_date": "2025-06-09 14:32:53+00:00",
+          "division_id": 709055511,
+          "division__label": "Cleveland"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 82.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 49,
+      "group_display_name": "Patricia Ayers (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "7327402758",
+      "prospects": [
+        {
+          "id": 190241,
+          "first_name": "Patricia",
+          "last_name": "Ayers",
+          "phone1": "732-740-2758",
+          "email": "",
+          "address1": "1610 Leslie Street",
+          "city": "Wall Township",
+          "state": "NJ",
+          "zip": "07719",
+          "add_date": "2025-06-09 15:06:23+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 190232,
+          "first_name": "Patricia",
+          "last_name": "Ayers",
+          "phone1": "732-740-2758",
+          "email": "",
+          "address1": "1610 Leslie Street",
+          "city": "Wall Township",
+          "state": "NJ",
+          "zip": "07719",
+          "add_date": "2025-06-09 15:06:04+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    },
+    {
+      "group_id": 50,
+      "group_display_name": "Alfonse Sibilia (2 duplicates)",
+      "total_duplicates": 2,
+      "matching_phone": "9089669983",
+      "prospects": [
+        {
+          "id": 190240,
+          "first_name": "Alfonse",
+          "last_name": "Sibilia",
+          "phone1": "908-966-9983",
+          "email": "",
+          "address1": "2206 Shore Dr",
+          "city": "Wall Township",
+          "state": "NJ",
+          "zip": "07719",
+          "add_date": "2025-06-09 15:06:22+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        },
+        {
+          "id": 190231,
+          "first_name": "Alfonse",
+          "last_name": "Sibilia",
+          "phone1": "908-966-9983",
+          "email": "",
+          "address1": "2206 Shore Dr",
+          "city": "Wall Township",
+          "state": "NJ",
+          "zip": "07719",
+          "add_date": "2025-06-09 15:06:04+00:00",
+          "division_id": 709055461,
+          "division__label": "Philadelphia"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "comprehensive_similarity_analysis",
+        "average_similarity_score": 100.0,
+        "fields_analyzed": [
+          "first_name",
+          "last_name",
+          "phone1",
+          "email",
+          "address1",
+          "city",
+          "state",
+          "zip"
+        ]
+      }
+    }
+  ]
+}

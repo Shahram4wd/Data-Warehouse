@@ -1,0 +1,515 @@
+{
+  "report_type": "duplicated_genius_prospects",
+  "generated_at": "2025-06-27T01:10:41.184253",
+  "parameters": {
+    "similarity_threshold": 80,
+    "total_prospects_analyzed": 1000,
+    "fields_compared": [
+      "first_name",
+      "last_name",
+      "phone1"
+    ],
+    "limit_used": 1000
+  },
+  "summary": {
+    "total_duplicate_groups": 13,
+    "total_duplicate_prospects": 27,
+    "percentage_duplicates": 2.7
+  },
+  "duplicate_groups": [
+    {
+      "group_id": 1,
+      "total_duplicates": 2,
+      "matching_phone": "2016734065",
+      "prospects": [
+        {
+          "id": 152669,
+          "first_name": "Carmen & Edgardo",
+          "last_name": "Aguero",
+          "phone1": "201-673-4065",
+          "email": "aguerocarmen123@aol.com",
+          "address1": "86 Graham St",
+          "city": "Jersey City",
+          "state": "NJ",
+          "zip": "07307",
+          "division_id": 709055501,
+          "add_date": "2025-02-09 12:01:33+00:00"
+        },
+        {
+          "id": 152668,
+          "first_name": "Carmen & Edgardo",
+          "last_name": "Aguero",
+          "phone1": "201-673-4065",
+          "email": "aguerocarmen123@aol.com",
+          "address1": "86 Graham St",
+          "city": "Jersey City",
+          "state": "NJ",
+          "zip": "07307",
+          "division_id": 709055501,
+          "add_date": "2025-02-09 12:01:00+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 2,
+      "total_duplicates": 2,
+      "matching_phone": "6315786532",
+      "prospects": [
+        {
+          "id": 152625,
+          "first_name": "Peter",
+          "last_name": "Murphy",
+          "phone1": "631-578-6532",
+          "email": "petemurphy936@gmail.com",
+          "address1": "936 4th Ave",
+          "city": "Neptune",
+          "state": "NJ",
+          "zip": "07753",
+          "division_id": 709055461,
+          "add_date": "2025-02-09 08:10:55+00:00"
+        },
+        {
+          "id": 152622,
+          "first_name": "Peter",
+          "last_name": "Murphy",
+          "phone1": "631-578-6532",
+          "email": "petemurphy936@gmail.com",
+          "address1": "936 4th Ave",
+          "city": "Neptune City",
+          "state": "NJ",
+          "zip": "07753",
+          "division_id": 709055501,
+          "add_date": "2025-02-09 07:55:48+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 3,
+      "total_duplicates": 2,
+      "matching_phone": "8043398090",
+      "prospects": [
+        {
+          "id": 152585,
+          "first_name": "Albert",
+          "last_name": "Little",
+          "phone1": "804-339-8090",
+          "email": "albertlittle05@gmail.com",
+          "address1": "7407 Jericho Rd",
+          "city": "Ruther Glen",
+          "state": "VA",
+          "zip": "22546",
+          "division_id": 709055513,
+          "add_date": "2025-02-08 15:20:54+00:00"
+        },
+        {
+          "id": 152581,
+          "first_name": "Albert",
+          "last_name": "Little",
+          "phone1": "804-339-8090",
+          "email": "albertlittle05@gmail.com",
+          "address1": "7407 Jericho Rd",
+          "city": "Ruther Glen",
+          "state": "VA",
+          "zip": "22546",
+          "division_id": 709055513,
+          "add_date": "2025-02-08 15:20:20+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 4,
+      "total_duplicates": 2,
+      "matching_phone": "8043709320",
+      "prospects": [
+        {
+          "id": 152586,
+          "first_name": "Terry",
+          "last_name": "Moore",
+          "phone1": "804-370-9320",
+          "email": "",
+          "address1": "14190 Nash Ln",
+          "city": "Glen Allen",
+          "state": "VA",
+          "zip": "23059",
+          "division_id": 709055513,
+          "add_date": "2025-02-08 15:20:54+00:00"
+        },
+        {
+          "id": 152582,
+          "first_name": "Terry",
+          "last_name": "Moore",
+          "phone1": "804-370-9320",
+          "email": "",
+          "address1": "14190 Nash Ln",
+          "city": "Glen Allen",
+          "state": "VA",
+          "zip": "23059",
+          "division_id": 709055513,
+          "add_date": "2025-02-08 15:20:20+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 5,
+      "total_duplicates": 2,
+      "matching_phone": "6102910798",
+      "prospects": [
+        {
+          "id": 152575,
+          "first_name": "Judith",
+          "last_name": "Profeto",
+          "phone1": "610-291-0798",
+          "email": "judith_profeto@comcast.net",
+          "address1": "5 Polsikna Ln",
+          "city": "Glenmoore",
+          "state": "PA",
+          "zip": "19343",
+          "division_id": 709055461,
+          "add_date": "2025-02-08 14:15:58+00:00"
+        },
+        {
+          "id": 152574,
+          "first_name": "Judith",
+          "last_name": "Profeto",
+          "phone1": "610-291-0798",
+          "email": "judith_profeto@comcast.net",
+          "address1": "5 Polsikna Ln",
+          "city": "Glenmoore",
+          "state": "PA",
+          "zip": "19343",
+          "division_id": 709055461,
+          "add_date": "2025-02-08 14:10:44+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 6,
+      "total_duplicates": 2,
+      "matching_phone": "4129779904",
+      "prospects": [
+        {
+          "id": 152398,
+          "first_name": "Bill",
+          "last_name": "Porter",
+          "phone1": "412-977-9904",
+          "email": "",
+          "address1": "1460 McFarland Rd",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15216",
+          "division_id": 709055503,
+          "add_date": "2025-02-07 15:25:58+00:00"
+        },
+        {
+          "id": 152393,
+          "first_name": "Bill",
+          "last_name": "Porter",
+          "phone1": "412-977-9904",
+          "email": "",
+          "address1": "1460 McFarland Rd",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15216",
+          "division_id": 709055503,
+          "add_date": "2025-02-07 15:25:53+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 7,
+      "total_duplicates": 2,
+      "matching_phone": "2166501688",
+      "prospects": [
+        {
+          "id": 152124,
+          "first_name": "Anthony",
+          "last_name": "Stokes",
+          "phone1": "216-650-1688",
+          "email": "",
+          "address1": "13521 Highlandview Ave",
+          "city": "Cleveland",
+          "state": "OH",
+          "zip": "44135",
+          "division_id": 709055511,
+          "add_date": "2025-02-06 11:41:02+00:00"
+        },
+        {
+          "id": 152119,
+          "first_name": "Anthony",
+          "last_name": "Stokes",
+          "phone1": "216-650-1688",
+          "email": "",
+          "address1": "13521 Highlandview Ave",
+          "city": "Cleveland",
+          "state": "OH",
+          "zip": "44135",
+          "division_id": 709055511,
+          "add_date": "2025-02-06 11:40:12+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 8,
+      "total_duplicates": 2,
+      "matching_phone": "4124144994",
+      "prospects": [
+        {
+          "id": 152125,
+          "first_name": "Cheryl",
+          "last_name": "Luffy",
+          "phone1": "412-414-4994",
+          "email": "luffy5@verizon.net",
+          "address1": "5621 Cross Street",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15236",
+          "division_id": 709055503,
+          "add_date": "2025-02-06 11:41:02+00:00"
+        },
+        {
+          "id": 152120,
+          "first_name": "Cheryl",
+          "last_name": "Luffy",
+          "phone1": "412-414-4994",
+          "email": "luffy5@verizon.net",
+          "address1": "5621 Cross Street",
+          "city": "Pittsburgh",
+          "state": "PA",
+          "zip": "15236",
+          "division_id": 709055503,
+          "add_date": "2025-02-06 11:40:12+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 9,
+      "total_duplicates": 2,
+      "matching_phone": "2403830584",
+      "prospects": [
+        {
+          "id": 152077,
+          "first_name": "Charles",
+          "last_name": "Pratt",
+          "phone1": "240-383-0584",
+          "email": "cprattrmz@gmail.com",
+          "address1": "9500 Bent Creek Pl",
+          "city": "Upper Marlboro",
+          "state": "MD",
+          "zip": "20772",
+          "division_id": 709055460,
+          "add_date": "2025-02-06 08:30:29+00:00"
+        },
+        {
+          "id": 152076,
+          "first_name": "Charles",
+          "last_name": "Pratt",
+          "phone1": "240-383-0584",
+          "email": "cprattrmz@gmail.com",
+          "address1": "9500 Bent Creek Pl",
+          "city": "Upper Marlboro",
+          "state": "MD",
+          "zip": "20772",
+          "division_id": 709055460,
+          "add_date": "2025-02-06 08:30:18+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 10,
+      "total_duplicates": 3,
+      "matching_phone": "2679185123",
+      "prospects": [
+        {
+          "id": 152066,
+          "first_name": "Alfreda",
+          "last_name": "Moore",
+          "phone1": "267-918-5123",
+          "email": "alfredamoore6038@gmail.com",
+          "address1": "7558 Sherwood Rd",
+          "city": "Philadelphia",
+          "state": "PA",
+          "zip": "19151",
+          "division_id": 709055461,
+          "add_date": "2025-02-06 07:25:01+00:00"
+        },
+        {
+          "id": 152064,
+          "first_name": "Alfreda",
+          "last_name": "Moore",
+          "phone1": "267-918-5123",
+          "email": "alfredamoore6038@gmail.com",
+          "address1": "7558 Sherwood Rd",
+          "city": "Philadelphia",
+          "state": "PA",
+          "zip": "19151",
+          "division_id": 709055461,
+          "add_date": "2025-02-06 07:24:24+00:00"
+        },
+        {
+          "id": 152063,
+          "first_name": "Alfreda",
+          "last_name": "Moore",
+          "phone1": "267-918-5123",
+          "email": "alfredamoore6038@gmail.com",
+          "address1": "7558 Sherwood Rd",
+          "city": "Philadelphia",
+          "state": "PA",
+          "zip": "19151",
+          "division_id": 709055461,
+          "add_date": "2025-02-06 07:21:33+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 11,
+      "total_duplicates": 2,
+      "matching_phone": "2165488761",
+      "prospects": [
+        {
+          "id": 152050,
+          "first_name": "Latasha",
+          "last_name": "Williams",
+          "phone1": "216-548-8761",
+          "email": "LWILLIAMS9792@SBCGLOBAL.NET",
+          "address1": "13635 Rybak Ave",
+          "city": "Cleveland",
+          "state": "OH",
+          "zip": "44125",
+          "division_id": 709055511,
+          "add_date": "2025-02-06 06:11:07+00:00"
+        },
+        {
+          "id": 151635,
+          "first_name": "Latasha",
+          "last_name": "Williams",
+          "phone1": "216-548-8761",
+          "email": "Lwilliams9792@sbcglobal.net",
+          "address1": "13635 Rybak Ave",
+          "city": "Maple Heights",
+          "state": "OH",
+          "zip": "44137",
+          "division_id": 709055460,
+          "add_date": "2025-02-03 10:06:06+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 12,
+      "total_duplicates": 2,
+      "matching_phone": "6145792401",
+      "prospects": [
+        {
+          "id": 152037,
+          "first_name": "Matthew",
+          "last_name": "Reed",
+          "phone1": "614-579-2401",
+          "email": "",
+          "address1": "107 S Westmoor ave",
+          "city": "Columbus",
+          "state": "OH",
+          "zip": "43204",
+          "division_id": 709055515,
+          "add_date": "2025-02-05 22:16:01+00:00"
+        },
+        {
+          "id": 152039,
+          "first_name": "Matthew",
+          "last_name": "Reed",
+          "phone1": "614-579-2401",
+          "email": "",
+          "address1": "107 S Westmoor ave",
+          "city": "Columbus",
+          "state": "OH",
+          "zip": "43204",
+          "division_id": 709055515,
+          "add_date": "2025-02-05 22:16:01+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 13,
+      "total_duplicates": 2,
+      "matching_phone": "7323304035",
+      "prospects": [
+        {
+          "id": 152008,
+          "first_name": "Thomas",
+          "last_name": "Long",
+          "phone1": "732-330-4035",
+          "email": "",
+          "address1": "20 Moorage Ave",
+          "city": "Bayville",
+          "state": "NJ",
+          "zip": "08721",
+          "division_id": 709055461,
+          "add_date": "2025-02-05 14:41:01+00:00"
+        },
+        {
+          "id": 152004,
+          "first_name": "Thomas",
+          "last_name": "Long",
+          "phone1": "732-330-4035",
+          "email": "",
+          "address1": "20 Moorage Ave",
+          "city": "Bayville",
+          "state": "NJ",
+          "zip": "08721",
+          "division_id": 709055461,
+          "add_date": "2025-02-05 14:40:28+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    }
+  ]
+}

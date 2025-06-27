@@ -1,0 +1,354 @@
+{
+  "report_type": "duplicated_genius_prospects",
+  "generated_at": "2025-06-27T00:18:15.286759",
+  "parameters": {
+    "similarity_threshold": 80,
+    "total_prospects_analyzed": 1000,
+    "fields_compared": [
+      "first_name",
+      "last_name",
+      "phone1"
+    ],
+    "limit_used": 1000
+  },
+  "summary": {
+    "total_duplicate_groups": 9,
+    "total_duplicate_prospects": 18,
+    "percentage_duplicates": 1.8
+  },
+  "duplicate_groups": [
+    {
+      "group_id": 1,
+      "total_duplicates": 2,
+      "matching_phone": "2024154849",
+      "prospects": [
+        {
+          "id": 131908,
+          "first_name": "Jeffrey",
+          "last_name": "Luke",
+          "phone1": "202-415-4849",
+          "email": "",
+          "address1": "10712 Huntley Ave",
+          "city": "Silver Spring",
+          "state": "MD",
+          "zip": "20902",
+          "division_id": 709055503,
+          "add_date": "2024-09-26 17:21:06+00:00"
+        },
+        {
+          "id": 131968,
+          "first_name": "Jeffrey",
+          "last_name": "Luke",
+          "phone1": "202-415-4849",
+          "email": "",
+          "address1": "10712 Huntley Ave",
+          "city": "Silver Spring",
+          "state": "MD",
+          "zip": "20902",
+          "division_id": 709055460,
+          "add_date": "2024-09-27 10:41:07+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 2,
+      "total_duplicates": 2,
+      "matching_phone": "7576679945",
+      "prospects": [
+        {
+          "id": 131942,
+          "first_name": "John",
+          "last_name": "Walker",
+          "phone1": "757-667-9945",
+          "email": "walkerjohn3@yahoo.com",
+          "address1": "2024 Mill Lake Rd",
+          "city": "Suffolk",
+          "state": "VA",
+          "zip": "23434",
+          "division_id": 709055460,
+          "add_date": "2024-09-27 07:40:39+00:00"
+        },
+        {
+          "id": 131943,
+          "first_name": "John",
+          "last_name": "Walker",
+          "phone1": "757-667-9945",
+          "email": "walkerjohn3@yahoo.com",
+          "address1": "2024 Mill Lake Rd",
+          "city": "Suffolk",
+          "state": "VA",
+          "zip": "23434",
+          "division_id": 709055510,
+          "add_date": "2024-09-27 07:51:00+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 3,
+      "total_duplicates": 2,
+      "matching_phone": "8045016684",
+      "prospects": [
+        {
+          "id": 132156,
+          "first_name": "Matt",
+          "last_name": "Douglas",
+          "phone1": "804-501-6684",
+          "email": "douglasmatt2001@yahoo.com",
+          "address1": "7600 Gallant Fox Ct",
+          "city": "Midlothian",
+          "state": "VA",
+          "zip": "23112",
+          "division_id": 709055460,
+          "add_date": "2024-09-28 10:20:24+00:00"
+        },
+        {
+          "id": 132218,
+          "first_name": "Matt",
+          "last_name": "Douglas",
+          "phone1": "804-501-6684",
+          "email": "douglasmatt2001@yahoo.com",
+          "address1": "7600 Gallant Fox Ct",
+          "city": "Midlothian",
+          "state": "VA",
+          "zip": "23112",
+          "division_id": 709055513,
+          "add_date": "2024-09-28 17:45:46+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 4,
+      "total_duplicates": 2,
+      "matching_phone": "7576460708",
+      "prospects": [
+        {
+          "id": 131922,
+          "first_name": "Daniel ",
+          "last_name": "Reukauf",
+          "phone1": "757-646-0708",
+          "email": "dreuk123@yahoo.com",
+          "address1": "2521 Back Acres Rd",
+          "city": "Virginia Beach ",
+          "state": "VA",
+          "zip": "23454",
+          "division_id": 709055510,
+          "add_date": "2024-09-26 18:26:17+00:00"
+        },
+        {
+          "id": 131973,
+          "first_name": "Daniel ",
+          "last_name": "Reukauf",
+          "phone1": "757-646-0708",
+          "email": "dreuk123@yahoo.com",
+          "address1": "2523 Back Acres Rd",
+          "city": "Virginia Beach ",
+          "state": "VA",
+          "zip": "23454",
+          "division_id": 709055510,
+          "add_date": "2024-09-27 11:28:50+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 5,
+      "total_duplicates": 2,
+      "matching_phone": "6143549164",
+      "prospects": [
+        {
+          "id": 150939,
+          "first_name": "Ryan",
+          "last_name": "Deloach",
+          "phone1": "614-354-9164",
+          "email": "ryandeloach86@yahoo.com",
+          "address1": "1244 Missouri Ave",
+          "city": "Logan",
+          "state": "OH",
+          "zip": "43138",
+          "division_id": 709055460,
+          "add_date": "2025-01-30 08:20:55+00:00"
+        },
+        {
+          "id": 151054,
+          "first_name": "Ryan",
+          "last_name": "Deloach",
+          "phone1": "614-354-9164",
+          "email": "ryandeloach86@yahoo.com",
+          "address1": "1244 Missouri Ave",
+          "city": "Logan",
+          "state": "OH",
+          "zip": "43138",
+          "division_id": 709055515,
+          "add_date": "2025-01-31 09:26:09+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 6,
+      "total_duplicates": 2,
+      "matching_phone": "7173278477",
+      "prospects": [
+        {
+          "id": 150959,
+          "first_name": "Maurice",
+          "last_name": "Lester",
+          "phone1": "717-327-8477",
+          "email": "",
+          "address1": "721 Hershey Ave",
+          "city": "Lancaster",
+          "state": "PA",
+          "zip": "17603",
+          "division_id": 709055461,
+          "add_date": "2025-01-30 12:06:04+00:00"
+        },
+        {
+          "id": 151164,
+          "first_name": "Maurice",
+          "last_name": "Lester",
+          "phone1": "717-327-8477",
+          "email": "",
+          "address1": "721 Hershey Ave",
+          "city": "Lancaster",
+          "state": "PA",
+          "zip": "17603",
+          "division_id": 709055519,
+          "add_date": "2025-02-01 07:40:55+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 7,
+      "total_duplicates": 2,
+      "matching_phone": "2153752121",
+      "prospects": [
+        {
+          "id": 151063,
+          "first_name": "marilyn",
+          "last_name": "cieger",
+          "phone1": "215-375-2121",
+          "email": "",
+          "address1": "4251 Boone St",
+          "city": "Philadelphia",
+          "state": "PA",
+          "zip": "19128",
+          "division_id": 709055461,
+          "add_date": "2025-01-31 11:25:48+00:00"
+        },
+        {
+          "id": 151064,
+          "first_name": "marilyn",
+          "last_name": "cieger",
+          "phone1": "215-375-2121",
+          "email": "",
+          "address1": "4251 Boone St",
+          "city": "Philadelphia",
+          "state": "PA",
+          "zip": "19128",
+          "division_id": 709055461,
+          "add_date": "2025-01-31 11:25:57+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 8,
+      "total_duplicates": 2,
+      "matching_phone": "6096058466",
+      "prospects": [
+        {
+          "id": 151184,
+          "first_name": "Andrew",
+          "last_name": "Howarth",
+          "phone1": "609-605-8466",
+          "email": "ahowarth930@gmail.com",
+          "address1": "5 Monroe Ct",
+          "city": "Southampton",
+          "state": "NJ",
+          "zip": "08088",
+          "division_id": 709055501,
+          "add_date": "2025-02-01 08:20:48+00:00"
+        },
+        {
+          "id": 151191,
+          "first_name": "Andrew",
+          "last_name": "Howarth",
+          "phone1": "609-605-8466",
+          "email": "ahowarth930@gmail.com",
+          "address1": "5 Monroe Ct",
+          "city": "Southampton",
+          "state": "NJ",
+          "zip": "08088",
+          "division_id": 709055461,
+          "add_date": "2025-02-01 08:35:58+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 9,
+      "total_duplicates": 2,
+      "matching_phone": "7174371481",
+      "prospects": [
+        {
+          "id": 151003,
+          "first_name": "Edd",
+          "last_name": "Lewis",
+          "phone1": "717-437-1481",
+          "email": "elewis@standardsteel.com",
+          "address1": "292 Cornfield Cir",
+          "city": "Lewistown",
+          "state": "PA",
+          "zip": "17044",
+          "division_id": 709055518,
+          "add_date": "2025-01-30 17:15:30+00:00"
+        },
+        {
+          "id": 151008,
+          "first_name": "Edd",
+          "last_name": "Lewis",
+          "phone1": "717-437-1481",
+          "email": "elewis@standardsteel.com",
+          "address1": "292 Cornfield Cir",
+          "city": "Lewistown",
+          "state": "PA",
+          "zip": "17044",
+          "division_id": 709055518,
+          "add_date": "2025-01-30 17:16:04+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    }
+  ]
+}

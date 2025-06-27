@@ -1,8 +1,139 @@
-{% for category in categories %}
-    <h2>{{ category.name }}</h2>
-    <ul>
-        {% for report in category.reports.all %}
-            <li><a href="{{ report.id }}/">{{ report.title }}</a></li>
+{% extends "base.html" %}
+
+{% block title %}Reports - Data Warehouse{% endblock %}
+
+{% block header %}Reports Dashboard{% endblock %}
+
+{% block content %}
+<style>
+.reports-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.category-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--gradient-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.category-section h2 {
+    margin-top: 0;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--accent-primary);
+    padding-bottom: 0.5rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.reports-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.report-item {
+    background: none;
+    margin: 0;
+    padding: 0;
+}
+
+.report-card {
+    background: var(--bg-primary);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.report-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-primary);
+}
+
+.report-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--accent-primary);
+}
+
+.report-card h3 {
+    margin: 0 0 0.5rem 0;
+}
+
+.report-card h3 a {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 1.2rem;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.report-card h3 a:hover {
+    color: var(--accent-primary);
+}
+
+.report-description {
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.no-reports {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+}
+
+.no-reports h3 {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+</style>
+
+<div class="reports-container">
+    <h1>Data Warehouse Reports</h1>
+    <p>Available reports organized by category:</p>
+    
+    {% if categories %}
+        {% for category in categories %}
+            <div class="category-section">
+                <h2>{{ category.name }}</h2>
+                <ul class="reports-list">
+                    {% for report in category.reports.all %}
+                        <li class="report-item">
+                            <div class="report-card">
+                                <h3><a href="{{ report.id }}/">{{ report.title }}</a></h3>
+                                {% if report.description %}
+                                    <p class="report-description">{{ report.description }}</p>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% empty %}
+                        <p>No reports in this category.</p>
+                    {% endfor %}
+                </ul>
+            </div>
         {% endfor %}
-    </ul>
-{% endfor %}
+    {% else %}
+        <div class="no-reports">
+            <h3>No Report Categories Available</h3>
+            <p>No report categories have been configured yet.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

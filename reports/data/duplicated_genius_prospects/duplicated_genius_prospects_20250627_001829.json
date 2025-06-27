@@ -1,0 +1,280 @@
+{
+  "report_type": "duplicated_genius_prospects",
+  "generated_at": "2025-06-27T00:18:29.573558",
+  "parameters": {
+    "similarity_threshold": 80,
+    "total_prospects_analyzed": 1000,
+    "fields_compared": [
+      "first_name",
+      "last_name",
+      "phone1"
+    ],
+    "limit_used": 1000
+  },
+  "summary": {
+    "total_duplicate_groups": 7,
+    "total_duplicate_prospects": 14,
+    "percentage_duplicates": 1.4
+  },
+  "duplicate_groups": [
+    {
+      "group_id": 1,
+      "total_duplicates": 2,
+      "matching_phone": "6096058466",
+      "prospects": [
+        {
+          "id": 151184,
+          "first_name": "Andrew",
+          "last_name": "Howarth",
+          "phone1": "609-605-8466",
+          "email": "ahowarth930@gmail.com",
+          "address1": "5 Monroe Ct",
+          "city": "Southampton",
+          "state": "NJ",
+          "zip": "08088",
+          "division_id": 709055501,
+          "add_date": "2025-02-01 08:20:48+00:00"
+        },
+        {
+          "id": 151191,
+          "first_name": "Andrew",
+          "last_name": "Howarth",
+          "phone1": "609-605-8466",
+          "email": "ahowarth930@gmail.com",
+          "address1": "5 Monroe Ct",
+          "city": "Southampton",
+          "state": "NJ",
+          "zip": "08088",
+          "division_id": 709055461,
+          "add_date": "2025-02-01 08:35:58+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 2,
+      "total_duplicates": 2,
+      "matching_phone": "8048924487",
+      "prospects": [
+        {
+          "id": 151199,
+          "first_name": "mahlon",
+          "last_name": "early",
+          "phone1": "804-892-4487",
+          "email": "",
+          "address1": "3808 Jackie Dr",
+          "city": "Petersburg",
+          "state": "VA",
+          "zip": "23803",
+          "division_id": 709055510,
+          "add_date": "2025-02-01 08:45:56+00:00"
+        },
+        {
+          "id": 151420,
+          "first_name": "Mahlon",
+          "last_name": "Early",
+          "phone1": "804-892-4487",
+          "email": "boggy4@comcast.net",
+          "address1": "3808 Jackie Dr",
+          "city": "Petersburg",
+          "state": "VA",
+          "zip": "23803",
+          "division_id": 709055513,
+          "add_date": "2025-02-02 07:30:53+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 3,
+      "total_duplicates": 2,
+      "matching_phone": "8148899879",
+      "prospects": [
+        {
+          "id": 151207,
+          "first_name": "Mark",
+          "last_name": "Eberhart",
+          "phone1": "814-889-9879",
+          "email": "",
+          "address1": "1005 Gordon Ln",
+          "city": "Duncansville",
+          "state": "PA",
+          "zip": "16635",
+          "division_id": 709055503,
+          "add_date": "2025-02-01 09:06:06+00:00"
+        },
+        {
+          "id": 151575,
+          "first_name": "Mark",
+          "last_name": "Eberhart",
+          "phone1": "814-889-9879",
+          "email": "mark.eberhart@npcweb.com",
+          "address1": "1005 Gordon Ln",
+          "city": "Duncansville",
+          "state": "PA",
+          "zip": "16635",
+          "division_id": 709055518,
+          "add_date": "2025-02-02 18:01:12+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 4,
+      "total_duplicates": 2,
+      "matching_phone": "7174371481",
+      "prospects": [
+        {
+          "id": 151003,
+          "first_name": "Edd",
+          "last_name": "Lewis",
+          "phone1": "717-437-1481",
+          "email": "elewis@standardsteel.com",
+          "address1": "292 Cornfield Cir",
+          "city": "Lewistown",
+          "state": "PA",
+          "zip": "17044",
+          "division_id": 709055518,
+          "add_date": "2025-01-30 17:15:30+00:00"
+        },
+        {
+          "id": 151008,
+          "first_name": "Edd",
+          "last_name": "Lewis",
+          "phone1": "717-437-1481",
+          "email": "elewis@standardsteel.com",
+          "address1": "292 Cornfield Cir",
+          "city": "Lewistown",
+          "state": "PA",
+          "zip": "17044",
+          "division_id": 709055518,
+          "add_date": "2025-01-30 17:16:04+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 5,
+      "total_duplicates": 2,
+      "matching_phone": "5409158668",
+      "prospects": [
+        {
+          "id": 151454,
+          "first_name": "Don C",
+          "last_name": "Loyd",
+          "phone1": "540-915-8668",
+          "email": "donloyd1955@gmail.com",
+          "address1": "1504 Turner Branch Rd",
+          "city": "Goodview",
+          "state": "VA",
+          "zip": "24095",
+          "division_id": 709055460,
+          "add_date": "2025-02-02 09:20:45+00:00"
+        },
+        {
+          "id": 151782,
+          "first_name": "Don C",
+          "last_name": "Loyd",
+          "phone1": "540-915-8668",
+          "email": "",
+          "address1": "1504 Turner Branch Rd",
+          "city": "Goodview",
+          "state": "VA",
+          "zip": "24095",
+          "division_id": 709055520,
+          "add_date": "2025-02-03 17:50:39+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 6,
+      "total_duplicates": 2,
+      "matching_phone": "7032831228",
+      "prospects": [
+        {
+          "id": 151593,
+          "first_name": "James",
+          "last_name": "Frank",
+          "phone1": "703-283-1228",
+          "email": "jamesfrank0917@msn.com",
+          "address1": "12721 Bristersburg Rd",
+          "city": "Midland",
+          "state": "VA",
+          "zip": "22728",
+          "division_id": 709055513,
+          "add_date": "2025-02-03 04:35:26+00:00"
+        },
+        {
+          "id": 151382,
+          "first_name": "James",
+          "last_name": "Frank",
+          "phone1": "703-283-1228",
+          "email": "jamesfrank0917@msn.com",
+          "address1": "12721 Bristersburg Rd",
+          "city": "Midland",
+          "state": "VA",
+          "zip": "22728",
+          "division_id": 709055460,
+          "add_date": "2025-02-01 15:01:06+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    },
+    {
+      "group_id": 7,
+      "total_duplicates": 2,
+      "matching_phone": "3306008484",
+      "prospects": [
+        {
+          "id": 151649,
+          "first_name": "Marvin",
+          "last_name": "Miller",
+          "phone1": "330-600-8484",
+          "email": "quadm@sle.email",
+          "address1": "29625 County Road 190",
+          "city": "Fresno",
+          "state": "OH",
+          "zip": "43824",
+          "division_id": 709055511,
+          "add_date": "2025-02-03 11:11:01+00:00"
+        },
+        {
+          "id": 151862,
+          "first_name": "Marvin",
+          "last_name": "Miller",
+          "phone1": "330-600-8484",
+          "email": "quadm@sle.email",
+          "address1": "29625 County Rd 100",
+          "city": "Fresno",
+          "state": "OH",
+          "zip": "43824",
+          "division_id": 709055515,
+          "add_date": "2025-02-04 13:25:59+00:00"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 80,
+        "detection_method": "phone_grouping_with_name_fuzzy"
+      }
+    }
+  ]
+}

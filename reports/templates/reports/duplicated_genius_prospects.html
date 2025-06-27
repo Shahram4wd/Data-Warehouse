@@ -1,0 +1,942 @@
+{% extends "base.html" %}
+
+{% block title %}{{ report.title }} - Data Warehouse{% endblock %}
+
+{% block header %}🔍 {{ report.title }}{% endblock %}
+
+{% block content %}
+<style>
+.report-header {
+    background: var(--gradient-card);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.report-title {
+    font-size: 2.5rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+}
+
+.report-description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.report-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.status-message {
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+    border-radius: 8px;
+    border-left: 4px solid;
+    font-weight: 500;
+}
+
+.status-message.success {
+    background: rgba(124, 176, 171, 0.15);
+    color: var(--accent-success);
+    border-left-color: var(--accent-success);
+}
+
+.status-message.error {
+    background: rgba(198, 115, 115, 0.15);
+    color: var(--accent-danger);
+    border-left-color: var(--accent-danger);
+}
+
+.status-message.info {
+    background: rgba(90, 154, 149, 0.15);
+    color: var(--accent-primary);
+    border-left-color: var(--accent-primary);
+}
+
+.progress-container {
+    background: var(--surface-secondary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border: 1px solid var(--border-color);
+    display: none;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: var(--surface-tertiary);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--gradient-primary);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.progress-status {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.progress-percent {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: var(--text-on-primary);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.progress-details {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+.summary-section {
+    background: var(--gradient-card);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.metric-card {
+    background: var(--bg-primary);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-primary);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+}
+
+.metadata {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.pagination-section {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 1.5rem 0;
+    border: 1px solid var(--border-color);
+}
+
+.pagination-info {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.pagination-controls .btn {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.pagination-controls .btn:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-primary);
+}
+
+.current-page {
+    background: var(--gradient-primary);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+}
+
+.page-jump {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 1rem;
+    padding-left: 1rem;
+    border-left: 1px solid var(--border-color);
+}
+
+.page-jump input {
+    width: 60px;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.duplicate-group {
+    background: var(--gradient-card);
+    border: 1px solid var(--border-color);
+    margin: 1.5rem 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.duplicate-group:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.group-header {
+    background: var(--bg-secondary);
+    padding: 1.5rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.group-header:hover {
+    background: var(--bg-tertiary);
+}
+
+.group-header h4 {
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.toggle-icon {
+    font-size: 1rem;
+    transition: transform 0.3s ease;
+    color: var(--accent-primary);
+}
+
+.toggle-icon.rotated {
+    transform: rotate(180deg);
+}
+
+.group-details {
+    padding: 1.5rem;
+}
+
+.prospects-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.prospects-table th,
+.prospects-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.prospects-table th {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.prospects-table td {
+    color: var(--text-secondary);
+}
+
+.prospects-table tr:hover {
+    background: var(--bg-secondary);
+}
+
+.prospects-table tr:last-child td {
+    border-bottom: none;
+}
+
+.available-files {
+    background: var(--gradient-card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.available-files h3 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.available-files ul {
+    list-style: none;
+    padding: 0;
+}
+
+.available-files li {
+    background: var(--bg-primary);
+    margin: 0.5rem 0;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.available-files li:hover {
+    background: var(--bg-secondary);
+    border-color: var(--accent-primary);
+}
+
+.available-files li a {
+    display: block;
+    padding: 0.75rem 1rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.available-files li a:hover {
+    color: var(--accent-primary);
+}
+
+.no-results {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+}
+
+.no-results h3 {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+#runDetection:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--gradient-card);
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    position: relative;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.close {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+    font-size: 2rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color 0.3s ease;
+}
+
+.close:hover {
+    color: var(--accent-danger);
+}
+</style>
+
+<div class="report-header">
+    <h1 class="report-title">🔍 {{ report.title }}</h1>
+    <p class="report-description">{{ report.description|default:"Advanced duplicate detection using fuzzy logic to identify and analyze duplicate prospect records in the Genius database." }}</p>
+    
+    <div class="report-actions">
+        <button id="runDetection" class="btn btn-success" onclick="runDuplicateDetection()">
+            ⚡ Run Detection
+        </button>
+        <button id="refreshResults" class="btn btn-secondary" onclick="refreshResults()">
+            🔄 Refresh Results
+        </button>
+        {% if results %}
+        <button id="exportCsv" class="btn btn-primary" onclick="exportToCsv()">
+            📊 Export CSV
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div id="statusMessage" class="status-message" style="display: none;"></div>
+
+<div id="progressContainer" class="progress-container" style="display: none;">
+    <div class="progress-text">
+        <span id="progressStatus" class="progress-status">Initializing...</span>
+        <span id="progressPercent" class="progress-percent">0%</span>
+    </div>
+    <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+    </div>
+    <div id="progressDetails" class="progress-details">Preparing to start detection...</div>
+    <div style="margin-top: 1rem;">
+        <button id="cancelDetection" class="btn btn-secondary" onclick="cancelDetection()" style="display: none;">
+            🛑 Cancel Detection
+        </button>
+    </div>
+</div>
+
+{% if results %}
+<div class="summary-section">
+    <h3>📊 Latest Results</h3>
+    <div class="summary-cards">
+        <div class="metric-card">
+            <div class="metric-label">Total Prospects Analyzed</div>
+            <div class="metric-value">{{ results.parameters.total_prospects_analyzed|default:"0" }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Duplicate Groups Found</div>
+            <div class="metric-value">{{ results.summary.total_duplicate_groups|default:"0" }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Total Duplicates</div>
+            <div class="metric-value">{{ results.summary.total_duplicate_prospects|default:"0" }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Duplicate Percentage</div>
+            <div class="metric-value">{{ results.summary.percentage_duplicates|default:"0" }}%</div>
+        </div>
+    </div>
+    
+    <div class="metadata">
+        <div><strong>📅 Generated:</strong> {{ results.generated_at }}</div>
+        <div><strong>🎯 Threshold:</strong> {{ results.parameters.similarity_threshold }}%</div>
+        <div><strong>🔬 Method:</strong> Comprehensive Similarity Analysis</div>
+        <div><strong>📊 Fields:</strong> Names, Phone, Email, Address, City, State, ZIP</div>
+    </div>
+</div>
+
+<div class="duplicate-groups">
+    <h3>🔍 Duplicate Groups</h3>
+    {% if paginated_groups %}
+        <div class="pagination-section">
+            <div class="pagination-info">
+                <p>
+                    Showing groups {{ paginated_groups.start_index }} - {{ paginated_groups.end_index }} 
+                    of {{ paginated_groups.paginator.count }} total groups
+                </p>
+            </div>
+            
+            <div class="pagination-controls">
+                {% if paginated_groups.has_previous %}
+                    <a href="?page=1" class="btn">« First</a>
+                    <a href="?page={{ paginated_groups.previous_page_number }}" class="btn">‹ Previous</a>
+                {% endif %}
+                
+                <span class="current-page">
+                    Page {{ paginated_groups.number }} of {{ paginated_groups.paginator.num_pages }}
+                </span>
+                
+                {% if paginated_groups.has_next %}
+                    <a href="?page={{ paginated_groups.next_page_number }}" class="btn">Next ›</a>
+                    <a href="?page={{ paginated_groups.paginator.num_pages }}" class="btn">Last »</a>
+                {% endif %}
+                
+                <div class="page-jump">
+                    <label for="pageJump">Jump to page:</label>
+                    <input type="number" id="pageJump" min="1" max="{{ paginated_groups.paginator.num_pages }}" 
+                           value="{{ paginated_groups.number }}" onchange="jumpToPage(this.value)">
+                </div>
+            </div>
+        </div>
+
+        {% for group in paginated_groups %}
+        <div class="duplicate-group" data-group-id="{{ group.group_id }}">
+            <div class="group-header" onclick="toggleGroup({{ group.group_id }})">
+                <h4>
+                    🔗 {% if group.group_display_name %}{{ group.group_display_name }}{% else %}Group {{ group.group_id }} ({{ group.total_duplicates }} duplicates){% endif %}
+                    <span class="toggle-icon">▼</span>
+                </h4>
+                {% if group.matching_phone %}
+                    <p><strong>📞 Matching Phone:</strong> {{ group.matching_phone }}</p>
+                {% endif %}
+                {% if group.matching_names %}
+                    <p><strong>👤 Matching Names:</strong> {{ group.matching_names }}</p>
+                {% endif %}
+                {% if group.detection_details.average_similarity_score %}
+                    <p><strong>🎯 Confidence Score:</strong> {{ group.detection_details.average_similarity_score }}%
+                    {% if group.detection_details.confidence_boost and group.detection_details.confidence_boost > 0 %}
+                        <span style="color: var(--accent-success); font-size: 0.9em;">(+{{ group.detection_details.confidence_boost }}% boost)</span>
+                    {% endif %}
+                    </p>
+                {% endif %}
+            </div>
+            <div class="group-details" id="group-{{ group.group_id }}-details" style="display: none;">
+                <table class="prospects-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Address</th>
+                            <th>Division</th>
+                            <th>Added Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for prospect in group.prospects %}
+                        <tr>
+                            <td>{{ prospect.id }}</td>
+                            <td>{{ prospect.first_name }} {{ prospect.last_name }}</td>
+                            <td>{{ prospect.phone1|default:"" }}</td>
+                            <td>{{ prospect.email|default:"" }}</td>
+                            <td>{{ prospect.address1|default:"" }}{% if prospect.city %}, {{ prospect.city }}{% endif %}{% if prospect.state %}, {{ prospect.state }}{% endif %}</td>
+                            <td>{{ prospect.division__label|default:"N/A" }}</td>
+                            <td>{{ prospect.add_date|default:"" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <div class="pagination-section">
+            <div class="pagination-controls">
+                {% if paginated_groups.has_previous %}
+                    <a href="?page=1" class="btn">« First</a>
+                    <a href="?page={{ paginated_groups.previous_page_number }}" class="btn">‹ Previous</a>
+                {% endif %}
+                
+                <span class="current-page">
+                    Page {{ paginated_groups.number }} of {{ paginated_groups.paginator.num_pages }}
+                </span>
+                
+                {% if paginated_groups.has_next %}
+                    <a href="?page={{ paginated_groups.next_page_number }}" class="btn">Next ›</a>
+                    <a href="?page={{ paginated_groups.paginator.num_pages }}" class="btn">Last »</a>
+                {% endif %}
+            </div>
+        </div>
+        
+    {% elif results.duplicate_groups %}
+        <p>No duplicate groups found on this page.</p>
+    {% else %}
+        <p>No duplicate groups found.</p>
+    {% endif %}
+</div>
+{% else %}
+<div class="no-results">
+    <h3>📊 No Results Available</h3>
+    <p>Click "Run Detection" to generate a new duplicate detection report.</p>
+</div>
+{% endif %}
+
+{% if available_files %}
+<div class="available-files">
+    <h3>📁 Previous Reports</h3>
+    <ul>
+        {% for file in available_files %}
+        <li>
+            <a href="#" onclick="loadReportFile('{{ file.filename }}')">
+                📄 {{ file.display_name }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div id="groupModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <div id="modalContent"></div>
+    </div>
+</div>
+
+<script>
+function runDuplicateDetection() {
+    const button = document.getElementById('runDetection');
+    const statusDiv = document.getElementById('statusMessage');
+    const progressContainer = document.getElementById('progressContainer');
+    
+    button.disabled = true;
+    button.textContent = '🔄 Starting...';
+    
+    showStatus('Starting duplicate detection...', 'info');
+    showProgress();
+    
+    fetch('/reports/api/run-duplicate-detection/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'started') {
+            showStatus(data.message, 'info');
+            // Start polling for progress
+            startProgressPolling();
+        } else if (data.status === 'already_running') {
+            showStatus(data.message, 'info');
+            // Start polling for progress of existing process
+            startProgressPolling();
+        } else {
+            showStatus(data.message, 'error');
+            hideProgress();
+            button.disabled = false;
+            button.textContent = '⚡ Run Detection';
+        }
+    })
+    .catch(error => {
+        showStatus('Error: ' + error.message, 'error');
+        hideProgress();
+        button.disabled = false;
+        button.textContent = '⚡ Run Detection';
+    });
+}
+
+let progressInterval = null;
+
+function startProgressPolling() {
+    // Clear any existing interval
+    if (progressInterval) {
+        clearInterval(progressInterval);
+    }
+    
+    // Poll every 2 seconds
+    progressInterval = setInterval(checkProgress, 2000);
+    
+    // Initial check
+    checkProgress();
+}
+
+function checkProgress() {
+    fetch('/reports/api/check-detection-progress/')
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'running' && data.progress) {
+            updateProgress(data.progress);
+            showProgress(); // Ensure progress bar and cancel button are visible
+            
+            // If completed, stop polling and reload
+            if (data.progress.completed) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+                
+                if (data.progress.error || data.progress.cancelled) {
+                    showStatus('Detection failed or was cancelled: ' + data.progress.details, 'error');
+                } else {
+                    showStatus('Detection completed successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+                
+                hideProgress();
+                const button = document.getElementById('runDetection');
+                button.disabled = false;
+                button.textContent = '⚡ Run Detection';
+            }
+        } else if (data.status === 'not_running') {
+            // Process finished or never started
+            clearInterval(progressInterval);
+            progressInterval = null;
+            hideProgress();
+            
+            const button = document.getElementById('runDetection');
+            button.disabled = false;
+            button.textContent = '⚡ Run Detection';
+        }
+    })
+    .catch(error => {
+        console.error('Error checking progress:', error);
+        // Don't stop polling on network errors, just log them
+    });
+}
+
+function updateProgress(progressData) {
+    const progressFill = document.getElementById('progressFill');
+    const progressStatus = document.getElementById('progressStatus');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressDetails = document.getElementById('progressDetails');
+    
+    if (progressFill) progressFill.style.width = progressData.percent + '%';
+    if (progressStatus) progressStatus.textContent = progressData.status;
+    if (progressPercent) progressPercent.textContent = progressData.percent + '%';
+    if (progressDetails) progressDetails.textContent = progressData.details;
+}
+
+function showProgress() {
+    const progressContainer = document.getElementById('progressContainer');
+    const cancelButton = document.getElementById('cancelDetection');
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+    }
+    if (cancelButton) {
+        cancelButton.style.display = 'inline-block';
+    }
+}
+
+function hideProgress() {
+    const progressContainer = document.getElementById('progressContainer');
+    const cancelButton = document.getElementById('cancelDetection');
+    if (progressContainer) {
+        progressContainer.style.display = 'none';
+    }
+    if (cancelButton) {
+        cancelButton.style.display = 'none';
+    }
+}
+
+function cancelDetection() {
+    if (confirm('Are you sure you want to cancel the duplicate detection?')) {
+        fetch('/reports/api/cancel-detection/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            showStatus(data.message, data.status === 'success' ? 'info' : 'error');
+            
+            if (data.status === 'success') {
+                // Stop polling and reset UI
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                
+                hideProgress();
+                const button = document.getElementById('runDetection');
+                button.disabled = false;
+                button.textContent = '⚡ Run Detection';
+            }
+        })
+        .catch(error => {
+            showStatus('Error: ' + error.message, 'error');
+        });
+    }
+}
+
+function exportToCsv() {
+    showStatus('Generating CSV export...', 'info');
+    
+    fetch('/reports/api/export-duplicates-csv/')
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        }
+        throw new Error('Failed to generate CSV');
+    })
+    .then(blob => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        
+        // Generate filename with timestamp
+        const now = new Date();
+        const timestamp = now.toISOString().slice(0, 19).replace(/[:-]/g, '');
+        a.download = `duplicated_genius_prospects_${timestamp}.csv`;
+        
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showStatus('CSV export completed successfully!', 'success');
+    })
+    .catch(error => {
+        showStatus('Error exporting CSV: ' + error.message, 'error');
+    });
+}
+
+function refreshResults() {
+    window.location.reload();
+}
+
+function toggleGroup(groupId) {
+    const details = document.getElementById('group-' + groupId + '-details');
+    const icon = document.querySelector('[data-group-id="' + groupId + '"] .toggle-icon');
+    
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        icon.classList.add('rotated');
+    } else {
+        details.style.display = 'none';
+        icon.classList.remove('rotated');
+    }
+}
+
+function loadReportFile(filename) {
+    showStatus('Loading report file...', 'info');
+    
+    fetch('/reports/api/load-report-file/' + filename + '/')
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showStatus('Report loaded successfully!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showStatus('Error loading file: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showStatus('Error: ' + error.message, 'error');
+    });
+}
+
+function showStatus(message, type) {
+    const statusDiv = document.getElementById('statusMessage');
+    statusDiv.textContent = message;
+    statusDiv.className = 'status-message ' + type;
+    statusDiv.style.display = 'block';
+    
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+function closeModal() {
+    document.getElementById('groupModal').style.display = 'none';
+}
+
+function jumpToPage(pageNumber) {
+    if (pageNumber && pageNumber > 0) {
+        window.location.href = '?page=' + pageNumber;
+    }
+}
+
+// Add CSRF token if it doesn't exist
+if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = '{{ csrf_token }}';
+    document.body.appendChild(csrfInput);
+}
+
+// Clean up progress polling when page unloads
+window.addEventListener('beforeunload', function() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+    }
+});
+
+// Check if there's a detection already running when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    checkProgress();
+});
+</script>
+
+{% endblock %}
