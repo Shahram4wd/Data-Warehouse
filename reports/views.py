@@ -29,6 +29,10 @@ def report_detail(request, report_id):
     if report.title == 'Duplicated HubSpot Appointments':
         return duplicated_hubspot_appointments_detail(request, report)
     
+    # Special handling for sales rep division mismatch report
+    if report.title == 'Sales Rep Does Not Exist In Appointment Division':
+        return sales_rep_division_mismatch_detail(request, report)
+    
     return render(request, 'reports/report_detail.html', {'report': report})
 
 @login_required
@@ -140,6 +144,82 @@ def duplicated_hubspot_appointments_detail(request, report):
     }
     
     return render(request, 'reports/duplicated_hubspot_appointments.html', context)
+
+@login_required
+def sales_rep_division_mismatch_detail(request, report):
+    """Special view for the sales rep division mismatch report"""
+    from django.db import connection
+    from django.core.paginator import Paginator
+    import csv
+    from io import StringIO
+    
+    # Execute the SQL query to get mismatched appointments
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 
+                CONCAT(p.first_name, ' ' , p.last_name) as prospect_name,
+                p.email as hubspot_identifier,
+                a.id as genius_app_id,
+                da.label as appointment_division,
+                CONCAT(u.first_name, ' ' , u.last_name) as sales_rep,
+                du.label as sales_rep_division
+            FROM ingestion_genius_appointment as a
+            LEFT JOIN ingestion_genius_prospect as p ON a.prospect_id = p.id
+            LEFT JOIN ingestion_genius_division as da ON p.division_id = da.id
+            LEFT JOIN ingestion_genius_userdata as u ON u.id = a.user_id
+            LEFT JOIN ingestion_genius_division as du ON u.division_id = du.id
+            WHERE p.division_id != u.division_id 
+                AND a.add_date > '2025-06-08'
+            ORDER BY da.label, prospect_name
+        """)
+        
+        columns = [col[0] for col in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+    # Handle CSV export
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="sales_rep_division_mismatch_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        writer = csv.writer(response)
+        
+        # Write header
+        headers = ['Prospect Name', 'HubSpot Identifier', 'Genius App ID', 'Appointment Division', 'Sales Rep', 'Sales Rep Division']
+        writer.writerow(headers)
+        
+        # Write data
+        for row in results:
+            writer.writerow([
+                row['prospect_name'],
+                row['hubspot_identifier'],
+                row['genius_app_id'],
+                row['appointment_division'],
+                row['sales_rep'],
+                row['sales_rep_division']
+            ])
+        
+        return response
+    
+    # Paginate results for display
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(results, 50)  # 50 results per page
+    paginated_results = paginator.get_page(page_number)
+    
+    # Calculate summary statistics
+    total_mismatches = len(results)
+    divisions_affected = len(set(row['appointment_division'] for row in results if row['appointment_division']))
+    sales_reps_affected = len(set(row['sales_rep'] for row in results if row['sales_rep']))
+    
+    context = {
+        'report': report,
+        'results': paginated_results,
+        'total_mismatches': total_mismatches,
+        'divisions_affected': divisions_affected,
+        'sales_reps_affected': sales_reps_affected,
+        'generated_at': datetime.now(),
+    }
+    
+    return render(request, 'reports/sales_rep_division_mismatch.html', context)
 
 @csrf_exempt
 @login_required

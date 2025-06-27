@@ -67,6 +67,26 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f"Report already exists: {hubspot_report.title}")
         
+        # Create Sales Rep Division Mismatch report
+        salesrep_report, created = Report.objects.get_or_create(
+            title="Sales Rep Does Not Exist In Appointment Division",
+            defaults={
+                'category': category,
+                'description': 'Identify appointments where the sales rep belongs to a different division than the prospect'
+            }
+        )
+        
+        # Update category if report exists but has different category
+        if not created and salesrep_report.category.name != "Data Quality":
+            salesrep_report.category = category
+            salesrep_report.save()
+            self.stdout.write(f"Updated category for report: {salesrep_report.title}")
+        
+        if created:
+            self.stdout.write(f"Created report: {salesrep_report.title}")
+        else:
+            self.stdout.write(f"Report already exists: {salesrep_report.title}")
+        
         # Clean up old "Data Cleanup" category if it still exists and is now empty
         try:
             old_category = ReportCategory.objects.get(name="Data Cleanup")
