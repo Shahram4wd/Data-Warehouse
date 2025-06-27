@@ -27,7 +27,7 @@ from .salespro import SalesPro_Users, SalesPro_Appointment, SalesPro_SyncHistory
 from .salesrabbit import SalesRabbit_Lead, SalesRabbit_SyncHistory
 
 # Import Hubspot models
-from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_Appointment, Hubspot_SyncHistory
+from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_Appointment, Hubspot_Division, Hubspot_SyncHistory
 
 # Import Arrivy models
 from .arrivy import Arrivy_Entity, Arrivy_Group, Arrivy_Task, Arrivy_TaskStatus, Arrivy_LocationReport, Arrivy_SyncHistory

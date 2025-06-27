@@ -590,3 +590,120 @@ class HubspotClient:
             except Exception as e:
                 logger.error(f"Exception during bulk association fetch: {str(e)}")
                 return []
+
+    async def get_custom_object_page(
+        self, 
+        object_type: str,
+        last_sync: Optional[datetime] = None, 
+        page_token: Optional[str] = None,
+        limit: int = 100
+    ) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+        """Fetch a single page from a HubSpot custom object."""
+        
+        # Create a fresh session for each call
+        async with aiohttp.ClientSession() as session:
+            # Set properties to retrieve for divisions
+            properties = [
+                "division_name", "division_label", "label", "division_code", "code",
+                "status", "region", "manager_name", "manager_email", "phone",
+                "address1", "address2", "city", "state", "zip",
+                # HubSpot system fields
+                "hs_object_id", "hs_createdate", "hs_lastmodifieddate", "hs_pipeline",
+                "hs_pipeline_stage", "hs_all_accessible_team_ids", "hs_all_assigned_business_unit_ids",
+                "hs_all_owner_ids", "hs_all_team_ids", "hs_created_by_user_id",
+                "hs_merged_object_ids", "hs_object_source", "hs_object_source_detail_1",
+                "hs_object_source_detail_2", "hs_object_source_detail_3", "hs_object_source_id",
+                "hs_object_source_label", "hs_object_source_user_id", "hs_owning_teams",
+                "hs_read_only", "hs_shared_team_ids", "hs_shared_user_ids",
+                "hs_unique_creation_key", "hs_updated_by_user_id",
+                "hs_user_ids_of_all_notification_followers", "hs_user_ids_of_all_notification_unfollowers",
+                "hs_user_ids_of_all_owners", "hs_was_imported"
+            ]
+            
+            try:
+                # Use search endpoint if we need to filter by date
+                if last_sync:
+                    url = f"{self.BASE_URL}/crm/v3/objects/{object_type}/search"
+                    
+                    # Format the date for HubSpot API
+                    last_sync_str = last_sync.strftime('%Y-%m-%dT%H:%M:%SZ')
+                    
+                    payload = {
+                        "filterGroups": [
+                            {
+                                "filters": [
+                                    {
+                                        "propertyName": "hs_lastmodifieddate",
+                                        "operator": "GTE",
+                                        "value": last_sync_str
+                                    }
+                                ]
+                            }
+                        ],
+                        "properties": properties,
+                        "limit": limit
+                    }
+                    
+                    if page_token:
+                        payload["after"] = page_token
+                    
+                    logger.info(f"Fetching custom object {object_type} with search payload: {json.dumps(payload, indent=2)[:500]}")
+                    
+                    async with session.post(url, headers=self.headers, json=payload, timeout=120) as response:
+                        status = response.status
+                        logger.info(f"Search response status: {status}")
+                        
+                        if status != 200:
+                            response_text = await response.text()
+                            logger.error(f"Error response: {response_text[:500]}")
+                            return [], None
+                        
+                        data = await response.json()
+                        results = data.get("results", [])
+                        logger.info(f"Got {len(results)} custom object results")
+                        
+                        # Get next page token if available
+                        paging = data.get("paging", {})
+                        next_page = paging.get("next", {}).get("after")
+                        if next_page:
+                            logger.info(f"Next page token: {next_page}")
+                        
+                        return results, next_page
+                
+                else:
+                    # Use regular get endpoint for full sync
+                    url = f"{self.BASE_URL}/crm/v3/objects/{object_type}"
+                    params = {
+                        "properties": ",".join(properties),
+                        "limit": limit
+                    }
+                    
+                    if page_token:
+                        params["after"] = page_token
+                    
+                    logger.info(f"Fetching custom object {object_type} with params: {params}")
+                    
+                    async with session.get(url, headers=self.headers, params=params, timeout=120) as response:
+                        status = response.status
+                        logger.info(f"Response status: {status}")
+                        
+                        if status != 200:
+                            response_text = await response.text()
+                            logger.error(f"Error response: {response_text[:500]}")
+                            return [], None
+                        
+                        data = await response.json()
+                        results = data.get("results", [])
+                        logger.info(f"Got {len(results)} custom object results")
+                        
+                        # Get next page token if available
+                        paging = data.get("paging", {})
+                        next_page = paging.get("next", {}).get("after")
+                        if next_page:
+                            logger.info(f"Next page token: {next_page}")
+                        
+                        return results, next_page
+                        
+            except Exception as e:
+                logger.error(f"Exception during custom object fetch: {str(e)}")
+                return [], None

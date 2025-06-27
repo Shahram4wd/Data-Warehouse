@@ -282,3 +282,71 @@ class Hubspot_AppointmentContactAssociation(models.Model):
 
     def __str__(self):
         return f"{self.appointment_id} -> {self.contact_id}"
+
+class Hubspot_Division(models.Model):
+    """HubSpot Division model for custom object 2-37778609"""
+    id = models.CharField(max_length=50, primary_key=True)  # hs_object_id
+    
+    # Basic division info
+    division_name = models.CharField(max_length=255, null=True, blank=True)
+    division_label = models.CharField(max_length=255, null=True, blank=True)
+    division_code = models.CharField(max_length=100, null=True, blank=True)
+    
+    # HubSpot specific fields
+    hs_object_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_createdate = models.DateTimeField(null=True, blank=True)
+    hs_lastmodifieddate = models.DateTimeField(null=True, blank=True)
+    hs_pipeline = models.CharField(max_length=255, null=True, blank=True)
+    hs_pipeline_stage = models.CharField(max_length=255, null=True, blank=True)
+    
+    # HubSpot system fields
+    hs_all_accessible_team_ids = models.JSONField(null=True, blank=True)
+    hs_all_assigned_business_unit_ids = models.JSONField(null=True, blank=True)
+    hs_all_owner_ids = models.JSONField(null=True, blank=True)
+    hs_all_team_ids = models.JSONField(null=True, blank=True)
+    hs_created_by_user_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_merged_object_ids = models.JSONField(null=True, blank=True)
+    hs_object_source = models.CharField(max_length=255, null=True, blank=True)
+    hs_object_source_detail_1 = models.CharField(max_length=255, null=True, blank=True)
+    hs_object_source_detail_2 = models.CharField(max_length=255, null=True, blank=True)
+    hs_object_source_detail_3 = models.CharField(max_length=255, null=True, blank=True)
+    hs_object_source_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_object_source_label = models.CharField(max_length=255, null=True, blank=True)
+    hs_object_source_user_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_owning_teams = models.JSONField(null=True, blank=True)
+    hs_read_only = models.BooleanField(null=True, blank=True)
+    hs_shared_team_ids = models.JSONField(null=True, blank=True)
+    hs_shared_user_ids = models.JSONField(null=True, blank=True)
+    hs_unique_creation_key = models.CharField(max_length=255, null=True, blank=True)
+    hs_updated_by_user_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_user_ids_of_all_notification_followers = models.JSONField(null=True, blank=True)
+    hs_user_ids_of_all_notification_unfollowers = models.JSONField(null=True, blank=True)
+    hs_user_ids_of_all_owners = models.JSONField(null=True, blank=True)
+    hs_was_imported = models.BooleanField(null=True, blank=True)
+    
+    # Division properties
+    status = models.CharField(max_length=100, null=True, blank=True)
+    region = models.CharField(max_length=100, null=True, blank=True)
+    manager_name = models.CharField(max_length=255, null=True, blank=True)
+    manager_email = models.EmailField(null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    
+    # Address information
+    address1 = models.CharField(max_length=255, null=True, blank=True)
+    address2 = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=10, null=True, blank=True)
+    zip = models.CharField(max_length=20, null=True, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    archived = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'ingestion_hubspot_division'
+        verbose_name = 'HubSpot Division'
+        verbose_name_plural = 'HubSpot Divisions'
+    
+    def __str__(self):
+        return f"{self.division_name or self.division_label or self.id}"
