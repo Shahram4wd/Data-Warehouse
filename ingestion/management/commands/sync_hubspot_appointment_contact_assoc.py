@@ -23,7 +23,7 @@ ASSOCATION_MAPPING = {
 }
 
 class Command(BaseCommand):
-    help = 'Sync HubSpot associations between appointments and contacts'
+    help = 'Sync HubSpot appointment to contact associations'
 
     def handle(self, *args, **options):
         from_object = ASSOCATION_MAPPING['appointment_to_contact']['from_object']
