@@ -1,0 +1,2056 @@
+{
+  "groups": [
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 174735,
+          "first_name": "Doug",
+          "last_name": "Burd",
+          "phone1": "609-234-5905",
+          "email": "",
+          "zip": "08731",
+          "first_name_norm": "doug",
+          "last_name_norm": "burd",
+          "email_norm": "",
+          "phone_norm": "6092345905",
+          "zip_norm": "08731"
+        },
+        {
+          "id": 174905,
+          "first_name": "Doug",
+          "last_name": "Burd",
+          "phone1": "609-234-5905",
+          "email": "",
+          "zip": "08731",
+          "first_name_norm": "doug",
+          "last_name_norm": "burd",
+          "email_norm": "",
+          "phone_norm": "6092345905",
+          "zip_norm": "08731"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 176090,
+          "first_name": "Deborah",
+          "last_name": "Brice",
+          "phone1": "412-720-8908",
+          "email": "debrebrice7777@icloud.com",
+          "zip": "15208",
+          "first_name_norm": "deborah",
+          "last_name_norm": "brice",
+          "email_norm": "debrebrice7777@icloud.com",
+          "phone_norm": "4127208908",
+          "zip_norm": "15208"
+        },
+        {
+          "id": 176095,
+          "first_name": "Deborah",
+          "last_name": "Brice",
+          "phone1": "412-720-8908",
+          "email": "debrebrice7777@icloud.com",
+          "zip": "15208",
+          "first_name_norm": "deborah",
+          "last_name_norm": "brice",
+          "email_norm": "debrebrice7777@icloud.com",
+          "phone_norm": "4127208908",
+          "zip_norm": "15208"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 177425,
+          "first_name": "Matthew",
+          "last_name": "Bunjac",
+          "phone1": "586-932-7565",
+          "email": "",
+          "zip": "48021",
+          "first_name_norm": "matthew",
+          "last_name_norm": "bunjac",
+          "email_norm": "",
+          "phone_norm": "5869327565",
+          "zip_norm": "48021"
+        },
+        {
+          "id": 178692,
+          "first_name": "Matthew",
+          "last_name": "Bunjac",
+          "phone1": "586-932-7565",
+          "email": "",
+          "zip": "48021",
+          "first_name_norm": "matthew",
+          "last_name_norm": "bunjac",
+          "email_norm": "",
+          "phone_norm": "5869327565",
+          "zip_norm": "48021"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 176091,
+          "first_name": "Faris",
+          "last_name": "Rodas",
+          "phone1": "703-731-2977",
+          "email": "rodascontractor@gmail.com",
+          "zip": "20711",
+          "first_name_norm": "faris",
+          "last_name_norm": "rodas",
+          "email_norm": "rodascontractor@gmail.com",
+          "phone_norm": "7037312977",
+          "zip_norm": "20711"
+        },
+        {
+          "id": 176097,
+          "first_name": "Faris",
+          "last_name": "Rodas",
+          "phone1": "703-731-2977",
+          "email": "rodascontractor@gmail.com",
+          "zip": "20711",
+          "first_name_norm": "faris",
+          "last_name_norm": "rodas",
+          "email_norm": "rodascontractor@gmail.com",
+          "phone_norm": "7037312977",
+          "zip_norm": "20711"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 176906,
+          "first_name": "Joy",
+          "last_name": "Carlton",
+          "phone1": "804-275-7181",
+          "email": "",
+          "zip": "23234",
+          "first_name_norm": "joy",
+          "last_name_norm": "carlton",
+          "email_norm": "",
+          "phone_norm": "8042757181",
+          "zip_norm": "23234"
+        },
+        {
+          "id": 176913,
+          "first_name": "Joy",
+          "last_name": "Carlton",
+          "phone1": "804-275-7181",
+          "email": "",
+          "zip": "23234",
+          "first_name_norm": "joy",
+          "last_name_norm": "carlton",
+          "email_norm": "",
+          "phone_norm": "8042757181",
+          "zip_norm": "23234"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 177092,
+          "first_name": "Elaine",
+          "last_name": "Tate",
+          "phone1": "740-297-5954",
+          "email": "",
+          "zip": "43701",
+          "first_name_norm": "elaine",
+          "last_name_norm": "tate",
+          "email_norm": "",
+          "phone_norm": "7402975954",
+          "zip_norm": "43701"
+        },
+        {
+          "id": 177718,
+          "first_name": "Elaine",
+          "last_name": "Tate",
+          "phone1": "740-297-5954",
+          "email": "",
+          "zip": "43701",
+          "first_name_norm": "elaine",
+          "last_name_norm": "tate",
+          "email_norm": "",
+          "phone_norm": "7402975954",
+          "zip_norm": "43701"
+        }
+      ]
+    },
+    {
+      "group_id": 4,
+      "prospects": [
+        {
+          "id": 178511,
+          "first_name": "Ron",
+          "last_name": "Hoffman",
+          "phone1": "973-827-0585",
+          "email": "aicecinc@gmail.com",
+          "zip": "07416",
+          "first_name_norm": "ron",
+          "last_name_norm": "hoffman",
+          "email_norm": "aicecinc@gmail.com",
+          "phone_norm": "9738270585",
+          "zip_norm": "07416"
+        },
+        {
+          "id": 178508,
+          "first_name": "Ron",
+          "last_name": "Hoffman",
+          "phone1": "973-827-0585",
+          "email": "aicecinc@gmail.com",
+          "zip": "07416",
+          "first_name_norm": "ron",
+          "last_name_norm": "hoffman",
+          "email_norm": "aicecinc@gmail.com",
+          "phone_norm": "9738270585",
+          "zip_norm": "07416"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 176092,
+          "first_name": "Marc & Merlie",
+          "last_name": "Kirschenbaum",
+          "phone1": "732-642-8047",
+          "email": "louismarcus@aol.com",
+          "zip": "07719",
+          "first_name_norm": "marc & merlie",
+          "last_name_norm": "kirschenbaum",
+          "email_norm": "louismarcus@aol.com",
+          "phone_norm": "7326428047",
+          "zip_norm": "07719"
+        },
+        {
+          "id": 176098,
+          "first_name": "Marc & Merlie",
+          "last_name": "Kirschenbaum",
+          "phone1": "732-642-8047",
+          "email": "louismarcus@aol.com",
+          "zip": "07719",
+          "first_name_norm": "marc & merlie",
+          "last_name_norm": "kirschenbaum",
+          "email_norm": "louismarcus@aol.com",
+          "phone_norm": "7326428047",
+          "zip_norm": "07719"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 174980,
+          "first_name": "Nish",
+          "last_name": "Whittle",
+          "phone1": "513-377-7880",
+          "email": "",
+          "zip": "45207",
+          "first_name_norm": "nish",
+          "last_name_norm": "whittle",
+          "email_norm": "",
+          "phone_norm": "5133777880",
+          "zip_norm": "45207"
+        },
+        {
+          "id": 175910,
+          "first_name": "NIsh",
+          "last_name": "Whittle",
+          "phone1": "513-377-7880",
+          "email": "",
+          "zip": "45207",
+          "first_name_norm": "nish",
+          "last_name_norm": "whittle",
+          "email_norm": "",
+          "phone_norm": "5133777880",
+          "zip_norm": "45207"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 177679,
+          "first_name": "Dave",
+          "last_name": "Beavers",
+          "phone1": "703-498-0640",
+          "email": "",
+          "zip": "22405",
+          "first_name_norm": "dave",
+          "last_name_norm": "beavers",
+          "email_norm": "",
+          "phone_norm": "7034980640",
+          "zip_norm": "22405"
+        },
+        {
+          "id": 179032,
+          "first_name": "Dave",
+          "last_name": "Beavers",
+          "phone1": "703-498-0640",
+          "email": "",
+          "zip": "22405",
+          "first_name_norm": "dave",
+          "last_name_norm": "beavers",
+          "email_norm": "",
+          "phone_norm": "7034980640",
+          "zip_norm": "22405"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 176903,
+          "first_name": "Aydee",
+          "last_name": "Perez",
+          "phone1": "301-233-2691",
+          "email": "aydeeperez59@gmail.com",
+          "zip": "20783",
+          "first_name_norm": "aydee",
+          "last_name_norm": "perez",
+          "email_norm": "aydeeperez59@gmail.com",
+          "phone_norm": "3012332691",
+          "zip_norm": "20783"
+        },
+        {
+          "id": 176910,
+          "first_name": "Aydee",
+          "last_name": "Perez",
+          "phone1": "301-233-2691",
+          "email": "aydeeperez59@gmail.com",
+          "zip": "20783",
+          "first_name_norm": "aydee",
+          "last_name_norm": "perez",
+          "email_norm": "aydeeperez59@gmail.com",
+          "phone_norm": "3012332691",
+          "zip_norm": "20783"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 175786,
+          "first_name": "Elaine",
+          "last_name": "Beacham",
+          "phone1": "301-580-8860",
+          "email": "elaine.beacham83@gmail.com",
+          "zip": "20723",
+          "first_name_norm": "elaine",
+          "last_name_norm": "beacham",
+          "email_norm": "elaine.beacham83@gmail.com",
+          "phone_norm": "3015808860",
+          "zip_norm": "20723"
+        },
+        {
+          "id": 175789,
+          "first_name": "Elaine",
+          "last_name": "Beacham",
+          "phone1": "301-580-8860",
+          "email": "elaine.beacham83@gmail.com",
+          "zip": "20723",
+          "first_name_norm": "elaine",
+          "last_name_norm": "beacham",
+          "email_norm": "elaine.beacham83@gmail.com",
+          "phone_norm": "3015808860",
+          "zip_norm": "20723"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 176904,
+          "first_name": "Deepak",
+          "last_name": "Advani",
+          "phone1": "732-318-9337",
+          "email": "dadvani@att.net",
+          "zip": "08820",
+          "first_name_norm": "deepak",
+          "last_name_norm": "advani",
+          "email_norm": "dadvani@att.net",
+          "phone_norm": "7323189337",
+          "zip_norm": "08820"
+        },
+        {
+          "id": 176911,
+          "first_name": "Deepak",
+          "last_name": "Advani",
+          "phone1": "732-318-9337",
+          "email": "dadvani@att.net",
+          "zip": "08820",
+          "first_name_norm": "deepak",
+          "last_name_norm": "advani",
+          "email_norm": "dadvani@att.net",
+          "phone_norm": "7323189337",
+          "zip_norm": "08820"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 178881,
+          "first_name": "Seth",
+          "last_name": "Coross",
+          "phone1": "704-975-4878",
+          "email": "sethcross89@ymail.com",
+          "zip": "28092",
+          "first_name_norm": "seth",
+          "last_name_norm": "coross",
+          "email_norm": "sethcross89@ymail.com",
+          "phone_norm": "7049754878",
+          "zip_norm": "28092"
+        },
+        {
+          "id": 178963,
+          "first_name": "Seth",
+          "last_name": "Coross",
+          "phone1": "704-975-4878",
+          "email": "sethcross89@ymail.com",
+          "zip": "28092",
+          "first_name_norm": "seth",
+          "last_name_norm": "coross",
+          "email_norm": "sethcross89@ymail.com",
+          "phone_norm": "7049754878",
+          "zip_norm": "28092"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 176905,
+          "first_name": "Trish",
+          "last_name": "Li",
+          "phone1": "703-774-4537",
+          "email": "miamisui@yahoo.com",
+          "zip": "20197",
+          "first_name_norm": "trish",
+          "last_name_norm": "li",
+          "email_norm": "miamisui@yahoo.com",
+          "phone_norm": "7037744537",
+          "zip_norm": "20197"
+        },
+        {
+          "id": 176912,
+          "first_name": "Trish",
+          "last_name": "Li",
+          "phone1": "703-774-4537",
+          "email": "miamisui@yahoo.com",
+          "zip": "20197",
+          "first_name_norm": "trish",
+          "last_name_norm": "li",
+          "email_norm": "miamisui@yahoo.com",
+          "phone_norm": "7037744537",
+          "zip_norm": "20197"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 177386,
+          "first_name": "Eric",
+          "last_name": "Black",
+          "phone1": "540-809-6219",
+          "email": "eric.dk.black@gmail.com",
+          "zip": "22728",
+          "first_name_norm": "eric",
+          "last_name_norm": "black",
+          "email_norm": "eric.dk.black@gmail.com",
+          "phone_norm": "5408096219",
+          "zip_norm": "22728"
+        },
+        {
+          "id": 177595,
+          "first_name": "Eric",
+          "last_name": "Black",
+          "phone1": "540-809-6219",
+          "email": "eric.dk.black@gmail.com",
+          "zip": "22728",
+          "first_name_norm": "eric",
+          "last_name_norm": "black",
+          "email_norm": "eric.dk.black@gmail.com",
+          "phone_norm": "5408096219",
+          "zip_norm": "22728"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 176714,
+          "first_name": "Joyce",
+          "last_name": "Wilson",
+          "phone1": "484-818-0876",
+          "email": "joycelusane218@gmail.com",
+          "zip": "19601",
+          "first_name_norm": "joyce",
+          "last_name_norm": "wilson",
+          "email_norm": "joycelusane218@gmail.com",
+          "phone_norm": "4848180876",
+          "zip_norm": "19601"
+        },
+        {
+          "id": 176400,
+          "first_name": "Joyce",
+          "last_name": "Wilson",
+          "phone1": "484-818-0876",
+          "email": "joycelusane218@gmail.com",
+          "zip": "19601",
+          "first_name_norm": "joyce",
+          "last_name_norm": "wilson",
+          "email_norm": "joycelusane218@gmail.com",
+          "phone_norm": "4848180876",
+          "zip_norm": "19601"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 176908,
+          "first_name": "Roy",
+          "last_name": "Sprouse",
+          "phone1": "804-263-3169",
+          "email": "k9nikita@yahoo.com",
+          "zip": "23111",
+          "first_name_norm": "roy",
+          "last_name_norm": "sprouse",
+          "email_norm": "k9nikita@yahoo.com",
+          "phone_norm": "8042633169",
+          "zip_norm": "23111"
+        },
+        {
+          "id": 176915,
+          "first_name": "Roy",
+          "last_name": "Sprouse",
+          "phone1": "804-263-3169",
+          "email": "k9nikita@yahoo.com",
+          "zip": "23111",
+          "first_name_norm": "roy",
+          "last_name_norm": "sprouse",
+          "email_norm": "k9nikita@yahoo.com",
+          "phone_norm": "8042633169",
+          "zip_norm": "23111"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 177685,
+          "first_name": "Patty",
+          "last_name": "Miller",
+          "phone1": "419-203-3095",
+          "email": "hamilton516@live.com",
+          "zip": "22701",
+          "first_name_norm": "patty",
+          "last_name_norm": "miller",
+          "email_norm": "hamilton516@live.com",
+          "phone_norm": "4192033095",
+          "zip_norm": "22701"
+        },
+        {
+          "id": 177956,
+          "first_name": "Patty",
+          "last_name": "Miller",
+          "phone1": "419-203-3095",
+          "email": "hamilton516@live.com",
+          "zip": "22701",
+          "first_name_norm": "patty",
+          "last_name_norm": "miller",
+          "email_norm": "hamilton516@live.com",
+          "phone_norm": "4192033095",
+          "zip_norm": "22701"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 176914,
+          "first_name": "Gwendolyn",
+          "last_name": "Peterson",
+          "phone1": "804-892-4608",
+          "email": "",
+          "zip": "23836",
+          "first_name_norm": "gwendolyn",
+          "last_name_norm": "peterson",
+          "email_norm": "",
+          "phone_norm": "8048924608",
+          "zip_norm": "23836"
+        },
+        {
+          "id": 176907,
+          "first_name": "Gwendolyn",
+          "last_name": "Peterson",
+          "phone1": "804-892-4608",
+          "email": "",
+          "zip": "23836",
+          "first_name_norm": "gwendolyn",
+          "last_name_norm": "peterson",
+          "email_norm": "",
+          "phone_norm": "8048924608",
+          "zip_norm": "23836"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 174969,
+          "first_name": "Jo",
+          "last_name": "Griffin",
+          "phone1": "570-701-5772",
+          "email": "jgriffin1314@gmail.com",
+          "zip": "17847",
+          "first_name_norm": "jo",
+          "last_name_norm": "griffin",
+          "email_norm": "jgriffin1314@gmail.com",
+          "phone_norm": "5707015772",
+          "zip_norm": "17847"
+        },
+        {
+          "id": 175163,
+          "first_name": "Jo",
+          "last_name": "Griffin",
+          "phone1": "570-701-5772",
+          "email": "",
+          "zip": "17847",
+          "first_name_norm": "jo",
+          "last_name_norm": "griffin",
+          "email_norm": "",
+          "phone_norm": "5707015772",
+          "zip_norm": "17847"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 177293,
+          "first_name": "Jmm",
+          "last_name": "Jmm",
+          "phone1": "443-866-2390",
+          "email": "tweety031762@gmail.com",
+          "zip": "21154",
+          "first_name_norm": "jmm",
+          "last_name_norm": "jmm",
+          "email_norm": "tweety031762@gmail.com",
+          "phone_norm": "4438662390",
+          "zip_norm": "21154"
+        },
+        {
+          "id": 177294,
+          "first_name": "Jmm",
+          "last_name": "Jmm",
+          "phone1": "443-866-2390",
+          "email": "tweety031762@gmail.com",
+          "zip": "21154",
+          "first_name_norm": "jmm",
+          "last_name_norm": "jmm",
+          "email_norm": "tweety031762@gmail.com",
+          "phone_norm": "4438662390",
+          "zip_norm": "21154"
+        },
+        {
+          "id": 177295,
+          "first_name": "Jmm",
+          "last_name": "Jmm",
+          "phone1": "443-866-2390",
+          "email": "tweety031762@gmail.com",
+          "zip": "21154",
+          "first_name_norm": "jmm",
+          "last_name_norm": "jmm",
+          "email_norm": "tweety031762@gmail.com",
+          "phone_norm": "4438662390",
+          "zip_norm": "21154"
+        },
+        {
+          "id": 177297,
+          "first_name": "Jmm",
+          "last_name": "Jmm",
+          "phone1": "443-866-2390",
+          "email": "tweety031762@gmail.com",
+          "zip": "21154",
+          "first_name_norm": "jmm",
+          "last_name_norm": "jmm",
+          "email_norm": "tweety031762@gmail.com",
+          "phone_norm": "4438662390",
+          "zip_norm": "21154"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 178282,
+          "first_name": "John",
+          "last_name": "Trapmann",
+          "phone1": "609-296-4116",
+          "email": "",
+          "zip": "08087",
+          "first_name_norm": "john",
+          "last_name_norm": "trapmann",
+          "email_norm": "",
+          "phone_norm": "6092964116",
+          "zip_norm": "08087"
+        },
+        {
+          "id": 178192,
+          "first_name": "John",
+          "last_name": "Trapmann",
+          "phone1": "609-296-4116",
+          "email": "",
+          "zip": "08087",
+          "first_name_norm": "john",
+          "last_name_norm": "trapmann",
+          "email_norm": "",
+          "phone_norm": "6092964116",
+          "zip_norm": "08087"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 179233,
+          "first_name": "Joanna",
+          "last_name": "Millhouse",
+          "phone1": "410-245-9309",
+          "email": "joanna.m.millhouse@gmail.com",
+          "zip": "20032",
+          "first_name_norm": "joanna",
+          "last_name_norm": "millhouse",
+          "email_norm": "joanna.m.millhouse@gmail.com",
+          "phone_norm": "4102459309",
+          "zip_norm": "20032"
+        },
+        {
+          "id": 179234,
+          "first_name": "Joanna",
+          "last_name": "Millhouse",
+          "phone1": "410-245-9309",
+          "email": "joanna.m.millhouse@gmail.com",
+          "zip": "20032",
+          "first_name_norm": "joanna",
+          "last_name_norm": "millhouse",
+          "email_norm": "joanna.m.millhouse@gmail.com",
+          "phone_norm": "4102459309",
+          "zip_norm": "20032"
+        },
+        {
+          "id": 179236,
+          "first_name": "Joanna",
+          "last_name": "Millhouse",
+          "phone1": "410-245-9309",
+          "email": "joanna.m.millhouse@gmail.com",
+          "zip": "20032",
+          "first_name_norm": "joanna",
+          "last_name_norm": "millhouse",
+          "email_norm": "joanna.m.millhouse@gmail.com",
+          "phone_norm": "4102459309",
+          "zip_norm": "20032"
+        },
+        {
+          "id": 179237,
+          "first_name": "Joanna",
+          "last_name": "Millhouse",
+          "phone1": "410-245-9309",
+          "email": "joanna.m.millhouse@gmail.com",
+          "zip": "20032",
+          "first_name_norm": "joanna",
+          "last_name_norm": "millhouse",
+          "email_norm": "joanna.m.millhouse@gmail.com",
+          "phone_norm": "4102459309",
+          "zip_norm": "20032"
+        },
+        {
+          "id": 179238,
+          "first_name": "Joanna",
+          "last_name": "Millhouse",
+          "phone1": "410-245-9309",
+          "email": "joanna.m.millhouse@gmail.com",
+          "zip": "20032",
+          "first_name_norm": "joanna",
+          "last_name_norm": "millhouse",
+          "email_norm": "joanna.m.millhouse@gmail.com",
+          "phone_norm": "4102459309",
+          "zip_norm": "20032"
+        },
+        {
+          "id": 179239,
+          "first_name": "Joanna",
+          "last_name": "Millhouse",
+          "phone1": "410-245-9309",
+          "email": "joanna.m.millhouse@gmail.com",
+          "zip": "20032",
+          "first_name_norm": "joanna",
+          "last_name_norm": "millhouse",
+          "email_norm": "joanna.m.millhouse@gmail.com",
+          "phone_norm": "4102459309",
+          "zip_norm": "20032"
+        },
+        {
+          "id": 179240,
+          "first_name": "Joanna",
+          "last_name": "Millhouse",
+          "phone1": "410-245-9309",
+          "email": "joanna.m.millhouse@gmail.com",
+          "zip": "20032",
+          "first_name_norm": "joanna",
+          "last_name_norm": "millhouse",
+          "email_norm": "joanna.m.millhouse@gmail.com",
+          "phone_norm": "4102459309",
+          "zip_norm": "20032"
+        },
+        {
+          "id": 179235,
+          "first_name": "Joanna",
+          "last_name": "Millhouse",
+          "phone1": "410-245-9309",
+          "email": "joanna.m.millhouse@gmail.com",
+          "zip": "20032",
+          "first_name_norm": "joanna",
+          "last_name_norm": "millhouse",
+          "email_norm": "joanna.m.millhouse@gmail.com",
+          "phone_norm": "4102459309",
+          "zip_norm": "20032"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 175297,
+          "first_name": "Robert",
+          "last_name": "Garbush",
+          "phone1": "570-998-1916",
+          "email": "garbushrobert@gmail.com",
+          "zip": "18656",
+          "first_name_norm": "robert",
+          "last_name_norm": "garbush",
+          "email_norm": "garbushrobert@gmail.com",
+          "phone_norm": "5709981916",
+          "zip_norm": "18656"
+        },
+        {
+          "id": 175565,
+          "first_name": "Robert",
+          "last_name": "Garbush",
+          "phone1": "570-998-1916",
+          "email": "garbushrobert@gmail.com",
+          "zip": "18656",
+          "first_name_norm": "robert",
+          "last_name_norm": "garbush",
+          "email_norm": "garbushrobert@gmail.com",
+          "phone_norm": "5709981916",
+          "zip_norm": "18656"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 176036,
+          "first_name": "Richard",
+          "last_name": "Bertges",
+          "phone1": "814-838-9004",
+          "email": "rpbertges@gmail.com",
+          "zip": "16508",
+          "first_name_norm": "richard",
+          "last_name_norm": "bertges",
+          "email_norm": "rpbertges@gmail.com",
+          "phone_norm": "8148389004",
+          "zip_norm": "16508"
+        },
+        {
+          "id": 176040,
+          "first_name": "Richard",
+          "last_name": "Bertges",
+          "phone1": "814-838-9004",
+          "email": "rpbertges@gmail.com",
+          "zip": "16508",
+          "first_name_norm": "richard",
+          "last_name_norm": "bertges",
+          "email_norm": "rpbertges@gmail.com",
+          "phone_norm": "8148389004",
+          "zip_norm": "16508"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 176662,
+          "first_name": "Matthew",
+          "last_name": "Phares",
+          "phone1": "540-688-7101",
+          "email": "mphares1994@gmail.com",
+          "zip": "22980",
+          "first_name_norm": "matthew",
+          "last_name_norm": "phares",
+          "email_norm": "mphares1994@gmail.com",
+          "phone_norm": "5406887101",
+          "zip_norm": "22980"
+        },
+        {
+          "id": 177678,
+          "first_name": "Matthew",
+          "last_name": "Phares",
+          "phone1": "540-688-7101",
+          "email": "mphares1994@gmail.com",
+          "zip": "22980",
+          "first_name_norm": "matthew",
+          "last_name_norm": "phares",
+          "email_norm": "mphares1994@gmail.com",
+          "phone_norm": "5406887101",
+          "zip_norm": "22980"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 176037,
+          "first_name": "Troy",
+          "last_name": "Galloway",
+          "phone1": "336-979-6948",
+          "email": "vegeman47@gmail.com",
+          "zip": "27104",
+          "first_name_norm": "troy",
+          "last_name_norm": "galloway",
+          "email_norm": "vegeman47@gmail.com",
+          "phone_norm": "3369796948",
+          "zip_norm": "27104"
+        },
+        {
+          "id": 176041,
+          "first_name": "Troy",
+          "last_name": "Galloway",
+          "phone1": "336-979-6948",
+          "email": "vegeman47@gmail.com",
+          "zip": "27104",
+          "first_name_norm": "troy",
+          "last_name_norm": "galloway",
+          "email_norm": "vegeman47@gmail.com",
+          "phone_norm": "3369796948",
+          "zip_norm": "27104"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 176920,
+          "first_name": "Karen & Jerry",
+          "last_name": "Hayostek",
+          "phone1": "724-683-7689",
+          "email": "",
+          "zip": "15074",
+          "first_name_norm": "karen & jerry",
+          "last_name_norm": "hayostek",
+          "email_norm": "",
+          "phone_norm": "7246837689",
+          "zip_norm": "15074"
+        },
+        {
+          "id": 177465,
+          "first_name": "Karen & Jerry",
+          "last_name": "Hayostek",
+          "phone1": "724-683-7689",
+          "email": "",
+          "zip": "15074",
+          "first_name_norm": "karen & jerry",
+          "last_name_norm": "hayostek",
+          "email_norm": "",
+          "phone_norm": "7246837689",
+          "zip_norm": "15074"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 176038,
+          "first_name": "Mersad",
+          "last_name": "Hoorfar",
+          "phone1": "610-256-3666",
+          "email": "",
+          "zip": "19085",
+          "first_name_norm": "mersad",
+          "last_name_norm": "hoorfar",
+          "email_norm": "",
+          "phone_norm": "6102563666",
+          "zip_norm": "19085"
+        },
+        {
+          "id": 176042,
+          "first_name": "Mersad",
+          "last_name": "Hoorfar",
+          "phone1": "610-256-3666",
+          "email": "",
+          "zip": "19085",
+          "first_name_norm": "mersad",
+          "last_name_norm": "hoorfar",
+          "email_norm": "",
+          "phone_norm": "6102563666",
+          "zip_norm": "19085"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 176505,
+          "first_name": "shawn",
+          "last_name": "seery",
+          "phone1": "724-622-4446",
+          "email": "",
+          "zip": "15066",
+          "first_name_norm": "shawn",
+          "last_name_norm": "seery",
+          "email_norm": "",
+          "phone_norm": "7246224446",
+          "zip_norm": "15066"
+        },
+        {
+          "id": 176540,
+          "first_name": "Shawn",
+          "last_name": "Seery",
+          "phone1": "724-622-4446",
+          "email": "shaunseery22@gmail.com",
+          "zip": "15066",
+          "first_name_norm": "shawn",
+          "last_name_norm": "seery",
+          "email_norm": "shaunseery22@gmail.com",
+          "phone_norm": "7246224446",
+          "zip_norm": "15066"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 177623,
+          "first_name": "Bob",
+          "last_name": "Cone",
+          "phone1": "610-334-2528",
+          "email": "bobcone@windstream.net",
+          "zip": "17519",
+          "first_name_norm": "bob",
+          "last_name_norm": "cone",
+          "email_norm": "bobcone@windstream.net",
+          "phone_norm": "6103342528",
+          "zip_norm": "17519"
+        },
+        {
+          "id": 177645,
+          "first_name": "Bob",
+          "last_name": "Cone",
+          "phone1": "610-334-2528",
+          "email": "bobcone@windstream.net",
+          "zip": "17519",
+          "first_name_norm": "bob",
+          "last_name_norm": "cone",
+          "email_norm": "bobcone@windstream.net",
+          "phone_norm": "6103342528",
+          "zip_norm": "17519"
+        }
+      ]
+    },
+    {
+      "group_id": 4,
+      "prospects": [
+        {
+          "id": 177806,
+          "first_name": "LaDonna",
+          "last_name": "Wilson",
+          "phone1": "586-298-5829",
+          "email": null,
+          "zip": "48082",
+          "first_name_norm": "ladonna",
+          "last_name_norm": "wilson",
+          "email_norm": "",
+          "phone_norm": "5862985829",
+          "zip_norm": "48082"
+        },
+        {
+          "id": 177994,
+          "first_name": "LaDonna",
+          "last_name": "Wilson",
+          "phone1": "586-298-5829",
+          "email": "ladonnaywilson@comcast.net",
+          "zip": "48082",
+          "first_name_norm": "ladonna",
+          "last_name_norm": "wilson",
+          "email_norm": "ladonnaywilson@comcast.net",
+          "phone_norm": "5862985829",
+          "zip_norm": "48082"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 176039,
+          "first_name": "Antonio",
+          "last_name": "Mccollum",
+          "phone1": "336-470-5738",
+          "email": "mccollumantonio@icloud.com",
+          "zip": "27407",
+          "first_name_norm": "antonio",
+          "last_name_norm": "mccollum",
+          "email_norm": "mccollumantonio@icloud.com",
+          "phone_norm": "3364705738",
+          "zip_norm": "27407"
+        },
+        {
+          "id": 176043,
+          "first_name": "Antonio",
+          "last_name": "Mccollum",
+          "phone1": "336-470-5738",
+          "email": "mccollumantonio@icloud.com",
+          "zip": "27407",
+          "first_name_norm": "antonio",
+          "last_name_norm": "mccollum",
+          "email_norm": "mccollumantonio@icloud.com",
+          "phone_norm": "3364705738",
+          "zip_norm": "27407"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 177396,
+          "first_name": "Deb",
+          "last_name": "Friss",
+          "phone1": "412-915-4113",
+          "email": "",
+          "zip": "15211",
+          "first_name_norm": "deb",
+          "last_name_norm": "friss",
+          "email_norm": "",
+          "phone_norm": "4129154113",
+          "zip_norm": "15211"
+        },
+        {
+          "id": 177397,
+          "first_name": "Deb",
+          "last_name": "Friss",
+          "phone1": "412-915-4113",
+          "email": "",
+          "zip": "15211",
+          "first_name_norm": "deb",
+          "last_name_norm": "friss",
+          "email_norm": "",
+          "phone_norm": "4129154113",
+          "zip_norm": "15211"
+        },
+        {
+          "id": 177398,
+          "first_name": "Deb",
+          "last_name": "Friss",
+          "phone1": "412-915-4113",
+          "email": "",
+          "zip": "15211",
+          "first_name_norm": "deb",
+          "last_name_norm": "friss",
+          "email_norm": "",
+          "phone_norm": "4129154113",
+          "zip_norm": "15211"
+        },
+        {
+          "id": 177399,
+          "first_name": "Deb",
+          "last_name": "Friss",
+          "phone1": "412-915-4113",
+          "email": "",
+          "zip": "15211",
+          "first_name_norm": "deb",
+          "last_name_norm": "friss",
+          "email_norm": "",
+          "phone_norm": "4129154113",
+          "zip_norm": "15211"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 179000,
+          "first_name": "Kab",
+          "last_name": "Yi",
+          "phone1": "540-226-1151",
+          "email": "gurengyi@gmail.com",
+          "zip": "22406",
+          "first_name_norm": "kab",
+          "last_name_norm": "yi",
+          "email_norm": "gurengyi@gmail.com",
+          "phone_norm": "5402261151",
+          "zip_norm": "22406"
+        },
+        {
+          "id": 179049,
+          "first_name": "Kab",
+          "last_name": "Yi",
+          "phone1": "540-226-1151",
+          "email": "gurengyi@gmail.com",
+          "zip": "22406",
+          "first_name_norm": "kab",
+          "last_name_norm": "yi",
+          "email_norm": "gurengyi@gmail.com",
+          "phone_norm": "5402261151",
+          "zip_norm": "22406"
+        }
+      ]
+    },
+    {
+      "group_id": 4,
+      "prospects": [
+        {
+          "id": 179590,
+          "first_name": "Regina",
+          "last_name": "Ndeto",
+          "phone1": "610-203-4126",
+          "email": "regina.ndeto@gmail.com",
+          "zip": "19082",
+          "first_name_norm": "regina",
+          "last_name_norm": "ndeto",
+          "email_norm": "regina.ndeto@gmail.com",
+          "phone_norm": "6102034126",
+          "zip_norm": "19082"
+        },
+        {
+          "id": 179591,
+          "first_name": "Regina",
+          "last_name": "Ndeto",
+          "phone1": "610-203-4126",
+          "email": "regina.ndeto@gmail.com",
+          "zip": "19082",
+          "first_name_norm": "regina",
+          "last_name_norm": "ndeto",
+          "email_norm": "regina.ndeto@gmail.com",
+          "phone_norm": "6102034126",
+          "zip_norm": "19082"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 175258,
+          "first_name": "Bonnie",
+          "last_name": "Hite",
+          "phone1": "814-330-5546",
+          "email": "bdhumphress1@verizon.com",
+          "zip": "15940",
+          "first_name_norm": "bonnie",
+          "last_name_norm": "hite",
+          "email_norm": "bdhumphress1@verizon.com",
+          "phone_norm": "8143305546",
+          "zip_norm": "15940"
+        },
+        {
+          "id": 176050,
+          "first_name": "Bonnie",
+          "last_name": "Hite",
+          "phone1": "814-330-5546",
+          "email": "",
+          "zip": "15940",
+          "first_name_norm": "bonnie",
+          "last_name_norm": "hite",
+          "email_norm": "",
+          "phone_norm": "8143305546",
+          "zip_norm": "15940"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 175980,
+          "first_name": "Stuart",
+          "last_name": "Tansill ",
+          "phone1": "804-741-0432",
+          "email": "",
+          "zip": "23229",
+          "first_name_norm": "stuart",
+          "last_name_norm": "tansill",
+          "email_norm": "",
+          "phone_norm": "8047410432",
+          "zip_norm": "23229"
+        },
+        {
+          "id": 175995,
+          "first_name": "Stuart",
+          "last_name": "Tansill",
+          "phone1": "804-741-0432",
+          "email": "stuarttan18@gmail.com",
+          "zip": "23229",
+          "first_name_norm": "stuart",
+          "last_name_norm": "tansill",
+          "email_norm": "stuarttan18@gmail.com",
+          "phone_norm": "8047410432",
+          "zip_norm": "23229"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 176724,
+          "first_name": "Gary",
+          "last_name": "Freese",
+          "phone1": "717-503-9436",
+          "email": "gfreese42@gmail.com",
+          "zip": "17801",
+          "first_name_norm": "gary",
+          "last_name_norm": "freese",
+          "email_norm": "gfreese42@gmail.com",
+          "phone_norm": "7175039436",
+          "zip_norm": "17801"
+        },
+        {
+          "id": 177115,
+          "first_name": "Gary",
+          "last_name": "Freese",
+          "phone1": "717-503-9436",
+          "email": "gfreese42@gmail.com",
+          "zip": "17801",
+          "first_name_norm": "gary",
+          "last_name_norm": "freese",
+          "email_norm": "gfreese42@gmail.com",
+          "phone_norm": "7175039436",
+          "zip_norm": "17801"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 175461,
+          "first_name": "Jim",
+          "last_name": "Jefferson",
+          "phone1": "717-756-0846",
+          "email": "",
+          "zip": "17070",
+          "first_name_norm": "jim",
+          "last_name_norm": "jefferson",
+          "email_norm": "",
+          "phone_norm": "7177560846",
+          "zip_norm": "17070"
+        },
+        {
+          "id": 175727,
+          "first_name": "Jim",
+          "last_name": "Jefferson",
+          "phone1": "717-756-0846",
+          "email": "",
+          "zip": "17070",
+          "first_name_norm": "jim",
+          "last_name_norm": "jefferson",
+          "email_norm": "",
+          "phone_norm": "7177560846",
+          "zip_norm": "17070"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 178003,
+          "first_name": "Tyler",
+          "last_name": "Windows",
+          "phone1": "724-549-5332",
+          "email": "",
+          "zip": "15754",
+          "first_name_norm": "tyler",
+          "last_name_norm": "windows",
+          "email_norm": "",
+          "phone_norm": "7245495332",
+          "zip_norm": "15754"
+        },
+        {
+          "id": 179577,
+          "first_name": "Tyler",
+          "last_name": "Windows",
+          "phone1": "724-549-5332",
+          "email": "",
+          "zip": "15754",
+          "first_name_norm": "tyler",
+          "last_name_norm": "windows",
+          "email_norm": "",
+          "phone_norm": "7245495332",
+          "zip_norm": "15754"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 175263,
+          "first_name": "Joe",
+          "last_name": "Sundeen",
+          "phone1": "215-493-2647",
+          "email": "jeesbay@aol.com",
+          "zip": "19067",
+          "first_name_norm": "joe",
+          "last_name_norm": "sundeen",
+          "email_norm": "jeesbay@aol.com",
+          "phone_norm": "2154932647",
+          "zip_norm": "19067"
+        },
+        {
+          "id": 175273,
+          "first_name": "Joe",
+          "last_name": "Sundeen",
+          "phone1": "215-493-2647",
+          "email": "jeesbay@aol.com",
+          "zip": "19067",
+          "first_name_norm": "joe",
+          "last_name_norm": "sundeen",
+          "email_norm": "jeesbay@aol.com",
+          "phone_norm": "2154932647",
+          "zip_norm": "19067"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 174808,
+          "first_name": "Angel",
+          "last_name": "Almodovar",
+          "phone1": "704-806-4994",
+          "email": "AngelAlmodovar11@yahoo.com",
+          "zip": "28278",
+          "first_name_norm": "angel",
+          "last_name_norm": "almodovar",
+          "email_norm": "angelalmodovar11@yahoo.com",
+          "phone_norm": "7048064994",
+          "zip_norm": "28278"
+        },
+        {
+          "id": 175238,
+          "first_name": "Angel",
+          "last_name": "Almodovar",
+          "phone1": "704-806-4994",
+          "email": "AngelAlmodovar11@yahoo.com",
+          "zip": "28278",
+          "first_name_norm": "angel",
+          "last_name_norm": "almodovar",
+          "email_norm": "angelalmodovar11@yahoo.com",
+          "phone_norm": "7048064994",
+          "zip_norm": "28278"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 174912,
+          "first_name": "Afonso",
+          "last_name": "Pinto",
+          "phone1": "732-857-1487",
+          "email": "",
+          "zip": "08863",
+          "first_name_norm": "afonso",
+          "last_name_norm": "pinto",
+          "email_norm": "",
+          "phone_norm": "7328571487",
+          "zip_norm": "08863"
+        },
+        {
+          "id": 174914,
+          "first_name": "Afonso",
+          "last_name": "Pinto",
+          "phone1": "732-857-1487",
+          "email": "",
+          "zip": "08863",
+          "first_name_norm": "afonso",
+          "last_name_norm": "pinto",
+          "email_norm": "",
+          "phone_norm": "7328571487",
+          "zip_norm": "08863"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 178584,
+          "first_name": "Tavis",
+          "last_name": "Sadulski",
+          "phone1": "724-624-0190",
+          "email": "",
+          "zip": "16045",
+          "first_name_norm": "tavis",
+          "last_name_norm": "sadulski",
+          "email_norm": "",
+          "phone_norm": "7246240190",
+          "zip_norm": "16045"
+        },
+        {
+          "id": 179198,
+          "first_name": "Tavis",
+          "last_name": "Sadulski",
+          "phone1": "724-624-0190",
+          "email": "",
+          "zip": "16045",
+          "first_name_norm": "tavis",
+          "last_name_norm": "sadulski",
+          "email_norm": "",
+          "phone_norm": "7246240190",
+          "zip_norm": "16045"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 174988,
+          "first_name": "Terri",
+          "last_name": "Roman",
+          "phone1": "724-462-8443",
+          "email": "jromie@verizon.net",
+          "zip": "15108",
+          "first_name_norm": "terri",
+          "last_name_norm": "roman",
+          "email_norm": "jromie@verizon.net",
+          "phone_norm": "7244628443",
+          "zip_norm": "15108"
+        },
+        {
+          "id": 174991,
+          "first_name": "Terri",
+          "last_name": "Roman",
+          "phone1": "724-462-8443",
+          "email": "jromie@verizon.net",
+          "zip": "15108",
+          "first_name_norm": "terri",
+          "last_name_norm": "roman",
+          "email_norm": "jromie@verizon.net",
+          "phone_norm": "7244628443",
+          "zip_norm": "15108"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 176930,
+          "first_name": "Mark",
+          "last_name": "Petrovich",
+          "phone1": "443-691-9157",
+          "email": "mark825p@msn.com",
+          "zip": "19510",
+          "first_name_norm": "mark",
+          "last_name_norm": "petrovich",
+          "email_norm": "mark825p@msn.com",
+          "phone_norm": "4436919157",
+          "zip_norm": "19510"
+        },
+        {
+          "id": 176932,
+          "first_name": "Mark",
+          "last_name": "Petrovich",
+          "phone1": "443-691-9157",
+          "email": "mark825p@msn.com",
+          "zip": "19510",
+          "first_name_norm": "mark",
+          "last_name_norm": "petrovich",
+          "email_norm": "mark825p@msn.com",
+          "phone_norm": "4436919157",
+          "zip_norm": "19510"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 179447,
+          "first_name": "John",
+          "last_name": "Brezarich",
+          "phone1": "724-733-7360",
+          "email": "",
+          "zip": "15668",
+          "first_name_norm": "john",
+          "last_name_norm": "brezarich",
+          "email_norm": "",
+          "phone_norm": "7247337360",
+          "zip_norm": "15668"
+        },
+        {
+          "id": 179624,
+          "first_name": "John",
+          "last_name": "Brezarich",
+          "phone1": "724-733-7360",
+          "email": "",
+          "zip": "15668",
+          "first_name_norm": "john",
+          "last_name_norm": "brezarich",
+          "email_norm": "",
+          "phone_norm": "7247337360",
+          "zip_norm": "15668"
+        }
+      ]
+    },
+    {
+      "group_id": 4,
+      "prospects": [
+        {
+          "id": 178532,
+          "first_name": "Dariela",
+          "last_name": "Ortiz",
+          "phone1": "570-436-2403",
+          "email": "",
+          "zip": "18201",
+          "first_name_norm": "dariela",
+          "last_name_norm": "ortiz",
+          "email_norm": "",
+          "phone_norm": "5704362403",
+          "zip_norm": "18201"
+        },
+        {
+          "id": 178541,
+          "first_name": "Dariela",
+          "last_name": "Ortiz",
+          "phone1": "570-436-2403",
+          "email": "",
+          "zip": "18201",
+          "first_name_norm": "dariela",
+          "last_name_norm": "ortiz",
+          "email_norm": "",
+          "phone_norm": "5704362403",
+          "zip_norm": "18201"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 178117,
+          "first_name": "Luan",
+          "last_name": "Tran",
+          "phone1": "937-241-1908",
+          "email": "navydork@yahoo.com",
+          "zip": "22405",
+          "first_name_norm": "luan",
+          "last_name_norm": "tran",
+          "email_norm": "navydork@yahoo.com",
+          "phone_norm": "9372411908",
+          "zip_norm": "22405"
+        },
+        {
+          "id": 178879,
+          "first_name": "Luan",
+          "last_name": "Tran",
+          "phone1": "937-241-1908",
+          "email": "navydork@yahoo.com",
+          "zip": "22405",
+          "first_name_norm": "luan",
+          "last_name_norm": "tran",
+          "email_norm": "navydork@yahoo.com",
+          "phone_norm": "9372411908",
+          "zip_norm": "22405"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 178162,
+          "first_name": "Daniel",
+          "last_name": "Lynch",
+          "phone1": "609-778-8211",
+          "email": "",
+          "zip": "08210",
+          "first_name_norm": "daniel",
+          "last_name_norm": "lynch",
+          "email_norm": "",
+          "phone_norm": "6097788211",
+          "zip_norm": "08210"
+        },
+        {
+          "id": 178240,
+          "first_name": "Daniel",
+          "last_name": "Lynch",
+          "phone1": "609-778-8211",
+          "email": "",
+          "zip": "08210",
+          "first_name_norm": "daniel",
+          "last_name_norm": "lynch",
+          "email_norm": "",
+          "phone_norm": "6097788211",
+          "zip_norm": "08210"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 176362,
+          "first_name": "Scott",
+          "last_name": "Ebright",
+          "phone1": "570-246-9647",
+          "email": "srebright@gmail.com",
+          "zip": "17772",
+          "first_name_norm": "scott",
+          "last_name_norm": "ebright",
+          "email_norm": "srebright@gmail.com",
+          "phone_norm": "5702469647",
+          "zip_norm": "17772"
+        },
+        {
+          "id": 178413,
+          "first_name": "Scott",
+          "last_name": "Ebright",
+          "phone1": "570-246-9647",
+          "email": "srebright@gmail.com",
+          "zip": "17772",
+          "first_name_norm": "scott",
+          "last_name_norm": "ebright",
+          "email_norm": "srebright@gmail.com",
+          "phone_norm": "5702469647",
+          "zip_norm": "17772"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 175722,
+          "first_name": "Jewel",
+          "last_name": "Berry",
+          "phone1": "540-287-8767",
+          "email": "jewelbeagle1@aol.com",
+          "zip": "22405",
+          "first_name_norm": "jewel",
+          "last_name_norm": "berry",
+          "email_norm": "jewelbeagle1@aol.com",
+          "phone_norm": "5402878767",
+          "zip_norm": "22405"
+        },
+        {
+          "id": 176177,
+          "first_name": "Jewel",
+          "last_name": "Berry",
+          "phone1": "540-287-8767",
+          "email": "jewelbeagle1@aol.com",
+          "zip": "22405",
+          "first_name_norm": "jewel",
+          "last_name_norm": "berry",
+          "email_norm": "jewelbeagle1@aol.com",
+          "phone_norm": "5402878767",
+          "zip_norm": "22405"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 176138,
+          "first_name": "Bob",
+          "last_name": "Winters",
+          "phone1": "440-915-7538",
+          "email": "",
+          "zip": "44017",
+          "first_name_norm": "bob",
+          "last_name_norm": "winters",
+          "email_norm": "",
+          "phone_norm": "4409157538",
+          "zip_norm": "44017"
+        },
+        {
+          "id": 176144,
+          "first_name": "Bob",
+          "last_name": "Winters",
+          "phone1": "440-915-7538",
+          "email": "",
+          "zip": "44017",
+          "first_name_norm": "bob",
+          "last_name_norm": "winters",
+          "email_norm": "",
+          "phone_norm": "4409157538",
+          "zip_norm": "44017"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 177319,
+          "first_name": "Stephanie",
+          "last_name": "Cameron",
+          "phone1": "724-777-7204",
+          "email": "stephanierenacameron@icloud.con",
+          "zip": "15056",
+          "first_name_norm": "stephanie",
+          "last_name_norm": "cameron",
+          "email_norm": "stephanierenacameron@icloud.con",
+          "phone_norm": "7247777204",
+          "zip_norm": "15056"
+        },
+        {
+          "id": 177320,
+          "first_name": "Stephanie",
+          "last_name": "Cameron",
+          "phone1": "724-777-7204",
+          "email": "stephanierenacameron@icloud.con",
+          "zip": "15056",
+          "first_name_norm": "stephanie",
+          "last_name_norm": "cameron",
+          "email_norm": "stephanierenacameron@icloud.con",
+          "phone_norm": "7247777204",
+          "zip_norm": "15056"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 178270,
+          "first_name": "Torie",
+          "last_name": "Mount",
+          "phone1": "804-868-0117",
+          "email": "torie.mount@gmail.com",
+          "zip": "23222",
+          "first_name_norm": "torie",
+          "last_name_norm": "mount",
+          "email_norm": "torie.mount@gmail.com",
+          "phone_norm": "8048680117",
+          "zip_norm": "23222"
+        },
+        {
+          "id": 179650,
+          "first_name": "Torie",
+          "last_name": "Mount",
+          "phone1": "804-868-0117",
+          "email": "torie.mount@gmail.com",
+          "zip": "23222",
+          "first_name_norm": "torie",
+          "last_name_norm": "mount",
+          "email_norm": "torie.mount@gmail.com",
+          "phone_norm": "8048680117",
+          "zip_norm": "23222"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 179295,
+          "first_name": "Tyriq",
+          "last_name": "Henderson",
+          "phone1": "240-601-1833",
+          "email": "",
+          "zip": "20723",
+          "first_name_norm": "tyriq",
+          "last_name_norm": "henderson",
+          "email_norm": "",
+          "phone_norm": "2406011833",
+          "zip_norm": "20723"
+        },
+        {
+          "id": 179296,
+          "first_name": "Tyriq",
+          "last_name": "Henderson",
+          "phone1": "240-601-1833",
+          "email": "",
+          "zip": "20723",
+          "first_name_norm": "tyriq",
+          "last_name_norm": "henderson",
+          "email_norm": "",
+          "phone_norm": "2406011833",
+          "zip_norm": "20723"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 175779,
+          "first_name": "Barbara",
+          "last_name": "Lawrence",
+          "phone1": "412-979-6975",
+          "email": "blaw5254@gmail.com",
+          "zip": "15236",
+          "first_name_norm": "barbara",
+          "last_name_norm": "lawrence",
+          "email_norm": "blaw5254@gmail.com",
+          "phone_norm": "4129796975",
+          "zip_norm": "15236"
+        },
+        {
+          "id": 175790,
+          "first_name": "Barbara",
+          "last_name": "Lawrence",
+          "phone1": "412-979-6975",
+          "email": "blaw5254@gmail.com",
+          "zip": "15236",
+          "first_name_norm": "barbara",
+          "last_name_norm": "lawrence",
+          "email_norm": "blaw5254@gmail.com",
+          "phone_norm": "4129796975",
+          "zip_norm": "15236"
+        }
+      ]
+    },
+    {
+      "group_id": 1,
+      "prospects": [
+        {
+          "id": 175693,
+          "first_name": "Salvator",
+          "last_name": "mazzamuto",
+          "phone1": "609-949-3803",
+          "email": "smazzamuto1@gmail.com",
+          "zip": "08016",
+          "first_name_norm": "salvator",
+          "last_name_norm": "mazzamuto",
+          "email_norm": "smazzamuto1@gmail.com",
+          "phone_norm": "6099493803",
+          "zip_norm": "08016"
+        },
+        {
+          "id": 176009,
+          "first_name": "Salvator",
+          "last_name": "Mazzamuto",
+          "phone1": "609-949-3803",
+          "email": "SMAZZAMUTO1@GMAIL.COM",
+          "zip": "08016",
+          "first_name_norm": "salvator",
+          "last_name_norm": "mazzamuto",
+          "email_norm": "smazzamuto1@gmail.com",
+          "phone_norm": "6099493803",
+          "zip_norm": "08016"
+        }
+      ]
+    },
+    {
+      "group_id": 2,
+      "prospects": [
+        {
+          "id": 175780,
+          "first_name": "Sarah",
+          "last_name": "Wilson",
+          "phone1": "240-405-9105",
+          "email": "smfirebunny87@gmail.com",
+          "zip": "21793",
+          "first_name_norm": "sarah",
+          "last_name_norm": "wilson",
+          "email_norm": "smfirebunny87@gmail.com",
+          "phone_norm": "2404059105",
+          "zip_norm": "21793"
+        },
+        {
+          "id": 175791,
+          "first_name": "Sarah",
+          "last_name": "Wilson",
+          "phone1": "240-405-9105",
+          "email": "smfirebunny87@gmail.com",
+          "zip": "21793",
+          "first_name_norm": "sarah",
+          "last_name_norm": "wilson",
+          "email_norm": "smfirebunny87@gmail.com",
+          "phone_norm": "2404059105",
+          "zip_norm": "21793"
+        }
+      ]
+    },
+    {
+      "group_id": 3,
+      "prospects": [
+        {
+          "id": 175781,
+          "first_name": "Dorothy",
+          "last_name": "Bielko",
+          "phone1": "570-594-8506",
+          "email": "",
+          "zip": "18603",
+          "first_name_norm": "dorothy",
+          "last_name_norm": "bielko",
+          "email_norm": "",
+          "phone_norm": "5705948506",
+          "zip_norm": "18603"
+        },
+        {
+          "id": 175792,
+          "first_name": "Dorothy",
+          "last_name": "Bielko",
+          "phone1": "570-594-8506",
+          "email": "",
+          "zip": "18603",
+          "first_name_norm": "dorothy",
+          "last_name_norm": "bielko",
+          "email_norm": "",
+          "phone_norm": "5705948506",
+          "zip_norm": "18603"
+        }
+      ]
+    }
+  ]
+}

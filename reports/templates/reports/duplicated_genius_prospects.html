@@ -728,19 +728,27 @@ function checkProgress() {
                 
                 if (data.progress.error || data.progress.cancelled) {
                     showStatus('Detection failed or was cancelled: ' + data.progress.details, 'error');
+                    hideProgress();
+                    const button = document.getElementById('runDetection');
+                    button.disabled = false;
+                    button.textContent = '⚡ Run Detection';
                 } else {
-                    showStatus('Detection completed successfully!', 'success');
+                    showStatus('Detection completed successfully! Reloading page...', 'success');
                     setTimeout(() => {
                         window.location.reload();
                     }, 2000);
                 }
-                
-                hideProgress();
-                const button = document.getElementById('runDetection');
-                button.disabled = false;
-                button.textContent = '⚡ Run Detection';
             }
         } else if (data.status === 'not_running') {
+            // Check if detection just finished
+            if (progressInterval) {
+                // Detection was running but now finished
+                showStatus('Detection completed! Reloading page...', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+            
             // Process finished or never started
             clearInterval(progressInterval);
             progressInterval = null;
@@ -881,7 +889,7 @@ function loadReportFile(filename) {
     .then(response => response.json())
     .then(data => {
         if (data.status === 'success') {
-            showStatus('Report loaded successfully!', 'success');
+            showStatus('Report loaded successfully! Reloading page...', 'success');
             setTimeout(() => {
                 window.location.reload();
             }, 1000);
