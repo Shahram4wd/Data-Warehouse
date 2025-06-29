@@ -1,0 +1,115 @@
+{
+  "report_type": "unlink_hubspot_divisions",
+  "generated_at": "2025-06-29T17:54:02.776352",
+  "parameters": {
+    "min_divisions_threshold": 2,
+    "total_contacts_analyzed": 3,
+    "limit_used": 3,
+    "output_limit_used": null
+  },
+  "summary": {
+    "total_contacts_with_multiple_divisions": 3,
+    "total_contacts_displayed": 3,
+    "output_limited": false,
+    "total_divisions_involved": 7
+  },
+  "contact_groups": [
+    {
+      "group_id": 1,
+      "group_display_name": "Dummy Prospect (4 divisions)",
+      "contact_id": "84478712477",
+      "hubspot_contact_id": "84478712477",
+      "firstname": "Dummy",
+      "lastname": "Prospect",
+      "email": "grantconyers+test@gmail.com",
+      "phone": "4402125196",
+      "division_count": 4,
+      "division_names": "Charlotte, Cleveland, Corporate, New Jersey",
+      "divisions": [
+        {
+          "division_id": "21271401905",
+          "division_name": "Charlotte"
+        },
+        {
+          "division_id": "21298393943",
+          "division_name": "Cleveland"
+        },
+        {
+          "division_id": "21300404556",
+          "division_name": "Corporate"
+        },
+        {
+          "division_id": "21300404568",
+          "division_name": "New Jersey"
+        }
+      ],
+      "contact_created_date": "2024-12-13T14:35:31.367000+00:00",
+      "analysis_details": {
+        "total_divisions": 4,
+        "analysis_method": "exact_sql_matching"
+      }
+    },
+    {
+      "group_id": 2,
+      "group_display_name": "Mckenzie Almeida (3 divisions)",
+      "contact_id": "86017112244",
+      "hubspot_contact_id": "86017112244",
+      "firstname": "Mckenzie",
+      "lastname": "Almeida",
+      "email": "mikkithemanny@gmail.com",
+      "phone": "712-574-2594",
+      "division_count": 3,
+      "division_names": "Richmond, Tidewater, Tidewater-old",
+      "divisions": [
+        {
+          "division_id": "21302964568",
+          "division_name": "Richmond"
+        },
+        {
+          "division_id": "21319478069",
+          "division_name": "Tidewater"
+        },
+        {
+          "division_id": "21321604503",
+          "division_name": "Tidewater-old"
+        }
+      ],
+      "contact_created_date": "2024-12-18T21:31:07.411000+00:00",
+      "analysis_details": {
+        "total_divisions": 3,
+        "analysis_method": "exact_sql_matching"
+      }
+    },
+    {
+      "group_id": 3,
+      "group_display_name": "Beverly And Chris Benner (3 divisions)",
+      "contact_id": "85953395520",
+      "hubspot_contact_id": "85953395520",
+      "firstname": "Beverly And Chris",
+      "lastname": "Benner",
+      "email": "benner@widomaker.com",
+      "phone": "757-229-3091",
+      "division_count": 3,
+      "division_names": "Richmond, Tidewater, Tidewater-old",
+      "divisions": [
+        {
+          "division_id": "21302964568",
+          "division_name": "Richmond"
+        },
+        {
+          "division_id": "21319478069",
+          "division_name": "Tidewater"
+        },
+        {
+          "division_id": "21321604503",
+          "division_name": "Tidewater-old"
+        }
+      ],
+      "contact_created_date": "2024-12-18T21:32:22.718000+00:00",
+      "analysis_details": {
+        "total_divisions": 3,
+        "analysis_method": "exact_sql_matching"
+      }
+    }
+  ]
+}

@@ -228,86 +228,55 @@ def sales_rep_division_mismatch_detail(request, report):
 @login_required
 def unlink_hubspot_division_detail(request, report):
     """Special view for the unlink hubspot division report"""
-    from django.db import connection
-    from django.core.paginator import Paginator
     import csv
-    from io import StringIO
     
-    # Execute the SQL query to get contacts with multiple divisions
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT 
-                hc.id as contact_id,
-                hc.hubspot_id as hubspot_contact_id,
-                hc.first_name,
-                hc.last_name,
-                hc.email,
-                COUNT(DISTINCT hd.id) as division_count,
-                STRING_AGG(DISTINCT hd.name, ', ') as division_names,
-                STRING_AGG(DISTINCT CAST(hd.id AS TEXT), ', ') as division_ids
-            FROM ingestion_hubspotcontact hc
-            INNER JOIN ingestion_hubspotcontactdivisionassociation hcda ON hc.id = hcda.contact_id
-            INNER JOIN ingestion_hubspotdivision hd ON hcda.division_id = hd.id
-            GROUP BY hc.id, hc.hubspot_id, hc.first_name, hc.last_name, hc.email
-            HAVING COUNT(DISTINCT hd.id) > 1
-            ORDER BY division_count DESC, hc.last_name, hc.first_name
-        """)
-        
-        columns = [col[0] for col in cursor.description]
-        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    # Load latest results if they exist
+    latest_file = os.path.join(settings.BASE_DIR, 'reports', 'data', 'unlink_hubspot_divisions', 'latest.json')
+    results = None
+    paginated_groups = None
     
-    # Handle CSV export
-    if request.GET.get('export') == 'csv':
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="hubspot_contacts_multiple_divisions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
-        
-        writer = csv.writer(response)
-        
-        # Write header
-        headers = ['Contact ID', 'HubSpot Contact ID', 'First Name', 'Last Name', 'Email', 'Division Count', 'Division Names', 'Division IDs']
-        writer.writerow(headers)
-        
-        # Write data
-        for row in results:
-            writer.writerow([
-                row['contact_id'],
-                row['hubspot_contact_id'],
-                row['first_name'],
-                row['last_name'],
-                row['email'],
-                row['division_count'],
-                row['division_names'],
-                row['division_ids']
-            ])
-        
-        return response
+    if os.path.exists(latest_file):
+        try:
+            with open(latest_file, 'r', encoding='utf-8') as f:
+                results = json.load(f)
+                
+            # Paginate the contact groups
+            if results and 'contact_groups' in results:
+                page_number = request.GET.get('page', 1)
+                paginator = Paginator(results['contact_groups'], 50)  # 50 groups per page
+                paginated_groups = paginator.get_page(page_number)
+                
+        except Exception as e:
+            messages.error(request, f'Error loading results: {str(e)}')
     
-    # Paginate results for display
-    page_number = request.GET.get('page', 1)
-    paginator = Paginator(results, 50)  # 50 results per page
-    paginated_results = paginator.get_page(page_number)
+    # Get all available result files
+    results_dir = os.path.join(settings.BASE_DIR, 'reports', 'data', 'unlink_hubspot_divisions')
+    available_files = []
     
-    # Calculate summary statistics
-    total_contacts = len(results)
-    division_count_stats = {}
-    for contact in results:
-        count = contact['division_count']
-        division_count_stats[count] = division_count_stats.get(count, 0) + 1
+    if os.path.exists(results_dir):
+        for filename in os.listdir(results_dir):
+            if filename.endswith('.json') and filename != 'latest.json':
+                file_path = os.path.join(results_dir, filename)
+                try:
+                    # Extract timestamp from filename
+                    timestamp_str = filename.replace('unlink_hubspot_divisions_', '').replace('.json', '')
+                    timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
+                    available_files.append({
+                        'filename': filename,
+                        'timestamp': timestamp,
+                        'display_name': timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    })
+                except:
+                    pass
     
-    # Get unique divisions involved
-    all_division_names = set()
-    for contact in results:
-        if contact['division_names']:
-            division_names = [name.strip() for name in contact['division_names'].split(',')]
-            all_division_names.update(division_names)
+    # Sort by timestamp descending (newest first)
+    available_files.sort(key=lambda x: x['timestamp'], reverse=True)
     
     context = {
         'report': report,
-        'results': paginated_results,
-        'total_contacts': total_contacts,
-        'division_count_stats': sorted(division_count_stats.items()),
-        'total_divisions_involved': len(all_division_names),
-        'generated_at': datetime.now(),
+        'results': results,
+        'paginated_groups': paginated_groups,
+        'available_files': available_files[:10],  # Show last 10 files
     }
     
     return render(request, 'reports/unlink_hubspot_division.html', context)
@@ -681,7 +650,7 @@ def load_hubspot_report_file(request, filename):
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 @login_required
-@csrf_exempt 
+@csrf_exempt
 def export_hubspot_duplicates_csv(request):
     """Export HubSpot appointment duplicates to CSV"""
     if request.method == 'GET':
@@ -768,6 +737,200 @@ def export_hubspot_duplicates_csv(request):
             return JsonResponse({
                 'status': 'error',
                 'message': f'Error generating CSV: {str(e)}'
+            })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@login_required
+@csrf_exempt
+def run_unlink_division_analysis(request):
+    """AJAX endpoint to run the unlink HubSpot division analysis"""
+    if request.method == 'POST':
+        try:
+            limit = request.POST.get('limit')
+            min_divisions = request.POST.get('min_divisions', 2)
+            
+            # Build command arguments
+            cmd_args = ['unlink_hubspot_divisions']
+            if limit:
+                cmd_args.extend([f'--limit={limit}'])
+            if min_divisions:
+                cmd_args.extend([f'--min-divisions={min_divisions}'])
+            
+            # Run the command in background
+            call_command(*cmd_args)
+            
+            return JsonResponse({'status': 'success', 'message': 'Analysis started successfully'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@login_required
+@csrf_exempt
+def check_unlink_division_progress(request):
+    """AJAX endpoint to check the progress of unlink division analysis"""
+    if request.method == 'GET':
+        try:
+            progress_file = os.path.join(settings.BASE_DIR, 'reports', 'data', 'unlink_hubspot_divisions', 'detection_progress.json')
+            
+            if not os.path.exists(progress_file):
+                return JsonResponse({
+                    'status': 'not_running',
+                    'message': 'No analysis process is currently running'
+                })
+            
+            with open(progress_file, 'r', encoding='utf-8') as f:
+                progress_data = json.load(f)
+            
+            return JsonResponse({
+                'status': 'running',
+                'progress': progress_data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error checking progress: {str(e)}'
+            })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@login_required
+@csrf_exempt
+def cancel_unlink_division_analysis(request):
+    """AJAX endpoint to cancel unlink division analysis"""
+    if request.method == 'POST':
+        try:
+            progress_file = os.path.join(settings.BASE_DIR, 'reports', 'data', 'unlink_hubspot_divisions', 'detection_progress.json')
+            
+            if os.path.exists(progress_file):
+                # Mark the analysis as cancelled
+                cancelled_progress = {
+                    'percent': 0,
+                    'status': 'Cancelled',
+                    'details': 'Analysis was cancelled by user',
+                    'timestamp': datetime.now().isoformat(),
+                    'completed': True,
+                    'cancelled': True
+                }
+                
+                with open(progress_file, 'w', encoding='utf-8') as f:
+                    json.dump(cancelled_progress, f, indent=2)
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Analysis cancellation requested. The process will stop shortly.'
+                })
+            else:
+                return JsonResponse({
+                    'status': 'not_running',
+                    'message': 'No analysis process is currently running.'
+                })
+                
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error cancelling analysis: {str(e)}'
+            })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@csrf_exempt
+@login_required
+def load_unlink_division_report_file(request, filename):
+    """AJAX endpoint to load a specific unlink division report file"""
+    if request.method == 'GET':
+        try:
+            file_path = os.path.join(settings.BASE_DIR, 'reports', 'data', 'unlink_hubspot_divisions', filename)
+            latest_path = os.path.join(settings.BASE_DIR, 'reports', 'data', 'unlink_hubspot_divisions', 'latest.json')
+            
+            if not os.path.exists(file_path) or not filename.endswith('.json'):
+                return JsonResponse({'status': 'error', 'message': 'File not found'})
+            
+            # Copy the selected file to latest.json
+            import shutil
+            shutil.copy2(file_path, latest_path)
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Successfully loaded report: {filename}'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error loading file: {str(e)}'
+            })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@login_required
+@csrf_exempt 
+def export_unlink_division_csv(request):
+    """Export unlink division analysis to CSV"""
+    if request.method == 'GET':
+        try:
+            # Load latest results
+            latest_file = os.path.join(settings.BASE_DIR, 'reports', 'data', 'unlink_hubspot_divisions', 'latest.json')
+            
+            if not os.path.exists(latest_file):
+                return JsonResponse({'status': 'error', 'message': 'No results found. Please run analysis first.'})
+            
+            with open(latest_file, 'r', encoding='utf-8') as f:
+                results = json.load(f)
+            
+            # Create CSV content
+            import csv
+            from io import StringIO
+            
+            output = StringIO()
+            writer = csv.writer(output)
+            
+            # Write header
+            writer.writerow([
+                'Group ID',
+                'Contact ID',
+                'HubSpot Contact ID',
+                'First Name',
+                'Last Name',
+                'Email',
+                'Phone',
+                'Division Count',
+                'Division Names',
+                'Division IDs',
+                'Contact Created Date'
+            ])
+            
+            # Write data
+            for group in results.get('contact_groups', []):
+                writer.writerow([
+                    group.get('group_id', ''),
+                    group.get('contact_id', ''),
+                    group.get('hubspot_contact_id', ''),
+                    group.get('firstname', ''),
+                    group.get('lastname', ''),
+                    group.get('email', ''),
+                    group.get('phone', ''),
+                    group.get('division_count', 0),
+                    group.get('division_names', ''),
+                    ', '.join([str(div.get('division_id', '')) for div in group.get('divisions', [])]),
+                    group.get('contact_created_date', '')
+                ])
+            
+            # Create HTTP response with CSV
+            response = HttpResponse(output.getvalue(), content_type='text/csv')
+            
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'unlink_hubspot_divisions_{timestamp}.csv'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error exporting CSV: {str(e)}'
             })
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})

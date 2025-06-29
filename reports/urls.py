@@ -18,4 +18,11 @@ urlpatterns = [
     path('api/cancel-hubspot-detection/', views.cancel_hubspot_detection, name='cancel_hubspot_detection'),
     path('api/export-hubspot-duplicates-csv/', views.export_hubspot_duplicates_csv, name='export_hubspot_duplicates_csv'),
     path('api/load-hubspot-report-file/<str:filename>/', views.load_hubspot_report_file, name='load_hubspot_report_file'),
+
+    # HubSpot Division Unlink Analysis
+    path('api/run-unlink-division-analysis/', views.run_unlink_division_analysis, name='run_unlink_division_analysis'),
+    path('api/check-unlink-division-progress/', views.check_unlink_division_progress, name='check_unlink_division_progress'),
+    path('api/cancel-unlink-division-analysis/', views.cancel_unlink_division_analysis, name='cancel_unlink_division_analysis'),
+    path('api/export-unlink-division-csv/', views.export_unlink_division_csv, name='export_unlink_division_csv'),
+    path('api/load-unlink-division-report/<str:filename>/', views.load_unlink_division_report_file, name='load_unlink_division_report_file'),
 ]

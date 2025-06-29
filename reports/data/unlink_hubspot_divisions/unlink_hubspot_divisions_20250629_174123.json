@@ -1,0 +1,108 @@
+{
+  "report_type": "unlink_hubspot_divisions",
+  "generated_at": "2025-06-29T17:41:23.287994",
+  "parameters": {
+    "min_divisions_threshold": 2,
+    "total_contacts_analyzed": 5,
+    "limit_used": 5,
+    "output_limit_used": null
+  },
+  "summary": {
+    "total_contacts_with_multiple_divisions": 5,
+    "total_contacts_displayed": 5,
+    "output_limited": false,
+    "total_divisions_involved": 0
+  },
+  "contact_groups": [
+    {
+      "group_id": 1,
+      "group_display_name": "Dummy Prospect (4 divisions)",
+      "contact_id": "84478712477",
+      "hubspot_contact_id": "84478712477",
+      "firstname": "Dummy",
+      "lastname": "Prospect",
+      "email": "grantconyers+test@gmail.com",
+      "phone": "4402125196",
+      "division_count": 4,
+      "division_names": "",
+      "divisions": [],
+      "contact_created_date": "2024-12-13T14:35:31.367000+00:00",
+      "analysis_details": {
+        "total_divisions": 4,
+        "analysis_method": "exact_sql_matching"
+      }
+    },
+    {
+      "group_id": 2,
+      "group_display_name": "Mckenzie Almeida (3 divisions)",
+      "contact_id": "86017112244",
+      "hubspot_contact_id": "86017112244",
+      "firstname": "Mckenzie",
+      "lastname": "Almeida",
+      "email": "mikkithemanny@gmail.com",
+      "phone": "712-574-2594",
+      "division_count": 3,
+      "division_names": "",
+      "divisions": [],
+      "contact_created_date": "2024-12-18T21:31:07.411000+00:00",
+      "analysis_details": {
+        "total_divisions": 3,
+        "analysis_method": "exact_sql_matching"
+      }
+    },
+    {
+      "group_id": 3,
+      "group_display_name": "Beverly And Chris Benner (3 divisions)",
+      "contact_id": "85953395520",
+      "hubspot_contact_id": "85953395520",
+      "firstname": "Beverly And Chris",
+      "lastname": "Benner",
+      "email": "benner@widomaker.com",
+      "phone": "757-229-3091",
+      "division_count": 3,
+      "division_names": "",
+      "divisions": [],
+      "contact_created_date": "2024-12-18T21:32:22.718000+00:00",
+      "analysis_details": {
+        "total_divisions": 3,
+        "analysis_method": "exact_sql_matching"
+      }
+    },
+    {
+      "group_id": 4,
+      "group_display_name": "None Biz (3 divisions)",
+      "contact_id": "85908109369",
+      "hubspot_contact_id": "85908109369",
+      "firstname": "None",
+      "lastname": "Biz",
+      "email": "none@gmail.com",
+      "phone": "2165557412",
+      "division_count": 3,
+      "division_names": "",
+      "divisions": [],
+      "contact_created_date": "2024-12-18T18:19:58.922000+00:00",
+      "analysis_details": {
+        "total_divisions": 3,
+        "analysis_method": "exact_sql_matching"
+      }
+    },
+    {
+      "group_id": 5,
+      "group_display_name": "Kathleen Bortner (3 divisions)",
+      "contact_id": "85647434505",
+      "hubspot_contact_id": "85647434505",
+      "firstname": "Kathleen",
+      "lastname": "Bortner",
+      "email": "8144643690@gmail.com",
+      "phone": "+18144643690",
+      "division_count": 3,
+      "division_names": "",
+      "divisions": [],
+      "contact_created_date": "2024-12-17T15:40:24.733000+00:00",
+      "analysis_details": {
+        "total_divisions": 3,
+        "analysis_method": "exact_sql_matching"
+      }
+    }
+  ]
+}

@@ -1,0 +1,913 @@
+{% extends "base.html" %}
+
+{% block title %}{{ report.title }} - Data Warehouse{% endblock %}
+
+{% block header %}🔗 {{ report.title }}{% endblock %}
+
+{% block content %}
+<style>
+.report-header {
+    background: var(--gradient-card);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.report-title {
+    font-size: 2.5rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1rem;
+}
+
+.report-description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.report-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.status-message {
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+    border-radius: 8px;
+    border-left: 4px solid;
+    font-weight: 500;
+}
+
+.status-message.success {
+    background: rgba(124, 176, 171, 0.15);
+    color: var(--accent-success);
+    border-left-color: var(--accent-success);
+}
+
+.status-message.error {
+    background: rgba(198, 115, 115, 0.15);
+    color: var(--accent-danger);
+    border-left-color: var(--accent-danger);
+}
+
+.status-message.info {
+    background: rgba(90, 154, 149, 0.15);
+    color: var(--accent-primary);
+    border-left-color: var(--accent-primary);
+}
+
+.progress-container {
+    background: var(--surface-secondary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border: 1px solid var(--border-color);
+    display: none;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: var(--surface-tertiary);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--gradient-primary);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.progress-status {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.progress-percent {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: var(--text-on-primary);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.progress-details {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+}
+
+.summary-section {
+    background: var(--gradient-card);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.metric-card {
+    background: var(--bg-primary);
+    padding: 1.5rem;
+    border-radius: 12px;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-primary);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+}
+
+.metadata {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.contact-groups {
+    margin-top: 2rem;
+}
+
+.contact-group {
+    background: var(--gradient-card);
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.contact-group:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.group-header {
+    background: linear-gradient(135deg, rgba(90, 154, 149, 0.1), rgba(124, 176, 171, 0.1));
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.group-header:hover {
+    background: linear-gradient(135deg, rgba(90, 154, 149, 0.15), rgba(124, 176, 171, 0.15));
+}
+
+.group-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.group-summary {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.group-details {
+    padding: 1.5rem;
+    display: none;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.contact-info {
+    background: var(--surface-secondary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.contact-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.contact-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+}
+
+.contact-id {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.contact-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.meta-label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+}
+
+.meta-value {
+    color: var(--text-primary);
+}
+
+.divisions-list {
+    margin-top: 1rem;
+}
+
+.divisions-header {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.division-item {
+    background: var(--surface-tertiary);
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.division-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.division-id {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    background: var(--surface-secondary);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+
+.expand-icon {
+    transition: transform 0.3s ease;
+    font-size: 0.8rem;
+    margin-left: auto;
+}
+
+.expanded .expand-icon {
+    transform: rotate(90deg);
+}
+
+.pagination-container {
+    margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+}
+
+.pagination {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.pagination a, .pagination span {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.pagination a {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.pagination a:hover {
+    background: var(--accent-primary);
+    color: var(--text-on-primary);
+    transform: translateY(-1px);
+}
+
+.pagination .current {
+    background: var(--accent-primary);
+    color: var(--text-on-primary);
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-secondary);
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.previous-reports {
+    background: var(--gradient-card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.previous-reports h3 {
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.reports-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.report-file {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--surface-secondary);
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.report-file:hover {
+    background: var(--surface-tertiary);
+    transform: translateX(5px);
+}
+
+.report-filename {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.report-timestamp {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.btn-secondary {
+    background: var(--surface-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.btn-secondary:hover {
+    background: var(--surface-tertiary);
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    background: var(--accent-danger);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-danger:hover {
+    background: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-success {
+    background: var(--accent-success);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-success:hover {
+    background: #4caf50;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+@media (max-width: 768px) {
+    .report-actions {
+        flex-direction: column;
+    }
+    
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .metadata {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .contact-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .contact-meta {
+        grid-template-columns: 1fr;
+    }
+    
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+</style>
+
+<div class="report-header">
+    <h1 class="report-title">{{ report.title }}</h1>
+    <p class="report-description">{{ report.description }}</p>
+    
+    <div class="report-actions">
+        <button id="runAnalysisBtn" class="btn-primary">
+            <i class="fas fa-play"></i> Run Analysis
+        </button>
+        {% if results %}
+        <button id="exportCsvBtn" class="btn-success">
+            <i class="fas fa-download"></i> Export CSV
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Status Messages -->
+<div id="statusMessages"></div>
+
+<!-- Progress Container -->
+<div id="progressContainer" class="progress-container">
+    <div class="progress-text">
+        <span id="progressStatus" class="progress-status">Starting analysis...</span>
+        <span id="progressPercent" class="progress-percent">0%</span>
+    </div>
+    <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+    </div>
+    <div id="progressDetails" class="progress-details"></div>
+    <div style="margin-top: 1rem;">
+        <button id="cancelAnalysisBtn" class="btn-danger">
+            <i class="fas fa-stop"></i> Cancel Analysis
+        </button>
+    </div>
+</div>
+
+<!-- Previous Reports -->
+{% if available_files %}
+<div class="previous-reports">
+    <h3><i class="fas fa-history"></i> Previous Reports</h3>
+    <div class="reports-list">
+        {% for file in available_files %}
+        <div class="report-file">
+            <span class="report-filename">{{ file.display_name }}</span>
+            <button class="btn-secondary load-report-btn" data-filename="{{ file.filename }}">
+                Load
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Results Summary -->
+{% if results %}
+<div class="summary-section">
+    <h2><i class="fas fa-chart-bar"></i> Analysis Summary</h2>
+    
+    <div class="summary-cards">
+        <div class="metric-card">
+            <div class="metric-label">Total Contacts</div>
+            <div class="metric-value">{{ results.summary.total_contacts_with_multiple_divisions }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Contacts Displayed</div>
+            <div class="metric-value">{{ results.summary.total_contacts_displayed }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Divisions Involved</div>
+            <div class="metric-value">{{ results.summary.total_divisions_involved }}</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Min Divisions</div>
+            <div class="metric-value">{{ results.parameters.min_divisions_threshold }}</div>
+        </div>
+    </div>
+    
+    {% if results.summary.output_limited %}
+    <div class="status-message info">
+        <i class="fas fa-info-circle"></i> 
+        Output limited to {{ results.summary.total_contacts_displayed }} contacts for performance. 
+        {{ results.summary.total_contacts_with_multiple_divisions }} total contacts found.
+    </div>
+    {% endif %}
+    
+    <div class="metadata">
+        <span><strong>Generated:</strong> {{ results.generated_at|date:"M d, Y H:i" }}</span>
+        <span><strong>Analysis Method:</strong> SQL Exact Matching</span>
+        {% if results.parameters.limit_used %}
+        <span><strong>Limit Applied:</strong> {{ results.parameters.limit_used }}</span>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Contact Groups -->
+{% if paginated_groups %}
+<div class="contact-groups">
+    <h2><i class="fas fa-users"></i> Contacts with Multiple Divisions ({{ paginated_groups.paginator.count }} total)</h2>
+    
+    {% for group in paginated_groups %}
+    <div class="contact-group">
+        <div class="group-header" onclick="toggleGroup({{ group.group_id }})">
+            <div class="group-title">
+                <i class="fas fa-chevron-right expand-icon"></i>
+                {{ group.group_display_name }}
+            </div>
+            <div class="group-summary">
+                <span><i class="fas fa-envelope"></i> {{ group.email|default:"No email" }}</span>
+                <span><i class="fas fa-phone"></i> {{ group.phone|default:"No phone" }}</span>
+                <span><i class="fas fa-building"></i> {{ group.division_count }} divisions</span>
+                {% if group.contact_created_date %}
+                <span><i class="fas fa-calendar"></i> Created: {{ group.contact_created_date|date:"M d, Y" }}</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div id="group-{{ group.group_id }}" class="group-details">
+            <div class="contact-info">
+                <div class="contact-header">
+                    <div>
+                        <div class="contact-name">{{ group.firstname }} {{ group.lastname }}</div>
+                        <div class="contact-id">Contact ID: {{ group.contact_id }}</div>
+                        {% if group.hubspot_contact_id %}
+                        <div class="contact-id">HubSpot ID: {{ group.hubspot_contact_id }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="contact-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">Email</span>
+                        <span class="meta-value">{{ group.email|default:"Not provided" }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Phone</span>
+                        <span class="meta-value">{{ group.phone|default:"Not provided" }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">Division Count</span>
+                        <span class="meta-value">{{ group.division_count }}</span>
+                    </div>
+                    {% if group.contact_created_date %}
+                    <div class="meta-item">
+                        <span class="meta-label">Created Date</span>
+                        <span class="meta-value">{{ group.contact_created_date|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="divisions-list">
+                    <div class="divisions-header">
+                        <i class="fas fa-building"></i> Linked Divisions ({{ group.divisions|length }})
+                    </div>
+                    {% for division in group.divisions %}
+                    <div class="division-item">
+                        <span class="division-name">{{ division.division_name }}</span>
+                        <span class="division-id">ID: {{ division.division_id }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    
+    <!-- Pagination -->
+    {% if paginated_groups.has_other_pages %}
+    <div class="pagination-container">
+        <div class="pagination">
+            {% if paginated_groups.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ paginated_groups.previous_page_number }}">previous</a>
+            {% endif %}
+            
+            <span class="current">
+                Page {{ paginated_groups.number }} of {{ paginated_groups.paginator.num_pages }}
+            </span>
+            
+            {% if paginated_groups.has_next %}
+                <a href="?page={{ paginated_groups.next_page_number }}">next</a>
+                <a href="?page={{ paginated_groups.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% elif results %}
+<div class="empty-state">
+    <div class="empty-state-icon">🎉</div>
+    <h3>No Contacts with Multiple Divisions Found!</h3>
+    <p>The analysis didn't find any HubSpot contacts linked to multiple divisions in your database.</p>
+</div>
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">📊</div>
+    <h3>No Results Yet</h3>
+    <p>Click "Run Analysis" to analyze your HubSpot contacts for multiple division associations.</p>
+</div>
+{% endif %}
+
+<script>
+// Global variables for progress tracking
+let progressInterval = null;
+let isAnalysisRunning = false;
+
+// Toggle group details
+function toggleGroup(groupId) {
+    const details = document.getElementById(`group-${groupId}`);
+    const header = details.previousElementSibling;
+    const icon = header.querySelector('.expand-icon');
+    
+    if (details.style.display === 'none' || details.style.display === '') {
+        details.style.display = 'block';
+        header.classList.add('expanded');
+    } else {
+        details.style.display = 'none';
+        header.classList.remove('expanded');
+    }
+}
+
+// Show status message
+function showMessage(type, message) {
+    const container = document.getElementById('statusMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `status-message ${type}`;
+    messageDiv.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${message}`;
+    
+    container.innerHTML = '';
+    container.appendChild(messageDiv);
+    
+    // Auto-hide after 5 seconds for success messages
+    if (type === 'success') {
+        setTimeout(() => {
+            container.innerHTML = '';
+        }, 5000);
+    }
+}
+
+// Update progress bar
+function updateProgress(data) {
+    const container = document.getElementById('progressContainer');
+    const fill = document.getElementById('progressFill');
+    const status = document.getElementById('progressStatus');
+    const percent = document.getElementById('progressPercent');
+    const details = document.getElementById('progressDetails');
+    
+    container.style.display = 'block';
+    fill.style.width = `${data.percent}%`;
+    status.textContent = data.status;
+    percent.textContent = `${data.percent}%`;
+    details.textContent = data.details || '';
+}
+
+// Check analysis progress
+function checkProgress() {
+    fetch('/reports/api/check-unlink-division-progress/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'running') {
+                isAnalysisRunning = true;
+                updateProgress(data.progress);
+                
+                if (data.progress.completed) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                    clearInterval(progressInterval);
+                    isAnalysisRunning = false;
+                }
+            } else {
+                clearInterval(progressInterval);
+                isAnalysisRunning = false;
+                document.getElementById('progressContainer').style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error checking progress:', error);
+        });
+}
+
+// Run analysis
+document.getElementById('runAnalysisBtn').addEventListener('click', function() {
+    if (isAnalysisRunning) {
+        showMessage('info', 'Analysis is already running. Please wait for it to complete.');
+        return;
+    }
+    
+    const formData = new FormData();
+    
+    fetch('/reports/api/run-unlink-division-analysis/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showMessage('success', data.message);
+            isAnalysisRunning = true;
+            progressInterval = setInterval(checkProgress, 1000);
+            checkProgress();
+        } else {
+            showMessage('error', data.message);
+        }
+    })
+    .catch(error => {
+        showMessage('error', 'Error starting analysis: ' + error);
+    });
+});
+
+// Cancel analysis
+document.getElementById('cancelAnalysisBtn').addEventListener('click', function() {
+    fetch('/reports/api/cancel-unlink-division-analysis/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showMessage('success', data.message);
+            clearInterval(progressInterval);
+            isAnalysisRunning = false;
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            showMessage('error', data.message);
+        }
+    })
+    .catch(error => {
+        showMessage('error', 'Error cancelling analysis: ' + error);
+    });
+});
+
+// Export CSV
+{% if results %}
+document.getElementById('exportCsvBtn').addEventListener('click', function() {
+    window.location.href = '/reports/api/export-unlink-division-csv/';
+});
+{% endif %}
+
+// Load previous reports
+document.querySelectorAll('.load-report-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const filename = this.getAttribute('data-filename');
+        
+        fetch(`/reports/api/load-unlink-division-report/${filename}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showMessage('success', data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showMessage('error', data.message);
+            }
+        })
+        .catch(error => {
+            showMessage('error', 'Error loading report: ' + error);
+        });
+    });
+});
+
+// Check if analysis is running on page load
+document.addEventListener('DOMContentLoaded', function() {
+    checkProgress();
+});
+</script>
+
+{% endblock %}
