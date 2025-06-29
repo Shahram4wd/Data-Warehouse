@@ -87,6 +87,26 @@ class Command(BaseCommand):
         else:
             self.stdout.write(f"Report already exists: {salesrep_report.title}")
         
+        # Create Unlink HubSpot Division report
+        unlink_report, created = Report.objects.get_or_create(
+            title="Unlink HubSpot Division",
+            defaults={
+                'category': category,
+                'description': 'Find HubSpot contacts linked to multiple divisions'
+            }
+        )
+        
+        # Update category if report exists but has different category
+        if not created and unlink_report.category.name != "Data Quality":
+            unlink_report.category = category
+            unlink_report.save()
+            self.stdout.write(f"Updated category for report: {unlink_report.title}")
+        
+        if created:
+            self.stdout.write(f"Created report: {unlink_report.title}")
+        else:
+            self.stdout.write(f"Report already exists: {unlink_report.title}")
+        
         # Clean up old "Data Cleanup" category if it still exists and is now empty
         try:
             old_category = ReportCategory.objects.get(name="Data Cleanup")

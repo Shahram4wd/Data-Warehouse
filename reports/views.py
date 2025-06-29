@@ -33,6 +33,10 @@ def report_detail(request, report_id):
     if report.title == 'Sales Rep Does Not Exist In Appointment Division':
         return sales_rep_division_mismatch_detail(request, report)
     
+    # Special handling for unlink hubspot division report
+    if report.title == 'Unlink HubSpot Division':
+        return unlink_hubspot_division_detail(request, report)
+    
     return render(request, 'reports/report_detail.html', {'report': report})
 
 @login_required
@@ -220,6 +224,93 @@ def sales_rep_division_mismatch_detail(request, report):
     }
     
     return render(request, 'reports/sales_rep_division_mismatch.html', context)
+
+@login_required
+def unlink_hubspot_division_detail(request, report):
+    """Special view for the unlink hubspot division report"""
+    from django.db import connection
+    from django.core.paginator import Paginator
+    import csv
+    from io import StringIO
+    
+    # Execute the SQL query to get contacts with multiple divisions
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 
+                hc.id as contact_id,
+                hc.hubspot_id as hubspot_contact_id,
+                hc.first_name,
+                hc.last_name,
+                hc.email,
+                COUNT(DISTINCT hd.id) as division_count,
+                STRING_AGG(DISTINCT hd.name, ', ') as division_names,
+                STRING_AGG(DISTINCT CAST(hd.id AS TEXT), ', ') as division_ids
+            FROM ingestion_hubspotcontact hc
+            INNER JOIN ingestion_hubspotcontactdivisionassociation hcda ON hc.id = hcda.contact_id
+            INNER JOIN ingestion_hubspotdivision hd ON hcda.division_id = hd.id
+            GROUP BY hc.id, hc.hubspot_id, hc.first_name, hc.last_name, hc.email
+            HAVING COUNT(DISTINCT hd.id) > 1
+            ORDER BY division_count DESC, hc.last_name, hc.first_name
+        """)
+        
+        columns = [col[0] for col in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    
+    # Handle CSV export
+    if request.GET.get('export') == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="hubspot_contacts_multiple_divisions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+        
+        writer = csv.writer(response)
+        
+        # Write header
+        headers = ['Contact ID', 'HubSpot Contact ID', 'First Name', 'Last Name', 'Email', 'Division Count', 'Division Names', 'Division IDs']
+        writer.writerow(headers)
+        
+        # Write data
+        for row in results:
+            writer.writerow([
+                row['contact_id'],
+                row['hubspot_contact_id'],
+                row['first_name'],
+                row['last_name'],
+                row['email'],
+                row['division_count'],
+                row['division_names'],
+                row['division_ids']
+            ])
+        
+        return response
+    
+    # Paginate results for display
+    page_number = request.GET.get('page', 1)
+    paginator = Paginator(results, 50)  # 50 results per page
+    paginated_results = paginator.get_page(page_number)
+    
+    # Calculate summary statistics
+    total_contacts = len(results)
+    division_count_stats = {}
+    for contact in results:
+        count = contact['division_count']
+        division_count_stats[count] = division_count_stats.get(count, 0) + 1
+    
+    # Get unique divisions involved
+    all_division_names = set()
+    for contact in results:
+        if contact['division_names']:
+            division_names = [name.strip() for name in contact['division_names'].split(',')]
+            all_division_names.update(division_names)
+    
+    context = {
+        'report': report,
+        'results': paginated_results,
+        'total_contacts': total_contacts,
+        'division_count_stats': sorted(division_count_stats.items()),
+        'total_divisions_involved': len(all_division_names),
+        'generated_at': datetime.now(),
+    }
+    
+    return render(request, 'reports/unlink_hubspot_division.html', context)
 
 @csrf_exempt
 @login_required
