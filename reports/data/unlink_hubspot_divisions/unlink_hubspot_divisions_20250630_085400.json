@@ -1,6 +1,6 @@
 {
   "report_type": "unlink_hubspot_divisions",
-  "generated_at": "2025-06-30T08:59:31.580705",
+  "generated_at": "2025-06-30T08:54:00.166921",
   "parameters": {
     "min_divisions_threshold": 2,
     "total_contacts_analyzed": 4812,

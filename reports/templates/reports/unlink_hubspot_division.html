@@ -237,6 +237,14 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    width: 100%;
+    text-align: left;
+    justify-content: flex-start;
+}
+
+.group-title span {
+    flex-grow: 1;
+    text-align: left;
 }
 
 .group-summary {
@@ -245,6 +253,7 @@
     display: flex;
     gap: 1.5rem;
     flex-wrap: wrap;
+    text-align: left;
 }
 
 .group-details {
@@ -326,6 +335,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+}
+
+.division-item.primary {
+    background: linear-gradient(135deg, rgba(124, 176, 171, 0.2), rgba(90, 154, 149, 0.15));
+    border: 2px solid var(--accent-success);
+    box-shadow: 0 2px 8px rgba(124, 176, 171, 0.3);
+}
+
+.division-item.primary::before {
+    content: '✓ PRIMARY';
+    position: absolute;
+    top: -8px;
+    right: 8px;
+    background: var(--accent-success);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    letter-spacing: 0.5px;
 }
 
 .division-name {
@@ -344,11 +374,16 @@
 .expand-icon {
     transition: transform 0.3s ease;
     font-size: 0.8rem;
-    margin-left: auto;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
 }
 
 .expanded .expand-icon {
     transform: rotate(90deg);
+}
+
+.expanded .expand-icon.fa-chevron-down {
+    transform: rotate(0deg);
 }
 
 .pagination-container {
@@ -637,8 +672,10 @@
     <div class="contact-group">
         <div class="group-header" onclick="toggleGroup({{ group.group_id }})">
             <div class="group-title">
-                <i class="fas fa-chevron-right expand-icon"></i>
-                {{ group.group_display_name }}
+                <i class="fas fa-chevron-right expand-icon" id="icon-{{ group.group_id }}"></i>
+                <span>{{ group.firstname|default:"" }} {{ group.lastname|default:"" }}{% if group.firstname or group.lastname %} - {% endif %}{{ group.division_count }} Division{{ group.division_count|pluralize }}
+                ({{ group.zip_division|default:"Unknown" }})
+                </span>
             </div>
             <div class="group-summary">
                 <span><i class="fas fa-envelope"></i> {{ group.email|default:"No email" }}</span>
@@ -688,7 +725,7 @@
                         <i class="fas fa-building"></i> Linked Divisions ({{ group.divisions|length }})
                     </div>
                     {% for division in group.divisions %}
-                    <div class="division-item">
+                    <div class="division-item{% if division.division_name == group.zip_division %} primary{% endif %}">
                         <span class="division-name">{{ division.division_name }}</span>
                         <span class="division-id">ID: {{ division.division_id }}</span>
                     </div>
@@ -745,14 +782,18 @@ let isAnalysisRunning = false;
 function toggleGroup(groupId) {
     const details = document.getElementById(`group-${groupId}`);
     const header = details.previousElementSibling;
-    const icon = header.querySelector('.expand-icon');
+    const icon = document.getElementById(`icon-${groupId}`);
     
     if (details.style.display === 'none' || details.style.display === '') {
         details.style.display = 'block';
         header.classList.add('expanded');
+        icon.classList.remove('fa-chevron-right');
+        icon.classList.add('fa-chevron-down');
     } else {
         details.style.display = 'none';
         header.classList.remove('expanded');
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-right');
     }
 }
 
