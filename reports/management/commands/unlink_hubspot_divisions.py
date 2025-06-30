@@ -103,6 +103,8 @@ class Command(BaseCommand):
             c.id as hubspot_contact_id,
             c.firstname,
             c.lastname,
+            c.zip,
+            z.division,
             c.email,
             c.phone,
             COUNT(DISTINCT d.id) as division_count,
@@ -112,7 +114,8 @@ class Command(BaseCommand):
         FROM ingestion_hubspot_contact c
         INNER JOIN ingestion_hubspot_contact_division_assoc cd ON cd.contact_id = c.id
         INNER JOIN ingestion_hubspot_division d ON d.id = cd.division_id
-        GROUP BY c.id, c.firstname, c.lastname, c.email, c.phone, c.createdate
+        LEFT JOIN ingestion_hubspot_zipcode as z ON z.zipcode = c.zip
+        GROUP BY c.id, c.firstname, c.lastname, z.division, c.email, c.phone, c.createdate
         HAVING COUNT(DISTINCT d.id) >= %s
         ORDER BY COUNT(DISTINCT d.id) DESC, c.lastname, c.firstname
         """
@@ -154,7 +157,7 @@ class Command(BaseCommand):
         contact_groups = []
         total_contacts_with_multiple_divisions = len(contacts_raw)
         
-        for i, (contact_id, hubspot_contact_id, firstname, lastname, email, phone, 
+        for i, (contact_id, hubspot_contact_id, firstname, lastname, zip_code, zip_division, email, phone, 
                 division_count, division_names, division_ids, contact_created_date) in enumerate(contacts_raw):
             
             if self.check_cancellation():
@@ -162,8 +165,8 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING('Analysis cancelled by user.'))
                 return "Analysis cancelled"
             
-            # Generate group display name
-            display_name = self.generate_contact_display_name(firstname, lastname, email, division_count)
+            # Generate group display name with zip division
+            display_name = self.generate_contact_display_name(firstname, lastname, email, division_count, zip_division)
             
             # Get individual divisions for this contact
             divisions = []
@@ -184,6 +187,8 @@ class Command(BaseCommand):
                 'hubspot_contact_id': hubspot_contact_id,
                 'firstname': firstname or '',
                 'lastname': lastname or '',
+                'zip': zip_code or '',
+                'zip_division': zip_division or 'Unknown',
                 'email': email or '',
                 'phone': phone or '',
                 'division_count': division_count,
@@ -268,15 +273,18 @@ class Command(BaseCommand):
 
         return f"Analysis completed: {len(contact_groups)} contacts found"
 
-    def generate_contact_display_name(self, firstname, lastname, email, division_count):
+    def generate_contact_display_name(self, firstname, lastname, email, division_count, zip_division=None):
         """Generate a descriptive group name based on the contact"""
         # Clean up the name
         display_name = f"{firstname or ''} {lastname or ''}".strip()
         if not display_name:
             display_name = email or "Unknown Contact"
         
-        # Add division count
-        return f"{display_name} ({division_count} divisions)"
+        # Add zip division info
+        zip_div_text = zip_division if zip_division else "Unknown"
+        
+        # Add division count and zip division
+        return f"{display_name} ({division_count} divisions) - {zip_div_text}"
 
     def save_empty_results(self):
         """Save empty results when no contacts with multiple divisions are found"""

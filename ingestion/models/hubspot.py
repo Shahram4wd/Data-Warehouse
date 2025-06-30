@@ -363,3 +363,24 @@ class Hubspot_Division(models.Model):
     
     def __str__(self):
         return f"{self.division_name or self.division_label or self.id}"
+
+
+class Hubspot_ZipCode(models.Model):
+    zipcode = models.CharField(max_length=10, primary_key=True)
+    division = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=255, null=True, blank=True)
+    county = models.CharField(max_length=255, null=True, blank=True)
+    state = models.CharField(max_length=10, null=True, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    archived = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'ingestion_hubspot_zipcode'
+        verbose_name = 'HubSpot ZipCode'
+        verbose_name_plural = 'HubSpot ZipCodes'
+    
+    def __str__(self):
+        return f"{self.zipcode} - {self.city}, {self.state}"
