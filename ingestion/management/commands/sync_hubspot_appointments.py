@@ -120,17 +120,15 @@ class Command(BaseCommand):
             return None
 
     async def _sync_appointments_chunked(self, client, last_sync, options):
-        """Sync appointments using HubspotClient.get_appointments_chunked (bypass 10k limit)"""
+        """Sync appointments using adaptive chunking to handle API limits and errors"""
         # Determine date range for full history
         start_date = last_sync or datetime(2018, 1, 1, tzinfo=timezone.utc)
         end_date = timezone.now()
-        self.stdout.write(f"Syncing appointments from {start_date} to {end_date} using chunked fetch...")
-        # Fetch all appointments in chunks via client
-        all_appointments = await client.get_appointments_chunked(
-            start_date=start_date,
-            end_date=end_date,
-            chunk_days=30
-        )
+        self.stdout.write(f"Syncing appointments from {start_date} to {end_date} using adaptive chunked fetch...")
+        
+        # Use adaptive chunking instead of fixed 30-day chunks
+        all_appointments = await self._fetch_appointments_adaptive(client, start_date, end_date)
+        
         # Process and save all fetched appointments
         processed_count = await self._process_appointments(all_appointments)
         return processed_count
@@ -717,3 +715,110 @@ class Command(BaseCommand):
                 logger.info(f"Bulk updated {updated_count} appointments")
             
             return created_count + updated_count
+
+    async def _fetch_appointments_adaptive(self, client, start_date, end_date, max_results_per_chunk=8000):
+        """
+        Adaptively fetch appointments by breaking down time ranges when errors occur or too many results are returned.
+        
+        Args:
+            client: HubspotClient instance
+            start_date: Start datetime for the range
+            end_date: End datetime for the range
+            max_results_per_chunk: Maximum number of results per chunk before subdividing
+        
+        Returns:
+            List of all appointments fetched
+        """
+        all_appointments = []
+        
+        # Create initial time ranges to process
+        pending_ranges = [(start_date, end_date)]
+        
+        while pending_ranges:
+            current_start, current_end = pending_ranges.pop(0)
+            
+            # Calculate time span
+            time_span = current_end - current_start
+            self.stdout.write(f"Processing range: {current_start} to {current_end} (span: {time_span})")
+            
+            try:
+                # Try to fetch appointments for this time range
+                chunk_appointments = await self._fetch_single_chunk(client, current_start, current_end)
+                
+                # Check if we got too many results (approaching API limits)
+                if len(chunk_appointments) >= max_results_per_chunk:
+                    self.stdout.write(f"⚠️ Large result set ({len(chunk_appointments)} appointments), subdividing range...")
+                    
+                    # Subdivide this range into smaller chunks
+                    sub_ranges = self._subdivide_time_range(current_start, current_end, 10)
+                    pending_ranges.extend(sub_ranges)
+                    continue
+                
+                # Success - add these appointments to our collection
+                all_appointments.extend(chunk_appointments)
+                self.stdout.write(f"✅ Successfully fetched {len(chunk_appointments)} appointments for range")
+                
+            except Exception as e:
+                error_msg = str(e)
+                self.stdout.write(f"❌ Error fetching range {current_start} to {current_end}: {error_msg}")
+                
+                # Check if the time range is too small to subdivide further
+                if time_span.total_seconds() < 3600:  # Less than 1 hour
+                    self.stdout.write(f"⚠️ Cannot subdivide further (range < 1 hour), skipping...")
+                    logger.error(f"Skipping problematic range {current_start} to {current_end}: {error_msg}")
+                    continue
+                
+                # Subdivide this range into smaller chunks
+                self.stdout.write(f"🔄 Subdividing problematic range into smaller chunks...")
+                sub_ranges = self._subdivide_time_range(current_start, current_end, 10)
+                pending_ranges.extend(sub_ranges)
+        
+        self.stdout.write(f"✅ Adaptive fetch complete: {len(all_appointments)} total appointments")
+        return all_appointments
+    
+    async def _fetch_single_chunk(self, client, start_date, end_date):
+        """
+        Fetch a single chunk of appointments for the given date range.
+        
+        Args:
+            client: HubspotClient instance
+            start_date: Start datetime
+            end_date: End datetime
+            
+        Returns:
+            List of appointments for this range
+        """
+        # Use the client's internal method to fetch appointments for a specific date range
+        # without additional chunking
+        return await client._get_appointments_for_date_range(start_date, end_date)
+    
+    def _subdivide_time_range(self, start_date, end_date, num_subdivisions=10):
+        """
+        Subdivide a time range into smaller equal chunks.
+        
+        Args:
+            start_date: Start datetime
+            end_date: End datetime
+            num_subdivisions: Number of equal subdivisions to create
+            
+        Returns:
+            List of (start, end) tuples for each subdivision
+        """
+        total_seconds = (end_date - start_date).total_seconds()
+        chunk_seconds = total_seconds / num_subdivisions
+        
+        subdivisions = []
+        current_start = start_date
+        
+        for i in range(num_subdivisions):
+            if i == num_subdivisions - 1:
+                # Last chunk - use the original end_date to avoid rounding errors
+                current_end = end_date
+            else:
+                current_end = current_start + timedelta(seconds=chunk_seconds)
+            
+            subdivisions.append((current_start, current_end))
+            current_start = current_end
+        
+        self.stdout.write(f"📋 Created {len(subdivisions)} subdivisions of {timedelta(seconds=chunk_seconds)} each")
+        return subdivisions

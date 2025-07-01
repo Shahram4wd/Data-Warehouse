@@ -204,7 +204,7 @@ class Hubspot_Appointment(models.Model):
     salespro_deposit_type = models.CharField(max_length=255, null=True, blank=True)
     salespro_fileurl_contract = models.URLField(null=True, blank=True)
     salespro_fileurl_estimate = models.URLField(null=True, blank=True)
-    salespro_financing = models.CharField(max_length=255, null=True, blank=True)
+    salespro_financing = models.TextField(null=True, blank=True)
     salespro_job_size = models.CharField(max_length=255, null=True, blank=True)
     salespro_job_type = models.CharField(max_length=255, null=True, blank=True)
     salespro_last_price_offered = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
