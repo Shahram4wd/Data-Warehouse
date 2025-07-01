@@ -591,6 +591,63 @@ class HubspotClient:
                 logger.error(f"Exception during bulk association fetch: {str(e)}")
                 return []
 
+    async def get_association_labels(self, from_object_type: str, to_object_type: str) -> List[Dict[str, Any]]:
+        """Fetch all association labels/types between two object types."""
+        url = f"{self.BASE_URL}/crm/v4/associations/{from_object_type}/{to_object_type}/labels"
+        
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(url, headers=self.headers, timeout=60) as response:
+                    if response.status != 200:
+                        response_text = await response.text()
+                        logger.error(f"Error fetching association labels: {response_text[:500]}")
+                        return []
+
+                    data = await response.json()
+                    results = data.get("results", [])
+                    logger.info(f"Found {len(results)} association types between {from_object_type} and {to_object_type}")
+                    return results
+
+            except Exception as e:
+                logger.error(f"Exception during association labels fetch: {str(e)}")
+                return []
+
+    async def get_bulk_associations_with_types(self, from_object_type: str, to_object_type: str, inputs: List[str], association_types: List[int] = None) -> Dict[str, Any]:
+        """
+        Fetch bulk associations with specific association types.
+        If association_types is provided, only fetch those types.
+        If not provided, fetch all available association types.
+        """
+        url = f"{self.BASE_URL}/crm/v4/associations/{from_object_type}/{to_object_type}/batch/read"
+        
+        # Build payload with association types if specified
+        payload = {"inputs": [{"id": obj_id} for obj_id in inputs]}
+        
+        # Add association types filter if provided
+        if association_types:
+            payload["types"] = [{"associationTypeId": type_id} for type_id in association_types]
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post(url, headers=self.headers, json=payload, timeout=60) as response:
+                    if response.status != 200:
+                        response_text = await response.text()
+                        logger.error(f"Error fetching bulk associations with types: {response_text[:500]}")
+                        return {"results": [], "errors": []}
+
+                    data = await response.json()
+                    results = data.get("results", [])
+                    errors = data.get("errors", [])
+                    
+                    type_filter_msg = f" with types {association_types}" if association_types else " (all types)"
+                    logger.info(f"Fetched {len(results)} associations{type_filter_msg}, {len(errors)} errors")
+                    
+                    return {"results": results, "errors": errors}
+
+            except Exception as e:
+                logger.error(f"Exception during bulk association fetch with types: {str(e)}")
+                return {"results": [], "errors": []}
+
     async def get_custom_object_page(
         self, 
         object_type: str,

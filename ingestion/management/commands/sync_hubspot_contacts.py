@@ -3,7 +3,8 @@ import os
 import sys
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import List, Tuple
 
 import aiohttp
 from asgiref.sync import sync_to_async
@@ -63,6 +64,18 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS("Starting HubSpot contacts sync..."))
         
+        # Run the async sync
+        try:
+            asyncio.run(self.sync_contacts(options, token))
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Sync failed: {str(e)}'))
+            logger.error(f"HubSpot contacts sync failed: {str(e)}")
+
+    async def sync_contacts(self, options, token):
+        """Main sync logic"""
+        full_sync = options.get("full")
+        lastmodifieddate = options.get("lastmodifieddate")
+        
         # Get the last sync time
         endpoint = "contacts"
         
@@ -86,74 +99,24 @@ class Command(BaseCommand):
         else:
             self.stdout.write("Performing full sync")
         
-        # Process in a completely separated way - fetch data, then process it
+        # Initialize client
+        client = HubspotClient(token)
+        
+        # Process in a completely separated way - fetch data using adaptive chunking, then process it
         try:
-            # Step 1: Fetch all pages of data asynchronously
-            all_contacts = []
-            total_pages = 0
+            # Use adaptive chunking similar to appointments sync
+            all_contacts = await self._fetch_contacts_adaptive(client, last_sync, timezone.now())
             
-            # Start async event loop
-            next_page_token = None
-            client = HubspotClient(token)
-            
-            self.stdout.write("Starting to fetch contacts from HubSpot...")
-            self.stdout.write(f"Using batch size: {BATCH_SIZE}")
-            
-            while True:
-                # Check if we've reached the maximum number of pages
-                if max_pages > 0 and total_pages >= max_pages:
-                    self.stdout.write(f"Reached maximum page limit of {max_pages}")
-                    break
-
-                # Fetch a single page                total_pages += 1
-                self.stdout.write(f"Fetching page {total_pages}...")
-
-                # Log the parameters being sent
-                self.stdout.write(f"Fetching page from {client.BASE_URL} with params: {{'limit': 100, 'after': {next_page_token}}}")
-
-                page_result = asyncio.run(client.get_page(
-                    endpoint=endpoint,
-                    last_sync=last_sync,
-                    page_token=next_page_token
-                ))
-
-                if not page_result or not page_result[0]:
-                    self.stdout.write("No more data to fetch")
-                    break
-
-                page_data, next_page_token = page_result
-                self.stdout.write(f"Retrieved {len(page_data)} contacts")
-                all_contacts.extend(page_data)
-
-                # Debug: Log retrieved contact IDs
-                self.stdout.write(f"Retrieved contact IDs: {[contact.get('id') for contact in page_data]}")
-                
-                # Check if the specific contact ID is in the retrieved data
-                if '128352605076' in [contact.get('id') for contact in page_data]:
-                    self.stdout.write("Contact ID 128352605076 found in the API response.")
-                else:
-                    self.stdout.write("Contact ID 128352605076 not found in the API response.")
-
-                # Save data if we've reached a checkpoint
-                if len(all_contacts) >= BATCH_SIZE:
-                    self.stdout.write(f"Processing checkpoint at page {total_pages}...")
-                    self.process_contacts_batch(all_contacts[:BATCH_SIZE])
-                    all_contacts = all_contacts[BATCH_SIZE:]  # Keep remaining contacts
-
-                # If no next page token, we're done
-                if not next_page_token:
-                    self.stdout.write("No more pages available")
-                    break
-
-            # Process any remaining contacts
+            # Process all fetched contacts
             if all_contacts:
-                self.stdout.write(f"Processing final batch of {len(all_contacts)} contacts...")
-                self.process_contacts_batch(all_contacts)
+                self.stdout.write(f"Processing {len(all_contacts)} total contacts...")
+                total_created, total_updated = await self._process_contacts_async(all_contacts)
+                self.stdout.write(self.style.SUCCESS(f"Created {total_created} contacts, updated {total_updated} contacts"))
 
             # Update last sync time
-            self.update_last_sync(endpoint)
+            await self._update_last_sync_async(endpoint)
 
-            self.stdout.write(self.style.SUCCESS(f"HubSpot contacts sync complete. Processed {total_pages} pages."))
+            self.stdout.write(self.style.SUCCESS(f"HubSpot contacts sync complete. Processed {len(all_contacts)} contacts."))
             
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Error in sync process: {str(e)}"))
@@ -306,3 +269,189 @@ class Command(BaseCommand):
         except (ValueError, TypeError):
             logger.warning(f"Could not parse datetime: {value}")
             return None
+
+    async def _fetch_contacts_adaptive(self, client, start_date, end_date, max_results_per_chunk=8000):
+        """
+        Adaptively fetch contacts by breaking down time ranges when errors occur or too many results are returned.
+        
+        Args:
+            client: HubspotClient instance
+            start_date: Start datetime for the range (None for full sync)
+            end_date: End datetime for the range
+            max_results_per_chunk: Maximum number of results per chunk before subdividing
+        
+        Returns:
+            List of all contacts fetched
+        """
+        all_contacts = []
+        
+        # If no start_date, do a full fetch without date range
+        if start_date is None:
+            self.stdout.write("Performing full contact fetch without date filtering...")
+            return await self._fetch_all_contacts_paginated(client)
+        
+        # Create initial time ranges to process
+        pending_ranges = [(start_date, end_date)]
+        
+        while pending_ranges:
+            current_start, current_end = pending_ranges.pop(0)
+            time_span = current_end - current_start
+            
+            self.stdout.write(f"Processing range: {current_start} to {current_end} (span: {time_span})")
+            
+            try:
+                # Try to fetch this chunk
+                chunk_contacts = await self._fetch_single_chunk(client, current_start, current_end)
+                
+                if len(chunk_contacts) > max_results_per_chunk:
+                    # Too many results, subdivide the time range
+                    self.stdout.write(f"⚠️ Chunk too large ({len(chunk_contacts)} contacts), subdividing...")
+                    subdivisions = self._subdivide_time_range(current_start, current_end, 4)
+                    pending_ranges.extend(subdivisions)
+                else:
+                    # Acceptable chunk size
+                    all_contacts.extend(chunk_contacts)
+                    self.stdout.write(f"✅ Processed range: {len(chunk_contacts)} contacts")
+            
+            except Exception as e:
+                error_msg = str(e)
+                self.stdout.write(f"❌ Error fetching range {current_start} to {current_end}: {error_msg}")
+                
+                # If it's a large time span, try subdividing
+                if time_span.days > 1:
+                    self.stdout.write("Subdividing range due to error...")
+                    subdivisions = self._subdivide_time_range(current_start, current_end, 7)
+                    pending_ranges.extend(subdivisions)
+                else:
+                    # Small range still failing, skip it but log the error
+                    self.stdout.write(f"⚠️ Skipping problematic range: {current_start} to {current_end}")
+                    logger.error(f"Failed to fetch contacts for range {current_start} to {current_end}: {error_msg}")
+        
+        self.stdout.write(f"✅ Adaptive fetch complete: {len(all_contacts)} total contacts")
+        return all_contacts
+    
+    async def _fetch_all_contacts_paginated(self, client):
+        """Fetch all contacts using standard pagination for full sync."""
+        all_contacts = []
+        next_page_token = None
+        page_num = 0
+        
+        while True:
+            page_num += 1
+            self.stdout.write(f"Fetching page {page_num}...")
+            
+            try:
+                page_result = await client.get_page(
+                    endpoint="contacts",
+                    last_sync=None,
+                    page_token=next_page_token
+                )
+                
+                if not page_result or not page_result[0]:
+                    self.stdout.write("No more data to fetch")
+                    break
+                
+                page_data, next_page_token = page_result
+                self.stdout.write(f"Retrieved {len(page_data)} contacts")
+                all_contacts.extend(page_data)
+                
+                if not next_page_token:
+                    self.stdout.write("No more pages available")
+                    break
+                    
+            except Exception as e:
+                self.stdout.write(f"Error fetching page {page_num}: {str(e)}")
+                break
+        
+        return all_contacts
+    
+    async def _fetch_single_chunk(self, client, start_date, end_date):
+        """
+        Fetch a single chunk of contacts for the given date range.
+        
+        Args:
+            client: HubspotClient instance
+            start_date: Start datetime
+            end_date: End datetime
+            
+        Returns:
+            List of contacts for this range
+        """
+        all_contacts = []
+        next_page_token = None
+        page_num = 0
+        
+        while True:
+            page_num += 1
+            
+            try:
+                page_result = await client.get_page(
+                    endpoint="contacts",
+                    last_sync=start_date,
+                    page_token=next_page_token
+                )
+                
+                if not page_result or not page_result[0]:
+                    break
+                
+                page_data, next_page_token = page_result
+                
+                # Filter by end_date if necessary
+                filtered_contacts = []
+                for contact in page_data:
+                    contact_modified = self._parse_datetime(contact.get('properties', {}).get('lastmodifieddate'))
+                    if contact_modified and contact_modified <= end_date:
+                        filtered_contacts.append(contact)
+                    elif not contact_modified:
+                        # Include contacts without lastmodifieddate
+                        filtered_contacts.append(contact)
+                
+                all_contacts.extend(filtered_contacts)
+                
+                if not next_page_token:
+                    break
+                    
+            except Exception as e:
+                raise e
+        
+        return all_contacts
+    
+    def _subdivide_time_range(self, start_date, end_date, num_subdivisions=4):
+        """
+        Subdivide a time range into smaller equal chunks.
+        
+        Args:
+            start_date: Start datetime
+            end_date: End datetime
+            num_subdivisions: Number of equal subdivisions to create
+            
+        Returns:
+            List of (start, end) tuples for each subdivision
+        """
+        total_seconds = (end_date - start_date).total_seconds()
+        chunk_seconds = total_seconds / num_subdivisions
+        
+        subdivisions = []
+        current_start = start_date
+        
+        for i in range(num_subdivisions):
+            if i == num_subdivisions - 1:
+                # Last chunk goes to the end
+                subdivisions.append((current_start, end_date))
+            else:
+                current_end = current_start + timedelta(seconds=chunk_seconds)
+                subdivisions.append((current_start, current_end))
+                current_start = current_end
+        
+        self.stdout.write(f"📋 Created {len(subdivisions)} subdivisions of {timedelta(seconds=chunk_seconds)} each")
+        return subdivisions
+
+    @sync_to_async
+    def _process_contacts_async(self, contacts):
+        """Process contacts asynchronously"""
+        return self.process_contacts_batch(contacts)
+
+    @sync_to_async
+    def _update_last_sync_async(self, endpoint):
+        """Update the last sync time asynchronously"""
+        self.update_last_sync(endpoint)
