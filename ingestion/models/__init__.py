@@ -6,7 +6,7 @@ from .genius import (
     Genius_DivisionGroup,
     Genius_Division,
     Genius_UserData,
-    Genius_UserTitle,  # Added new model
+    Genius_UserTitle,  
     Genius_Prospect,
     Genius_ProspectSource,
     Genius_AppointmentType,
@@ -18,6 +18,7 @@ from .genius import (
     Genius_Quote,
     Genius_MarketingSourceType,
     Genius_MarketingSource,
+    Genius_Lead,  
 )
 
 # Import SalesPro models
@@ -58,8 +59,8 @@ from .leadconduit import (
 # This allows existing code to continue using: from ingestion.models import X
 __all__ = [
     'SyncTracker',
-    'Genius_DivisionGroup', 'Genius_Division', 'Genius_UserData', 'Genius_UserTitle',  # Added new model
-    'Genius_Prospect', 'Genius_ProspectSource',
+    'Genius_DivisionGroup', 'Genius_Division', 'Genius_UserData', 'Genius_UserTitle',  
+    'Genius_Prospect', 'Genius_ProspectSource', 'Genius_Lead',
     'Genius_AppointmentType', 'Genius_AppointmentOutcome', 'Genius_Appointment', 'Genius_AppointmentService',
     'Genius_Service', 'Genius_Quote', 'Genius_MarketingSourceType', 'Genius_MarketingSource', 'Genius_AppointmentOutcomeType',
     'SalesPro_Users', 'SalesPro_Appointment', 'SalesPro_SyncHistory',    'Hubspot_Contact', 'Hubspot_Deal', 'Hubspot_Appointment', 'Hubspot_SyncHistory',

@@ -242,3 +242,102 @@ class Genius_UserTitle(models.Model):
 
     def __str__(self):
         return self.title or f"Title {self.id}"
+
+class Genius_Lead(models.Model):
+    lead_id = models.IntegerField(primary_key=True)
+    contact = models.IntegerField(null=True, blank=True)
+    division = models.ForeignKey('Genius_Division', on_delete=models.SET_NULL, null=True, related_name='leads')
+    first_name = models.CharField(max_length=50, null=True, blank=True)
+    last_name = models.CharField(max_length=50, null=True, blank=True)
+    address1 = models.CharField(max_length=50, null=True, blank=True)
+    address2 = models.CharField(max_length=50, null=True, blank=True)
+    city = models.CharField(max_length=50, null=True, blank=True)
+    state = models.CharField(max_length=2, null=True, blank=True)
+    zip = models.CharField(max_length=7, null=True, blank=True)
+    cdyne_county = models.CharField(max_length=25, null=True, blank=True)
+    is_valid_address = models.SmallIntegerField(default=0)  # tinyint in DB
+    email = models.CharField(max_length=100, null=True, blank=True)
+    phone1 = models.CharField(max_length=12, null=True, blank=True)
+    type1 = models.SmallIntegerField(null=True, blank=True)
+    phone2 = models.CharField(max_length=12, null=True, blank=True)
+    type2 = models.SmallIntegerField(null=True, blank=True)
+    phone3 = models.CharField(max_length=12, null=True, blank=True)
+    type3 = models.SmallIntegerField(null=True, blank=True)
+    phone4 = models.CharField(max_length=12, null=True, blank=True)
+    type4 = models.SmallIntegerField(null=True, blank=True)
+    source = models.SmallIntegerField(null=True, blank=True)
+    source_notes = models.CharField(max_length=64, null=True, blank=True)
+    sourced_on = models.DateTimeField(null=True, blank=True)
+    job_type = models.SmallIntegerField(null=True, blank=True, default=2)
+    rating = models.SmallIntegerField(null=True, blank=True)
+    year_built = models.CharField(max_length=4, null=True, blank=True)
+    is_year_built_verified = models.SmallIntegerField(default=0)  # tinyint in DB
+    is_zillow = models.SmallIntegerField(default=0)  # tinyint in DB
+    is_express_consent = models.SmallIntegerField(default=0)  # tinyint in DB
+    express_consent_set_by = models.IntegerField(null=True, blank=True)
+    express_consent_set_on = models.DateTimeField(null=True, blank=True)
+    express_consent_source = models.SmallIntegerField(null=True, blank=True)
+    express_consent_upload_file_id = models.IntegerField(null=True, blank=True)
+    is_express_consent_being_reviewed = models.SmallIntegerField(default=0)  # tinyint in DB
+    express_consent_being_reviewed_by = models.IntegerField(null=True, blank=True)
+    notes = models.TextField(null=True, blank=True)
+    status = models.SmallIntegerField(null=True, blank=True)
+    substatus = models.SmallIntegerField(null=True, blank=True)
+    substatus_reason = models.IntegerField(null=True, blank=True)
+    alternate_id = models.IntegerField(null=True, blank=True)
+    added_by = models.IntegerField(null=True, blank=True)
+    added_on = models.DateTimeField(null=True, blank=True)
+    viewed_on = models.DateTimeField(null=True, blank=True)
+    is_estimate_set = models.SmallIntegerField(default=0)  # tinyint in DB
+    estimate_set_by = models.IntegerField(null=True, blank=True)
+    estimate_set_on = models.DateTimeField(null=True, blank=True)
+    dead_on = models.DateTimeField(null=True, blank=True)
+    dead_by = models.IntegerField(null=True, blank=True)
+    dead_note = models.CharField(max_length=100, null=True, blank=True)
+    is_credit_request = models.SmallIntegerField(null=True, blank=True)  # tinyint in DB
+    credit_request_by = models.IntegerField(null=True, blank=True)
+    credit_request_on = models.DateTimeField(null=True, blank=True)
+    credit_request_reason = models.TextField(null=True, blank=True)
+    credit_request_status = models.SmallIntegerField(null=True, blank=True)
+    credit_request_update_on = models.DateTimeField(null=True, blank=True)
+    credit_request_update_by = models.IntegerField(null=True, blank=True)
+    credit_request_note = models.TextField(null=True, blank=True)
+    lead_cost = models.FloatField(default=20.00)  # double(10,2) in DB
+    import_source = models.CharField(max_length=100, null=True, blank=True)
+    call_screen_viewed_on = models.DateTimeField(null=True, blank=True)
+    call_screen_viewed_by = models.IntegerField(null=True, blank=True)
+    copied_to_id = models.IntegerField(null=True, blank=True)
+    copied_to_on = models.DateTimeField(null=True, blank=True)
+    copied_from_id = models.IntegerField(null=True, blank=True)
+    copied_from_on = models.DateTimeField(null=True, blank=True)
+    cwp_client = models.IntegerField(default=0)
+    cwp_referral = models.IntegerField(null=True, blank=True)
+    rc_paid_to = models.IntegerField(null=True, blank=True)
+    rc_paid_on = models.DateTimeField(null=True, blank=True)
+    with_dm = models.SmallIntegerField(default=-1)  # tinyint with default -1
+    voicemail_file = models.CharField(max_length=124, null=True, blank=True)
+    agent_id = models.CharField(max_length=48, null=True, blank=True)
+    agent_name = models.CharField(max_length=124, null=True, blank=True)
+    invalid_address = models.SmallIntegerField(default=0)  # tinyint(1) in DB
+    is_valid_email = models.SmallIntegerField(default=0)  # tinyint(1) in DB
+    is_high_potential = models.SmallIntegerField(default=0)  # tinyint in DB
+    is_mobile_lead = models.SmallIntegerField(default=0)  # tinyint in DB
+    is_dnc = models.SmallIntegerField(null=True, blank=True, default=0)  # tinyint in DB
+    is_dummy = models.SmallIntegerField(default=0)  # tinyint in DB
+    lead_central_estimate_date = models.DateTimeField(null=True, blank=True)
+    do_not_call_before = models.DateTimeField(null=True, blank=True)
+    is_estimate_confirmed = models.SmallIntegerField(null=True, blank=True)  # tinyint in DB
+    estimate_confirmed_by = models.IntegerField(null=True, blank=True)
+    estimate_confirmed_on = models.DateTimeField(null=True, blank=True)
+    added_by_latitude = models.DecimalField(max_digits=9, decimal_places=7, null=True, blank=True)
+    added_by_longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    is_carpentry_followup = models.SmallIntegerField(default=0)  # tinyint in DB
+    carpentry_followup_notes = models.TextField(null=True, blank=True)
+    marketing_source = models.IntegerField(null=True, blank=True)
+    prospect_id = models.IntegerField(null=True, blank=True)
+    added_by_supervisor = models.IntegerField(null=True, blank=True)
+    salesrabbit_lead_id = models.IntegerField(null=True, blank=True)
+    third_party_source_id = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name or ''}".strip() or f"Lead {self.lead_id}"
