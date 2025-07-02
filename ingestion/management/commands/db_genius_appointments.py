@@ -25,11 +25,22 @@ class Command(BaseCommand):
             default=0,
             help="The starting offset for processing records. Defaults to 0."
         )
+        parser.add_argument(
+            "--page",
+            type=int,
+            default=1,
+            help="Starting page number (each page is BATCH_SIZE records). Defaults to 1. Overrides --start-offset if provided."
+        )
 
     def handle(self, *args, **options):
         table_name = options["table"]
         start_offset = options["start_offset"]
+        start_page = options["page"]
         connection = None
+        
+        # Initialize counters
+        self.corrupted_count = 0
+        self.processed_count = 0
 
         try:
             # Database connection and preloading data
@@ -44,7 +55,22 @@ class Command(BaseCommand):
             total_records = cursor.fetchone()[0]
             self.stdout.write(self.style.SUCCESS(f"Total records in table '{table_name}': {total_records}"))
             
-            # Process records in batches starting from the specified offset
+            # Calculate starting offset based on page number (page overrides start_offset if provided)
+            if start_page > 1:
+                start_offset = (start_page - 1) * BATCH_SIZE
+                remaining_records = total_records - start_offset
+                
+                if start_offset >= total_records:
+                    self.stdout.write(self.style.WARNING(f"Starting page {start_page} is beyond available data. Total records: {total_records}"))
+                    return
+                
+                self.stdout.write(f"Starting from page {start_page} (offset {start_offset:,}), processing {remaining_records:,} remaining records")
+            else:
+                remaining_records = total_records - start_offset
+                if start_offset > 0:
+                    self.stdout.write(f"Starting from offset {start_offset:,}, processing {remaining_records:,} remaining records")
+            
+            # Process records in batches starting from the calculated offset
             for offset in tqdm(range(start_offset, total_records, BATCH_SIZE), desc="Processing batches"):
                 cursor.execute(f"""
                     SELECT id, prospect_id, prospect_source_id, user_id, type_id, date, time, duration, address1, address2, city, state, zip, email, notes, add_user_id, add_date, assign_date, confirm_user_id, confirm_date, confirm_with, spouses_present, is_complete, complete_outcome_id, complete_user_id, complete_date, marketsharp_id, marketsharp_appt_type, leap_estimate_id, third_party_source_id
@@ -55,6 +81,12 @@ class Command(BaseCommand):
                 self._process_batch(rows, **lookup_data)
                 
             self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
+            
+            # Print summary
+            if self.corrupted_count > 0:
+                self.stdout.write(self.style.WARNING(f"Summary: {self.processed_count} records processed, {self.corrupted_count} records had corrupted data that was cleaned."))
+            else:
+                self.stdout.write(self.style.SUCCESS(f"Summary: {self.processed_count} records processed successfully with no data corruption detected."))
             
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"An error occurred: {e}"))
@@ -97,14 +129,24 @@ class Command(BaseCommand):
 
         for row in rows:
             try:
-                # Extract fields from row
-                (
-                    record_id, prospect_id, prospect_source_id, user_id, type_id, date, time, duration,
-                    address1, address2, city, state, zip, email, notes, add_user_id, add_date,
-                    assign_date, confirm_user_id, confirm_date, confirm_with, spouses_present,
-                    is_complete, complete_outcome_id, complete_user_id, complete_date,
-                    marketsharp_id, marketsharp_appt_type, leap_estimate_id, third_party_source_id
-                ) = row
+                # Validate row length first
+                if len(row) != 30:  # Expected number of columns
+                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 30. Skipping record."))
+                    continue
+                
+                # Extract fields from row with debugging
+                try:
+                    (
+                        record_id, prospect_id, prospect_source_id, user_id, type_id, date, time, duration,
+                        address1, address2, city, state, zip, email, notes, add_user_id, add_date,
+                        assign_date, confirm_user_id, confirm_date, confirm_with, spouses_present,
+                        is_complete, complete_outcome_id, complete_user_id, complete_date,
+                        marketsharp_id, marketsharp_appt_type, leap_estimate_id, third_party_source_id
+                    ) = row
+                except ValueError as e:
+                    self.stdout.write(self.style.ERROR(f"Error unpacking row for record_id {row[0] if row else 'unknown'}: {e}"))
+                    self.stdout.write(self.style.ERROR(f"Row data: {row}"))
+                    continue
 
                 # Look up related objects
                 prospect = prospects.get(prospect_id)
@@ -113,19 +155,24 @@ class Command(BaseCommand):
                 complete_outcome = appointment_outcomes.get(complete_outcome_id)
                 hubspot_id = hubspot_sources.get(third_party_source_id) if third_party_source_id is not None else None
 
+                # Increment processed count
+                self.processed_count += 1
+
                 # Skip records with missing required foreign keys
                 if not prospect:
-                    #self.stdout.write(self.style.WARNING(f"Skipping appointment {record_id}: prospect {prospect_id} not found"))
+                    self.stdout.write(self.style.WARNING(f"Skipping appointment {record_id}: prospect {prospect_id} not found"))
+                    self.stdout.write(self.style.WARNING(f"Original row data: {row}"))
                     continue
                     
                 if not appointment_type:
-                    #self.stdout.write(self.style.WARNING(f"Skipping appointment {record_id}: appointment type {type_id} not found"))
+                    self.stdout.write(self.style.WARNING(f"Skipping appointment {record_id}: appointment type {type_id} not found"))
+                    self.stdout.write(self.style.WARNING(f"Original row data: {row}"))
                     continue
 
                 # Process fields that need special handling
                 processed_data = self._process_field_values(
                     date, time, duration, add_date, assign_date, confirm_date, complete_date,
-                    spouses_present, is_complete
+                    spouses_present, is_complete, original_row=row
                 )
                 
                 # Create or update the record
@@ -135,14 +182,14 @@ class Command(BaseCommand):
                                        processed_data, address1, address2, city, state, zip, email, notes,
                                        add_user_id, confirm_user_id, confirm_with, complete_outcome,
                                        complete_user_id, marketsharp_id, marketsharp_appt_type,
-                                       leap_estimate_id, hubspot_id)
+                                       leap_estimate_id, hubspot_id, original_row=row)
                     to_update.append(record)
                 else:
                     record = self._create_record(record_id, prospect, prospect_source, user_id, appointment_type,
                                                processed_data, address1, address2, city, state, zip, email, notes,
                                                add_user_id, confirm_user_id, confirm_with, complete_outcome,
                                                complete_user_id, marketsharp_id, marketsharp_appt_type,
-                                               leap_estimate_id, hubspot_id)
+                                               leap_estimate_id, hubspot_id, original_row=row)
                     to_create.append(record)
                     
             except Exception as e:
@@ -152,7 +199,7 @@ class Command(BaseCommand):
         self._save_records(to_create, to_update)
     
     def _process_field_values(self, date_val, time_val, duration_val, add_date, assign_date, 
-                             confirm_date, complete_date, spouses_present, is_complete):
+                             confirm_date, complete_date, spouses_present, is_complete, original_row=None):
         """Process and convert field values to appropriate types."""
         # Process date and time fields
         if isinstance(date_val, datetime):
@@ -172,8 +219,8 @@ class Command(BaseCommand):
         complete_date = self._parse_datetime(complete_date)
         
         # Process boolean fields as integers with validation
-        spouses_present = self._safe_int_convert(spouses_present, 0)
-        is_complete = self._safe_int_convert(is_complete, 0)
+        spouses_present = self._safe_int_convert(spouses_present, 0, field_name="spouses_present", original_row=original_row)
+        is_complete = self._safe_int_convert(is_complete, 0, field_name="is_complete", original_row=original_row)
         
         return {
             'date': date_val,
@@ -198,7 +245,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING(f"Invalid string value: {value}, using default {default}"))
             return default
 
-    def _safe_int_convert(self, value, default=None, is_bigint=False):
+    def _safe_int_convert(self, value, default=None, is_bigint=False, field_name="unknown", original_row=None):
         """Safely convert value to integer with range validation."""
         if value is None:
             return default
@@ -209,24 +256,33 @@ class Command(BaseCommand):
             if is_bigint:
                 # Check for PostgreSQL bigint range (-9223372036854775808 to 9223372036854775807)
                 if int_val < -9223372036854775808 or int_val > 9223372036854775807:
-                    self.stdout.write(self.style.WARNING(f"BigInteger out of range: {int_val}, using default {default}"))
+                    self.stdout.write(self.style.WARNING(f"BigInteger out of range for {field_name}: {int_val}, using default {default}"))
+                    if original_row:
+                        self.stdout.write(self.style.WARNING(f"Original row data: {original_row}"))
+                    self.corrupted_count += 1
                     return default
             else:
                 # Check for PostgreSQL int4 range
                 if int_val < -2147483648 or int_val > 2147483647:
-                    self.stdout.write(self.style.WARNING(f"Integer out of range: {int_val}, using default {default}"))
+                    self.stdout.write(self.style.WARNING(f"Integer out of range for {field_name}: {int_val}, using default {default}"))
+                    if original_row:
+                        self.stdout.write(self.style.WARNING(f"Original row data: {original_row}"))
+                    self.corrupted_count += 1
                     return default
             
             return int_val
         except (ValueError, TypeError):
-            self.stdout.write(self.style.WARNING(f"Invalid integer value: {value}, using default {default}"))
+            self.stdout.write(self.style.WARNING(f"Invalid integer value for {field_name}: {value}, using default {default}"))
+            if original_row:
+                self.stdout.write(self.style.WARNING(f"Original row data: {original_row}"))
+            self.corrupted_count += 1
             return default
 
     def _update_record(self, record, prospect, prospect_source, user_id, appointment_type,
                       processed_data, address1, address2, city, state, zip, email, notes,
                       add_user_id, confirm_user_id, confirm_with, complete_outcome,
                       complete_user_id, marketsharp_id, marketsharp_appt_type,
-                      leap_estimate_id, hubspot_id):
+                      leap_estimate_id, hubspot_id, original_row=None):
         """Update an existing record with new values."""
         # Set foreign keys
         record.prospect = prospect
@@ -246,7 +302,7 @@ class Command(BaseCommand):
         record.is_complete = processed_data['is_complete']
         
         # Set other fields with validation
-        record.user_id = self._safe_int_convert(user_id, is_bigint=True)
+        record.user_id = self._safe_int_convert(user_id, is_bigint=True, field_name="user_id", original_row=original_row)
         record.address1 = address1
         record.address2 = address2
         record.city = city
@@ -254,14 +310,14 @@ class Command(BaseCommand):
         record.zip = zip
         record.email = email
         record.notes = notes
-        record.add_user_id = self._safe_int_convert(add_user_id, is_bigint=True)
-        record.confirm_user_id = self._safe_int_convert(confirm_user_id, is_bigint=True)
+        record.add_user_id = self._safe_int_convert(add_user_id, is_bigint=True, field_name="add_user_id", original_row=original_row)
+        record.confirm_user_id = self._safe_int_convert(confirm_user_id, is_bigint=True, field_name="confirm_user_id", original_row=original_row)
         record.confirm_with = confirm_with
-        record.complete_user_id = self._safe_int_convert(complete_user_id, is_bigint=True)
+        record.complete_user_id = self._safe_int_convert(complete_user_id, is_bigint=True, field_name="complete_user_id", original_row=original_row)
         record.marketsharp_id = marketsharp_id
         record.marketsharp_appt_type = marketsharp_appt_type
         record.leap_estimate_id = self._safe_string_convert(leap_estimate_id)
-        record.third_party_source_id = self._safe_int_convert(hubspot_id, is_bigint=True)
+        record.third_party_source_id = self._safe_int_convert(hubspot_id, is_bigint=True, field_name="third_party_source_id", original_row=original_row)
         
         return record
     
@@ -269,13 +325,13 @@ class Command(BaseCommand):
                       processed_data, address1, address2, city, state, zip, email, notes,
                       add_user_id, confirm_user_id, confirm_with, complete_outcome,
                       complete_user_id, marketsharp_id, marketsharp_appt_type,
-                      leap_estimate_id, hubspot_id):
+                      leap_estimate_id, hubspot_id, original_row=None):
         """Create a new appointment record."""
         return Genius_Appointment(
             id=record_id,
             prospect=prospect,
             prospect_source=prospect_source,
-            user_id=self._safe_int_convert(user_id, is_bigint=True),
+            user_id=self._safe_int_convert(user_id, is_bigint=True, field_name="user_id", original_row=original_row),
             type=appointment_type,
             date=processed_data['date'],
             time=processed_data['time'],
@@ -287,21 +343,21 @@ class Command(BaseCommand):
             zip=zip,
             email=email,
             notes=notes,
-            add_user_id=self._safe_int_convert(add_user_id, is_bigint=True),
+            add_user_id=self._safe_int_convert(add_user_id, is_bigint=True, field_name="add_user_id", original_row=original_row),
             add_date=processed_data['add_date'],
             assign_date=processed_data['assign_date'],
-            confirm_user_id=self._safe_int_convert(confirm_user_id, is_bigint=True),
+            confirm_user_id=self._safe_int_convert(confirm_user_id, is_bigint=True, field_name="confirm_user_id", original_row=original_row),
             confirm_date=processed_data['confirm_date'],
             confirm_with=confirm_with,
             spouses_present=processed_data['spouses_present'],
             is_complete=processed_data['is_complete'],
             complete_outcome=complete_outcome,
-            complete_user_id=self._safe_int_convert(complete_user_id, is_bigint=True),
+            complete_user_id=self._safe_int_convert(complete_user_id, is_bigint=True, field_name="complete_user_id", original_row=original_row),
             complete_date=processed_data['complete_date'],
             marketsharp_id=marketsharp_id,
             marketsharp_appt_type=marketsharp_appt_type,
             leap_estimate_id=self._safe_string_convert(leap_estimate_id),
-            third_party_source_id=self._safe_int_convert(hubspot_id, is_bigint=True)
+            third_party_source_id=self._safe_int_convert(hubspot_id, is_bigint=True, field_name="third_party_source_id", original_row=original_row)
         )
     
     def _save_records(self, to_create, to_update):

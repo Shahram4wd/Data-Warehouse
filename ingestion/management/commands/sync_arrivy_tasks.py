@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from datetime import datetime
 
 from asgiref.sync import sync_to_async
@@ -13,6 +14,9 @@ from ingestion.models.arrivy import Arrivy_Task, Arrivy_SyncHistory
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 100
+MAX_RETRIES = 3
+RETRY_DELAY = 5  # seconds
+BACKOFF_MULTIPLIER = 2
 
 class Command(BaseCommand):
     help = "Sync tasks from Arrivy API"
@@ -53,9 +57,13 @@ class Command(BaseCommand):
 
         try:
             total_pages = 0
+            failed_pages = []
             client = ArrivyClient()
+            
             self.stdout.write("Starting to fetch tasks from Arrivy...")
             self.stdout.write(f"Using batch size: {BATCH_SIZE}")
+            self.stdout.write(f"Retry settings: {MAX_RETRIES} retries, {RETRY_DELAY}s delay, {BACKOFF_MULTIPLIER}x backoff")
+            
             page = 1
             has_next = True
 
@@ -65,13 +73,17 @@ class Command(BaseCommand):
                     break
 
                 total_pages += 1
-                self.stdout.write(f"Fetching page {total_pages}...")
 
-                page_result = asyncio.run(client.get_tasks(
-                    page_size=BATCH_SIZE,
-                    page=page,
-                    last_sync=last_sync
-                ))
+                page_result = self.fetch_page_with_retry(client, page, BATCH_SIZE, last_sync)
+
+                if page_result is None:
+                    # API call failed after retries
+                    failed_pages.append(page)
+                    self.stdout.write(self.style.WARNING(
+                        f"Skipping page {page} due to API errors. Continuing with next page..."
+                    ))
+                    page += 1
+                    continue
 
                 if not page_result or not page_result.get('data'):
                     self.stdout.write("No more data to fetch")
@@ -80,12 +92,18 @@ class Command(BaseCommand):
                 page_data = page_result['data']
                 pagination = page_result.get('pagination', {})
 
-                self.stdout.write(f"Retrieved {len(page_data)} tasks")
+                self.stdout.write(f"Retrieved {len(page_data)} tasks from page {page}")
                 self.stdout.write(f"API response pagination: {pagination}")
                 logger.debug(f"API response pagination: {pagination}")
 
                 # Process and save this page immediately
-                self.process_tasks_batch(page_data)
+                try:
+                    self.process_tasks_batch(page_data)
+                    self.stdout.write(f"Successfully processed page {page}")
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f"Error processing page {page}: {str(e)}"))
+                    logger.exception(f"Error processing page {page}")
+                    failed_pages.append(page)
 
                 # Check if there are more pages
                 if pagination is None:
@@ -94,12 +112,27 @@ class Command(BaseCommand):
                     has_next = pagination.get('has_next', len(page_data) == BATCH_SIZE)
                 page = pagination.get('next_page', page + 1) if pagination else page + 1
 
-            self.update_last_sync(sync_type)
-            self.stdout.write(self.style.SUCCESS(f"Arrivy tasks sync complete. Processed {total_pages} pages."))
+            # Update sync timestamp only if we processed at least some pages successfully
+            if total_pages > len(failed_pages):
+                self.update_last_sync(sync_type)
+
+            # Summary
+            successful_pages = total_pages - len(failed_pages)
+            self.stdout.write(self.style.SUCCESS(
+                f"Arrivy tasks sync complete. "
+                f"Successfully processed: {successful_pages} pages. "
+                f"Failed pages: {len(failed_pages)}"
+            ))
+            
+            if failed_pages:
+                self.stdout.write(self.style.WARNING(f"Failed pages: {failed_pages}"))
+                logger.warning(f"Sync completed with failed pages: {failed_pages}")
+            
+            logger.info(f"Sync summary - Total: {total_pages}, Success: {successful_pages}, Failed: {len(failed_pages)}")
 
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Error in sync process: {str(e)}"))
-            logger.exception("Error during Arrivy tasks sync")
+            self.stdout.write(self.style.ERROR(f"Critical error in sync process: {str(e)}"))
+            logger.exception("Critical error during Arrivy tasks sync")
             raise CommandError(f"Sync failed: {str(e)}")
 
     def process_tasks_batch(self, tasks_data):
@@ -289,3 +322,41 @@ class Command(BaseCommand):
             return json.dumps(data)
         except (TypeError, ValueError):
             return str(data) if data else None
+
+    def fetch_page_with_retry(self, client, page, batch_size, last_sync):
+        """Fetch a single page with retry logic."""
+        for attempt in range(MAX_RETRIES):
+            try:
+                if attempt == 0:
+                    self.stdout.write(f"Fetching page {page}...")
+                else:
+                    self.stdout.write(f"Retrying page {page} (attempt {attempt + 1}/{MAX_RETRIES})")
+                
+                page_result = asyncio.run(client.get_tasks(
+                    page_size=batch_size,
+                    page=page,
+                    last_sync=last_sync
+                ))
+                
+                return page_result
+                
+            except Exception as e:
+                error_msg = str(e)
+                is_last_attempt = attempt == MAX_RETRIES - 1
+                
+                if is_last_attempt:
+                    self.stdout.write(self.style.ERROR(
+                        f"Failed to fetch page {page} after {MAX_RETRIES} attempts: {error_msg}"
+                    ))
+                    logger.error(f"Page {page} failed after {MAX_RETRIES} attempts: {error_msg}")
+                    return None
+                else:
+                    delay = RETRY_DELAY * (BACKOFF_MULTIPLIER ** attempt)
+                    self.stdout.write(self.style.WARNING(
+                        f"Page {page} failed (attempt {attempt + 1}): {error_msg}. "
+                        f"Retrying in {delay} seconds..."
+                    ))
+                    logger.warning(f"Page {page} attempt {attempt + 1} failed: {error_msg}")
+                    time.sleep(delay)
+        
+        return None

@@ -17,6 +17,7 @@ class Command(BaseCommand):
             'db_genius_marketing_sources',
             'db_genius_prospect_sources',
             'db_genius_prospects',
+            'db_genius_leads',
             'db_genius_services',
             'db_genius_appointment_types',
             'db_genius_appointment_outcome_types',

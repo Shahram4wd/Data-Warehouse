@@ -18,9 +18,16 @@ class Command(BaseCommand):
             default="prospect_source",
             help="The name of the table to download data from. Defaults to 'prospect_source'."
         )
+        parser.add_argument(
+            "--page",
+            type=int,
+            default=1,
+            help="Starting page number (each page is BATCH_SIZE records). Defaults to 1."
+        )
 
     def handle(self, *args, **options):
         table_name = options["table"]
+        start_page = options["page"]
 
         connection = None  # Initialize the connection variable
         try:
@@ -35,16 +42,28 @@ class Command(BaseCommand):
             # Fetch total record count
             cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
             total_records = cursor.fetchone()[0]
-            self.stdout.write(self.style.SUCCESS(f"Total records in table '{table_name}': {total_records}"))
+            
+            # Calculate starting offset based on page number
+            start_offset = (start_page - 1) * BATCH_SIZE
+            remaining_records = total_records - start_offset
+            
+            if start_offset >= total_records:
+                self.stdout.write(self.style.ERROR(f"Starting page {start_page} exceeds total records. Total pages: {(total_records + BATCH_SIZE - 1) // BATCH_SIZE}"))
+                return
+            
+            self.stdout.write(self.style.SUCCESS(f"Total records in table '{table_name}': {total_records:,}"))
+            self.stdout.write(self.style.WARNING(f"Starting from page {start_page} (offset {start_offset:,}), processing {remaining_records:,} remaining records"))
 
-            # Process records in batches
-            for offset in tqdm(range(0, total_records, BATCH_SIZE), desc="Processing batches"):
+            # Process records in batches starting from the specified page
+            for offset in tqdm(range(start_offset, total_records, BATCH_SIZE), desc=f"Processing from page {start_page}"):
                 cursor.execute(f"""
                     SELECT id, prospect_id, marketing_source_id, source_date, notes, add_user_id, add_date
                     FROM {table_name}
                     LIMIT {BATCH_SIZE} OFFSET {offset}
                 """)
                 rows = cursor.fetchall()
+                if not rows:
+                    break
                 self._process_batch(rows, prospects, marketing_sources)
 
             self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
@@ -60,6 +79,7 @@ class Command(BaseCommand):
         """Process a single batch of records."""
         to_create = []
         to_update = []
+        skipped_records = []
         existing_records = Genius_ProspectSource.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
 
         for row in rows:
@@ -69,6 +89,20 @@ class Command(BaseCommand):
 
             prospect = prospects.get(prospect_id)
             marketing_source = marketing_sources.get(marketing_source_id)
+
+            # Skip records with missing foreign key references
+            if prospect is None or marketing_source is None:
+                missing_refs = []
+                if prospect is None:
+                    missing_refs.append(f"prospect_id={prospect_id}")
+                if marketing_source is None:
+                    missing_refs.append(f"marketing_source_id={marketing_source_id}")
+                
+                skipped_records.append({
+                    'id': record_id,
+                    'missing': ', '.join(missing_refs)
+                })
+                continue
 
             # Make dates timezone-aware
             if add_date:
@@ -105,3 +139,11 @@ class Command(BaseCommand):
                 ['prospect', 'marketing_source', 'source_date', 'notes', 'add_user_id', 'add_date'],
                 batch_size=BATCH_SIZE
             )
+        
+        # Log skipped records if any
+        if skipped_records:
+            self.stdout.write(self.style.WARNING(f"Skipped {len(skipped_records)} records due to missing foreign key references:"))
+            for skipped in skipped_records[:5]:  # Show first 5 examples
+                self.stdout.write(f"  - Record ID {skipped['id']}: missing {skipped['missing']}")
+            if len(skipped_records) > 5:
+                self.stdout.write(f"  ... and {len(skipped_records) - 5} more")
