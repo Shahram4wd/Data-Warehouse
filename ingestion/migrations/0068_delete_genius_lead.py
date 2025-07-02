@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ingestion', '0067_alter_genius_lead_invalid_address_and_more'),
+        ('ingestion', '0066_fix_with_dm_field_type'),
     ]
 
     operations = [

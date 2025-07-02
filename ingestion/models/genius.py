@@ -341,3 +341,22 @@ class Genius_Lead(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name or ''}".strip() or f"Lead {self.lead_id}"
+
+
+class Genius_MarketSharpSource(models.Model):
+    id = models.AutoField(primary_key=True)
+    marketsharp_id = models.CharField(max_length=256, null=True, blank=True)
+    source_name = models.CharField(max_length=128, null=True, blank=True)
+    inactive = models.SmallIntegerField(default=0) 
+
+    def __str__(self):
+        return self.source_name or f"MarketSharp Source {self.id}"
+
+
+class Genius_MarketSharpSourceMaps(models.Model):
+    marketsharp_id = models.CharField(max_length=128, unique=True)
+    marketing_source_id = models.IntegerField(default=-1)
+
+    def __str__(self):
+        return f"MarketSharp ID: {self.marketsharp_id}, Marketing Source ID: {self.marketing_source_id}"
+

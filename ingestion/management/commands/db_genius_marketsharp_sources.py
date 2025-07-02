@@ -1,0 +1,218 @@
+import os
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+from ingestion.models.genius import Genius_MarketSharpSource
+from ingestion.utils import get_mysql_connection
+from tqdm import tqdm
+from datetime import timezone as dt_timezone
+
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))
+
+class Command(BaseCommand):
+    help = "Download MarketSharp sources directly from the database and update the local database."
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--table",
+            type=str,
+            default="marketsharp_source",
+            help="The name of the table to download data from. Defaults to 'marketsharp_source'."
+        )
+        parser.add_argument(
+            "--start-offset",
+            type=int,
+            default=0,
+            help="The starting offset for processing records. Defaults to 0."
+        )
+        parser.add_argument(
+            "--page",
+            type=int,
+            default=1,
+            help="Starting page number (each page is BATCH_SIZE records). Defaults to 1. Overrides --start-offset if provided."
+        )
+
+    def handle(self, *args, **options):
+        table_name = options["table"]
+        start_offset = options["start_offset"]
+        start_page = options["page"]
+        connection = None
+        
+        # Initialize counters
+        self.corrupted_count = 0
+        self.processed_count = 0
+
+        try:
+            # Database connection
+            connection = get_mysql_connection()
+            cursor = connection.cursor()
+            
+            # Get total records and process in batches
+            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            total_records = cursor.fetchone()[0]
+            self.stdout.write(self.style.SUCCESS(f"Total records in table '{table_name}': {total_records}"))
+            
+            # Calculate starting offset based on page number (page overrides start_offset if provided)
+            if start_page > 1:
+                start_offset = (start_page - 1) * BATCH_SIZE
+                remaining_records = total_records - start_offset
+                
+                if start_offset >= total_records:
+                    self.stdout.write(self.style.WARNING(f"Starting page {start_page} is beyond available data. Total records: {total_records}"))
+                    return
+                
+                self.stdout.write(f"Starting from page {start_page} (offset {start_offset:,}), processing {remaining_records:,} remaining records")
+            else:
+                remaining_records = total_records - start_offset
+                if start_offset > 0:
+                    self.stdout.write(f"Starting from offset {start_offset:,}, processing {remaining_records:,} remaining records")
+            
+            # Process records in batches starting from the calculated offset
+            for offset in tqdm(range(start_offset, total_records, BATCH_SIZE), desc="Processing batches"):
+                cursor.execute(f"""
+                    SELECT id, marketsharp_id, source_name, inactive
+                    FROM {table_name}
+                    LIMIT {BATCH_SIZE} OFFSET {offset}
+                """)
+                rows = cursor.fetchall()
+                self._process_batch(rows)
+                
+            self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
+            
+            # Print summary
+            if self.corrupted_count > 0:
+                self.stdout.write(self.style.WARNING(f"Summary: {self.processed_count} records processed, {self.corrupted_count} records had corrupted data that was cleaned."))
+            else:
+                self.stdout.write(self.style.SUCCESS(f"Summary: {self.processed_count} records processed successfully with no data corruption detected."))
+            
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"An error occurred: {e}"))
+        finally:
+            if connection:
+                cursor.close()
+                connection.close()
+    
+    def _process_batch(self, rows):
+        """Process a batch of MarketSharp source records."""
+        to_create = []
+        to_update = []
+        existing_records = Genius_MarketSharpSource.objects.in_bulk([row[0] for row in rows])
+
+        for row in rows:
+            try:
+                # Validate row length first
+                if len(row) != 4:  # Expected number of columns
+                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 4. Skipping record."))
+                    continue
+                
+                # Extract fields from row with debugging
+                try:
+                    record_id, marketsharp_id, source_name, inactive = row
+                except ValueError as e:
+                    self.stdout.write(self.style.ERROR(f"Error unpacking row for record_id {row[0] if row else 'unknown'}: {e}"))
+                    self.stdout.write(self.style.ERROR(f"Row data: {row}"))
+                    continue
+
+                # Increment processed count
+                self.processed_count += 1
+                
+                # Process fields with validation
+                processed_data = {
+                    'marketsharp_id': self._safe_string_convert(marketsharp_id),
+                    'source_name': self._safe_string_convert(source_name),
+                    'inactive': self._safe_int_convert(inactive, 0, field_name="inactive", original_row=row)
+                }
+                
+                # Create or update the record
+                if record_id in existing_records:
+                    record = existing_records[record_id]
+                    self._update_record(record, processed_data)
+                    to_update.append(record)
+                else:
+                    record = self._create_record(record_id, processed_data)
+                    to_create.append(record)
+                    
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"Error processing record ID {row[0] if row else 'unknown'}: {e}"))
+
+        # Save records to database
+        self._save_records(to_create, to_update)
+
+    def _safe_string_convert(self, value, default=None):
+        """Safely convert value to string."""
+        if value is None:
+            return default
+        
+        try:
+            return str(value).strip() if str(value).strip() else default
+        except (ValueError, TypeError):
+            self.stdout.write(self.style.WARNING(f"Invalid string value: {value}, using default {default}"))
+            self.corrupted_count += 1
+            return default
+
+    def _safe_int_convert(self, value, default=None, field_name="unknown", original_row=None):
+        """Safely convert value to integer with range validation."""
+        if value is None:
+            return default
+        
+        try:
+            int_val = int(value)
+            
+            # Check for PostgreSQL int4 range
+            if int_val < -2147483648 or int_val > 2147483647:
+                self.stdout.write(self.style.WARNING(f"Integer out of range for {field_name}: {int_val}, using default {default}"))
+                if original_row:
+                    self.stdout.write(self.style.WARNING(f"Original row data: {original_row}"))
+                self.corrupted_count += 1
+                return default
+            
+            return int_val
+        except (ValueError, TypeError):
+            self.stdout.write(self.style.WARNING(f"Invalid integer value for {field_name}: {value}, using default {default}"))
+            if original_row:
+                self.stdout.write(self.style.WARNING(f"Original row data: {original_row}"))
+            self.corrupted_count += 1
+            return default
+
+    def _update_record(self, record, processed_data):
+        """Update an existing record with new values."""
+        record.marketsharp_id = processed_data['marketsharp_id']
+        record.source_name = processed_data['source_name']
+        record.inactive = processed_data['inactive']
+        
+        return record
+    
+    def _create_record(self, record_id, processed_data):
+        """Create a new MarketSharp source record."""
+        return Genius_MarketSharpSource(
+            id=record_id,
+            marketsharp_id=processed_data['marketsharp_id'],
+            source_name=processed_data['source_name'],
+            inactive=processed_data['inactive']
+        )
+    
+    def _save_records(self, to_create, to_update):
+        """Save records to database with error handling."""
+        try:
+            if to_create:
+                Genius_MarketSharpSource.objects.bulk_create(to_create, batch_size=BATCH_SIZE, ignore_conflicts=True)
+                self.stdout.write(f"Created {len(to_create)} records")
+            
+            if to_update:
+                Genius_MarketSharpSource.objects.bulk_update(
+                    to_update,
+                    ['marketsharp_id', 'source_name', 'inactive'],
+                    batch_size=BATCH_SIZE
+                )
+                self.stdout.write(f"Updated {len(to_update)} records")
+                
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Error during bulk operations: {e}"))
+            self._fallback_individual_saves(to_create + to_update)
+    
+    def _fallback_individual_saves(self, records):
+        """Fallback to individual saves when bulk operations fail."""
+        for record in records:
+            try:
+                record.save()
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"Error saving record {record.id}: {e}"))

@@ -18,7 +18,8 @@ from .genius import (
     Genius_Quote,
     Genius_MarketingSourceType,
     Genius_MarketingSource,
-    Genius_Lead,  
+    Genius_Lead,
+    Genius_MarketSharpSource,
 )
 
 # Import SalesPro models
@@ -60,7 +61,7 @@ from .leadconduit import (
 __all__ = [
     'SyncTracker',
     'Genius_DivisionGroup', 'Genius_Division', 'Genius_UserData', 'Genius_UserTitle',  
-    'Genius_Prospect', 'Genius_ProspectSource', 'Genius_Lead',
+    'Genius_Prospect', 'Genius_ProspectSource', 'Genius_Lead', 'Genius_MarketSharpSource',
     'Genius_AppointmentType', 'Genius_AppointmentOutcome', 'Genius_Appointment', 'Genius_AppointmentService',
     'Genius_Service', 'Genius_Quote', 'Genius_MarketingSourceType', 'Genius_MarketingSource', 'Genius_AppointmentOutcomeType',
     'SalesPro_Users', 'SalesPro_Appointment', 'SalesPro_SyncHistory',    'Hubspot_Contact', 'Hubspot_Deal', 'Hubspot_Appointment', 'Hubspot_SyncHistory',
