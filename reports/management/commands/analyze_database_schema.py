@@ -195,13 +195,28 @@ class Command(BaseCommand):
                         # Calculate completeness ratio
                         try:
                             if table_info['record_count'] > 0:
-                                cursor.execute(f'SELECT COUNT(*) FROM "{table_name}" WHERE "{col_name}" IS NOT NULL AND "{col_name}" != \'\'')
+                                # For text/varchar fields, check for both NULL and empty string
+                                # For numeric and other fields, only check for NULL
+                                if str(data_type) in ['1043', '25']:  # varchar and text types in PostgreSQL
+                                    cursor.execute(f'SELECT COUNT(*) FROM "{table_name}" WHERE "{col_name}" IS NOT NULL AND "{col_name}" != \'\'')
+                                else:
+                                    # For numeric, boolean, date, and other non-text fields
+                                    cursor.execute(f'SELECT COUNT(*) FROM "{table_name}" WHERE "{col_name}" IS NOT NULL')
                                 non_null_count = cursor.fetchone()[0]
                                 completeness_ratio = round((non_null_count / table_info['record_count']) * 100, 1)
                             else:
                                 completeness_ratio = 0.0
-                        except:
-                            completeness_ratio = 0.0
+                        except Exception as e:
+                            # If there's an error, fall back to just checking for NULL
+                            try:
+                                if table_info['record_count'] > 0:
+                                    cursor.execute(f'SELECT COUNT(*) FROM "{table_name}" WHERE "{col_name}" IS NOT NULL')
+                                    non_null_count = cursor.fetchone()[0]
+                                    completeness_ratio = round((non_null_count / table_info['record_count']) * 100, 1)
+                                else:
+                                    completeness_ratio = 0.0
+                            except:
+                                completeness_ratio = 0.0
                         
                         table_info['columns'].append({
                             'name': col_name,
