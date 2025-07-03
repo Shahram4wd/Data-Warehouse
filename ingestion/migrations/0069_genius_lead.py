@@ -3,11 +3,10 @@
 from django.db import migrations, models
 import django.db.models.deletion
 
-
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ingestion', '0068_delete_genius_lead'),
+        ('ingestion', '0068_create_genius_marketsharp_source_maps'),
     ]
 
     operations = [
