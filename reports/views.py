@@ -37,6 +37,10 @@ def report_detail(request, report_id):
     if report.title == 'Unlink HubSpot Division':
         return unlink_hubspot_division_detail(request, report)
     
+    # Special handling for database schema analysis report
+    if report.title == 'Database Schema Analysis':
+        return database_schema_analysis_detail(request, report)
+    
     return render(request, 'reports/report_detail.html', {'report': report})
 
 @login_required
@@ -280,6 +284,61 @@ def unlink_hubspot_division_detail(request, report):
     }
     
     return render(request, 'reports/unlink_hubspot_division.html', context)
+
+@login_required
+def database_schema_analysis_detail(request, report):
+    """Special view for the database schema analysis report"""
+    
+    # Load latest results if they exist
+    latest_file = os.path.join(settings.BASE_DIR, 'reports', 'data', 'database_schema_analysis', 'latest.json')
+    results = None
+    paginated_tables = None
+    
+    if os.path.exists(latest_file):
+        try:
+            with open(latest_file, 'r', encoding='utf-8') as f:
+                results = json.load(f)
+                
+            # Paginate the tables
+            if results and 'tables' in results:
+                page_number = request.GET.get('page', 1)
+                paginator = Paginator(results['tables'], 20)  # 20 tables per page
+                paginated_tables = paginator.get_page(page_number)
+                
+        except Exception as e:
+            messages.error(request, f'Error loading results: {str(e)}')
+    
+    # Get all available result files
+    results_dir = os.path.join(settings.BASE_DIR, 'reports', 'data', 'database_schema_analysis')
+    available_files = []
+    
+    if os.path.exists(results_dir):
+        for filename in os.listdir(results_dir):
+            if filename.endswith('.json') and filename != 'latest.json':
+                file_path = os.path.join(results_dir, filename)
+                try:
+                    # Extract timestamp from filename
+                    timestamp_str = filename.replace('database_schema_analysis_', '').replace('.json', '')
+                    timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
+                    available_files.append({
+                        'filename': filename,
+                        'timestamp': timestamp,
+                        'display_name': timestamp.strftime('%Y-%m-%d %H:%M:%S')
+                    })
+                except:
+                    pass
+    
+    # Sort by timestamp descending (newest first)
+    available_files.sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    context = {
+        'report': report,
+        'results': results,
+        'paginated_tables': paginated_tables,
+        'available_files': available_files[:10],  # Show last 10 files
+    }
+    
+    return render(request, 'reports/database_schema_analysis.html', context)
 
 @csrf_exempt
 @login_required
@@ -932,5 +991,161 @@ def export_unlink_division_csv(request):
                 'status': 'error',
                 'message': f'Error exporting CSV: {str(e)}'
             })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@csrf_exempt
+@login_required
+def run_database_schema_analysis(request):
+    """Start the database schema analysis process"""
+    if request.method == 'POST':
+        try:
+            # Use the management command like other reports
+            from django.core.management import call_command
+            import threading
+            
+            def run_analysis():
+                try:
+                    call_command('analyze_database_schema')
+                except Exception as e:
+                    # Error handling is done within the command itself
+                    pass
+            
+            # Start analysis in background thread
+            thread = threading.Thread(target=run_analysis)
+            thread.daemon = True
+            thread.start()
+            
+            return JsonResponse({'status': 'success', 'message': 'Schema analysis started successfully'})
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@csrf_exempt
+@login_required
+def check_schema_analysis_progress(request):
+    """Check the progress of the schema analysis"""
+    from django.core.cache import cache
+    
+    status = cache.get('schema_analysis_status', 'idle')
+    progress = cache.get('schema_analysis_progress', {
+        'percent': 0,
+        'status': 'No analysis running',
+        'details': '',
+        'completed': False
+    })
+    
+    return JsonResponse({
+        'status': status,
+        'progress': progress
+    })
+
+@csrf_exempt
+@login_required
+def cancel_schema_analysis(request):
+    """Cancel the running schema analysis"""
+    if request.method == 'POST':
+        from django.core.cache import cache
+        
+        cache.set('schema_analysis_status', 'cancelled', timeout=3600)
+        cache.set('schema_analysis_progress', {
+            'percent': 0,
+            'status': 'Analysis cancelled by user',
+            'details': '',
+            'completed': True
+        }, timeout=3600)
+        
+        return JsonResponse({'status': 'success', 'message': 'Analysis cancelled successfully'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@csrf_exempt
+@login_required
+def export_schema_analysis_csv(request):
+    """Export schema analysis results as CSV"""
+    if request.method == 'GET':
+        try:
+            # Load latest results
+            latest_file = os.path.join(settings.BASE_DIR, 'reports', 'data', 'database_schema_analysis', 'latest.json')
+            
+            if not os.path.exists(latest_file):
+                return JsonResponse({'status': 'error', 'message': 'No results found. Please run analysis first.'})
+            
+            with open(latest_file, 'r', encoding='utf-8') as f:
+                results = json.load(f)
+            
+            # Create CSV content
+            import csv
+            from io import StringIO
+            
+            output = StringIO()
+            writer = csv.writer(output)
+            
+            # Write header
+            writer.writerow([
+                'Table Name',
+                'Display Name',
+                'Record Count',
+                'Last Updated',
+                'Column Name',
+                'Data Type',
+                'Is Nullable',
+                'Completeness Ratio (%)'
+            ])
+            
+            # Write data
+            for table in results.get('tables', []):
+                for column in table.get('columns', []):
+                    writer.writerow([
+                        table.get('table_name', ''),
+                        table.get('display_name', ''),
+                        table.get('record_count', 0),
+                        table.get('last_updated', ''),
+                        column.get('name', ''),
+                        column.get('data_type', ''),
+                        'Yes' if column.get('is_nullable', False) else 'No',
+                        column.get('completeness_ratio', 0)
+                    ])
+            
+            # Create HTTP response with CSV
+            response = HttpResponse(output.getvalue(), content_type='text/csv')
+            
+            # Generate filename with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'database_schema_analysis_{timestamp}.csv'
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Error exporting CSV: {str(e)}'
+            })
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+@csrf_exempt
+@login_required
+def load_schema_analysis_report_file(request, filename):
+    """AJAX endpoint to load a specific schema analysis report file"""
+    if request.method == 'GET':
+        try:
+            file_path = os.path.join(settings.BASE_DIR, 'reports', 'data', 'database_schema_analysis', filename)
+            latest_path = os.path.join(settings.BASE_DIR, 'reports', 'data', 'database_schema_analysis', 'latest.json')
+            
+            if not os.path.exists(file_path) or not filename.endswith('.json'):
+                return JsonResponse({'status': 'error', 'message': 'File not found'})
+            
+            # Copy the selected file to latest.json
+            import shutil
+            shutil.copy2(file_path, latest_path)
+            
+            return JsonResponse({'status': 'success', 'message': f'Report "{filename}" loaded successfully'})
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'})

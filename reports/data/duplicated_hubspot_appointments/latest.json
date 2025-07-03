@@ -1,27 +1,101 @@
 {
   "report_type": "duplicated_hubspot_appointments",
-  "generated_at": "2025-07-01T12:58:43.983102",
+  "generated_at": "2025-07-03T09:10:10.426532",
   "parameters": {
     "similarity_threshold": 100,
-    "total_appointments_analyzed": 327,
+    "total_appointments_analyzed": 447,
     "fields_compared": [
       "appointment_date",
       "appointment_time",
       "contact_id"
     ],
-    "limit_used": 5000,
+    "limit_used": null,
     "output_limit_used": null
   },
   "summary": {
-    "total_duplicate_groups_found": 163,
-    "total_duplicate_groups_displayed": 163,
+    "total_duplicate_groups_found": 222,
+    "total_duplicate_groups_displayed": 222,
     "output_limited": false,
-    "total_duplicate_appointments": 327,
+    "total_duplicate_appointments": 447,
     "percentage_duplicates": 100.0
   },
   "duplicate_groups": [
     {
       "group_id": 1,
+      "group_display_name": "Teresa Paulmer - 07/02/2025 02:00 PM (3 duplicates)",
+      "total_duplicates": 3,
+      "appointments": [
+        {
+          "id": "440952668343",
+          "hs_appointment_start": "2025-07-02 14:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2025-07-02 00:31:53.873000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "13307307529",
+          "appointment_phone": "+13307307529",
+          "appointment_first_name": "Teresa",
+          "appointment_last_name": "Paulmer",
+          "contact_firstname": "Teresa",
+          "contact_lastname": "Paulmer",
+          "contact_email": null,
+          "contact_phone": "330-730-7529",
+          "appointment_date": "2025-07-02",
+          "appointment_time": "14:00:00",
+          "contact_id": "86302024986"
+        },
+        {
+          "id": "440946569588",
+          "hs_appointment_start": "2025-07-02 14:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2025-07-02 00:31:43.767000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "13307307529",
+          "appointment_phone": "+13307307529",
+          "appointment_first_name": "Teresa",
+          "appointment_last_name": "Paulmer",
+          "contact_firstname": "Teresa",
+          "contact_lastname": "Paulmer",
+          "contact_email": null,
+          "contact_phone": "330-730-7529",
+          "appointment_date": "2025-07-02",
+          "appointment_time": "14:00:00",
+          "contact_id": "86302024986"
+        },
+        {
+          "id": "440936215396",
+          "hs_appointment_start": "2025-07-02 14:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2025-07-02 00:31:38.366000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "13307307529",
+          "appointment_phone": "+13307307529",
+          "appointment_first_name": "Teresa",
+          "appointment_last_name": "Paulmer",
+          "contact_firstname": "Teresa",
+          "contact_lastname": "Paulmer",
+          "contact_email": null,
+          "contact_phone": "330-730-7529",
+          "appointment_date": "2025-07-02",
+          "appointment_time": "14:00:00",
+          "contact_id": "86302024986"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2025-07-02",
+        "appointment_time": "14:00:00",
+        "contact_id": "86302024986",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 2,
       "group_display_name": "Lindsay Guion - 06/26/2025 10:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -77,7 +151,63 @@
       }
     },
     {
-      "group_id": 2,
+      "group_id": 3,
+      "group_display_name": "Kenneth Arthur - 04/13/2024 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392817029682",
+          "hs_appointment_start": "2024-04-13 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-22 07:19:53.687000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Kenneth",
+          "contact_lastname": "Arthur",
+          "contact_email": null,
+          "contact_phone": "609-271-9759",
+          "appointment_date": "2024-04-13",
+          "appointment_time": "10:00:00",
+          "contact_id": "119392141575"
+        },
+        {
+          "id": "392535475004",
+          "hs_appointment_start": "2024-04-13 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 20:40:35.242000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Kenneth",
+          "contact_lastname": "Arthur",
+          "contact_email": null,
+          "contact_phone": "609-271-9759",
+          "appointment_date": "2024-04-13",
+          "appointment_time": "10:00:00",
+          "contact_id": "119392141575"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-04-13",
+        "appointment_time": "10:00:00",
+        "contact_id": "119392141575",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 4,
       "group_display_name": "Ray Hill - 03/26/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -133,7 +263,7 @@
       }
     },
     {
-      "group_id": 3,
+      "group_id": 5,
       "group_display_name": "Paulette Smith - 03/21/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -189,7 +319,7 @@
       }
     },
     {
-      "group_id": 4,
+      "group_id": 6,
       "group_display_name": "William Clarke - 03/05/2024 05:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -245,7 +375,7 @@
       }
     },
     {
-      "group_id": 5,
+      "group_id": 7,
       "group_display_name": "Jazmine Augusma - 02/24/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -301,7 +431,63 @@
       }
     },
     {
-      "group_id": 6,
+      "group_id": 8,
+      "group_display_name": "Maria Salerno - 10/04/2023 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392789485431",
+          "hs_appointment_start": "2023-10-04 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-22 03:26:46.088000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Maria",
+          "contact_lastname": "Salerno",
+          "contact_email": null,
+          "contact_phone": "908-875-6527",
+          "appointment_date": "2023-10-04",
+          "appointment_time": "10:00:00",
+          "contact_id": "119633039716"
+        },
+        {
+          "id": "392517500036",
+          "hs_appointment_start": "2023-10-04 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 19:19:56.862000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Maria",
+          "contact_lastname": "Salerno",
+          "contact_email": null,
+          "contact_phone": "908-875-6527",
+          "appointment_date": "2023-10-04",
+          "appointment_time": "10:00:00",
+          "contact_id": "119633039716"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-10-04",
+        "appointment_time": "10:00:00",
+        "contact_id": "119633039716",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 9,
       "group_display_name": "Mary Ecker - 09/06/2023 11:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -357,7 +543,7 @@
       }
     },
     {
-      "group_id": 7,
+      "group_id": 10,
       "group_display_name": "Joe Kobal - 09/06/2023 10:30 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -413,7 +599,63 @@
       }
     },
     {
-      "group_id": 8,
+      "group_id": 11,
+      "group_display_name": "Mary Gill - 07/20/2023 11:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392783535113",
+          "hs_appointment_start": "2023-07-20 00:00:00+00:00",
+          "time": "11:00:00",
+          "hs_createdate": "2024-12-22 01:53:28.717000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mary",
+          "contact_lastname": "Gill",
+          "contact_email": null,
+          "contact_phone": "330-606-5188",
+          "appointment_date": "2023-07-20",
+          "appointment_time": "11:00:00",
+          "contact_id": "86054702926"
+        },
+        {
+          "id": "392489986646",
+          "hs_appointment_start": "2023-07-20 00:00:00+00:00",
+          "time": "11:00:00",
+          "hs_createdate": "2024-12-20 16:24:10.880000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mary",
+          "contact_lastname": "Gill",
+          "contact_email": null,
+          "contact_phone": "330-606-5188",
+          "appointment_date": "2023-07-20",
+          "appointment_time": "11:00:00",
+          "contact_id": "86054702926"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-07-20",
+        "appointment_time": "11:00:00",
+        "contact_id": "86054702926",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 12,
       "group_display_name": "Tina Winstead - 07/19/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -469,7 +711,7 @@
       }
     },
     {
-      "group_id": 9,
+      "group_id": 13,
       "group_display_name": "Osman Cortes - 06/29/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -525,7 +767,7 @@
       }
     },
     {
-      "group_id": 10,
+      "group_id": 14,
       "group_display_name": "Lechyna Mitchell - 06/28/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -581,7 +823,119 @@
       }
     },
     {
-      "group_id": 11,
+      "group_id": 15,
+      "group_display_name": "Edward & Beth Curcio - 06/13/2023 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392777087508",
+          "hs_appointment_start": "2023-06-13 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-22 01:13:43.499000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "curcioet@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Edward & Beth",
+          "contact_lastname": "Curcio",
+          "contact_email": "curcioet@gmail.com",
+          "contact_phone": "609-969-0893",
+          "appointment_date": "2023-06-13",
+          "appointment_time": "18:00:00",
+          "contact_id": "86048349243"
+        },
+        {
+          "id": "392454997408",
+          "hs_appointment_start": "2023-06-13 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:07:15.522000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "curcioet@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Edward & Beth",
+          "contact_lastname": "Curcio",
+          "contact_email": "curcioet@gmail.com",
+          "contact_phone": "609-969-0893",
+          "appointment_date": "2023-06-13",
+          "appointment_time": "18:00:00",
+          "contact_id": "86048349243"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-13",
+        "appointment_time": "18:00:00",
+        "contact_id": "86048349243",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 16,
+      "group_display_name": "Kenny Savage - 06/13/2023 09:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392784902537",
+          "hs_appointment_start": "2023-06-13 00:00:00+00:00",
+          "time": "09:00:00",
+          "hs_createdate": "2024-12-22 01:08:46.049000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "Ksavage77@live.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Kenny",
+          "contact_lastname": "Savage",
+          "contact_email": "ksavage77@live.com",
+          "contact_phone": "856-308-7868",
+          "appointment_date": "2023-06-13",
+          "appointment_time": "09:00:00",
+          "contact_id": "86021457737"
+        },
+        {
+          "id": "392468110766",
+          "hs_appointment_start": "2023-06-13 00:00:00+00:00",
+          "time": "09:00:00",
+          "hs_createdate": "2024-12-20 15:01:15.084000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "KSavage77@live.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Kenny",
+          "contact_lastname": "Savage",
+          "contact_email": "ksavage77@live.com",
+          "contact_phone": "856-308-7868",
+          "appointment_date": "2023-06-13",
+          "appointment_time": "09:00:00",
+          "contact_id": "86021457737"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-13",
+        "appointment_time": "09:00:00",
+        "contact_id": "86021457737",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 17,
       "group_display_name": "Alexandra Wagner - 06/05/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -637,7 +991,7 @@
       }
     },
     {
-      "group_id": 12,
+      "group_id": 18,
       "group_display_name": "Barbara And Dorothy Wichoski - 06/05/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -693,7 +1047,7 @@
       }
     },
     {
-      "group_id": 13,
+      "group_id": 19,
       "group_display_name": "Mark Mcgowan - 05/21/2023 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -749,7 +1103,7 @@
       }
     },
     {
-      "group_id": 14,
+      "group_id": 20,
       "group_display_name": "Oscar Angulo - 10/15/2022 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -805,7 +1159,7 @@
       }
     },
     {
-      "group_id": 15,
+      "group_id": 21,
       "group_display_name": "James Costa - 10/11/2022 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -861,7 +1215,231 @@
       }
     },
     {
-      "group_id": 16,
+      "group_id": 22,
+      "group_display_name": "Mazharul Islam - 06/10/2022 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392758302322",
+          "hs_appointment_start": "2022-06-10 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-21 21:22:21.954000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "isl65@hotmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mazharul",
+          "contact_lastname": "Islam",
+          "contact_email": "isl65@hotmail.com",
+          "contact_phone": "267-266-6039",
+          "appointment_date": "2022-06-10",
+          "appointment_time": "14:00:00",
+          "contact_id": "85906336790"
+        },
+        {
+          "id": "392538904103",
+          "hs_appointment_start": "2022-06-10 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 20:52:57.511000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "isl65@hotmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mazharul",
+          "contact_lastname": "Islam",
+          "contact_email": "isl65@hotmail.com",
+          "contact_phone": "267-266-6039",
+          "appointment_date": "2022-06-10",
+          "appointment_time": "14:00:00",
+          "contact_id": "85906336790"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-06-10",
+        "appointment_time": "14:00:00",
+        "contact_id": "85906336790",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 23,
+      "group_display_name": "Patrick Harvish - 06/08/2022 06:30 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392758338430",
+          "hs_appointment_start": "2022-06-08 00:00:00+00:00",
+          "time": "18:30:00",
+          "hs_createdate": "2024-12-21 21:20:45.907000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Patrick",
+          "contact_lastname": "Harvish",
+          "contact_email": null,
+          "contact_phone": "732-826-3842",
+          "appointment_date": "2022-06-08",
+          "appointment_time": "18:30:00",
+          "contact_id": "85912873344"
+        },
+        {
+          "id": "392549155363",
+          "hs_appointment_start": "2022-06-08 00:00:00+00:00",
+          "time": "18:30:00",
+          "hs_createdate": "2024-12-20 20:45:09.845000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Patrick",
+          "contact_lastname": "Harvish",
+          "contact_email": null,
+          "contact_phone": "732-826-3842",
+          "appointment_date": "2022-06-08",
+          "appointment_time": "18:30:00",
+          "contact_id": "85912873344"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-06-08",
+        "appointment_time": "18:30:00",
+        "contact_id": "85912873344",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 24,
+      "group_display_name": "Angela Smith - 04/09/2022 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392757279026",
+          "hs_appointment_start": "2022-04-09 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-21 20:49:10+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Angela",
+          "contact_lastname": "Smith",
+          "contact_email": null,
+          "contact_phone": "412-583-5831",
+          "appointment_date": "2022-04-09",
+          "appointment_time": "14:00:00",
+          "contact_id": "118478564632"
+        },
+        {
+          "id": "392524955930",
+          "hs_appointment_start": "2022-04-09 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 19:43:12.786000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Angela",
+          "contact_lastname": "Smith",
+          "contact_email": null,
+          "contact_phone": "412-583-5831",
+          "appointment_date": "2022-04-09",
+          "appointment_time": "14:00:00",
+          "contact_id": "118478564632"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-04-09",
+        "appointment_time": "14:00:00",
+        "contact_id": "118478564632",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 25,
+      "group_display_name": "Colleen Spaeth - 04/08/2022 03:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392752556412",
+          "hs_appointment_start": "2022-04-08 00:00:00+00:00",
+          "time": "15:00:00",
+          "hs_createdate": "2024-12-21 20:48:11.998000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "colleenspaeth2@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Colleen",
+          "contact_lastname": "Spaeth",
+          "contact_email": "colleenspaeth2@gmail.com",
+          "contact_phone": "609-440-2411",
+          "appointment_date": "2022-04-08",
+          "appointment_time": "15:00:00",
+          "contact_id": "85899360595"
+        },
+        {
+          "id": "392513175897",
+          "hs_appointment_start": "2022-04-08 00:00:00+00:00",
+          "time": "15:00:00",
+          "hs_createdate": "2024-12-20 19:41:53.218000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "colleenspaeth2@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Colleen",
+          "contact_lastname": "Spaeth",
+          "contact_email": "colleenspaeth2@gmail.com",
+          "contact_phone": "609-440-2411",
+          "appointment_date": "2022-04-08",
+          "appointment_time": "15:00:00",
+          "contact_id": "85899360595"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-04-08",
+        "appointment_time": "15:00:00",
+        "contact_id": "85899360595",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 26,
       "group_display_name": "Pat Horsley - 10/21/2021 03:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -917,7 +1495,7 @@
       }
     },
     {
-      "group_id": 17,
+      "group_id": 27,
       "group_display_name": "Patricia Garnett - 10/20/2021 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -973,7 +1551,7 @@
       }
     },
     {
-      "group_id": 18,
+      "group_id": 28,
       "group_display_name": "Ryne Jones - 10/20/2021 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1029,7 +1607,7 @@
       }
     },
     {
-      "group_id": 19,
+      "group_id": 29,
       "group_display_name": "Mark Moller - 10/13/2021 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1085,7 +1663,7 @@
       }
     },
     {
-      "group_id": 20,
+      "group_id": 30,
       "group_display_name": "Bryan Schultz - 10/12/2021 05:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1141,7 +1719,7 @@
       }
     },
     {
-      "group_id": 21,
+      "group_id": 31,
       "group_display_name": "Omar Perera - 09/11/2021 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1197,7 +1775,7 @@
       }
     },
     {
-      "group_id": 22,
+      "group_id": 32,
       "group_display_name": "Cathy Jones - 07/27/2021 03:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1253,7 +1831,119 @@
       }
     },
     {
-      "group_id": 23,
+      "group_id": 33,
+      "group_display_name": "Joan & Ed Park - 07/06/2021 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392735366304",
+          "hs_appointment_start": "2021-07-06 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-21 18:57:43.464000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ejparkplace@Comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Joan & Ed",
+          "contact_lastname": "Park",
+          "contact_email": "ejparkplace@comcast.net",
+          "contact_phone": "610-809-1940",
+          "appointment_date": "2021-07-06",
+          "appointment_time": "14:00:00",
+          "contact_id": "85837836592"
+        },
+        {
+          "id": "392472835979",
+          "hs_appointment_start": "2021-07-06 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 16:19:45.948000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ejparkplace@Comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Joan & Ed",
+          "contact_lastname": "Park",
+          "contact_email": "ejparkplace@comcast.net",
+          "contact_phone": "610-809-1940",
+          "appointment_date": "2021-07-06",
+          "appointment_time": "14:00:00",
+          "contact_id": "85837836592"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-07-06",
+        "appointment_time": "14:00:00",
+        "contact_id": "85837836592",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 34,
+      "group_display_name": "Annette Ball - 07/10/2021 03:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392744020538",
+          "hs_appointment_start": "2021-07-10 00:00:00+00:00",
+          "time": "15:00:00",
+          "hs_createdate": "2024-12-21 18:54:36.786000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "terryfromjersey@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Annette",
+          "contact_lastname": "Ball",
+          "contact_email": "terryfromjersey@gmail.com",
+          "contact_phone": "412-668-1027",
+          "appointment_date": "2021-07-10",
+          "appointment_time": "15:00:00",
+          "contact_id": "119426738580"
+        },
+        {
+          "id": "392485664336",
+          "hs_appointment_start": "2021-07-10 00:00:00+00:00",
+          "time": "15:00:00",
+          "hs_createdate": "2024-12-20 16:22:18.037000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "terryfromjersey@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Annette",
+          "contact_lastname": "Ball",
+          "contact_email": "terryfromjersey@gmail.com",
+          "contact_phone": "412-668-1027",
+          "appointment_date": "2021-07-10",
+          "appointment_time": "15:00:00",
+          "contact_id": "119426738580"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-07-10",
+        "appointment_time": "15:00:00",
+        "contact_id": "119426738580",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 35,
       "group_display_name": "Albert Meissonier - 08/09/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1309,7 +1999,7 @@
       }
     },
     {
-      "group_id": 24,
+      "group_id": 36,
       "group_display_name": "Dywane Norman - 08/06/2024 03:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1365,7 +2055,7 @@
       }
     },
     {
-      "group_id": 25,
+      "group_id": 37,
       "group_display_name": "Jim Harris - 07/28/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1421,7 +2111,7 @@
       }
     },
     {
-      "group_id": 26,
+      "group_id": 38,
       "group_display_name": "Merrie Cullin - 07/18/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1477,7 +2167,7 @@
       }
     },
     {
-      "group_id": 27,
+      "group_id": 39,
       "group_display_name": "Wenona Towles - 07/17/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1533,7 +2223,7 @@
       }
     },
     {
-      "group_id": 28,
+      "group_id": 40,
       "group_display_name": "Anna Johnson - 07/11/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1589,7 +2279,7 @@
       }
     },
     {
-      "group_id": 29,
+      "group_id": 41,
       "group_display_name": "Lucy Merced - 07/03/2024 01:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1645,7 +2335,7 @@
       }
     },
     {
-      "group_id": 30,
+      "group_id": 42,
       "group_display_name": "Marwa Ali - 07/03/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1701,7 +2391,7 @@
       }
     },
     {
-      "group_id": 31,
+      "group_id": 43,
       "group_display_name": "Charles Graham - 06/27/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1757,7 +2447,7 @@
       }
     },
     {
-      "group_id": 32,
+      "group_id": 44,
       "group_display_name": "Eunice Vargas - 06/30/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1813,7 +2503,7 @@
       }
     },
     {
-      "group_id": 33,
+      "group_id": 45,
       "group_display_name": "Randy Harrison - 06/25/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1869,7 +2559,7 @@
       }
     },
     {
-      "group_id": 34,
+      "group_id": 46,
       "group_display_name": "Christopher Nodurft - 06/23/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1925,7 +2615,7 @@
       }
     },
     {
-      "group_id": 35,
+      "group_id": 47,
       "group_display_name": "Edan Poretskin - 06/20/2024 10:30 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -1981,7 +2671,7 @@
       }
     },
     {
-      "group_id": 36,
+      "group_id": 48,
       "group_display_name": "Daniel Boyer - 06/19/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2037,7 +2727,7 @@
       }
     },
     {
-      "group_id": 37,
+      "group_id": 49,
       "group_display_name": "Lemma Ebssa - 06/10/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2093,7 +2783,7 @@
       }
     },
     {
-      "group_id": 38,
+      "group_id": 50,
       "group_display_name": "Amanda Philpott - 06/08/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2149,7 +2839,7 @@
       }
     },
     {
-      "group_id": 39,
+      "group_id": 51,
       "group_display_name": "Hunter Williams - 05/30/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2205,7 +2895,7 @@
       }
     },
     {
-      "group_id": 40,
+      "group_id": 52,
       "group_display_name": "Peter Phillips - 05/24/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2261,7 +2951,7 @@
       }
     },
     {
-      "group_id": 41,
+      "group_id": 53,
       "group_display_name": "Kevin Shelton - 05/21/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2317,7 +3007,7 @@
       }
     },
     {
-      "group_id": 42,
+      "group_id": 54,
       "group_display_name": "Samyse Romain - 09/20/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2373,7 +3063,7 @@
       }
     },
     {
-      "group_id": 43,
+      "group_id": 55,
       "group_display_name": "Spike Hussain - 05/20/2024 06:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2429,7 +3119,7 @@
       }
     },
     {
-      "group_id": 44,
+      "group_id": 56,
       "group_display_name": "Pete Meringolo - 05/20/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2485,7 +3175,7 @@
       }
     },
     {
-      "group_id": 45,
+      "group_id": 57,
       "group_display_name": "Samyse Romain - 09/17/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2541,7 +3231,7 @@
       }
     },
     {
-      "group_id": 46,
+      "group_id": 58,
       "group_display_name": "Warren Hurdle - 05/05/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2597,7 +3287,7 @@
       }
     },
     {
-      "group_id": 47,
+      "group_id": 59,
       "group_display_name": "Leon Wang - 09/01/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2653,7 +3343,7 @@
       }
     },
     {
-      "group_id": 48,
+      "group_id": 60,
       "group_display_name": "Madie Parrish - 05/02/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2709,7 +3399,7 @@
       }
     },
     {
-      "group_id": 49,
+      "group_id": 61,
       "group_display_name": "Andrew And Chianjo Lo - 04/30/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2765,7 +3455,7 @@
       }
     },
     {
-      "group_id": 50,
+      "group_id": 62,
       "group_display_name": "Cena Glass - 04/29/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2821,7 +3511,7 @@
       }
     },
     {
-      "group_id": 51,
+      "group_id": 63,
       "group_display_name": "Mi Dai - 04/26/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2877,7 +3567,7 @@
       }
     },
     {
-      "group_id": 52,
+      "group_id": 64,
       "group_display_name": "Andrew & Jesenia Tanchyk - 04/26/2024 05:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2933,7 +3623,7 @@
       }
     },
     {
-      "group_id": 53,
+      "group_id": 65,
       "group_display_name": "Dominique Simon - 08/22/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -2989,7 +3679,7 @@
       }
     },
     {
-      "group_id": 54,
+      "group_id": 66,
       "group_display_name": "Jacob Lowstetter - 04/20/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3045,7 +3735,7 @@
       }
     },
     {
-      "group_id": 55,
+      "group_id": 67,
       "group_display_name": "Brian Belliconish - 04/20/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3101,7 +3791,7 @@
       }
     },
     {
-      "group_id": 56,
+      "group_id": 68,
       "group_display_name": "Sydney Knab - 04/19/2024 01:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3157,7 +3847,7 @@
       }
     },
     {
-      "group_id": 57,
+      "group_id": 69,
       "group_display_name": "Torin Tyson - 05/25/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3213,7 +3903,7 @@
       }
     },
     {
-      "group_id": 58,
+      "group_id": 70,
       "group_display_name": "Barry Boring - 04/19/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3269,7 +3959,7 @@
       }
     },
     {
-      "group_id": 59,
+      "group_id": 71,
       "group_display_name": "Diesha Lamb - 04/19/2024 10:00 AM (3 duplicates)",
       "total_duplicates": 3,
       "appointments": [
@@ -3343,7 +4033,7 @@
       }
     },
     {
-      "group_id": 60,
+      "group_id": 72,
       "group_display_name": "Joe Dwyer - 05/25/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3399,7 +4089,7 @@
       }
     },
     {
-      "group_id": 61,
+      "group_id": 73,
       "group_display_name": "Susan Dyer - 04/19/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3455,7 +4145,7 @@
       }
     },
     {
-      "group_id": 62,
+      "group_id": 74,
       "group_display_name": "Freddie Tam - 04/20/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3511,7 +4201,7 @@
       }
     },
     {
-      "group_id": 63,
+      "group_id": 75,
       "group_display_name": "Li Sun - 05/24/2023 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3567,7 +4257,7 @@
       }
     },
     {
-      "group_id": 64,
+      "group_id": 76,
       "group_display_name": "Raymond Tilley - 04/18/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3623,7 +4313,7 @@
       }
     },
     {
-      "group_id": 65,
+      "group_id": 77,
       "group_display_name": "Johnathan Sotomayr - 04/19/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3679,7 +4369,7 @@
       }
     },
     {
-      "group_id": 66,
+      "group_id": 78,
       "group_display_name": "Caitlin Greogry - 04/18/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3735,7 +4425,7 @@
       }
     },
     {
-      "group_id": 67,
+      "group_id": 79,
       "group_display_name": "Hermmans Calvache - 05/23/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3791,7 +4481,7 @@
       }
     },
     {
-      "group_id": 68,
+      "group_id": 80,
       "group_display_name": "Vernon Thistlewaite - 05/23/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3847,7 +4537,7 @@
       }
     },
     {
-      "group_id": 69,
+      "group_id": 81,
       "group_display_name": "Elaine And Clyde Simpson - 05/23/2023 12:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3903,7 +4593,7 @@
       }
     },
     {
-      "group_id": 70,
+      "group_id": 82,
       "group_display_name": "Carol Dziuk - 05/23/2023 01:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -3959,7 +4649,7 @@
       }
     },
     {
-      "group_id": 71,
+      "group_id": 83,
       "group_display_name": "Fardin Yeganeh - 04/18/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4015,7 +4705,7 @@
       }
     },
     {
-      "group_id": 72,
+      "group_id": 84,
       "group_display_name": "Stephen Piekarski - 05/23/2023 01:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4071,7 +4761,7 @@
       }
     },
     {
-      "group_id": 73,
+      "group_id": 85,
       "group_display_name": "John Ott - 05/23/2023 03:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4127,7 +4817,7 @@
       }
     },
     {
-      "group_id": 74,
+      "group_id": 86,
       "group_display_name": "Rick Rowland - 04/18/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4183,7 +4873,7 @@
       }
     },
     {
-      "group_id": 75,
+      "group_id": 87,
       "group_display_name": "John Weinmann - 05/23/2023 01:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4239,7 +4929,7 @@
       }
     },
     {
-      "group_id": 76,
+      "group_id": 88,
       "group_display_name": "Jade Thompson - 04/19/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4295,7 +4985,7 @@
       }
     },
     {
-      "group_id": 77,
+      "group_id": 89,
       "group_display_name": "Shawn Slocum - 04/18/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4351,7 +5041,7 @@
       }
     },
     {
-      "group_id": 78,
+      "group_id": 90,
       "group_display_name": "Ariel Hezi - 05/22/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4407,7 +5097,7 @@
       }
     },
     {
-      "group_id": 79,
+      "group_id": 91,
       "group_display_name": "John Carson - 05/20/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4463,7 +5153,63 @@
       }
     },
     {
-      "group_id": 80,
+      "group_id": 92,
+      "group_display_name": "Elaine And Ronald Smith - 06/16/2022 03:30 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392549385037",
+          "hs_appointment_start": "2022-06-16 00:00:00+00:00",
+          "time": "03:30:00",
+          "hs_createdate": "2024-12-20 21:02:48.053000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Elaine And Ronald",
+          "contact_lastname": "Smith",
+          "contact_email": "elaine816@comcast.net",
+          "contact_phone": "302-588-7126",
+          "appointment_date": "2022-06-16",
+          "appointment_time": "03:30:00",
+          "contact_id": "85916135844"
+        },
+        {
+          "id": "392550664008",
+          "hs_appointment_start": "2022-06-16 00:00:00+00:00",
+          "time": "03:30:00",
+          "hs_createdate": "2024-12-20 21:02:47.185000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Elaine And Ronald",
+          "contact_lastname": "Smith",
+          "contact_email": "elaine816@comcast.net",
+          "contact_phone": "302-588-7126",
+          "appointment_date": "2022-06-16",
+          "appointment_time": "03:30:00",
+          "contact_id": "85916135844"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-06-16",
+        "appointment_time": "03:30:00",
+        "contact_id": "85916135844",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 93,
       "group_display_name": "Mohammed Qureshi - 04/18/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4519,7 +5265,7 @@
       }
     },
     {
-      "group_id": 81,
+      "group_id": 94,
       "group_display_name": "Carrie Castillo - 05/19/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4575,7 +5321,63 @@
       }
     },
     {
-      "group_id": 82,
+      "group_id": 95,
+      "group_display_name": "Thomas Banks - 06/16/2022 04:30 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392548528518",
+          "hs_appointment_start": "2022-06-16 00:00:00+00:00",
+          "time": "16:30:00",
+          "hs_createdate": "2024-12-20 21:00:44.633000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Thomas",
+          "contact_lastname": "Banks",
+          "contact_email": null,
+          "contact_phone": "856-777-6276",
+          "appointment_date": "2022-06-16",
+          "appointment_time": "16:30:00",
+          "contact_id": "117684658035"
+        },
+        {
+          "id": "392537154109",
+          "hs_appointment_start": "2022-06-16 00:00:00+00:00",
+          "time": "16:30:00",
+          "hs_createdate": "2024-12-20 20:58:06.763000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Thomas",
+          "contact_lastname": "Banks",
+          "contact_email": null,
+          "contact_phone": "856-777-6276",
+          "appointment_date": "2022-06-16",
+          "appointment_time": "16:30:00",
+          "contact_id": "117684658035"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-06-16",
+        "appointment_time": "16:30:00",
+        "contact_id": "117684658035",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 96,
       "group_display_name": "Larry Graham - 04/16/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4631,7 +5433,7 @@
       }
     },
     {
-      "group_id": 83,
+      "group_id": 97,
       "group_display_name": "Kathleen Stock - 05/25/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4687,7 +5489,287 @@
       }
     },
     {
-      "group_id": 84,
+      "group_id": 98,
+      "group_display_name": "James Badler - 06/11/2022 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392549952527",
+          "hs_appointment_start": "2022-06-11 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 20:54:09.158000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "jamesbadler1974@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "James",
+          "contact_lastname": "Badler",
+          "contact_email": "jamesbadler1974@gmail.com",
+          "contact_phone": "215-499-5935",
+          "appointment_date": "2022-06-11",
+          "appointment_time": "10:00:00",
+          "contact_id": "85902463504"
+        },
+        {
+          "id": "392536419967",
+          "hs_appointment_start": "2022-06-11 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 20:49:44.429000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "jamesbadler1974@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "James",
+          "contact_lastname": "Badler",
+          "contact_email": "jamesbadler1974@gmail.com",
+          "contact_phone": "215-499-5935",
+          "appointment_date": "2022-06-11",
+          "appointment_time": "10:00:00",
+          "contact_id": "85902463504"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-06-11",
+        "appointment_time": "10:00:00",
+        "contact_id": "85902463504",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 99,
+      "group_display_name": "Dave And Wendy Jenkins - 04/15/2024 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392550849720",
+          "hs_appointment_start": "2024-04-15 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 20:53:52.008000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ladlecranedave@hotmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Dave And Wendy",
+          "contact_lastname": "Jenkins",
+          "contact_email": "ladlecranedave@hotmail.com",
+          "contact_phone": "3017035963",
+          "appointment_date": "2024-04-15",
+          "appointment_time": "18:00:00",
+          "contact_id": "86119018872"
+        },
+        {
+          "id": "392530850600",
+          "hs_appointment_start": "2024-04-15 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 20:24:35.053000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ladlecranedave@hotmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Dave And Wendy",
+          "contact_lastname": "Jenkins",
+          "contact_email": "ladlecranedave@hotmail.com",
+          "contact_phone": "3017035963",
+          "appointment_date": "2024-04-15",
+          "appointment_time": "18:00:00",
+          "contact_id": "86119018872"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-04-15",
+        "appointment_time": "18:00:00",
+        "contact_id": "86119018872",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 100,
+      "group_display_name": "Mathew Mathai - 06/12/2022 09:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392537044119",
+          "hs_appointment_start": "2022-06-12 00:00:00+00:00",
+          "time": "09:00:00",
+          "hs_createdate": "2024-12-20 20:53:30.714000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "mathewmathai55@hotmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mathew",
+          "contact_lastname": "Mathai",
+          "contact_email": "mathewmathai55@hotmail.com",
+          "contact_phone": "215-275-8757",
+          "appointment_date": "2022-06-12",
+          "appointment_time": "09:00:00",
+          "contact_id": "85916286304"
+        },
+        {
+          "id": "392549854631",
+          "hs_appointment_start": "2022-06-12 00:00:00+00:00",
+          "time": "09:00:00",
+          "hs_createdate": "2024-12-20 20:52:54.798000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "mathewmathai55@hotmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mathew",
+          "contact_lastname": "Mathai",
+          "contact_email": "mathewmathai55@hotmail.com",
+          "contact_phone": "215-275-8757",
+          "appointment_date": "2022-06-12",
+          "appointment_time": "09:00:00",
+          "contact_id": "85916286304"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-06-12",
+        "appointment_time": "09:00:00",
+        "contact_id": "85916286304",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 101,
+      "group_display_name": "David And Patrina Thompson - 04/14/2024 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392538000033",
+          "hs_appointment_start": "2024-04-14 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 20:53:12.809000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "David And Patrina",
+          "contact_lastname": "Thompson",
+          "contact_email": null,
+          "contact_phone": "631-673-8692",
+          "appointment_date": "2024-04-14",
+          "appointment_time": "14:00:00",
+          "contact_id": "119622093346"
+        },
+        {
+          "id": "392549657362",
+          "hs_appointment_start": "2024-04-14 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 20:50:49.651000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "David And Patrina",
+          "contact_lastname": "Thompson",
+          "contact_email": null,
+          "contact_phone": "631-673-8692",
+          "appointment_date": "2024-04-14",
+          "appointment_time": "14:00:00",
+          "contact_id": "119622093346"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-04-14",
+        "appointment_time": "14:00:00",
+        "contact_id": "119622093346",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 102,
+      "group_display_name": "Dave Burentt - 06/10/2022 06:30 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392537491235",
+          "hs_appointment_start": "2022-06-10 00:00:00+00:00",
+          "time": "18:30:00",
+          "hs_createdate": "2024-12-20 20:52:55.846000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Dave",
+          "contact_lastname": "Burentt",
+          "contact_email": "davydb12345@gmail.com",
+          "contact_phone": "609-247-2741",
+          "appointment_date": "2022-06-10",
+          "appointment_time": "18:30:00",
+          "contact_id": "119426737273"
+        },
+        {
+          "id": "392548417423",
+          "hs_appointment_start": "2022-06-10 00:00:00+00:00",
+          "time": "18:30:00",
+          "hs_createdate": "2024-12-20 20:50:43.244000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Dave",
+          "contact_lastname": "Burentt",
+          "contact_email": "davydb12345@gmail.com",
+          "contact_phone": "609-247-2741",
+          "appointment_date": "2022-06-10",
+          "appointment_time": "18:30:00",
+          "contact_id": "119426737273"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-06-10",
+        "appointment_time": "18:30:00",
+        "contact_id": "119426737273",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 103,
       "group_display_name": "Tyrone Tanks - 04/14/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4743,7 +5825,343 @@
       }
     },
     {
-      "group_id": 85,
+      "group_id": 104,
+      "group_display_name": "Heather Till - 06/09/2022 06:30 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392550930253",
+          "hs_appointment_start": "2022-06-09 00:00:00+00:00",
+          "time": "18:30:00",
+          "hs_createdate": "2024-12-20 20:51:08.530000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Heather",
+          "contact_lastname": "Till",
+          "contact_email": null,
+          "contact_phone": "856-628-3299",
+          "appointment_date": "2022-06-09",
+          "appointment_time": "18:30:00",
+          "contact_id": "119633052803"
+        },
+        {
+          "id": "392539683959",
+          "hs_appointment_start": "2022-06-09 00:00:00+00:00",
+          "time": "18:30:00",
+          "hs_createdate": "2024-12-20 20:50:57.103000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Heather",
+          "contact_lastname": "Till",
+          "contact_email": null,
+          "contact_phone": "856-628-3299",
+          "appointment_date": "2022-06-09",
+          "appointment_time": "18:30:00",
+          "contact_id": "119633052803"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-06-09",
+        "appointment_time": "18:30:00",
+        "contact_id": "119633052803",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 105,
+      "group_display_name": "Andrew Hopper - 04/14/2024 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392547066468",
+          "hs_appointment_start": "2024-04-14 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 20:49:57.415000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Andrew",
+          "contact_lastname": "Hopper",
+          "contact_email": null,
+          "contact_phone": "609-290-5262",
+          "appointment_date": "2024-04-14",
+          "appointment_time": "14:00:00",
+          "contact_id": "119390559540"
+        },
+        {
+          "id": "392536933295",
+          "hs_appointment_start": "2024-04-14 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 20:48:22.220000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Andrew",
+          "contact_lastname": "Hopper",
+          "contact_email": null,
+          "contact_phone": "609-290-5262",
+          "appointment_date": "2024-04-14",
+          "appointment_time": "14:00:00",
+          "contact_id": "119390559540"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-04-14",
+        "appointment_time": "14:00:00",
+        "contact_id": "119390559540",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 106,
+      "group_display_name": "Natalie Wuchenich - 04/16/2024 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392538989850",
+          "hs_appointment_start": "2024-04-16 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 20:49:14.237000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "nWuchenich@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Natalie",
+          "contact_lastname": "Wuchenich",
+          "contact_email": "nwuchenich@gmail.com",
+          "contact_phone": "412-221-1619",
+          "appointment_date": "2024-04-16",
+          "appointment_time": "18:00:00",
+          "contact_id": "116082808668"
+        },
+        {
+          "id": "392548505490",
+          "hs_appointment_start": "2024-04-16 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 20:49:12.560000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "nWuchenich@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Natalie",
+          "contact_lastname": "Wuchenich",
+          "contact_email": "nwuchenich@gmail.com",
+          "contact_phone": "412-221-1619",
+          "appointment_date": "2024-04-16",
+          "appointment_time": "18:00:00",
+          "contact_id": "116082808668"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-04-16",
+        "appointment_time": "18:00:00",
+        "contact_id": "116082808668",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 107,
+      "group_display_name": "Richard L Coy - 04/13/2024 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392539575345",
+          "hs_appointment_start": "2024-04-13 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 20:47:41.552000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "rlcblc@comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Richard L",
+          "contact_lastname": "Coy",
+          "contact_email": "rlcblc2@comcast.net",
+          "contact_phone": "724-541-0649",
+          "appointment_date": "2024-04-13",
+          "appointment_time": "10:00:00",
+          "contact_id": "116082849632"
+        },
+        {
+          "id": "392547119918",
+          "hs_appointment_start": "2024-04-13 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 20:28:17.382000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "rlcblc2@comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Richard L",
+          "contact_lastname": "Coy",
+          "contact_email": "rlcblc2@comcast.net",
+          "contact_phone": "724-541-0649",
+          "appointment_date": "2024-04-13",
+          "appointment_time": "10:00:00",
+          "contact_id": "116082849632"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-04-13",
+        "appointment_time": "10:00:00",
+        "contact_id": "116082849632",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 108,
+      "group_display_name": "Dana Lilly - 04/13/2024 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392547907981",
+          "hs_appointment_start": "2024-04-13 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 20:47:39.983000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "dayna999@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Dana",
+          "contact_lastname": "Lilly",
+          "contact_email": "dayna999@gmail.com",
+          "contact_phone": "8143417617",
+          "appointment_date": "2024-04-13",
+          "appointment_time": "14:00:00",
+          "contact_id": "116112843572"
+        },
+        {
+          "id": "392532090263",
+          "hs_appointment_start": "2024-04-13 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 20:33:58.285000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "dayna999@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Dana",
+          "contact_lastname": "Lilly",
+          "contact_email": "dayna999@gmail.com",
+          "contact_phone": "8143417617",
+          "appointment_date": "2024-04-13",
+          "appointment_time": "14:00:00",
+          "contact_id": "116112843572"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-04-13",
+        "appointment_time": "14:00:00",
+        "contact_id": "116112843572",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 109,
+      "group_display_name": "Jess Friederick - 04/13/2024 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392550836125",
+          "hs_appointment_start": "2024-04-13 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 20:47:31.258000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "jess_friederick@yahoo.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Jess",
+          "contact_lastname": "Friederick",
+          "contact_email": "jess_friederick@yahoo.com",
+          "contact_phone": "317-654-5173",
+          "appointment_date": "2024-04-13",
+          "appointment_time": "14:00:00",
+          "contact_id": "86200446783"
+        },
+        {
+          "id": "392539477078",
+          "hs_appointment_start": "2024-04-13 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 20:46:56.292000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "jess_friederick@yahoo.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Jess",
+          "contact_lastname": "Friederick",
+          "contact_email": "jess_friederick@yahoo.com",
+          "contact_phone": "317-654-5173",
+          "appointment_date": "2024-04-13",
+          "appointment_time": "14:00:00",
+          "contact_id": "86200446783"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-04-13",
+        "appointment_time": "14:00:00",
+        "contact_id": "86200446783",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 110,
       "group_display_name": "Ron Hamlin - 04/13/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4799,7 +6217,7 @@
       }
     },
     {
-      "group_id": 86,
+      "group_id": 111,
       "group_display_name": "Sandra Smyre - 04/10/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4855,7 +6273,7 @@
       }
     },
     {
-      "group_id": 87,
+      "group_id": 112,
       "group_display_name": "Tim Boothe - 04/09/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4911,7 +6329,7 @@
       }
     },
     {
-      "group_id": 88,
+      "group_id": 113,
       "group_display_name": "Ron Woolfrey - 04/08/2024 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -4967,7 +6385,7 @@
       }
     },
     {
-      "group_id": 89,
+      "group_id": 114,
       "group_display_name": "Sheyla Naranjo - 04/05/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5023,7 +6441,175 @@
       }
     },
     {
-      "group_id": 90,
+      "group_id": 115,
+      "group_display_name": "Will Keezer - 10/17/2023 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392513911674",
+          "hs_appointment_start": "2023-10-17 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 19:50:32.899000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "josdeco69@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Will",
+          "contact_lastname": "Keezer",
+          "contact_email": "josdeco69@gmail.com",
+          "contact_phone": "252-562-6635",
+          "appointment_date": "2023-10-17",
+          "appointment_time": "10:00:00",
+          "contact_id": "86127794466"
+        },
+        {
+          "id": "392514323754",
+          "hs_appointment_start": "2023-10-17 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 19:50:18.207000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "josdeco69@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Will",
+          "contact_lastname": "Keezer",
+          "contact_email": "josdeco69@gmail.com",
+          "contact_phone": "252-562-6635",
+          "appointment_date": "2023-10-17",
+          "appointment_time": "10:00:00",
+          "contact_id": "86127794466"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-10-17",
+        "appointment_time": "10:00:00",
+        "contact_id": "86127794466",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 116,
+      "group_display_name": "Catherine Huber - 10/17/2023 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392526938773",
+          "hs_appointment_start": "2023-10-17 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 19:49:43.226000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "catcathuber@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Catherine",
+          "contact_lastname": "Huber",
+          "contact_email": "catcathuber@gmail.com",
+          "contact_phone": "443-789-9996",
+          "appointment_date": "2023-10-17",
+          "appointment_time": "14:00:00",
+          "contact_id": "86133452919"
+        },
+        {
+          "id": "392512976569",
+          "hs_appointment_start": "2023-10-17 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 19:49:41.589000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "catcathuber@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Catherine",
+          "contact_lastname": "Huber",
+          "contact_email": "catcathuber@gmail.com",
+          "contact_phone": "443-789-9996",
+          "appointment_date": "2023-10-17",
+          "appointment_time": "14:00:00",
+          "contact_id": "86133452919"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-10-17",
+        "appointment_time": "14:00:00",
+        "contact_id": "86133452919",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 117,
+      "group_display_name": "Carl Konold - 10/16/2023 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392529589018",
+          "hs_appointment_start": "2023-10-16 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 19:49:01.242000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Carl",
+          "contact_lastname": "Konold",
+          "contact_email": null,
+          "contact_phone": "610-797-6477",
+          "appointment_date": "2023-10-16",
+          "appointment_time": "14:00:00",
+          "contact_id": "119633051991"
+        },
+        {
+          "id": "392526831875",
+          "hs_appointment_start": "2023-10-16 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 19:41:29.821000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Carl",
+          "contact_lastname": "Konold",
+          "contact_email": null,
+          "contact_phone": "610-797-6477",
+          "appointment_date": "2023-10-16",
+          "appointment_time": "14:00:00",
+          "contact_id": "119633051991"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-10-16",
+        "appointment_time": "14:00:00",
+        "contact_id": "119633051991",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 118,
       "group_display_name": "Steven Williams - 10/14/2023 05:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5079,7 +6665,7 @@
       }
     },
     {
-      "group_id": 91,
+      "group_id": 119,
       "group_display_name": "Angie And Alcides Cortez - 10/15/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5135,7 +6721,7 @@
       }
     },
     {
-      "group_id": 92,
+      "group_id": 120,
       "group_display_name": "Donald Anderson - 03/25/2024 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5191,7 +6777,7 @@
       }
     },
     {
-      "group_id": 93,
+      "group_id": 121,
       "group_display_name": "Shyam Sharma - 10/12/2023 06:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5247,7 +6833,7 @@
       }
     },
     {
-      "group_id": 94,
+      "group_id": 122,
       "group_display_name": "Brian Demsey - 10/13/2023 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5303,7 +6889,63 @@
       }
     },
     {
-      "group_id": 95,
+      "group_id": 123,
+      "group_display_name": "David DeLaRosa - 04/02/2022 12:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392515543692",
+          "hs_appointment_start": "2022-04-02 00:00:00+00:00",
+          "time": "12:00:00",
+          "hs_createdate": "2024-12-20 19:35:43.580000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "David",
+          "contact_lastname": "DeLaRosa",
+          "contact_email": "cacukika@gmail.com",
+          "contact_phone": "6467100106",
+          "appointment_date": "2022-04-02",
+          "appointment_time": "12:00:00",
+          "contact_id": "126581266329"
+        },
+        {
+          "id": "392513359537",
+          "hs_appointment_start": "2022-04-02 00:00:00+00:00",
+          "time": "12:00:00",
+          "hs_createdate": "2024-12-20 19:35:07.070000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "cacukika@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "David",
+          "contact_lastname": "DeLaRosa",
+          "contact_email": "cacukika@gmail.com",
+          "contact_phone": "6467100106",
+          "appointment_date": "2022-04-02",
+          "appointment_time": "12:00:00",
+          "contact_id": "126581266329"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2022-04-02",
+        "appointment_time": "12:00:00",
+        "contact_id": "126581266329",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 124,
       "group_display_name": "Josephine Phillips - 10/11/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5359,7 +7001,7 @@
       }
     },
     {
-      "group_id": 96,
+      "group_id": 125,
       "group_display_name": "Sara Berger - 10/10/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5415,7 +7057,7 @@
       }
     },
     {
-      "group_id": 97,
+      "group_id": 126,
       "group_display_name": "Carmen Martinez - 10/10/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5471,7 +7113,7 @@
       }
     },
     {
-      "group_id": 98,
+      "group_id": 127,
       "group_display_name": "Leslie Labianco - 10/07/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5527,7 +7169,7 @@
       }
     },
     {
-      "group_id": 99,
+      "group_id": 128,
       "group_display_name": "Carrie Heeser - 10/07/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5583,7 +7225,7 @@
       }
     },
     {
-      "group_id": 100,
+      "group_id": 129,
       "group_display_name": "Ferlando Pierre - 10/06/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5639,7 +7281,7 @@
       }
     },
     {
-      "group_id": 101,
+      "group_id": 130,
       "group_display_name": "James Alderfer - 10/05/2023 02:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5695,7 +7337,7 @@
       }
     },
     {
-      "group_id": 102,
+      "group_id": 131,
       "group_display_name": "Christine Green - 10/06/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5751,7 +7393,7 @@
       }
     },
     {
-      "group_id": 103,
+      "group_id": 132,
       "group_display_name": "Jeff Tillery - 10/05/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5807,7 +7449,63 @@
       }
     },
     {
-      "group_id": 104,
+      "group_id": 133,
+      "group_display_name": "Peter Wester - 10/04/2023 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392526544384",
+          "hs_appointment_start": "2023-10-04 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 19:20:06.702000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Peter",
+          "contact_lastname": "Wester",
+          "contact_email": "pwcandide@aol.com",
+          "contact_phone": "908-316-6140",
+          "appointment_date": "2023-10-04",
+          "appointment_time": "14:00:00",
+          "contact_id": "86129398802"
+        },
+        {
+          "id": "392525077665",
+          "hs_appointment_start": "2023-10-04 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 19:12:12.662000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "robertammaas@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Peter",
+          "contact_lastname": "Wester",
+          "contact_email": "pwcandide@aol.com",
+          "contact_phone": "908-316-6140",
+          "appointment_date": "2023-10-04",
+          "appointment_time": "14:00:00",
+          "contact_id": "86129398802"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-10-04",
+        "appointment_time": "14:00:00",
+        "contact_id": "86129398802",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 134,
       "group_display_name": "Tobin Ansel - 10/05/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5863,7 +7561,119 @@
       }
     },
     {
-      "group_id": 105,
+      "group_id": 135,
+      "group_display_name": "Mikylah Myers - 10/03/2023 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392524482828",
+          "hs_appointment_start": "2023-10-03 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 19:14:08.373000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mikylah",
+          "contact_lastname": "Myers",
+          "contact_email": "mikylahmyers@gmail.com",
+          "contact_phone": "304-276-8246",
+          "appointment_date": "2023-10-03",
+          "appointment_time": "10:00:00",
+          "contact_id": "86130073220"
+        },
+        {
+          "id": "392523016547",
+          "hs_appointment_start": "2023-10-03 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 19:09:36.489000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "mikylahmyers@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mikylah",
+          "contact_lastname": "Myers",
+          "contact_email": "mikylahmyers@gmail.com",
+          "contact_phone": "304-276-8246",
+          "appointment_date": "2023-10-03",
+          "appointment_time": "10:00:00",
+          "contact_id": "86130073220"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-10-03",
+        "appointment_time": "10:00:00",
+        "contact_id": "86130073220",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 136,
+      "group_display_name": "Jason Fitzsimmon - 10/04/2023 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392510340537",
+          "hs_appointment_start": "2023-10-04 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 19:13:58.140000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Jason",
+          "contact_lastname": "Fitzsimmon",
+          "contact_email": null,
+          "contact_phone": "908-510-2520",
+          "appointment_date": "2023-10-04",
+          "appointment_time": "14:00:00",
+          "contact_id": "119394698141"
+        },
+        {
+          "id": "392510240044",
+          "hs_appointment_start": "2023-10-04 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 19:12:52.362000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Jason",
+          "contact_lastname": "Fitzsimmon",
+          "contact_email": null,
+          "contact_phone": "908-510-2520",
+          "appointment_date": "2023-10-04",
+          "appointment_time": "14:00:00",
+          "contact_id": "119394698141"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-10-04",
+        "appointment_time": "14:00:00",
+        "contact_id": "119394698141",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 137,
       "group_display_name": "Alexei Avrine - 03/15/2024 09:30 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5919,7 +7729,7 @@
       }
     },
     {
-      "group_id": 106,
+      "group_id": 138,
       "group_display_name": "Dulce Banks - 03/08/2024 05:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -5975,7 +7785,7 @@
       }
     },
     {
-      "group_id": 107,
+      "group_id": 139,
       "group_display_name": "Jerome Mcpartland - 09/06/2023 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6031,7 +7841,7 @@
       }
     },
     {
-      "group_id": 108,
+      "group_id": 140,
       "group_display_name": "Jazmine Augusma - 02/17/2024 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6087,7 +7897,7 @@
       }
     },
     {
-      "group_id": 109,
+      "group_id": 141,
       "group_display_name": "Paul Tomarello - 09/01/2023 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6143,7 +7953,7 @@
       }
     },
     {
-      "group_id": 110,
+      "group_id": 142,
       "group_display_name": "Terry Guiste - 09/02/2023 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6199,7 +8009,7 @@
       }
     },
     {
-      "group_id": 111,
+      "group_id": 143,
       "group_display_name": "Scott And Sharon Wegener - 10/13/2021 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6255,7 +8065,7 @@
       }
     },
     {
-      "group_id": 112,
+      "group_id": 144,
       "group_display_name": "Sudhir Devidas - 09/21/2021 05:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6311,7 +8121,7 @@
       }
     },
     {
-      "group_id": 113,
+      "group_id": 145,
       "group_display_name": "Marguerite Tetkowski - 02/05/2024 05:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6367,7 +8177,7 @@
       }
     },
     {
-      "group_id": 114,
+      "group_id": 146,
       "group_display_name": "Craig Willms - 09/14/2021 12:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6423,7 +8233,7 @@
       }
     },
     {
-      "group_id": 115,
+      "group_id": 147,
       "group_display_name": "Keith Whitter - 08/11/2023 04:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6479,7 +8289,7 @@
       }
     },
     {
-      "group_id": 116,
+      "group_id": 148,
       "group_display_name": "Sean Zhang - 07/20/2021 05:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6535,7 +8345,81 @@
       }
     },
     {
-      "group_id": 117,
+      "group_id": 149,
+      "group_display_name": "Phyllis Bartek - 07/21/2023 10:00 AM (3 duplicates)",
+      "total_duplicates": 3,
+      "appointments": [
+        {
+          "id": "392492662711",
+          "hs_appointment_start": "2023-07-21 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 16:36:45.444000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "phyllisbartek3@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Phyllis",
+          "contact_lastname": "Bartek",
+          "contact_email": "phyllisbartek3@gmail.com",
+          "contact_phone": "412-860-4111",
+          "appointment_date": "2023-07-21",
+          "appointment_time": "10:00:00",
+          "contact_id": "86007437488"
+        },
+        {
+          "id": "392488497461",
+          "hs_appointment_start": "2023-07-21 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 16:36:07.071000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "phyllisbartek3@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Phyllis",
+          "contact_lastname": "Bartek",
+          "contact_email": "phyllisbartek3@gmail.com",
+          "contact_phone": "412-860-4111",
+          "appointment_date": "2023-07-21",
+          "appointment_time": "10:00:00",
+          "contact_id": "86007437488"
+        },
+        {
+          "id": "392474394928",
+          "hs_appointment_start": "2023-07-21 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 16:19:48.610000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "phyllisbartek3@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Phyllis",
+          "contact_lastname": "Bartek",
+          "contact_email": "phyllisbartek3@gmail.com",
+          "contact_phone": "412-860-4111",
+          "appointment_date": "2023-07-21",
+          "appointment_time": "10:00:00",
+          "contact_id": "86007437488"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-07-21",
+        "appointment_time": "10:00:00",
+        "contact_id": "86007437488",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 150,
       "group_display_name": "Bill Palmer - 10/21/2022 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6591,7 +8475,7 @@
       }
     },
     {
-      "group_id": 118,
+      "group_id": 151,
       "group_display_name": "Karen Edge - 10/20/2022 03:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6647,7 +8531,7 @@
       }
     },
     {
-      "group_id": 119,
+      "group_id": 152,
       "group_display_name": "Piero Fratangeli - 07/19/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6703,7 +8587,7 @@
       }
     },
     {
-      "group_id": 120,
+      "group_id": 153,
       "group_display_name": "Sheila Moses - 10/18/2022 05:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6759,7 +8643,7 @@
       }
     },
     {
-      "group_id": 121,
+      "group_id": 154,
       "group_display_name": "Bob Bucci - 07/14/2021 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6815,7 +8699,7 @@
       }
     },
     {
-      "group_id": 122,
+      "group_id": 155,
       "group_display_name": "Nina And Raymond Baldwin - 07/16/2021 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6871,7 +8755,7 @@
       }
     },
     {
-      "group_id": 123,
+      "group_id": 156,
       "group_display_name": "Gerry Solarek - 10/17/2022 03:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6927,7 +8811,7 @@
       }
     },
     {
-      "group_id": 124,
+      "group_id": 157,
       "group_display_name": "Sandra Steward - 07/19/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -6983,7 +8867,7 @@
       }
     },
     {
-      "group_id": 125,
+      "group_id": 158,
       "group_display_name": "Sean Green - 10/13/2022 03:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7039,7 +8923,7 @@
       }
     },
     {
-      "group_id": 126,
+      "group_id": 159,
       "group_display_name": "Rick Polidore - 07/17/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7095,7 +8979,7 @@
       }
     },
     {
-      "group_id": 127,
+      "group_id": 160,
       "group_display_name": "Jim Wendolek - 07/17/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7151,7 +9035,63 @@
       }
     },
     {
-      "group_id": 128,
+      "group_id": 161,
+      "group_display_name": "Anne Hays - 07/07/2021 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392473688130",
+          "hs_appointment_start": "2021-07-07 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 16:24:03.532000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "annehays1933@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Anne",
+          "contact_lastname": "Hays",
+          "contact_email": "annehays1933@gmail.com",
+          "contact_phone": "443-995-4815",
+          "appointment_date": "2021-07-07",
+          "appointment_time": "18:00:00",
+          "contact_id": "85840144809"
+        },
+        {
+          "id": "392471691412",
+          "hs_appointment_start": "2021-07-07 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 16:18:51.935000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "annehays1933@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Anne",
+          "contact_lastname": "Hays",
+          "contact_email": "annehays1933@gmail.com",
+          "contact_phone": "443-995-4815",
+          "appointment_date": "2021-07-07",
+          "appointment_time": "18:00:00",
+          "contact_id": "85840144809"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-07-07",
+        "appointment_time": "18:00:00",
+        "contact_id": "85840144809",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 162,
       "group_display_name": "Wanda Williams - 10/11/2022 03:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7207,7 +9147,7 @@
       }
     },
     {
-      "group_id": 129,
+      "group_id": 163,
       "group_display_name": "Gerry Solarek - 10/10/2022 03:30 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7263,7 +9203,7 @@
       }
     },
     {
-      "group_id": 130,
+      "group_id": 164,
       "group_display_name": "Vijay Tala - 10/10/2022 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7319,7 +9259,7 @@
       }
     },
     {
-      "group_id": 131,
+      "group_id": 165,
       "group_display_name": "Gregg Melvin - 10/10/2022 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7375,7 +9315,7 @@
       }
     },
     {
-      "group_id": 132,
+      "group_id": 166,
       "group_display_name": "Andre Skeete - 10/10/2022 03:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7431,7 +9371,7 @@
       }
     },
     {
-      "group_id": 133,
+      "group_id": 167,
       "group_display_name": "Sajal Mukherjee - 10/10/2022 03:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7487,7 +9427,7 @@
       }
     },
     {
-      "group_id": 134,
+      "group_id": 168,
       "group_display_name": "Farrah Terrell - 10/10/2022 12:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7543,7 +9483,735 @@
       }
     },
     {
-      "group_id": 135,
+      "group_id": 169,
+      "group_display_name": "Lauretta Martin - 01/03/2024 11:30 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392474218072",
+          "hs_appointment_start": "2024-01-03 00:00:00+00:00",
+          "time": "11:30:00",
+          "hs_createdate": "2024-12-20 16:12:43.300000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "valerieholt@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Lauretta",
+          "contact_lastname": "Martin",
+          "contact_email": "martinlauretta@gmail.com",
+          "contact_phone": "202-607-8071",
+          "appointment_date": "2024-01-03",
+          "appointment_time": "11:30:00",
+          "contact_id": "86143297059"
+        },
+        {
+          "id": "392486096219",
+          "hs_appointment_start": "2024-01-03 00:00:00+00:00",
+          "time": "11:30:00",
+          "hs_createdate": "2024-12-20 16:11:58.815000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Lauretta",
+          "contact_lastname": "Martin",
+          "contact_email": "martinlauretta@gmail.com",
+          "contact_phone": "202-607-8071",
+          "appointment_date": "2024-01-03",
+          "appointment_time": "11:30:00",
+          "contact_id": "86143297059"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-01-03",
+        "appointment_time": "11:30:00",
+        "contact_id": "86143297059",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 170,
+      "group_display_name": "Dennis & Bernadette Beckett - 01/03/2024 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392466083084",
+          "hs_appointment_start": "2024-01-03 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 16:08:29.690000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "denniskbeckett@yahoo.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Dennis & Bernadette",
+          "contact_lastname": "Beckett",
+          "contact_email": "denniskbeckett@yahoo.com",
+          "contact_phone": "856-694-4315",
+          "appointment_date": "2024-01-03",
+          "appointment_time": "14:00:00",
+          "contact_id": "86145050777"
+        },
+        {
+          "id": "392451220877",
+          "hs_appointment_start": "2024-01-03 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 15:55:10.515000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "denniskbeckett@yahoo.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Dennis & Bernadette",
+          "contact_lastname": "Beckett",
+          "contact_email": "denniskbeckett@yahoo.com",
+          "contact_phone": "856-694-4315",
+          "appointment_date": "2024-01-03",
+          "appointment_time": "14:00:00",
+          "contact_id": "86145050777"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-01-03",
+        "appointment_time": "14:00:00",
+        "contact_id": "86145050777",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 171,
+      "group_display_name": "Tammy Bleich - 01/02/2024 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392464984070",
+          "hs_appointment_start": "2024-01-02 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 16:07:21.600000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "tmkfuture@aol.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Tammy",
+          "contact_lastname": "Bleich",
+          "contact_email": "tmkfuture@aol.com",
+          "contact_phone": "216-402-5776",
+          "appointment_date": "2024-01-02",
+          "appointment_time": "14:00:00",
+          "contact_id": "86170124611"
+        },
+        {
+          "id": "392470220573",
+          "hs_appointment_start": "2024-01-02 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 16:06:46.873000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "tmkfuture@aol.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Tammy",
+          "contact_lastname": "Bleich",
+          "contact_email": "tmkfuture@aol.com",
+          "contact_phone": "216-402-5776",
+          "appointment_date": "2024-01-02",
+          "appointment_time": "14:00:00",
+          "contact_id": "86170124611"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-01-02",
+        "appointment_time": "14:00:00",
+        "contact_id": "86170124611",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 172,
+      "group_display_name": "Andrea Merendino - 01/02/2024 02:30 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392469626510",
+          "hs_appointment_start": "2024-01-02 00:00:00+00:00",
+          "time": "14:30:00",
+          "hs_createdate": "2024-12-20 16:06:12.279000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Andrea",
+          "contact_lastname": "Merendino",
+          "contact_email": null,
+          "contact_phone": "856-803-9914",
+          "appointment_date": "2024-01-02",
+          "appointment_time": "14:30:00",
+          "contact_id": "119633034927"
+        },
+        {
+          "id": "392454656288",
+          "hs_appointment_start": "2024-01-02 00:00:00+00:00",
+          "time": "14:30:00",
+          "hs_createdate": "2024-12-20 16:06:10.499000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Andrea",
+          "contact_lastname": "Merendino",
+          "contact_email": null,
+          "contact_phone": "856-803-9914",
+          "appointment_date": "2024-01-02",
+          "appointment_time": "14:30:00",
+          "contact_id": "119633034927"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-01-02",
+        "appointment_time": "14:30:00",
+        "contact_id": "119633034927",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 173,
+      "group_display_name": "William Freeman - 01/01/2024 01:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392455888813",
+          "hs_appointment_start": "2024-01-01 00:00:00+00:00",
+          "time": "13:00:00",
+          "hs_createdate": "2024-12-20 16:05:24.927000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "William",
+          "contact_lastname": "Freeman",
+          "contact_email": null,
+          "contact_phone": "757-603-1659",
+          "appointment_date": "2024-01-01",
+          "appointment_time": "13:00:00",
+          "contact_id": "119405897986"
+        },
+        {
+          "id": "392480876054",
+          "hs_appointment_start": "2024-01-01 00:00:00+00:00",
+          "time": "13:00:00",
+          "hs_createdate": "2024-12-20 16:05:04.950000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "William",
+          "contact_lastname": "Freeman",
+          "contact_email": null,
+          "contact_phone": "757-603-1659",
+          "appointment_date": "2024-01-01",
+          "appointment_time": "13:00:00",
+          "contact_id": "119405897986"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2024-01-01",
+        "appointment_time": "13:00:00",
+        "contact_id": "119405897986",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 174,
+      "group_display_name": "Rosita Mustatha - 12/30/2023 11:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392473216268",
+          "hs_appointment_start": "2023-12-30 00:00:00+00:00",
+          "time": "11:00:00",
+          "hs_createdate": "2024-12-20 16:04:49.431000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Rosita",
+          "contact_lastname": "Mustatha",
+          "contact_email": null,
+          "contact_phone": "856-725-1219",
+          "appointment_date": "2023-12-30",
+          "appointment_time": "11:00:00",
+          "contact_id": "119392142007"
+        },
+        {
+          "id": "392485199256",
+          "hs_appointment_start": "2023-12-30 00:00:00+00:00",
+          "time": "11:00:00",
+          "hs_createdate": "2024-12-20 15:57:07.855000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Rosita",
+          "contact_lastname": "Mustatha",
+          "contact_email": null,
+          "contact_phone": "856-725-1219",
+          "appointment_date": "2023-12-30",
+          "appointment_time": "11:00:00",
+          "contact_id": "119392142007"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-12-30",
+        "appointment_time": "11:00:00",
+        "contact_id": "119392142007",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 175,
+      "group_display_name": "Ivelisse Fernandez & Julio Cunha - 12/30/2023 05:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392465297485",
+          "hs_appointment_start": "2023-12-30 00:00:00+00:00",
+          "time": "17:00:00",
+          "hs_createdate": "2024-12-20 16:03:38.692000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ivette.f03@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Ivelisse Fernandez & Julio",
+          "contact_lastname": "Cunha",
+          "contact_email": "ivette.f03@gmail.com",
+          "contact_phone": "6096491495",
+          "appointment_date": "2023-12-30",
+          "appointment_time": "17:00:00",
+          "contact_id": "86070360918"
+        },
+        {
+          "id": "392486227841",
+          "hs_appointment_start": "2023-12-30 00:00:00+00:00",
+          "time": "17:00:00",
+          "hs_createdate": "2024-12-20 16:00:42.580000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ivette.f03@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Ivelisse Fernandez & Julio",
+          "contact_lastname": "Cunha",
+          "contact_email": "ivette.f03@gmail.com",
+          "contact_phone": "6096491495",
+          "appointment_date": "2023-12-30",
+          "appointment_time": "17:00:00",
+          "contact_id": "86070360918"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-12-30",
+        "appointment_time": "17:00:00",
+        "contact_id": "86070360918",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 176,
+      "group_display_name": "Ivy Mcneill - 06/17/2021 09:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392471296895",
+          "hs_appointment_start": "2021-06-17 00:00:00+00:00",
+          "time": "09:00:00",
+          "hs_createdate": "2024-12-20 16:03:29.895000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ivymcneill@icloud.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Ivy",
+          "contact_lastname": "Mcneill",
+          "contact_email": "ivymcneill@icloud.com",
+          "contact_phone": "2027221505",
+          "appointment_date": "2021-06-17",
+          "appointment_time": "09:00:00",
+          "contact_id": "85801040215"
+        },
+        {
+          "id": "392468850285",
+          "hs_appointment_start": "2021-06-17 00:00:00+00:00",
+          "time": "09:00:00",
+          "hs_createdate": "2024-12-20 16:02:45.458000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ivymcneill@icloud.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Ivy",
+          "contact_lastname": "Mcneill",
+          "contact_email": "ivymcneill@icloud.com",
+          "contact_phone": "2027221505",
+          "appointment_date": "2021-06-17",
+          "appointment_time": "09:00:00",
+          "contact_id": "85801040215"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-06-17",
+        "appointment_time": "09:00:00",
+        "contact_id": "85801040215",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 177,
+      "group_display_name": "William Means - 12/29/2023 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392452783388",
+          "hs_appointment_start": "2023-12-29 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 16:03:00.383000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ponchorelli61@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "William",
+          "contact_lastname": "Means",
+          "contact_email": "ponchorelli61@gmail.com",
+          "contact_phone": "330-344-0985",
+          "appointment_date": "2023-12-29",
+          "appointment_time": "10:00:00",
+          "contact_id": "86146011649"
+        },
+        {
+          "id": "392455585094",
+          "hs_appointment_start": "2023-12-29 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 16:02:33.239000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "ponchorelli61@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "William",
+          "contact_lastname": "Means",
+          "contact_email": "ponchorelli61@gmail.com",
+          "contact_phone": "330-344-0985",
+          "appointment_date": "2023-12-29",
+          "appointment_time": "10:00:00",
+          "contact_id": "86146011649"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-12-29",
+        "appointment_time": "10:00:00",
+        "contact_id": "86146011649",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 178,
+      "group_display_name": "Tom Reh - 06/14/2021 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392485048242",
+          "hs_appointment_start": "2021-06-14 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 16:02:46.317000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "hippicat@comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Tom",
+          "contact_lastname": "Reh",
+          "contact_email": "hippicat@comcast.net",
+          "contact_phone": "804-313-7563",
+          "appointment_date": "2021-06-14",
+          "appointment_time": "18:00:00",
+          "contact_id": "85810132130"
+        },
+        {
+          "id": "392452010142",
+          "hs_appointment_start": "2021-06-14 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 16:02:35.472000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "hippicat@comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Tom",
+          "contact_lastname": "Reh",
+          "contact_email": "hippicat@comcast.net",
+          "contact_phone": "804-313-7563",
+          "appointment_date": "2021-06-14",
+          "appointment_time": "18:00:00",
+          "contact_id": "85810132130"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-06-14",
+        "appointment_time": "18:00:00",
+        "contact_id": "85810132130",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 179,
+      "group_display_name": "Tim Rhinehardt - 12/29/2023 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392480871317",
+          "hs_appointment_start": "2023-12-29 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 16:02:22.634000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "timrhino@msn.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Tim",
+          "contact_lastname": "Rhinehardt",
+          "contact_email": "timrhino@msn.com",
+          "contact_phone": "732-259-4573",
+          "appointment_date": "2023-12-29",
+          "appointment_time": "10:00:00",
+          "contact_id": "85840347667"
+        },
+        {
+          "id": "392481186726",
+          "hs_appointment_start": "2023-12-29 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 15:58:49.066000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "timrhino@msn.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Tim",
+          "contact_lastname": "Rhinehardt",
+          "contact_email": "timrhino@msn.com",
+          "contact_phone": "732-259-4573",
+          "appointment_date": "2023-12-29",
+          "appointment_time": "10:00:00",
+          "contact_id": "85840347667"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-12-29",
+        "appointment_time": "10:00:00",
+        "contact_id": "85840347667",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 180,
+      "group_display_name": "Jim Owens - 06/11/2021 12:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392468849553",
+          "hs_appointment_start": "2021-06-11 00:00:00+00:00",
+          "time": "12:00:00",
+          "hs_createdate": "2024-12-20 16:02:20.485000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "owensjem@comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Jim",
+          "contact_lastname": "Owens",
+          "contact_email": "owensjem@comcast.net",
+          "contact_phone": "724-745-0831",
+          "appointment_date": "2021-06-11",
+          "appointment_time": "12:00:00",
+          "contact_id": "85857656381"
+        },
+        {
+          "id": "392452009579",
+          "hs_appointment_start": "2021-06-11 00:00:00+00:00",
+          "time": "12:00:00",
+          "hs_createdate": "2024-12-20 16:02:18.851000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "owensjem@comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Jim",
+          "contact_lastname": "Owens",
+          "contact_email": "owensjem@comcast.net",
+          "contact_phone": "724-745-0831",
+          "appointment_date": "2021-06-11",
+          "appointment_time": "12:00:00",
+          "contact_id": "85857656381"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-06-11",
+        "appointment_time": "12:00:00",
+        "contact_id": "85857656381",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 181,
+      "group_display_name": "Christina Clark - 06/08/2021 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392486913893",
+          "hs_appointment_start": "2021-06-08 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:58:48.967000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "savoyclark@yahoo.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Christina",
+          "contact_lastname": "Clark",
+          "contact_email": "savoyclark@yahoo.com",
+          "contact_phone": "240-244-1664",
+          "appointment_date": "2021-06-08",
+          "appointment_time": "18:00:00",
+          "contact_id": "85837828908"
+        },
+        {
+          "id": "392451228029",
+          "hs_appointment_start": "2021-06-08 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:58:48.066000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "savoyclark@yahoo.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Christina",
+          "contact_lastname": "Clark",
+          "contact_email": "savoyclark@yahoo.com",
+          "contact_phone": "240-244-1664",
+          "appointment_date": "2021-06-08",
+          "appointment_time": "18:00:00",
+          "contact_id": "85837828908"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-06-08",
+        "appointment_time": "18:00:00",
+        "contact_id": "85837828908",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 182,
       "group_display_name": "Adam Zajac - 06/09/2021 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7599,7 +10267,231 @@
       }
     },
     {
-      "group_id": 136,
+      "group_id": 183,
+      "group_display_name": "Mark Ruffner - 06/09/2021 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392466360452",
+          "hs_appointment_start": "2021-06-09 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:58:02.998000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "markruffner44@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mark",
+          "contact_lastname": "Ruffner",
+          "contact_email": "markruffner44@gmail.com",
+          "contact_phone": "219-455-0023",
+          "appointment_date": "2021-06-09",
+          "appointment_time": "18:00:00",
+          "contact_id": "85850282827"
+        },
+        {
+          "id": "392470888087",
+          "hs_appointment_start": "2021-06-09 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:58:01.052000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "markruffner44@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mark",
+          "contact_lastname": "Ruffner",
+          "contact_email": "markruffner44@gmail.com",
+          "contact_phone": "219-455-0023",
+          "appointment_date": "2021-06-09",
+          "appointment_time": "18:00:00",
+          "contact_id": "85850282827"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-06-09",
+        "appointment_time": "18:00:00",
+        "contact_id": "85850282827",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 184,
+      "group_display_name": "Ken Bunnell - 06/06/2021 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392484882795",
+          "hs_appointment_start": "2021-06-06 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 15:57:51.583000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "cindyb125@comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Ken",
+          "contact_lastname": "Bunnell",
+          "contact_email": "cindyb125@comcast.net",
+          "contact_phone": "609-296-8469",
+          "appointment_date": "2021-06-06",
+          "appointment_time": "10:00:00",
+          "contact_id": "85860039566"
+        },
+        {
+          "id": "392453541240",
+          "hs_appointment_start": "2021-06-06 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 15:57:15.658000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "cindyb125@comcast.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Ken",
+          "contact_lastname": "Bunnell",
+          "contact_email": "cindyb125@comcast.net",
+          "contact_phone": "609-296-8469",
+          "appointment_date": "2021-06-06",
+          "appointment_time": "10:00:00",
+          "contact_id": "85860039566"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-06-06",
+        "appointment_time": "10:00:00",
+        "contact_id": "85860039566",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 185,
+      "group_display_name": "William And Nicole Wilson - 12/29/2023 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392470202000",
+          "hs_appointment_start": "2023-12-29 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 15:57:46.458000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "williamrwilson89@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "William And Nicole",
+          "contact_lastname": "Wilson",
+          "contact_email": "williamrwilson89@gmail.com",
+          "contact_phone": "732-232-7170",
+          "appointment_date": "2023-12-29",
+          "appointment_time": "10:00:00",
+          "contact_id": "86112911417"
+        },
+        {
+          "id": "392454167826",
+          "hs_appointment_start": "2023-12-29 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 15:57:21.872000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "williamrwilson89@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "William And Nicole",
+          "contact_lastname": "Wilson",
+          "contact_email": "williamrwilson89@gmail.com",
+          "contact_phone": "732-232-7170",
+          "appointment_date": "2023-12-29",
+          "appointment_time": "10:00:00",
+          "contact_id": "86112911417"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-12-29",
+        "appointment_time": "10:00:00",
+        "contact_id": "86112911417",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 186,
+      "group_display_name": "Gail Edison - 06/04/2021 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392486219270",
+          "hs_appointment_start": "2021-06-04 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 15:56:23.439000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "gtde1153@aol.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Gail",
+          "contact_lastname": "Edison",
+          "contact_email": "gtde1153@aol.com",
+          "contact_phone": "856-625-1558",
+          "appointment_date": "2021-06-04",
+          "appointment_time": "14:00:00",
+          "contact_id": "85830445101"
+        },
+        {
+          "id": "392465437612",
+          "hs_appointment_start": "2021-06-04 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 15:55:45.867000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "gtde1153@aol.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Gail",
+          "contact_lastname": "Edison",
+          "contact_email": "gtde1153@aol.com",
+          "contact_phone": "856-625-1558",
+          "appointment_date": "2021-06-04",
+          "appointment_time": "14:00:00",
+          "contact_id": "85830445101"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2021-06-04",
+        "appointment_time": "14:00:00",
+        "contact_id": "85830445101",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 187,
       "group_display_name": "Mitch Paige - 06/28/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7655,7 +10547,7 @@
       }
     },
     {
-      "group_id": 137,
+      "group_id": 188,
       "group_display_name": "Pascell Osuji - 06/30/2023 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7711,7 +10603,7 @@
       }
     },
     {
-      "group_id": 138,
+      "group_id": 189,
       "group_display_name": "Everitte And Allison Perry - 06/29/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7767,7 +10659,7 @@
       }
     },
     {
-      "group_id": 139,
+      "group_id": 190,
       "group_display_name": "Dave Hudak - 05/22/2021 12:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7823,7 +10715,7 @@
       }
     },
     {
-      "group_id": 140,
+      "group_id": 191,
       "group_display_name": "Richard Burgos - 06/29/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7879,7 +10771,7 @@
       }
     },
     {
-      "group_id": 141,
+      "group_id": 192,
       "group_display_name": "Diane Mauceri - 06/29/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7935,7 +10827,7 @@
       }
     },
     {
-      "group_id": 142,
+      "group_id": 193,
       "group_display_name": "James Back - 06/28/2023 12:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -7991,7 +10883,7 @@
       }
     },
     {
-      "group_id": 143,
+      "group_id": 194,
       "group_display_name": "Cameron Weems - 06/28/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8047,7 +10939,7 @@
       }
     },
     {
-      "group_id": 144,
+      "group_id": 195,
       "group_display_name": "Steve Vanness - 06/28/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8103,7 +10995,7 @@
       }
     },
     {
-      "group_id": 145,
+      "group_id": 196,
       "group_display_name": "Bob Rowland - 06/27/2023 10:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8159,7 +11051,7 @@
       }
     },
     {
-      "group_id": 146,
+      "group_id": 197,
       "group_display_name": "Betty Bayus - 06/25/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8215,7 +11107,343 @@
       }
     },
     {
-      "group_id": 147,
+      "group_id": 198,
+      "group_display_name": "Elaine Boley - 06/25/2023 03:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392464919838",
+          "hs_appointment_start": "2023-06-25 00:00:00+00:00",
+          "time": "15:00:00",
+          "hs_createdate": "2024-12-20 15:35:19.158000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Elaine",
+          "contact_lastname": "Boley",
+          "contact_email": "luvbats63@gmail.com",
+          "contact_phone": "330-701-4918",
+          "appointment_date": "2023-06-25",
+          "appointment_time": "15:00:00",
+          "contact_id": "116651359510"
+        },
+        {
+          "id": "392470018741",
+          "hs_appointment_start": "2023-06-25 00:00:00+00:00",
+          "time": "15:00:00",
+          "hs_createdate": "2024-12-20 15:33:59.816000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "luvbats63@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Elaine",
+          "contact_lastname": "Boley",
+          "contact_email": "luvbats63@gmail.com",
+          "contact_phone": "330-701-4918",
+          "appointment_date": "2023-06-25",
+          "appointment_time": "15:00:00",
+          "contact_id": "116651359510"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-25",
+        "appointment_time": "15:00:00",
+        "contact_id": "116651359510",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 199,
+      "group_display_name": "Michelle Fagan - 06/24/2023 09:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392450280309",
+          "hs_appointment_start": "2023-06-24 00:00:00+00:00",
+          "time": "09:00:00",
+          "hs_createdate": "2024-12-20 15:34:12.080000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Michelle",
+          "contact_lastname": "Fagan",
+          "contact_email": "mfagan11@verizon.net",
+          "contact_phone": "732-275-2038",
+          "appointment_date": "2023-06-24",
+          "appointment_time": "09:00:00",
+          "contact_id": "116651354151"
+        },
+        {
+          "id": "392455522573",
+          "hs_appointment_start": "2023-06-24 00:00:00+00:00",
+          "time": "09:00:00",
+          "hs_createdate": "2024-12-20 15:34:03.885000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "Mfagan11@verizon.net",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Michelle",
+          "contact_lastname": "Fagan",
+          "contact_email": "mfagan11@verizon.net",
+          "contact_phone": "732-275-2038",
+          "appointment_date": "2023-06-24",
+          "appointment_time": "09:00:00",
+          "contact_id": "116651354151"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-24",
+        "appointment_time": "09:00:00",
+        "contact_id": "116651354151",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 200,
+      "group_display_name": "Lawrence Redd - 06/24/2023 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392485150466",
+          "hs_appointment_start": "2023-06-24 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 15:34:10.440000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "kxkalsjcjs@me.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Lawrence",
+          "contact_lastname": "Redd",
+          "contact_email": "kxkalsjcjs@me.com",
+          "contact_phone": "724-970-6267",
+          "appointment_date": "2023-06-24",
+          "appointment_time": "14:00:00",
+          "contact_id": "119405899142"
+        },
+        {
+          "id": "392465082413",
+          "hs_appointment_start": "2023-06-24 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 15:33:28.539000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Lawrence",
+          "contact_lastname": "Redd",
+          "contact_email": "kxkalsjcjs@me.com",
+          "contact_phone": "724-970-6267",
+          "appointment_date": "2023-06-24",
+          "appointment_time": "14:00:00",
+          "contact_id": "119405899142"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-24",
+        "appointment_time": "14:00:00",
+        "contact_id": "119405899142",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 201,
+      "group_display_name": "Tom Postolka - 06/23/2023 02:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392465683335",
+          "hs_appointment_start": "2023-06-23 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 15:30:11.196000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "tteriffic119@yahoo.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Tom",
+          "contact_lastname": "Postolka",
+          "contact_email": "tteriffic119@yahoo.com",
+          "contact_phone": "330-671-2754",
+          "appointment_date": "2023-06-23",
+          "appointment_time": "14:00:00",
+          "contact_id": "86019815752"
+        },
+        {
+          "id": "392451787013",
+          "hs_appointment_start": "2023-06-23 00:00:00+00:00",
+          "time": "14:00:00",
+          "hs_createdate": "2024-12-20 15:28:26.069000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "tteriffic119@yahoo.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Tom",
+          "contact_lastname": "Postolka",
+          "contact_email": "tteriffic119@yahoo.com",
+          "contact_phone": "330-671-2754",
+          "appointment_date": "2023-06-23",
+          "appointment_time": "14:00:00",
+          "contact_id": "86019815752"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-23",
+        "appointment_time": "14:00:00",
+        "contact_id": "86019815752",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 202,
+      "group_display_name": "Courtney Neff - 06/22/2023 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392486015501",
+          "hs_appointment_start": "2023-06-22 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:29:58.869000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "princess3009@hotmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Courtney",
+          "contact_lastname": "Neff",
+          "contact_email": "princess3009@hotmail.com",
+          "contact_phone": "440-476-2836",
+          "appointment_date": "2023-06-22",
+          "appointment_time": "18:00:00",
+          "contact_id": "116050828176"
+        },
+        {
+          "id": "392453797154",
+          "hs_appointment_start": "2023-06-22 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:29:27.409000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "princess3009@hotmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Courtney",
+          "contact_lastname": "Neff",
+          "contact_email": "princess3009@hotmail.com",
+          "contact_phone": "440-476-2836",
+          "appointment_date": "2023-06-22",
+          "appointment_time": "18:00:00",
+          "contact_id": "116050828176"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-22",
+        "appointment_time": "18:00:00",
+        "contact_id": "116050828176",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 203,
+      "group_display_name": "Mpumeleo Nxumalao - 06/24/2023 10:00 AM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392466917698",
+          "hs_appointment_start": "2023-06-24 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 15:23:47.436000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "mnxumalo.zw@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mpumeleo",
+          "contact_lastname": "Nxumalao",
+          "contact_email": "mnxumalozw@gmail.com",
+          "contact_phone": "413-210-6245",
+          "appointment_date": "2023-06-24",
+          "appointment_time": "10:00:00",
+          "contact_id": "116082852000"
+        },
+        {
+          "id": "392451466764",
+          "hs_appointment_start": "2023-06-24 00:00:00+00:00",
+          "time": "10:00:00",
+          "hs_createdate": "2024-12-20 15:23:35.134000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "mnxumalozw@gmail.com",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Mpumeleo",
+          "contact_lastname": "Nxumalao",
+          "contact_email": "mnxumalozw@gmail.com",
+          "contact_phone": "413-210-6245",
+          "appointment_date": "2023-06-24",
+          "appointment_time": "10:00:00",
+          "contact_id": "116082852000"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-24",
+        "appointment_time": "10:00:00",
+        "contact_id": "116082852000",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 204,
       "group_display_name": "Edward Chambers - 04/05/2021 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8271,7 +11499,7 @@
       }
     },
     {
-      "group_id": 148,
+      "group_id": 205,
       "group_display_name": "Jayla Moss - 04/13/2021 01:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8327,7 +11555,119 @@
       }
     },
     {
-      "group_id": 149,
+      "group_id": 206,
+      "group_display_name": "Emory Lanier - 06/12/2023 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392451596415",
+          "hs_appointment_start": "2023-06-12 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:09:34.777000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Emory",
+          "contact_lastname": "Lanier",
+          "contact_email": null,
+          "contact_phone": "732-998-5334",
+          "appointment_date": "2023-06-12",
+          "appointment_time": "18:00:00",
+          "contact_id": "119394704248"
+        },
+        {
+          "id": "392465794962",
+          "hs_appointment_start": "2023-06-12 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:04:24.633000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": null,
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Emory",
+          "contact_lastname": "Lanier",
+          "contact_email": null,
+          "contact_phone": "732-998-5334",
+          "appointment_date": "2023-06-12",
+          "appointment_time": "18:00:00",
+          "contact_id": "119394704248"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-12",
+        "appointment_time": "18:00:00",
+        "contact_id": "119394704248",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 207,
+      "group_display_name": "Andrew Milburn - 06/12/2023 06:00 PM (2 duplicates)",
+      "total_duplicates": 2,
+      "appointments": [
+        {
+          "id": "392467818538",
+          "hs_appointment_start": "2023-06-12 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:09:32.208000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "215EMMETT@GMAIL.COM",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Andrew",
+          "contact_lastname": "Milburn",
+          "contact_email": "215emmett@gmail.com",
+          "contact_phone": "215-651-7283",
+          "appointment_date": "2023-06-12",
+          "appointment_time": "18:00:00",
+          "contact_id": "86057798407"
+        },
+        {
+          "id": "392450227012",
+          "hs_appointment_start": "2023-06-12 00:00:00+00:00",
+          "time": "18:00:00",
+          "hs_createdate": "2024-12-20 15:05:51.210000+00:00",
+          "appointment_status": "Unknown",
+          "appointment_email": "215EMMETT@GMAIL.COM",
+          "appointment_phone": null,
+          "appointment_first_name": null,
+          "appointment_last_name": null,
+          "contact_firstname": "Andrew",
+          "contact_lastname": "Milburn",
+          "contact_email": "215emmett@gmail.com",
+          "contact_phone": "215-651-7283",
+          "appointment_date": "2023-06-12",
+          "appointment_time": "18:00:00",
+          "contact_id": "86057798407"
+        }
+      ],
+      "detection_details": {
+        "threshold_used": 100,
+        "detection_method": "sql_exact_match",
+        "average_similarity_score": 100.0,
+        "appointment_date": "2023-06-12",
+        "appointment_time": "18:00:00",
+        "contact_id": "86057798407",
+        "fields_analyzed": [
+          "appointment_date",
+          "appointment_time",
+          "contact_id"
+        ]
+      }
+    },
+    {
+      "group_id": 208,
       "group_display_name": "Sheila Phillips - 03/23/2021 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8383,7 +11723,7 @@
       }
     },
     {
-      "group_id": 150,
+      "group_id": 209,
       "group_display_name": "Jhoana Cuellar - 06/09/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8439,7 +11779,7 @@
       }
     },
     {
-      "group_id": 151,
+      "group_id": 210,
       "group_display_name": "Marty Gray - 06/09/2023 06:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8495,7 +11835,7 @@
       }
     },
     {
-      "group_id": 152,
+      "group_id": 211,
       "group_display_name": "Nick Strickling - 03/12/2021 01:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8551,7 +11891,7 @@
       }
     },
     {
-      "group_id": 153,
+      "group_id": 212,
       "group_display_name": "Henry Blake - 03/18/2021 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8607,7 +11947,7 @@
       }
     },
     {
-      "group_id": 154,
+      "group_id": 213,
       "group_display_name": "Ihab Alsoub - 03/18/2021 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8663,7 +12003,7 @@
       }
     },
     {
-      "group_id": 155,
+      "group_id": 214,
       "group_display_name": "Randel Williams - 03/17/2021 11:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8719,7 +12059,7 @@
       }
     },
     {
-      "group_id": 156,
+      "group_id": 215,
       "group_display_name": "Siobhan Keefe - 03/17/2021 03:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8775,7 +12115,7 @@
       }
     },
     {
-      "group_id": 157,
+      "group_id": 216,
       "group_display_name": "Amanda Rienstra - 06/07/2023 01:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8831,7 +12171,7 @@
       }
     },
     {
-      "group_id": 158,
+      "group_id": 217,
       "group_display_name": "Barbara Gans - 03/18/2021 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8887,7 +12227,7 @@
       }
     },
     {
-      "group_id": 159,
+      "group_id": 218,
       "group_display_name": "Alan Rittman - 03/16/2021 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8943,7 +12283,7 @@
       }
     },
     {
-      "group_id": 160,
+      "group_id": 219,
       "group_display_name": "Glenn Luga - 03/17/2021 01:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -8999,7 +12339,7 @@
       }
     },
     {
-      "group_id": 161,
+      "group_id": 220,
       "group_display_name": "Steven Parsons - 06/05/2023 02:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -9055,7 +12395,7 @@
       }
     },
     {
-      "group_id": 162,
+      "group_id": 221,
       "group_display_name": "Gerry Mcdermott - 06/06/2023 09:00 AM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [
@@ -9111,7 +12451,7 @@
       }
     },
     {
-      "group_id": 163,
+      "group_id": 222,
       "group_display_name": "Nick Gigliotti - 06/05/2023 07:00 PM (2 duplicates)",
       "total_duplicates": 2,
       "appointments": [

@@ -1,0 +1,458 @@
+{
+  "summary": {
+    "total_tables": 64,
+    "total_records": 17372525,
+    "analysis_date": "2025-07-03T09:44:08.768018"
+  },
+  "tables": [
+    {
+      "table_name": "ingestion_arrivy_entity",
+      "display_name": "Arrivy Entity",
+      "record_count": 452,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_arrivy_group",
+      "display_name": "Arrivy Group",
+      "record_count": 18,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_arrivy_location_report",
+      "display_name": "Arrivy Location Report",
+      "record_count": 0,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_arrivy_sync_history",
+      "display_name": "Arrivy Sync History",
+      "record_count": 4,
+      "last_updated": "2025-07-03T09:22:26.775960+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_arrivy_task",
+      "display_name": "Arrivy Task",
+      "record_count": 11804,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_arrivy_task_status",
+      "display_name": "Arrivy Task Status",
+      "record_count": 28,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_appointment",
+      "display_name": "Genius Appointment",
+      "record_count": 231588,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_appointmentoutcome",
+      "display_name": "Genius Appointmentoutcome",
+      "record_count": 31,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_appointmentoutcometype",
+      "display_name": "Genius Appointmentoutcometype",
+      "record_count": 3,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_appointmentservice",
+      "display_name": "Genius Appointmentservice",
+      "record_count": 283727,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_appointmenttype",
+      "display_name": "Genius Appointmenttype",
+      "record_count": 5,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_division",
+      "display_name": "Genius Division",
+      "record_count": 23,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_divisiongroup",
+      "display_name": "Genius Divisiongroup",
+      "record_count": 9,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_lead",
+      "display_name": "Genius Lead",
+      "record_count": 5958533,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_marketingsource",
+      "display_name": "Genius Marketingsource",
+      "record_count": 350,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_marketingsourcetype",
+      "display_name": "Genius Marketingsourcetype",
+      "record_count": 48,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_marketsharpmarketingsourcemap",
+      "display_name": "Genius Marketsharpmarketingsourcemap",
+      "record_count": 4101,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_marketsharpsource",
+      "display_name": "Genius Marketsharpsource",
+      "record_count": 4891,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_prospect",
+      "display_name": "Genius Prospect",
+      "record_count": 194276,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_prospectsource",
+      "display_name": "Genius Prospectsource",
+      "record_count": 195271,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_quote",
+      "display_name": "Genius Quote",
+      "record_count": 58466,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_service",
+      "display_name": "Genius Service",
+      "record_count": 11,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_userdata",
+      "display_name": "Genius Userdata",
+      "record_count": 11023,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_genius_usertitle",
+      "display_name": "Genius Usertitle",
+      "record_count": 28,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_hubspot_appointment",
+      "display_name": "Hubspot Appointment",
+      "record_count": 192898,
+      "last_updated": "2025-07-03T08:46:06.818258+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_hubspot_appointment_contact_assoc",
+      "display_name": "Hubspot Appointment Contact Assoc",
+      "record_count": 27883,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_hubspot_contact",
+      "display_name": "Hubspot Contact",
+      "record_count": 770991,
+      "last_updated": "2025-07-03T08:56:32.776594+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_hubspot_contact_division_assoc",
+      "display_name": "Hubspot Contact Division Assoc",
+      "record_count": 155612,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_hubspot_deal",
+      "display_name": "Hubspot Deal",
+      "record_count": 1,
+      "last_updated": "2025-06-22T07:19:49.138642+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_hubspot_division",
+      "display_name": "Hubspot Division",
+      "record_count": 23,
+      "last_updated": "2025-06-27T17:18:38.254672+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_hubspot_synchistory",
+      "display_name": "Hubspot Synchistory",
+      "record_count": 8,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_hubspot_zipcode",
+      "display_name": "Hubspot Zipcode",
+      "record_count": 3987,
+      "last_updated": "2025-06-30T05:30:50.981543+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_leadconduit_event",
+      "display_name": "Leadconduit Event",
+      "record_count": 2538,
+      "last_updated": "2025-06-26T06:54:59.690859+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_leadconduit_lead",
+      "display_name": "Leadconduit Lead",
+      "record_count": 98346,
+      "last_updated": "2025-06-20T08:39:21.867049+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_leadconduit_sync_history",
+      "display_name": "Leadconduit Sync History",
+      "record_count": 10,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_activity",
+      "display_name": "Marketsharp Activity",
+      "record_count": 3757219,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_activityreference",
+      "display_name": "Marketsharp Activityreference",
+      "record_count": 521,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_activityresult",
+      "display_name": "Marketsharp Activityresult",
+      "record_count": 936,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_address",
+      "display_name": "Marketsharp Address",
+      "record_count": 626000,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_appointment",
+      "display_name": "Marketsharp Appointment",
+      "record_count": 258163,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_appointmentresult",
+      "display_name": "Marketsharp Appointmentresult",
+      "record_count": 294,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_company",
+      "display_name": "Marketsharp Company",
+      "record_count": 16,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_contact",
+      "display_name": "Marketsharp Contact",
+      "record_count": 625101,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_contactphone",
+      "display_name": "Marketsharp Contactphone",
+      "record_count": 621694,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_contacttype",
+      "display_name": "Marketsharp Contacttype",
+      "record_count": 627865,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_customer",
+      "display_name": "Marketsharp Customer",
+      "record_count": 28026,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_customfield",
+      "display_name": "Marketsharp Customfield",
+      "record_count": 29615,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_employee",
+      "display_name": "Marketsharp Employee",
+      "record_count": 11159,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_inquiry",
+      "display_name": "Marketsharp Inquiry",
+      "record_count": 739521,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_inquirysourceprimary",
+      "display_name": "Marketsharp Inquirysourceprimary",
+      "record_count": 230,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_inquirysourcesecondary",
+      "display_name": "Marketsharp Inquirysourcesecondary",
+      "record_count": 5133,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_inquirystatus",
+      "display_name": "Marketsharp Inquirystatus",
+      "record_count": 237,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_job",
+      "display_name": "Marketsharp Job",
+      "record_count": 1351,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_lead",
+      "display_name": "Marketsharp Lead",
+      "record_count": 594388,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_productdetail",
+      "display_name": "Marketsharp Productdetail",
+      "record_count": 500,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_productinterest",
+      "display_name": "Marketsharp Productinterest",
+      "record_count": 580289,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_producttype",
+      "display_name": "Marketsharp Producttype",
+      "record_count": 0,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_marketsharp_prospect",
+      "display_name": "Marketsharp Prospect",
+      "record_count": 4857,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_salespro_appointment",
+      "display_name": "Salespro Appointment",
+      "record_count": 4120,
+      "last_updated": "2025-06-28T23:54:24.809000+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_salespro_sync_history",
+      "display_name": "Salespro Sync History",
+      "record_count": 3,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_salespro_users",
+      "display_name": "Salespro Users",
+      "record_count": 254,
+      "last_updated": "2025-06-04T09:26:33.413744+00:00",
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_salesrabbit_lead",
+      "display_name": "Salesrabbit Lead",
+      "record_count": 648043,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_salesrabbit_sync_history",
+      "display_name": "Salesrabbit Sync History",
+      "record_count": 0,
+      "last_updated": null,
+      "columns": []
+    },
+    {
+      "table_name": "ingestion_synctracker",
+      "display_name": "Synctracker",
+      "record_count": 3,
+      "last_updated": null,
+      "columns": []
+    }
+  ],
+  "generated_at": "2025-07-03T09:44:08.768026"
+}

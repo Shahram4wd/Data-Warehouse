@@ -25,4 +25,11 @@ urlpatterns = [
     path('api/cancel-unlink-division-analysis/', views.cancel_unlink_division_analysis, name='cancel_unlink_division_analysis'),
     path('api/export-unlink-division-csv/', views.export_unlink_division_csv, name='export_unlink_division_csv'),
     path('api/load-unlink-division-report/<str:filename>/', views.load_unlink_division_report_file, name='load_unlink_division_report_file'),
+
+    # Database Schema Analysis
+    path('api/run-schema-analysis/', views.run_database_schema_analysis, name='run_database_schema_analysis'),
+    path('api/check-schema-analysis-progress/', views.check_schema_analysis_progress, name='check_schema_analysis_progress'),
+    path('api/cancel-schema-analysis/', views.cancel_schema_analysis, name='cancel_schema_analysis'),
+    path('api/export-schema-analysis-csv/', views.export_schema_analysis_csv, name='export_schema_analysis_csv'),
+    path('api/load-schema-analysis-report/<str:filename>/', views.load_schema_analysis_report_file, name='load_schema_analysis_report_file'),
 ]
