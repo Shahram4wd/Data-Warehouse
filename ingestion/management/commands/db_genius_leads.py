@@ -15,16 +15,23 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--table", type=str, default="lead")
         parser.add_argument("--limit", type=int, default=None)
+        parser.add_argument("--added_on_after", type=str, default=None, help="Filter records with added_on after the given date (YYYY-MM-DD)")
 
     def handle(self, *args, **options):
         table_name = options["table"]
         limit = options["limit"]
+        added_on_after = options["added_on_after"]
 
         conn = get_mysql_connection()
         src_cursor = conn.cursor()
         try:
-            # get total
-            src_cursor.execute(f"SELECT COUNT(*) FROM `{table_name}`")
+            # Build the base query
+            base_query = f"SELECT COUNT(*) FROM `{table_name}`"
+            if added_on_after:
+                base_query += f" WHERE added_on > '{added_on_after}'"
+
+            # Get total
+            src_cursor.execute(base_query)
             total = src_cursor.fetchone()[0]
             if limit:
                 total = min(total, limit)
@@ -34,7 +41,7 @@ class Command(BaseCommand):
             with tqdm(total=total, unit="rows") as pbar:
                 while processed < total:
                     chunk = min(MYSQL_FETCH_SIZE, total - processed)
-                    src_cursor.execute(f"""
+                    query = f"""
                         SELECT 
                           lead_id, contact, division,
                           first_name, last_name, address1, address2, city, state, zip,
@@ -60,9 +67,12 @@ class Command(BaseCommand):
                           carpentry_followup_notes, marketing_source, prospect_id,
                           added_by_supervisor, salesrabbit_lead_id, third_party_source_id
                         FROM `{table_name}`
-                        ORDER BY lead_id
-                        LIMIT {chunk} OFFSET {processed}
-                    """)
+                    """
+                    if added_on_after:
+                        query += f" WHERE added_on > '{added_on_after}'"
+                    query += f" ORDER BY lead_id LIMIT {chunk} OFFSET {processed}"
+
+                    src_cursor.execute(query)
                     rows = src_cursor.fetchall()
                     if not rows:
                         break
