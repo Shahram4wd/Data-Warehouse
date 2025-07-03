@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from ingestion.models.genius import Genius_MarketSharpSourceMaps
+from ingestion.models.genius import Genius_MarketSharpMarketingSourceMap
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import timezone as dt_timezone
@@ -58,7 +58,7 @@ class Command(BaseCommand):
         """Process a batch of MarketSharp source map records."""
         to_create = []
         to_update = []
-        existing_records = Genius_MarketSharpSourceMaps.objects.in_bulk([row[0] for row in rows], field_name='marketsharp_id')
+        existing_records = Genius_MarketSharpMarketingSourceMap.objects.in_bulk([row[0] for row in rows], field_name='marketsharp_id')
 
         for row in rows:
             try:
@@ -107,7 +107,7 @@ class Command(BaseCommand):
 
     def _create_record(self, processed_data):
         """Create a new MarketSharp source map record."""
-        return Genius_MarketSharpSourceMaps(
+        return Genius_MarketSharpMarketingSourceMap(
             marketsharp_id=processed_data['marketsharp_id'],
             marketing_source_id=processed_data['marketing_source_id']
         )
@@ -116,11 +116,11 @@ class Command(BaseCommand):
         """Save records to database with error handling."""
         try:
             if to_create:
-                Genius_MarketSharpSourceMaps.objects.bulk_create(to_create, batch_size=BATCH_SIZE, ignore_conflicts=True)
+                Genius_MarketSharpMarketingSourceMap.objects.bulk_create(to_create, batch_size=BATCH_SIZE, ignore_conflicts=True)
                 self.stdout.write(f"Created {len(to_create)} records")
 
             if to_update:
-                Genius_MarketSharpSourceMaps.objects.bulk_update(
+                Genius_MarketSharpMarketingSourceMap.objects.bulk_update(
                     to_update,
                     ['marketsharp_id', 'marketing_source_id'],
                     batch_size=BATCH_SIZE

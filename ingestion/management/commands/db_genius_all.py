@@ -9,22 +9,24 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         commands = [
-            'db_genius_divisions',
-            'db_genius_division_groups',
             'db_genius_user_titles',
             'db_genius_users',
-            'db_genius_marketing_source_types',
-            'db_genius_marketing_sources',
+            'db_genius_services',
+            'db_genius_quotes',
             'db_genius_prospect_sources',
             'db_genius_prospects',
+            'db_genius_marketsharp_sources',
+            'db_genius_marketsharp_marketing_source_maps',
+            'db_genius_marketing_source_types',
+            'db_genius_marketing_sources',
             'db_genius_leads',
-            'db_genius_services',
+            'db_genius_division_groups',
+            'db_genius_divisions',
             'db_genius_appointment_types',
+            'db_genius_appointment_services',
             'db_genius_appointment_outcome_types',
             'db_genius_appointment_outcomes',
             'db_genius_appointments',
-            'db_genius_appointment_services',
-            'db_genius_quotes',
         ]
 
         self.stdout.write(self.style.NOTICE('Starting full Genius DB import sequence...'))

@@ -353,7 +353,7 @@ class Genius_MarketSharpSource(models.Model):
         return self.source_name or f"MarketSharp Source {self.id}"
 
 
-class Genius_MarketSharpSourceMaps(models.Model):
+class Genius_MarketSharpMarketingSourceMap(models.Model):
     marketsharp_id = models.CharField(max_length=128, unique=True)
     marketing_source_id = models.IntegerField(default=-1)
 
