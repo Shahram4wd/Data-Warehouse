@@ -92,7 +92,7 @@ class Command(BaseCommand):
         elif full_sync:
             last_sync = None
         else:
-            last_sync = self.get_last_sync(endpoint)
+            last_sync = await self.get_last_sync_async(endpoint)
         
         if last_sync:
             self.stdout.write(f"Performing delta sync since {last_sync}")
@@ -455,3 +455,8 @@ class Command(BaseCommand):
     def _update_last_sync_async(self, endpoint):
         """Update the last sync time asynchronously"""
         self.update_last_sync(endpoint)
+
+    @sync_to_async
+    def get_last_sync_async(self, endpoint):
+        """Get the last sync time for contacts asynchronously."""
+        return self.get_last_sync(endpoint)

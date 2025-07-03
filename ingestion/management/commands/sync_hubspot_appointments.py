@@ -75,7 +75,7 @@ class Command(BaseCommand):
         client = HubspotClient()
         
         # Determine last sync time
-        last_sync = self._get_last_sync_time(options)
+        last_sync = await self._get_last_sync_time_async(options)
         
         if last_sync:
             self.stdout.write(f'Incremental sync from: {last_sync}')
@@ -95,11 +95,14 @@ class Command(BaseCommand):
     def _get_last_sync_time(self, options):
         """Get the last sync time"""
         if options['full']:
+            self.stdout.write('Full sync requested via --full flag')
             return None
         
         if options['lastmodifieddate']:
             try:
-                return datetime.strptime(options['lastmodifieddate'], '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                result = datetime.strptime(options['lastmodifieddate'], '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                self.stdout.write(f'Using custom lastmodifieddate: {result}')
+                return result
             except ValueError:
                 self.stdout.write(self.style.WARNING('Invalid date format. Using full sync.'))
                 return None
@@ -108,15 +111,53 @@ class Command(BaseCommand):
         try:
             from django.db import connection
             with connection.cursor() as cursor:
+                self.stdout.write('Querying sync history...')
                 cursor.execute(
                     "SELECT last_synced_at FROM ingestion_hubspot_synchistory WHERE endpoint = %s",
                     ['appointments']
                 )
                 row = cursor.fetchone()
+                self.stdout.write(f'Sync history query returned: {row}')
                 if row:
-                    return row[0]
+                    last_sync = row[0]
+                    self.stdout.write(f'Found last sync time: {last_sync}')
+                    return last_sync
+                else:
+                    self.stdout.write('No sync history record found')
+                    return None
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'Error querying sync history: {str(e)}'))
+            return None
+
+    @sync_to_async
+    def _get_last_sync_time_async(self, options):
+        """Get the last sync time (async wrapper)"""
+        if options['full']:
+            self.stdout.write('Full sync requested via --full flag')
+            return None
+        
+        if options['lastmodifieddate']:
+            try:
+                result = datetime.strptime(options['lastmodifieddate'], '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                self.stdout.write(f'Using custom lastmodifieddate: {result}')
+                return result
+            except ValueError:
+                self.stdout.write(self.style.WARNING('Invalid date format. Using full sync.'))
                 return None
-        except Exception:
+        
+        # Get last sync from history using Django ORM - now safe to call from async context
+        try:
+            self.stdout.write('Querying sync history using ORM...')
+            sync_history = Hubspot_SyncHistory.objects.filter(endpoint='appointments').first()
+            if sync_history:
+                last_sync = sync_history.last_synced_at
+                self.stdout.write(f'Found last sync time: {last_sync}')
+                return last_sync
+            else:
+                self.stdout.write('No sync history record found for appointments endpoint')
+                return None
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f'Error querying sync history: {str(e)}'))
             return None
 
     async def _sync_appointments_chunked(self, client, last_sync, options):
