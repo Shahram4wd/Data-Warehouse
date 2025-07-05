@@ -9,24 +9,41 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         commands = [
-            {"name": "db_genius_leads", "options": {"added_on_after": "2025-07-01"}},
-            {"name": "db_genius_user_titles", "options": {}},
-            {"name": "db_genius_users", "options": {}},
-            {"name": "db_genius_services", "options": {}},
-            {"name": "db_genius_quotes", "options": {}},
-            {"name": "db_genius_prospect_sources", "options": {}},
-            {"name": "db_genius_prospects", "options": {}},
-            {"name": "db_genius_marketsharp_sources", "options": {}},
-            {"name": "db_genius_marketsharp_marketing_source_maps", "options": {}},
-            {"name": "db_genius_marketing_source_types", "options": {}},
-            {"name": "db_genius_marketing_sources", "options": {}},
+            # Independent tables (no foreign keys)
             {"name": "db_genius_division_groups", "options": {}},
-            {"name": "db_genius_divisions", "options": {}},
+            {"name": "db_genius_user_titles", "options": {}},
+            {"name": "db_genius_services", "options": {}},
             {"name": "db_genius_appointment_types", "options": {}},
-            {"name": "db_genius_appointment_services", "options": {}},
             {"name": "db_genius_appointment_outcome_types", "options": {}},
             {"name": "db_genius_appointment_outcomes", "options": {}},
-            {"name": "db_genius_appointments", "options": {}}
+            {"name": "db_genius_marketing_source_types", "options": {}},
+            {"name": "db_genius_marketsharp_sources", "options": {}},
+            {"name": "db_genius_marketsharp_marketing_source_maps", "options": {}},
+            
+            # Depends on division_groups
+            {"name": "db_genius_divisions", "options": {}},
+            
+            # Depends on marketing_source_types
+            {"name": "db_genius_marketing_sources", "options": {}},
+            
+            # Depends on divisions and user_titles
+            {"name": "db_genius_users", "options": {}},
+            
+            # Depends on divisions
+            {"name": "db_genius_prospects", "options": {}},
+            {"name": "db_genius_leads", "options": {"added_on_after": "2025-07-01"}},
+            
+            # Depends on prospects and marketing_sources
+            {"name": "db_genius_prospect_sources", "options": {}},
+            
+            # Depends on prospects, prospect_sources, appointment_types, and appointment_outcomes
+            {"name": "db_genius_appointments", "options": {}},
+            
+            # Depends on prospects, appointments, and services
+            {"name": "db_genius_quotes", "options": {}},
+            
+            # Depends on appointments and services
+            {"name": "db_genius_appointment_services", "options": {}},
         ]
 
         self.stdout.write(self.style.NOTICE('Starting full Genius DB import sequence...'))
