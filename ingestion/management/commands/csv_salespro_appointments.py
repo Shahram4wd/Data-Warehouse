@@ -75,12 +75,12 @@ class Command(BaseCommand, BaseSalesProProcessor):
                     "updated_at": self.parse_datetime(row.get("_updated_at")),
                     "is_sale": self.parse_boolean(row.get("isSale")),
                     "result_full_string": row.get("resultFullString") or None,
-                    "customer_last_name": row.get("customer.nameLast") or None,
-                    "customer_first_name": row.get("customer.nameFirst") or None,
-                    "customer_estimate_name": row.get("customer.estimateName") or None,
-                    "salesrep_email": row.get("salesrep.email") or None,
-                    "salesrep_first_name": row.get("salesrep.nameFirst") or None,
-                    "salesrep_last_name": row.get("salesrep.nameLast") or None,
+                    "customer_last_name": row.get("customerLastName") or None,
+                    "customer_first_name": row.get("customerFirstName") or None,
+                    "customer_estimate_name": row.get("estimateName") or None,
+                    "salesrep_email": row.get("salesRepEmail") or None,
+                    "salesrep_first_name": row.get("salesRepFirstName") or None,
+                    "salesrep_last_name": row.get("salesRepLastName") or None,
                     "sale_amount": self.parse_decimal(row.get("saleAmount")),
                 }
 
@@ -151,8 +151,8 @@ class Command(BaseCommand, BaseSalesProProcessor):
             self.stdout.write(f"  ID: {row.get('_id')}")
             self.stdout.write(f"  Created: {row.get('_created_at')}")
             self.stdout.write(f"  Is Sale: {row.get('isSale')}")
-            self.stdout.write(f"  Customer: {row.get('customer.nameFirst')} {row.get('customer.nameLast')}")
-            self.stdout.write(f"  Sales Rep: {row.get('salesrep.nameFirst')} {row.get('salesrep.nameLast')} ({row.get('salesrep.email')})")
+            self.stdout.write(f"  Customer: {row.get('customerFirstName')} {row.get('customerLastName')}")
+            self.stdout.write(f"  Sales Rep: {row.get('salesRepFirstName')} {row.get('salesRepLastName')} ({row.get('salesRepEmail')})")
             self.stdout.write(f"  Sale Amount: ${row.get('saleAmount') or '0'}")
             
         self.stdout.write("\n" + "-" * 80)
