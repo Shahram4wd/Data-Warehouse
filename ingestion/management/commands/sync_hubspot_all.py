@@ -9,12 +9,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         commands = [
-            'sync_hubspot_contacts',
-            'sync_hubspot_deals',
-            'sync_hubspot_appointments',
             'sync_hubspot_divisions',
+            'sync_hubspot_contacts',
+            'sync_hubspot_appointments',
+            'sync_hubspot_deals',
             'sync_hubspot_appointment_contact_assoc',
             'sync_hubspot_contact_division_assoc',
+            'check_removed_hubspot_appointments',
+            'check_removed_hubspot_contacts',
         ]
 
         self.stdout.write(self.style.NOTICE('Starting full HubSpot sync sequence...'))
