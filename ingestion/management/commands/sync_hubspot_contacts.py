@@ -2,7 +2,7 @@
 New HubSpot contacts sync command using the unified architecture
 """
 from ingestion.management.commands.base_hubspot_sync import BaseHubSpotSyncCommand
-from ingestion.sync.hubspot.engines import HubSpotContactSyncEngine
+from ingestion.sync.hubspot.engines.contacts import HubSpotContactSyncEngine
 
 class Command(BaseHubSpotSyncCommand):
     """Sync contacts from HubSpot using new architecture"""

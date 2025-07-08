@@ -50,18 +50,18 @@ class Command(BaseCommand):
         
         # Define sync commands in order of execution
         sync_commands = [
-            ('divisions', 'sync_hubspot_divisions_new'),
-            ('contacts', 'sync_hubspot_contacts_new'),
-            ('appointments', 'sync_hubspot_appointments_new'),
-            ('deals', 'sync_hubspot_deals_new'),
+            ('divisions', 'sync_hubspot_divisions'),
+            ('contacts', 'sync_hubspot_contacts'),
+            ('appointments', 'sync_hubspot_appointments'),
+            ('deals', 'sync_hubspot_deals'),
         ]
         
         # Add association commands if not skipped
         if not options.get('skip_associations'):
             sync_commands.extend([
-                ('contact-deal associations', 'sync_hubspot_associations_new', 
+                ('contact-deal associations', 'sync_hubspot_associations', 
                  ['--from-object', 'contacts', '--to-object', 'deals']),
-                ('contact-appointment associations', 'sync_hubspot_associations_new', 
+                ('contact-appointment associations', 'sync_hubspot_associations', 
                  ['--from-object', 'contacts', '--to-object', 'appointments']),
             ])
         

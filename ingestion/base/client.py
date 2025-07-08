@@ -31,11 +31,14 @@ class BaseAPIClient(ABC):
         
     async def __aenter__(self):
         """Async context manager entry"""
+        # First authenticate to set up headers
+        await self.authenticate()
+        
+        # Then create session with the authenticated headers
         self.session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=self.timeout),
             headers=self.headers
         )
-        await self.authenticate()
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):

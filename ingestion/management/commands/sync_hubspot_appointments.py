@@ -2,7 +2,7 @@
 New HubSpot appointments sync command using the unified architecture
 """
 from ingestion.management.commands.base_hubspot_sync import BaseHubSpotSyncCommand
-from ingestion.sync.hubspot.engines import HubSpotAppointmentSyncEngine
+from ingestion.sync.hubspot.engines.appointments import HubSpotAppointmentSyncEngine
 
 class Command(BaseHubSpotSyncCommand):
     """Sync appointments from HubSpot using new architecture"""

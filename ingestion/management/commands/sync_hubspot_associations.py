@@ -2,7 +2,7 @@
 New HubSpot associations sync command using the unified architecture
 """
 from ingestion.management.commands.base_hubspot_sync import BaseHubSpotSyncCommand
-from ingestion.sync.hubspot.engines import HubSpotAssociationSyncEngine
+from ingestion.sync.hubspot.engines.associations import HubSpotAssociationSyncEngine
 
 class Command(BaseHubSpotSyncCommand):
     """Sync associations from HubSpot using new architecture"""

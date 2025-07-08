@@ -4,6 +4,32 @@ from django.contrib.auth import views as auth_views
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from .views import GeniusUserSyncView
 
+# Import monitoring views directly to avoid module conflicts
+try:
+    from ingestion.views.monitoring import (
+        MonitoringDashboardView,
+        MonitoringAPIView,
+        SyncConfigurationView,
+        SyncControlView,
+        HealthCheckView
+    )
+    monitoring_available = True
+except ImportError:
+    monitoring_available = False
+
+# Define monitoring URLs directly here
+monitoring_urlpatterns = [
+    # Dashboard views
+    path('', MonitoringDashboardView.as_view(), name='monitoring_dashboard'),
+    path('dashboard/', MonitoringDashboardView.as_view(), name='monitoring_dashboard_home'),
+    
+    # API endpoints
+    path('api/data/', MonitoringAPIView.as_view(), name='monitoring_api_data'),
+    path('api/config/', SyncConfigurationView.as_view(), name='monitoring_api_config'),
+    path('api/control/', SyncControlView.as_view(), name='monitoring_api_control'),
+    path('api/health/', HealthCheckView.as_view(), name='monitoring_api_health'),
+] if monitoring_available else []
+
 urlpatterns = [
     # API endpoints
     path('api/sync/genius-users/', GeniusUserSyncView.as_view(), name='sync-genius-users'),
@@ -16,8 +42,11 @@ urlpatterns = [
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 
-    # Redirect root URL to API docs
-    path('', RedirectView.as_view(url='/api/docs/', permanent=False), name='index'),
+    # Monitoring endpoints (included directly)
+    path('monitoring/', include((monitoring_urlpatterns, 'monitoring'), namespace='monitoring')),
+
+    # Redirect root URL to monitoring dashboard
+    path('', RedirectView.as_view(url='/monitoring/', permanent=False), name='index'),
 
     # Added URL patterns for the reports module
     path('reports/', include('reports.urls')),

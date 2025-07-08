@@ -2,7 +2,7 @@
 New HubSpot deals sync command using the unified architecture
 """
 from ingestion.management.commands.base_hubspot_sync import BaseHubSpotSyncCommand
-from ingestion.sync.hubspot.engines import HubSpotDealSyncEngine
+from ingestion.sync.hubspot.engines.deals import HubSpotDealSyncEngine
 
 class Command(BaseHubSpotSyncCommand):
     """Sync deals from HubSpot using new architecture"""

@@ -11,6 +11,23 @@ from ingestion.base.exceptions import SyncException, ValidationException
 
 logger = logging.getLogger(__name__)
 
+# Global flag to track if connection pools are initialized
+_connection_pools_initialized = False
+
+async def ensure_connection_pools_initialized():
+    """Ensure connection pools are initialized (lazy loading)"""
+    global _connection_pools_initialized
+    
+    if not _connection_pools_initialized:
+        try:
+            from ingestion.base.connection_pool import initialize_connection_pools
+            await initialize_connection_pools()
+            _connection_pools_initialized = True
+            logger.info("Connection pools initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize connection pools: {e}")
+            # Don't fail the entire application if connection pools can't be initialized
+
 class BaseSyncEngine(ABC):
     """Universal base class for all CRM sync operations"""
     
@@ -63,13 +80,20 @@ class BaseSyncEngine(ABC):
         """Start sync operation and create history record"""
         from ingestion.models.common import SyncHistory
         
+        # Prepare configuration for JSON serialization
+        config = kwargs.copy()
+        
+        # Convert datetime to string for JSON serialization
+        if 'last_sync' in config and config['last_sync']:
+            config['last_sync'] = config['last_sync'].isoformat()
+        
         self.sync_history = await sync_to_async(SyncHistory.objects.create)(
             crm_source=self.crm_source,
             sync_type=self.sync_type,
             endpoint=kwargs.get('endpoint'),
             start_time=timezone.now(),
             status='running',
-            configuration=kwargs
+            configuration=config
         )
         return self.sync_history
     
@@ -100,40 +124,69 @@ class BaseSyncEngine(ABC):
             await sync_to_async(self.sync_history.save)()
     
     async def run_sync(self, **kwargs):
-        """Main sync execution method"""
+        """Main sync execution method with progress tracking"""
+        from tqdm.asyncio import tqdm
+        
         history = await self.start_sync(**kwargs)
         results = {'processed': 0, 'created': 0, 'updated': 0, 'failed': 0}
+        show_progress = kwargs.get('show_progress', True)
         
         try:
             await self.initialize_client()
             
+            # Get estimated total count if possible
+            estimated_total = kwargs.get('max_records', 0)
+            if estimated_total == 0:
+                estimated_total = await self.estimate_total_records(**kwargs)
+            
             batch_count = 0
-            async for batch in self.fetch_data(**kwargs):
-                batch_count += 1
-                logger.info(f"Processing batch {batch_count} with {len(batch)} records")
+            progress_bar = None
+            
+            if estimated_total > 0 and show_progress:
+                progress_bar = tqdm(
+                    total=estimated_total,
+                    desc=f"Syncing {self.sync_type}",
+                    unit="records",
+                    bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]"
+                )
+            
+            try:
+                async for batch in self.fetch_data(**kwargs):
+                    batch_count += 1
+                    logger.info(f"Processing batch {batch_count} with {len(batch)} records")
+                    
+                    try:
+                        # Transform data
+                        transformed_batch = await self.transform_data(batch)
+                        
+                        # Validate data
+                        validated_batch = await self.validate_data(transformed_batch)
+                        
+                        # Save data using bulk operations
+                        if not self.dry_run:
+                            batch_results = await self.save_data_bulk(validated_batch)
+                            for key, value in batch_results.items():
+                                if key in results:
+                                    results[key] += value
+                        
+                        results['processed'] += len(batch)
+                        
+                        # Update progress bar
+                        if progress_bar:
+                            progress_bar.update(len(batch))
+                        
+                        logger.info(f"Batch {batch_count} completed: {len(batch)} processed")
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing batch {batch_count}: {e}")
+                        results['failed'] += len(batch)
+                        if progress_bar:
+                            progress_bar.update(len(batch))
+                        await self.handle_batch_error(batch, e)
                 
-                try:
-                    # Transform data
-                    transformed_batch = await self.transform_data(batch)
-                    
-                    # Validate data
-                    validated_batch = await self.validate_data(transformed_batch)
-                    
-                    # Save data
-                    if not self.dry_run:
-                        batch_results = await self.save_data(validated_batch)
-                        for key, value in batch_results.items():
-                            if key in results:
-                                results[key] += value
-                    
-                    results['processed'] += len(batch)
-                    
-                    logger.info(f"Batch {batch_count} completed: {len(batch)} processed")
-                    
-                except Exception as e:
-                    logger.error(f"Error processing batch {batch_count}: {e}")
-                    results['failed'] += len(batch)
-                    await self.handle_batch_error(batch, e)
+            finally:
+                if progress_bar:
+                    progress_bar.close()
             
             await self.complete_sync(results)
             
@@ -159,3 +212,14 @@ class BaseSyncEngine(ABC):
             except Exception as individual_error:
                 logger.error(f"Individual record processing failed: {individual_error}")
                 pass
+    
+    async def estimate_total_records(self, **kwargs) -> int:
+        """Estimate total number of records to be synced"""
+        # Default implementation returns 0 (unknown)
+        # Subclasses should override this for better progress tracking
+        return 0
+    
+    async def save_data_bulk(self, validated_data: List[Dict]) -> Dict[str, int]:
+        """Save data using bulk operations - to be implemented by subclasses"""
+        # Fallback to regular save_data if not implemented
+        return await self.save_data(validated_data)

@@ -35,3 +35,15 @@ services:
     image: redis:7
     ports:
       - "6379:6379"
+
+  test:
+    build: .
+    command: python test_hubspot_docker.py
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    environment:
+      - DJANGO_SETTINGS_MODULE=data_warehouse.settings

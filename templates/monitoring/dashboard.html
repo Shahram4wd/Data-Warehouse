@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Warehouse - Enterprise Monitoring Dashboard</title>
+    
+    <!-- CSS Dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css" rel="stylesheet">
+    
+    <style>
+        .dashboard-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .metric-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .status-healthy { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-critical { background-color: #dc3545; }
+        
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .alert-item {
+            border-left: 4px solid;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background: white;
+        }
+        
+        .alert-error { border-left-color: #dc3545; background: #f8d7da; }
+        .alert-warning { border-left-color: #ffc107; background: #fff3cd; }
+        .alert-info { border-left-color: #17a2b8; background: #d1ecf1; }
+        
+        .sidebar {
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            margin: 5px 0;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .main-content {
+            background: #f8f9fa;
+            min-height: 100vh;
+            padding: 30px;
+        }
+        
+        .refresh-indicator {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .connection-pool-status {
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .pool-healthy { background: #d4edda; border: 1px solid #c3e6cb; }
+        .pool-warning { background: #fff3cd; border: 1px solid #ffeaa7; }
+        .pool-critical { background: #f8d7da; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar">
+                <div class="text-center mb-4">
+                    <h4 class="text-white">
+                        <i class="fas fa-chart-line"></i>
+                        DW Monitor
+                    </h4>
+                </div>
+                
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="#dashboard" data-tab="dashboard">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a class="nav-link" href="#performance" data-tab="performance">
+                        <i class="fas fa-chart-bar"></i> Performance
+                    </a>
+                    <a class="nav-link" href="#connections" data-tab="connections">
+                        <i class="fas fa-network-wired"></i> Connections
+                    </a>
+                    <a class="nav-link" href="#automation" data-tab="automation">
+                        <i class="fas fa-cogs"></i> Automation
+                    </a>
+                    <a class="nav-link" href="#alerts" data-tab="alerts">
+                        <i class="fas fa-bell"></i> Alerts
+                    </a>
+                    <a class="nav-link" href="#security" data-tab="security">
+                        <i class="fas fa-shield-alt"></i> Security
+                    </a>
+                </nav>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-md-10 main-content">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h3">Enterprise Monitoring Dashboard</h1>
+                    <div class="d-flex align-items-center">
+                        <span class="me-3">Last Updated: <span id="lastUpdated">{{ last_updated }}</span></span>
+                        <button class="btn btn-primary btn-sm" onclick="refreshDashboard()">
+                            <i class="fas fa-sync-alt" id="refreshIcon"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Dashboard Tab -->
+                <div id="dashboard-tab" class="tab-content active">
+                    <!-- Key Metrics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card dashboard-card text-center">
+                                <div class="card-body">
+                                    <div class="metric-value" id="successRate">{{ metrics.success_rate_24h|floatformat:1 }}%</div>
+                                    <div class="metric-label">Success Rate (24h)</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card dashboard-card text-center">
+                                <div class="card-body">
+                                    <div class="metric-value" id="avgSpeed">{{ metrics.avg_processing_speed|floatformat:0 }}</div>
+                                    <div class="metric-label">Records/Min</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card dashboard-card text-center">
+                                <div class="card-body">
+                                    <div class="metric-value" id="activeSync">{{ metrics.active_syncs }}</div>
+                                    <div class="metric-label">Active Syncs</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card dashboard-card text-center">
+                                <div class="card-body">
+                                    <div class="metric-value" id="dataQuality">{{ metrics.data_quality_score|floatformat:1 }}%</div>
+                                    <div class="metric-label">Data Quality</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Charts Row -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="chart-container">
+                                <h5>Performance Trends</h5>
+                                <canvas id="performanceChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="chart-container">
+                                <h5>System Health</h5>
+                                <canvas id="healthChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alerts and Status -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5>Recent Alerts</h5>
+                                <div id="alertsList">
+                                    {% for alert in alerts %}
+                                    <div class="alert-item alert-{{ alert.type }}">
+                                        <strong>{{ alert.message }}</strong>
+                                        <br><small>Threshold: {{ alert.threshold }}</small>
+                                    </div>
+                                    {% empty %}
+                                    <div class="text-muted">No recent alerts</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5>Error Distribution</h5>
+                                <canvas id="errorChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Performance Tab -->
+                <div id="performance-tab" class="tab-content">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="chart-container">
+                                <h5>Detailed Performance Metrics</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <canvas id="memoryChart"></canvas>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <canvas id="cpuChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Connections Tab -->
+                <div id="connections-tab" class="tab-content">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="chart-container">
+                                <h5>Connection Pool Status</h5>
+                                <div id="connectionPools">
+                                    <!-- Connection pools will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Automation Tab -->
+                <div id="automation-tab" class="tab-content">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="chart-container">
+                                <h5>Automation Actions</h5>
+                                <div id="automationActions">
+                                    <!-- Automation actions will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="chart-container">
+                                <h5>Pending Approvals</h5>
+                                <div id="pendingApprovals">
+                                    <!-- Pending approvals will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Alerts Tab -->
+                <div id="alerts-tab" class="tab-content">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="chart-container">
+                                <h5>Alert Management</h5>
+                                <div id="alertManagement">
+                                    <!-- Alert management will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Security Tab -->
+                <div id="security-tab" class="tab-content">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5>Credential Status</h5>
+                                <div id="credentialStatus">
+                                    <!-- Credential status will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="chart-container">
+                                <h5>Access Audit Log</h5>
+                                <div id="auditLog">
+                                    <!-- Audit log will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.1/index.min.js"></script>
+    
+    <script>
+        // Global variables
+        let charts = {};
+        let websocket = null;
+        let currentTab = 'dashboard';
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            initializeWebSocket();
+            initializeTabNavigation();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(refreshDashboard, 30000);
+        });
+        
+        // Initialize charts
+        function initializeCharts() {
+            // Performance trend chart
+            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            charts.performance = new Chart(performanceCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Records/Min',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1
+                    }, {
+                        label: 'Success Rate %',
+                        data: [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.1,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        }
+                    }
+                }
+            });
+            
+            // Health status chart
+            const healthCtx = document.getElementById('healthChart').getContext('2d');
+            charts.health = new Chart(healthCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Healthy', 'Warning', 'Critical'],
+                    datasets: [{
+                        data: [{{ metrics.success_rate_24h|floatformat:0 }}, 
+                               {{ metrics.validation_error_rate|floatformat:0 }}, 
+                               {{ metrics.failed_syncs_24h }}],
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            
+            // Error distribution chart
+            const errorCtx = document.getElementById('errorChart').getContext('2d');
+            charts.error = new Chart(errorCtx, {
+                type: 'bar',
+                data: {
+                    labels: [{% for error in metrics.top_errors %}'{{ error.category }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                    datasets: [{
+                        label: 'Error Count',
+                        data: [{% for error in metrics.top_errors %}{{ error.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                        backgroundColor: 'rgba(220, 53, 69, 0.8)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Initialize WebSocket connection
+        function initializeWebSocket() {
+            if (window.location.protocol === 'https:') {
+                websocket = new WebSocket('wss://' + window.location.host + '/ws/dashboard/');
+            } else {
+                websocket = new WebSocket('ws://' + window.location.host + '/ws/dashboard/');
+            }
+            
+            websocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                if (data.type === 'metrics_update') {
+                    updateDashboard(data.data);
+                }
+            };
+            
+            websocket.onclose = function(e) {
+                console.log('WebSocket closed, attempting to reconnect...');
+                setTimeout(initializeWebSocket, 3000);
+            };
+            
+            websocket.onerror = function(e) {
+                console.error('WebSocket error:', e);
+            };
+        }
+        
+        // Initialize tab navigation
+        function initializeTabNavigation() {
+            document.querySelectorAll('[data-tab]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    switchTab(this.dataset.tab);
+                });
+            });
+        }
+        
+        // Switch tabs
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Update navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            currentTab = tabName;
+            
+            // Load tab-specific data
+            loadTabData(tabName);
+        }
+        
+        // Load tab-specific data
+        function loadTabData(tabName) {
+            switch(tabName) {
+                case 'connections':
+                    loadConnectionPools();
+                    break;
+                case 'automation':
+                    loadAutomationData();
+                    break;
+                case 'alerts':
+                    loadAlertManagement();
+                    break;
+                case 'security':
+                    loadSecurityData();
+                    break;
+            }
+        }
+        
+        // Load connection pools data
+        function loadConnectionPools() {
+            fetch('/api/monitoring/connection-health/')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('connectionPools');
+                    container.innerHTML = '';
+                    
+                    Object.entries(data.pools).forEach(([name, stats]) => {
+                        const poolDiv = document.createElement('div');
+                        poolDiv.className = `connection-pool-status pool-${data.pools[name]}`;
+                        poolDiv.innerHTML = `
+                            <h6>${name}</h6>
+                            <div class="row">
+                                <div class="col-md-3">Active: ${stats.active_connections}</div>
+                                <div class="col-md-3">Idle: ${stats.idle_connections}</div>
+                                <div class="col-md-3">Total: ${stats.total_connections}</div>
+                                <div class="col-md-3">Utilization: ${(stats.utilization * 100).toFixed(1)}%</div>
+                            </div>
+                        `;
+                        container.appendChild(poolDiv);
+                    });
+                })
+                .catch(error => console.error('Error loading connection pools:', error));
+        }
+        
+        // Load automation data
+        function loadAutomationData() {
+            fetch('/api/monitoring/automation-status/')
+                .then(response => response.json())
+                .then(data => {
+                    // Load automation actions
+                    const actionsContainer = document.getElementById('automationActions');
+                    actionsContainer.innerHTML = '<h6>Recent Automation Actions</h6>';
+                    
+                    data.recent_actions.forEach(action => {
+                        const actionDiv = document.createElement('div');
+                        actionDiv.className = `alert-item ${action.success ? 'alert-info' : 'alert-error'}`;
+                        actionDiv.innerHTML = `
+                            <strong>${action.rule_name}</strong>: ${action.message}
+                            <br><small>${new Date(action.timestamp).toLocaleString()}</small>
+                        `;
+                        actionsContainer.appendChild(actionDiv);
+                    });
+                    
+                    // Load pending approvals
+                    const approvalsContainer = document.getElementById('pendingApprovals');
+                    approvalsContainer.innerHTML = '<h6>Pending Approvals</h6>';
+                    
+                    if (data.pending_approvals && data.pending_approvals.length > 0) {
+                        data.pending_approvals.forEach(approval => {
+                            const approvalDiv = document.createElement('div');
+                            approvalDiv.innerHTML = `
+                                <div class="card mb-2">
+                                    <div class="card-body">
+                                        <h6>${approval.rule_name}</h6>
+                                        <p>${approval.action}</p>
+                                        <button class="btn btn-success btn-sm" onclick="approveAction('${approval.id}')">Approve</button>
+                                        <button class="btn btn-danger btn-sm" onclick="rejectAction('${approval.id}')">Reject</button>
+                                    </div>
+                                </div>
+                            `;
+                            approvalsContainer.appendChild(approvalDiv);
+                        });
+                    } else {
+                        approvalsContainer.innerHTML += '<div class="text-muted">No pending approvals</div>';
+                    }
+                })
+                .catch(error => console.error('Error loading automation data:', error));
+        }
+        
+        // Load alert management
+        function loadAlertManagement() {
+            const container = document.getElementById('alertManagement');
+            container.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Active Alerts</h6>
+                        <div id="activeAlerts"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Alert History</h6>
+                        <div id="alertHistory"></div>
+                    </div>
+                </div>
+            `;
+            
+            // Load alert data would go here
+        }
+        
+        // Load security data
+        function loadSecurityData() {
+            const credentialContainer = document.getElementById('credentialStatus');
+            const auditContainer = document.getElementById('auditLog');
+            
+            credentialContainer.innerHTML = '<h6>Credential Rotation Status</h6><div class="text-muted">Loading...</div>';
+            auditContainer.innerHTML = '<h6>Recent Access Events</h6><div class="text-muted">Loading...</div>';
+            
+            // Load security data would go here
+        }
+        
+        // Refresh dashboard
+        function refreshDashboard() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            refreshIcon.classList.add('refresh-indicator');
+            
+            fetch('/api/monitoring/metrics/')
+                .then(response => response.json())
+                .then(data => {
+                    updateDashboard(data.data);
+                    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+                })
+                .finally(() => {
+                    refreshIcon.classList.remove('refresh-indicator');
+                });
+        }
+        
+        // Update dashboard with new data
+        function updateDashboard(data) {
+            const metrics = data.metrics;
+            
+            // Update key metrics
+            document.getElementById('successRate').textContent = (metrics.success_rate_24h * 100).toFixed(1) + '%';
+            document.getElementById('avgSpeed').textContent = Math.round(metrics.avg_processing_speed);
+            document.getElementById('activeSync').textContent = metrics.active_syncs;
+            document.getElementById('dataQuality').textContent = (metrics.data_quality_score * 100).toFixed(1) + '%';
+            
+            // Update charts if they exist
+            if (charts.health) {
+                charts.health.data.datasets[0].data = [
+                    metrics.success_rate_24h * 100,
+                    metrics.validation_error_rate * 100,
+                    metrics.failed_syncs_24h
+                ];
+                charts.health.update();
+            }
+            
+            // Update alerts
+            const alertsList = document.getElementById('alertsList');
+            if (alertsList && data.alerts) {
+                alertsList.innerHTML = '';
+                data.alerts.forEach(alert => {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = `alert-item alert-${alert.type}`;
+                    alertDiv.innerHTML = `
+                        <strong>${alert.message}</strong>
+                        <br><small>Threshold: ${alert.threshold}</small>
+                    `;
+                    alertsList.appendChild(alertDiv);
+                });
+            }
+        }
+        
+        // Approve automation action
+        function approveAction(approvalId) {
+            fetch(`/api/monitoring/approve-action/${approvalId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Action approved successfully');
+                    loadAutomationData();
+                } else {
+                    alert('Failed to approve action: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error approving action:', error);
+                alert('Error approving action');
+            });
+        }
+        
+        // Reject automation action
+        function rejectAction(approvalId) {
+            const reason = prompt('Rejection reason (optional):');
+            
+            fetch(`/api/monitoring/reject-action/${approvalId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ reason: reason })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Action rejected successfully');
+                    loadAutomationData();
+                } else {
+                    alert('Failed to reject action: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error rejecting action:', error);
+                alert('Error rejecting action');
+            });
+        }
+        
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+</body>
+</html>

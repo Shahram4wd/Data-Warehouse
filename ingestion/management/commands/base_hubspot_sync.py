@@ -1,5 +1,20 @@
 """
-Base management command for HubSpot sync operations using new architecture
+Base management command for HubSpot sync o        parser.add_argument(
+            "--max-records",
+            type=int,
+            default=0,
+            help="Maximum number of records to sync (0 for unlimited)"
+        )
+        parser.add_argument(
+            "--since",
+            type=str,
+            help="Sync records modified since this date (YYYY-MM-DD format)"
+        )
+        parser.add_argument(
+            "--no-progress",
+            action="store_true",
+            help="Disable progress bar display"
+        )sing new architecture
 """
 import asyncio
 import logging
@@ -8,6 +23,8 @@ from typing import Optional
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django.conf import settings
+from asgiref.sync import sync_to_async
+from tqdm import tqdm
 from ingestion.base.sync_engine import BaseSyncEngine
 from ingestion.models.common import SyncHistory
 
@@ -92,14 +109,15 @@ class BaseHubSpotSyncCommand(BaseCommand):
     async def run_sync(self, **options):
         """Run the sync operation"""
         # Determine last sync time
-        last_sync = self.get_last_sync_time(**options)
+        last_sync = await self.get_last_sync_time_async(**options)
         
         # Prepare sync parameters
         sync_params = {
             'last_sync': last_sync,
             'limit': options.get('batch_size', 100),
             'max_records': options.get('max_records', 0),
-            'endpoint': self.get_sync_name()
+            'endpoint': self.get_sync_name(),
+            'show_progress': not options.get('no_progress', False)
         }
         
         if options.get('debug'):
@@ -128,11 +146,53 @@ class BaseHubSpotSyncCommand(BaseCommand):
         
         # Get last successful sync from database
         try:
+            # Use sync database access - this method is called from sync context
             last_sync_record = SyncHistory.objects.filter(
                 crm_source='hubspot',
                 sync_type=self.get_sync_name(),
                 status='success'
             ).order_by('-end_time').first()
+            
+            if last_sync_record:
+                self.stdout.write(f"Performing incremental sync since {last_sync_record.end_time}")
+                return last_sync_record.end_time
+            else:
+                self.stdout.write("No previous sync found, performing full sync")
+                return None
+                
+        except Exception as e:
+            logger.warning(f"Error getting last sync time: {e}")
+            self.stdout.write("Error getting last sync time, performing full sync")
+            return None
+    
+    async def get_last_sync_time_async(self, **options) -> Optional[datetime]:
+        """Determine the last sync time (async version)"""
+        # Priority: 1) --since parameter, 2) database last sync, 3) full sync
+        if options.get('since'):
+            try:
+                last_sync = datetime.strptime(options['since'], "%Y-%m-%d")
+                last_sync = timezone.make_aware(last_sync)
+                self.stdout.write(f"Using provided since date: {options['since']}")
+                return last_sync
+            except ValueError:
+                raise CommandError(f"Invalid date format for --since. Use YYYY-MM-DD format.")
+        
+        if options.get('full'):
+            self.stdout.write("Performing full sync")
+            return None
+        
+        # Get last successful sync from database using async database access
+        try:
+            # Convert Django ORM query to async
+            @sync_to_async
+            def get_last_sync_record():
+                return SyncHistory.objects.filter(
+                    crm_source='hubspot',
+                    sync_type=self.get_sync_name(),
+                    status='success'
+                ).order_by('-end_time').first()
+            
+            last_sync_record = await get_last_sync_record()
             
             if last_sync_record:
                 self.stdout.write(f"Performing incremental sync since {last_sync_record.end_time}")

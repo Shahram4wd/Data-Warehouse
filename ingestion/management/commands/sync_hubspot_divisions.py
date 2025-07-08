@@ -2,7 +2,7 @@
 New HubSpot divisions sync command using the unified architecture
 """
 from ingestion.management.commands.base_hubspot_sync import BaseHubSpotSyncCommand
-from ingestion.sync.hubspot.engines import HubSpotDivisionSyncEngine
+from ingestion.sync.hubspot.engines.divisions import HubSpotDivisionSyncEngine
 
 class Command(BaseHubSpotSyncCommand):
     """Sync divisions from HubSpot using new architecture"""
