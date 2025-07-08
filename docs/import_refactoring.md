@@ -1647,41 +1647,67 @@ class [CRM][Entity]SyncEngine(BaseSyncEngine):
 
 ## CRM-Specific Recommendations
 
+### Standard Implementation Patterns
+All CRM integrations should follow these unified patterns established from HubSpot implementation:
+
+#### Architecture Standards
+1. **Sync History**: Use unified `SyncHistory` model from `ingestion.models.common`
+2. **Client Architecture**: Multiple specialized clients (one per entity type)
+3. **Validation Framework**: Full enterprise-level validation matching HubSpot standards
+4. **Enterprise Features**: Implement all enterprise features (monitoring, connection pooling, encryption, automation)
+5. **Management Commands**: Individual commands per entity type + unified "sync_all" command
+6. **Base Classes**: All implementations inherit from unified base classes
+
+#### Batch Size Guidelines
+- **Default**: Use global batch size recommendations
+- **API Rate Limited**: Reduce batch size (e.g., HubSpot: 100)
+- **High Performance APIs**: Increase batch size if testing shows significant improvement (e.g., Arrivy: 1000)
+
 ### Genius CRM
 - **Batch Size**: 500 (database direct access allows larger batches)
 - **Key Features**: Direct database sync, API sync, foreign key resolution
 - **Error Handling**: Exponential backoff for API, connection retry for database
 - **Special Considerations**: Handle both MySQL direct and API endpoints
+- **Architecture**: Follow unified patterns with specialized database and API clients
 
-### HubSpot
+### HubSpot (Reference Implementation)
 - **Batch Size**: 100 (API rate limits require smaller batches)
 - **Key Features**: Complex associations, webhook support, OAuth2
 - **Error Handling**: Adaptive retry based on rate limit headers
 - **Special Considerations**: Handle nested object relationships, respect rate limits
+- **Architecture**: Full enterprise implementation with modular clients, processors, engines
 
 ### MarketSharp
 - **Batch Size**: 200 (XML processing overhead)
 - **Key Features**: XML/OData API, field mapping configuration
 - **Error Handling**: XML parsing error recovery, connection retry
 - **Special Considerations**: Complex XML structure transformation
+- **Architecture**: Follow unified patterns with XML-specific processors
 
 ### ActiveProspect
 - **Batch Size**: 100 (event-based processing)
 - **Key Features**: Event streaming, webhook support, real-time processing
 - **Error Handling**: Event-level error handling, retry with backoff
 - **Special Considerations**: Event deduplication, real-time processing
+- **Architecture**: Follow unified patterns with event-specific processors
 
 ### SalesPro
 - **Batch Size**: 500 (CSV processing)
 - **Key Features**: CSV import only, batch processing
 - **Error Handling**: Individual record fallback, CSV parsing errors
 - **Special Considerations**: File processing, header mapping
+- **Architecture**: Follow unified patterns with file-specific processors
 
 ### Arrivy
-- **Batch Size**: 1000 (large file processing)
-- **Key Features**: Large CSV files, bulk operations
-- **Error Handling**: Memory-efficient processing, bulk error handling
-- **Special Considerations**: Memory management for large files
+- **Batch Size**: 1000 (API allows larger batches for better performance)
+- **Key Features**: API-only integration (CSV processing deprecated), bulk operations
+- **Error Handling**: Enterprise-grade error handling with retry logic
+- **Special Considerations**: Large data volumes, multiple entity types (tasks, groups, entities)
+- **Architecture**: Full enterprise implementation following HubSpot patterns
+  - Multiple specialized clients (tasks, groups, entities, location_reports, task_statuses)
+  - Enterprise validation framework
+  - Individual commands per entity + unified sync_arrivy_all command
+  - Unified SyncHistory model usage
 
 ## Migration Strategy
 
