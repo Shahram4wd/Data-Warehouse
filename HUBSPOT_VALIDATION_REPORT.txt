@@ -1,0 +1,79 @@
+================================================================================
+HUBSPOT REFACTORING VALIDATION REPORT
+================================================================================
+Generated: 2025-07-08 01:36:24
+Environment: Docker Container
+
+1. BASE CLASSES IMPORT TEST
+----------------------------------------
+✓ ingestion.base.exceptions.ValidationException
+✓ ingestion.base.client.BaseAPIClient
+✓ ingestion.base.processor.BaseDataProcessor
+✓ ingestion.base.sync_engine.BaseSyncEngine
+Base classes: 4/4 passed
+
+2. HUBSPOT SYNC COMPONENTS TEST
+----------------------------------------
+✓ ingestion.sync.hubspot.client.HubSpotClient
+✓ ingestion.sync.hubspot.processors.HubSpotContactProcessor
+✓ ingestion.sync.hubspot.processors.HubSpotAppointmentProcessor
+✓ ingestion.sync.hubspot.processors.HubSpotDivisionProcessor
+✓ ingestion.sync.hubspot.processors.HubSpotDealProcessor
+✓ ingestion.sync.hubspot.engines.HubSpotContactSyncEngine
+✓ ingestion.sync.hubspot.engines.HubSpotAppointmentSyncEngine
+✓ ingestion.sync.hubspot.engines.HubSpotDivisionSyncEngine
+✓ ingestion.sync.hubspot.engines.HubSpotDealSyncEngine
+✓ ingestion.sync.hubspot.engines.HubSpotAssociationSyncEngine
+HubSpot components: 10/10 passed
+
+3. MODEL IMPORTS TEST
+----------------------------------------
+✓ Common models (SyncHistory, SyncConfiguration, APICredential)
+✓ HubSpot models (Contact, Appointment, Division, Deal)
+Models: All passed
+
+4. MANAGEMENT COMMANDS TEST
+----------------------------------------
+✓ sync_hubspot_contacts_new
+✓ sync_hubspot_appointments_new
+✓ sync_hubspot_divisions_new
+✓ sync_hubspot_deals_new
+✓ sync_hubspot_associations_new
+✓ sync_hubspot_all_new
+✓ validate_hubspot_new
+✓ hubspot_parallel_test
+Commands: 8/8 passed
+
+5. FILE STRUCTURE TEST
+----------------------------------------
+✓ ingestion/base/__init__.py
+✓ ingestion/base/exceptions.py
+✓ ingestion/base/client.py
+✓ ingestion/base/processor.py
+✓ ingestion/base/sync_engine.py
+✓ ingestion/sync/__init__.py
+✓ ingestion/sync/hubspot/__init__.py
+✓ ingestion/sync/hubspot/client.py
+✓ ingestion/sync/hubspot/processors.py
+✓ ingestion/sync/hubspot/engines.py
+✓ ingestion/management/commands/sync_hubspot_contacts_new.py
+✓ ingestion/management/commands/sync_hubspot_appointments_new.py
+✓ ingestion/management/commands/sync_hubspot_divisions_new.py
+✓ ingestion/management/commands/sync_hubspot_deals_new.py
+✓ ingestion/management/commands/sync_hubspot_associations_new.py
+✓ ingestion/management/commands/sync_hubspot_all_new.py
+✓ ingestion/management/commands/validate_hubspot_new.py
+✓ ingestion/management/commands/hubspot_parallel_test.py
+Files: 18/18 passed
+
+================================================================================
+SUMMARY
+================================================================================
+Overall: 5/5 test suites passed
+🎉 ALL TESTS PASSED! HubSpot refactoring is ready for Phase 2.
+
+NEXT STEPS:
+1. Run parallel testing to compare old vs new sync results
+2. Validate data consistency and performance
+3. Plan for Phase 3 (remove old commands)
+================================================================================

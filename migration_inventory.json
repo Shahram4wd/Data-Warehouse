@@ -1,0 +1,43 @@
+{
+  "timestamp": "2025-07-08T01:43:07.355937",
+  "phase": "3",
+  "migration_type": "hubspot_refactoring",
+  "files_to_remove": {
+    "old_commands": [
+      "ingestion/management/commands/sync_hubspot_contacts.py",
+      "ingestion/management/commands/sync_hubspot_appointments.py",
+      "ingestion/management/commands/sync_hubspot_divisions.py",
+      "ingestion/management/commands/sync_hubspot_deals.py",
+      "ingestion/management/commands/sync_hubspot_all.py",
+      "ingestion/management/commands/sync_hubspot_contact_division_assoc.py",
+      "ingestion/management/commands/sync_hubspot_appointment_contact_assoc.py",
+      "ingestion/management/commands/validate_hubspot_data.py",
+      "ingestion/management/commands/test_hubspot_parallel.py"
+    ],
+    "old_files": [
+      "ingestion/hubspot/hubspot_client.py",
+      "ingestion/hubspot/__init__.py",
+      "ingestion/hubspot/README.md"
+    ]
+  },
+  "files_to_rename": {
+    "sync_hubspot_contacts_new.py": "sync_hubspot_contacts.py",
+    "sync_hubspot_appointments_new.py": "sync_hubspot_appointments.py",
+    "sync_hubspot_divisions_new.py": "sync_hubspot_divisions.py",
+    "sync_hubspot_deals_new.py": "sync_hubspot_deals.py",
+    "sync_hubspot_associations_new.py": "sync_hubspot_associations.py",
+    "sync_hubspot_all_new.py": "sync_hubspot_all.py",
+    "validate_hubspot_new.py": "validate_hubspot.py"
+  },
+  "new_architecture": [
+    "ingestion/base/exceptions.py",
+    "ingestion/base/client.py",
+    "ingestion/base/processor.py",
+    "ingestion/base/sync_engine.py",
+    "ingestion/sync/hubspot/client.py",
+    "ingestion/sync/hubspot/processors.py",
+    "ingestion/sync/hubspot/engines.py",
+    "ingestion/models/common.py"
+  ],
+  "backup_location": "backups/phase3_migration_backup/"
+}
