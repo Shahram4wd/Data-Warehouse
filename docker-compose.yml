@@ -38,7 +38,7 @@ services:
 
   test:
     build: .
-    command: python test_hubspot_docker.py
+    command: python ingestion/tests/test_hubspot_docker.py
     volumes:
       - .:/app
     env_file:
