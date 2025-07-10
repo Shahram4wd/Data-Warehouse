@@ -21,6 +21,11 @@ class HubSpotBaseSyncEngine(BaseSyncEngine):
         self.credential_manager = None
         self.automation_engine = None
         self.alert_system = None
+    
+    @property
+    def entity_type(self) -> str:
+        """Get entity type (alias for sync_type for clarity)"""
+        return self.sync_type
         
     async def initialize_enterprise_features(self):
         """Initialize enterprise features"""

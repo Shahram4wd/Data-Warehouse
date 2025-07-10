@@ -350,6 +350,61 @@ class AlertManager:
             
         except Exception as e:
             logger.error(f"Error during alert manager cleanup: {e}")
+    
+    async def send_alert(self, alert_type: str, message: str, context: Dict = None, severity: str = 'info') -> None:
+        """
+        Send alert using enterprise alerting workflow
+        
+        This method provides compatibility with the legacy alert interface
+        while using the enterprise alerting system internally.
+        """
+        try:
+            # Map severity strings to AlertSeverity enum
+            severity_mapping = {
+                'info': AlertSeverity.LOW,
+                'warning': AlertSeverity.MEDIUM,
+                'error': AlertSeverity.HIGH,
+                'critical': AlertSeverity.CRITICAL
+            }
+            
+            # Map alert type strings to AlertType enum
+            alert_type_mapping = {
+                'sync_error': AlertType.SYNC_FAILURE,
+                'sync_performance': AlertType.PERFORMANCE,
+                'performance': AlertType.PERFORMANCE,
+                'error_rate': AlertType.ERROR_RATE,
+                'resource_usage': AlertType.RESOURCE_USAGE,
+                'data_quality': AlertType.DATA_QUALITY,
+                'system_health': AlertType.SYSTEM_HEALTH
+            }
+            
+            # Get mapped values or defaults
+            alert_severity = severity_mapping.get(severity, AlertSeverity.LOW)
+            mapped_alert_type = alert_type_mapping.get(alert_type, AlertType.SYSTEM_HEALTH)
+            
+            # Create alert using enterprise system
+            alert = Alert(
+                id=self.generate_alert_id(),
+                alert_type=mapped_alert_type,
+                severity=alert_severity,
+                title=f"{alert_type.replace('_', ' ').title()} Alert",
+                message=message,
+                details=context or {},
+                timestamp=timezone.now(),
+                source="compatibility_layer"
+            )
+            
+            # Add to active alerts and history
+            self.active_alerts[alert.id] = alert
+            self.alert_history.append(alert)
+            
+            # Send notifications through enterprise channels
+            await self.send_notifications(alert)
+            
+            logger.info(f"Alert sent via compatibility layer: {alert.title} - {alert.message}")
+            
+        except Exception as e:
+            logger.error(f"Error in send_alert compatibility method: {e}")
 
 class NotificationChannel:
     """Base class for notification channels"""
