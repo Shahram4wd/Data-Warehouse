@@ -95,14 +95,25 @@ class PerformanceMonitor:
         self.metrics.append(metrics)
         self._update_aggregated_metrics(metrics)
         
-        self.logger.info(
-            f"Operation {metrics.operation_name} completed: "
-            f"{metrics.records_processed} records in {metrics.duration:.2f}s "
-            f"({metrics.throughput:.2f} records/s, {metrics.success_rate:.2%} success rate)"
-        )
+        # Only log INFO for operations that actually processed records
+        if metrics.records_processed > 0:
+            self.logger.info(
+                f"Operation {metrics.operation_name} completed: "
+                f"{metrics.records_processed} records in {metrics.duration:.2f}s "
+                f"({metrics.throughput:.2f} records/s, {metrics.success_rate:.2%} success rate)"
+            )
+        else:
+            # Log zero-record operations at DEBUG level to avoid spam
+            self.logger.debug(
+                f"Operation {metrics.operation_name} completed: "
+                f"{metrics.records_processed} records in {metrics.duration:.2f}s "
+                f"({metrics.throughput:.2f} records/s, {metrics.success_rate:.2%} success rate)"
+            )
         
         # Check for zero records and trigger automation if needed
-        if metrics.records_processed == 0 and metrics.duration > 0:
+        # Only trigger automation for operations that took some meaningful time (e.g., > 0.1 seconds)
+        # This prevents triggering automation for utility functions like parse_datetime
+        if metrics.records_processed == 0 and metrics.duration > 0.1:
             self._trigger_zero_record_automation(metrics)
         
         return metrics

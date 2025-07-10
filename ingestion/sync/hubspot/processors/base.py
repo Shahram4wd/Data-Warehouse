@@ -18,7 +18,7 @@ from ingestion.base.validators import (
 )
 from ingestion.base.retry import retry_with_backoff, RetryConfig
 from ingestion.base.config import SyncConfiguration
-from ingestion.base.performance import performance_monitor, monitor_performance
+from ingestion.base.performance import performance_monitor
 from ingestion.sync.hubspot.validators import (
     HubSpotEmailValidator, HubSpotPhoneValidator, HubSpotObjectIdValidator,
     HubSpotTimestampValidator, HubSpotCurrencyValidator, HubSpotZipCodeValidator,
@@ -144,7 +144,6 @@ class HubSpotBaseProcessor(BaseDataProcessor):
                 raise ValidationException(f"Field '{field_name}': Validation error")
             return value
     
-    @monitor_performance('parse_datetime')
     def _parse_datetime(self, value: Any) -> Optional[datetime]:
         """Parse datetime from HubSpot format using validator"""
         try:
@@ -184,7 +183,6 @@ class HubSpotBaseProcessor(BaseDataProcessor):
         
         return None
     
-    @monitor_performance('parse_decimal')
     def _parse_decimal(self, value: Any) -> Optional[Decimal]:
         """Parse decimal value using validator"""
         try:
@@ -203,7 +201,6 @@ class HubSpotBaseProcessor(BaseDataProcessor):
             logger.warning(f"Failed to parse decimal '{value}'")
             return None
     
-    @monitor_performance('parse_boolean')
     def _parse_boolean(self, value: Any) -> Optional[bool]:
         """Parse boolean value using validator"""
         try:
