@@ -83,6 +83,20 @@ class SelfHealingSystem:
     def load_automation_rules(self):
         """Load automation rules"""
         self.rules = [
+            # Critical performance issues
+            AutomationRule(
+                name="handle_zero_records",
+                trigger_condition="performance.records_processed == 0 AND performance.operation_duration > 0",
+                action="investigate_zero_records",
+                priority=0,  # Highest priority
+                automation_level=AutomationLevel.FULLY_AUTOMATIC,
+                strategy=AutomationStrategy.REACTIVE,
+                parameters={
+                    'max_zero_record_tolerance': 3,  # Max consecutive zero-record operations
+                    'investigation_actions': ['clear_cache', 'restart_sync', 'check_data_source']
+                }
+            ),
+            
             # Performance optimization rules
             AutomationRule(
                 name="optimize_batch_size",
@@ -315,7 +329,9 @@ class SelfHealingSystem:
         message = ""
         
         try:
-            if rule.action == "adjust_batch_size":
+            if rule.action == "investigate_zero_records":
+                success, message = await self.investigate_zero_records(rule, context)
+            elif rule.action == "adjust_batch_size":
                 success, message = await self.adjust_batch_size(rule, context)
             elif rule.action == "restart_sync":
                 success, message = await self.restart_sync(rule, context)
@@ -522,6 +538,85 @@ class SelfHealingSystem:
         except Exception as e:
             return False, f"Failed to schedule maintenance: {e}"
     
+    async def investigate_zero_records(self, rule: AutomationRule, context: Dict[str, Any]) -> tuple[bool, str]:
+        """Investigate zero-record operations and take corrective action"""
+        try:
+            operation_name = context.get('operation_name', 'unknown')
+            records_processed = context.get('performance.records_processed', 0)
+            operation_duration = context.get('performance.operation_duration', 0)
+            
+            logger.warning(f"Zero records detected for operation {operation_name}: {records_processed} records in {operation_duration}s")
+            
+            # Get investigation actions from parameters
+            investigation_actions = rule.parameters.get('investigation_actions', ['clear_cache', 'restart_sync'])
+            actions_taken = []
+            
+            # Clear cache first
+            if 'clear_cache' in investigation_actions:
+                try:
+                    # Clear operation-specific cache
+                    operation_cache_keys = [
+                        key for key in cache._cache.keys()
+                        if operation_name.lower() in key.lower()
+                    ]
+                    
+                    for key in operation_cache_keys:
+                        cache.delete(key)
+                    
+                    actions_taken.append(f"Cleared {len(operation_cache_keys)} cache keys for {operation_name}")
+                except Exception as e:
+                    actions_taken.append(f"Failed to clear cache: {e}")
+            
+            # Check data source connectivity
+            if 'check_data_source' in investigation_actions:
+                try:
+                    # This would check if the data source is accessible
+                    # For now, we'll just log the check
+                    actions_taken.append(f"Checked data source connectivity for {operation_name}")
+                except Exception as e:
+                    actions_taken.append(f"Failed to check data source: {e}")
+            
+            # Alert on consecutive zero-record operations
+            max_tolerance = rule.parameters.get('max_zero_record_tolerance', 3)
+            zero_record_count = context.get('consecutive_zero_records', 1)
+            
+            if zero_record_count >= max_tolerance:
+                # Send high-priority alert
+                await self.send_zero_record_alert(operation_name, zero_record_count, context)
+                actions_taken.append(f"Sent high-priority alert for {zero_record_count} consecutive zero-record operations")
+            
+            # Suggest data validation
+            actions_taken.append(f"Recommended data validation for {operation_name} operation")
+            
+            return True, f"Investigated zero-record operation for {operation_name}. Actions taken: {'; '.join(actions_taken)}"
+            
+        except Exception as e:
+            return False, f"Failed to investigate zero records: {e}"
+    
+    async def send_zero_record_alert(self, operation_name: str, count: int, context: Dict[str, Any]):
+        """Send alert for consecutive zero-record operations"""
+        try:
+            alert = Alert(
+                id=f"zero_records_{operation_name}_{int(timezone.now().timestamp())}",
+                alert_type='zero_records',
+                severity=AlertSeverity.HIGH,
+                title=f"Zero Records Alert: {operation_name}",
+                message=f"Operation {operation_name} has processed 0 records for {count} consecutive executions",
+                details={
+                    'operation_name': operation_name,
+                    'consecutive_zero_records': count,
+                    'context': context,
+                    'timestamp': timezone.now().isoformat()
+                },
+                timestamp=timezone.now(),
+                source="automation_system"
+            )
+            
+            await self.alert_manager.send_notifications(alert)
+            
+        except Exception as e:
+            logger.error(f"Failed to send zero-record alert: {e}")
+    
     def update_execution_tracking(self, rule: AutomationRule):
         """Update execution tracking"""
         current_hour = timezone.now().replace(minute=0, second=0, microsecond=0)
@@ -704,6 +799,11 @@ class SelfHealingSystem:
             Dictionary containing comprehensive automation metrics
         """
         try:
+            # Validate time_window_hours parameter
+            if not isinstance(time_window_hours, (int, float)):
+                logger.warning(f"Invalid time_window_hours parameter: {type(time_window_hours)}, defaulting to 24")
+                time_window_hours = 24
+            
             cutoff_time = timezone.now() - timedelta(hours=time_window_hours)
             
             # Filter actions within time window

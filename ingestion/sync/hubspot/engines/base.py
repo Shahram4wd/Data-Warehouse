@@ -172,7 +172,8 @@ class HubSpotBaseSyncEngine(BaseSyncEngine):
         """Report sync metrics to monitoring system"""
         try:
             if self.automation_engine:
-                await self.automation_engine.report_metrics(metrics)
+                # Report metrics with default time window (24 hours)
+                await self.automation_engine.report_metrics(time_window_hours=24, include_detailed=False)
         except Exception as e:
             logger.warning(f"Failed to report metrics to automation engine: {e}")
             

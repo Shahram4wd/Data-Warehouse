@@ -101,7 +101,64 @@ class PerformanceMonitor:
             f"({metrics.throughput:.2f} records/s, {metrics.success_rate:.2%} success rate)"
         )
         
+        # Check for zero records and trigger automation if needed
+        if metrics.records_processed == 0 and metrics.duration > 0:
+            self._trigger_zero_record_automation(metrics)
+        
         return metrics
+    
+    def _trigger_zero_record_automation(self, metrics: PerformanceMetrics):
+        """Trigger automation for zero-record operations"""
+        try:
+            # Import here to avoid circular imports
+            from ingestion.base.automation import automation_system
+            
+            # Build context for automation system
+            context = {
+                'operation_name': metrics.operation_name,
+                'performance.records_processed': metrics.records_processed,
+                'performance.operation_duration': metrics.duration,
+                'performance.throughput': metrics.throughput,
+                'performance.success_rate': metrics.success_rate,
+                'performance.errors_count': metrics.errors_count,
+                'performance.memory_usage': metrics.memory_usage_mb,
+                'performance.cpu_percent': metrics.cpu_percent,
+                'timestamp': metrics.end_time.isoformat() if metrics.end_time else None,
+                'consecutive_zero_records': self._get_consecutive_zero_records(metrics.operation_name)
+            }
+            
+            # Trigger automation evaluation asynchronously
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                loop.create_task(automation_system.evaluate_automation_rules(context))
+            except RuntimeError:
+                # If no event loop is running, log the issue for manual intervention
+                self.logger.warning(
+                    f"Cannot trigger automation for zero-record operation {metrics.operation_name}: "
+                    f"No event loop available. Manual intervention may be required."
+                )
+                
+        except Exception as e:
+            self.logger.error(f"Failed to trigger automation for zero records: {e}")
+    
+    def _get_consecutive_zero_records(self, operation_name: str) -> int:
+        """Get count of consecutive zero-record operations for a specific operation"""
+        # Get recent operations of the same type
+        recent_operations = [
+            m for m in self.metrics[-10:]  # Last 10 operations
+            if m.operation_name == operation_name
+        ]
+        
+        # Count consecutive zero records from the end
+        consecutive_count = 0
+        for metrics in reversed(recent_operations):
+            if metrics.records_processed == 0:
+                consecutive_count += 1
+            else:
+                break
+        
+        return consecutive_count
     
     def get_system_metrics(self) -> Dict[str, float]:
         """Get current system metrics"""
