@@ -3,7 +3,7 @@ Base processor for HubSpot data
 """
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 from decimal import Decimal, InvalidOperation
 from django.utils import timezone
@@ -51,6 +51,37 @@ class HubSpotBaseProcessor(BaseDataProcessor):
         
         # Initialize retry configuration
         self.retry_config = RetryConfig(**self.config.get_retry_config())
+    
+    def parse_duration(self, value: str) -> int:
+        """Convert 'HH:MM:SS' to minutes
+        
+        Args:
+            value: Duration string in 'HH:MM:SS' format (e.g., '2:00:00')
+            
+        Returns:
+            Duration in minutes as integer
+            
+        Raises:
+            Returns 0 if parsing fails to maintain data integrity
+        """
+        try:
+            if not value:
+                return 0
+            
+            # Handle string input    
+            if isinstance(value, str):
+                # Split by colons and convert to integers
+                h, m, s = map(int, value.split(":"))
+                return h * 60 + m + s // 60
+            
+            # Handle numeric input (assume it's already in minutes)
+            if isinstance(value, (int, float)):
+                return int(value)
+                
+            return 0
+        except Exception as e:
+            logger.warning(f"Failed to parse duration '{value}': {e}")
+            return 0  # Return 0 instead of raising exception for data integrity
     
     def validate_field(self, field_name: str, value: Any, field_type: str = 'string') -> Any:
         """Validate a field using appropriate validator"""

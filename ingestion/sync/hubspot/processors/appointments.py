@@ -47,7 +47,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'hs_appointment_name': properties.get('hs_appointment_name'),
             'hs_appointment_start': self._parse_datetime(properties.get('hs_appointment_start')),
             'hs_appointment_end': self._parse_datetime(properties.get('hs_appointment_end')),
-            'hs_duration': properties.get('hs_duration'),
+            'hs_duration': self.parse_duration(properties.get('hs_duration')),
             'hs_object_id': properties.get('hs_object_id'),
             'hs_createdate': self._parse_datetime(properties.get('hs_createdate')),
             'hs_lastmodifieddate': self._parse_datetime(properties.get('hs_lastmodifieddate')),
@@ -67,7 +67,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             # Appointment details
             'date': self._parse_datetime(properties.get('date')),
             'time': properties.get('time'),
-            'duration': properties.get('duration'),
+            'duration': self.parse_duration(properties.get('duration')),
             'appointment_status': properties.get('appointment_status'),
             'appointment_response': properties.get('appointment_response'),
             'is_complete': self._parse_boolean(properties.get('is_complete')),
