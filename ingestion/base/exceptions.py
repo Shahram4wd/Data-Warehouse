@@ -1,7 +1,7 @@
 """
 Custom exceptions for sync operations
 """
-
+  
 class SyncException(Exception):
     """Base exception for sync operations"""
     def __init__(self, message, details=None, retry_after=None):
@@ -9,6 +9,12 @@ class SyncException(Exception):
         self.message = message
         self.details = details or {}
         self.retry_after = retry_after
+
+class ConnectionException(SyncException):
+    """Exception raised for connection issues (e.g., pool exhausted, network failure)"""
+    def __init__(self, message, connection_name=None, **kwargs):
+        super().__init__(message, **kwargs)
+        self.connection_name = connection_name
 
 class ValidationException(SyncException):
     """Exception raised during data validation"""

@@ -11,7 +11,7 @@ from enum import Enum
 from contextlib import asynccontextmanager
 from collections import defaultdict, deque
 import aiohttp
-import aioredis
+import redis.asyncio as aioredis
 from django.conf import settings
 from django.core.cache import cache
 from ingestion.base.exceptions import ConnectionException, RateLimitException
@@ -496,35 +496,26 @@ class ConnectionManager:
     
     def create_http_pool(self, name: str, base_url: str, **kwargs) -> HTTPConnectionPool:
         """Create HTTP connection pool"""
+        circuit_config = kwargs.pop('circuit_config', self.default_circuit_config)
         pool = HTTPConnectionPool(name, base_url, **kwargs)
         self.pools[name] = pool
-        
-        # Create circuit breaker
-        circuit_config = kwargs.get('circuit_config', self.default_circuit_config)
         self.circuit_breakers[name] = CircuitBreaker(name, circuit_config)
-        
         return pool
     
     def create_database_pool(self, name: str, database_url: str, **kwargs) -> DatabaseConnectionPool:
         """Create database connection pool"""
+        circuit_config = kwargs.pop('circuit_config', self.default_circuit_config)
         pool = DatabaseConnectionPool(name, database_url, **kwargs)
         self.pools[name] = pool
-        
-        # Create circuit breaker
-        circuit_config = kwargs.get('circuit_config', self.default_circuit_config)
         self.circuit_breakers[name] = CircuitBreaker(name, circuit_config)
-        
         return pool
     
     def create_redis_pool(self, name: str, redis_url: str, **kwargs) -> RedisConnectionPool:
         """Create Redis connection pool"""
+        circuit_config = kwargs.pop('circuit_config', self.default_circuit_config)
         pool = RedisConnectionPool(name, redis_url, **kwargs)
         self.pools[name] = pool
-        
-        # Create circuit breaker
-        circuit_config = kwargs.get('circuit_config', self.default_circuit_config)
         self.circuit_breakers[name] = CircuitBreaker(name, circuit_config)
-        
         return pool
     
     def get_pool(self, name: str) -> ConnectionPool:
