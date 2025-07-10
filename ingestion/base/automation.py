@@ -682,6 +682,718 @@ class SelfHealingSystem:
         
         logger.info(f"Automation engine for {self.source} cleaned up successfully")
 
+    async def report_metrics(self, time_window_hours: int = 24, include_detailed: bool = False) -> Dict[str, Any]:
+        """Report comprehensive automation metrics following import refactoring guidelines
+        
+        Args:
+            time_window_hours: Time window for metrics collection (default: 24 hours)
+            include_detailed: Whether to include detailed metrics (default: False)
+            
+        Returns:
+            Dictionary containing comprehensive automation metrics
+        """
+        try:
+            cutoff_time = timezone.now() - timedelta(hours=time_window_hours)
+            
+            # Filter actions within time window
+            recent_actions = [
+                action for action in self.action_history
+                if action.timestamp > cutoff_time
+            ]
+            
+            # Basic metrics
+            total_actions = len(recent_actions)
+            successful_actions = sum(1 for action in recent_actions if action.success)
+            failed_actions = total_actions - successful_actions
+            
+            # Rule-specific metrics
+            rule_metrics = defaultdict(lambda: {
+                'total_executions': 0,
+                'successful_executions': 0,
+                'failed_executions': 0,
+                'success_rate': 0.0,
+                'avg_execution_time': 0.0,
+                'automation_level': 'unknown',
+                'strategy': 'unknown'
+            })
+            
+            # Strategy metrics
+            strategy_metrics = defaultdict(lambda: {
+                'total_executions': 0,
+                'successful_executions': 0,
+                'success_rate': 0.0
+            })
+            
+            # Automation level metrics
+            automation_level_metrics = defaultdict(lambda: {
+                'total_executions': 0,
+                'successful_executions': 0,
+                'success_rate': 0.0
+            })
+            
+            # Process recent actions
+            for action in recent_actions:
+                # Find corresponding rule
+                rule = next((r for r in self.rules if r.name == action.rule_name), None)
+                
+                # Update rule metrics
+                rule_metrics[action.rule_name]['total_executions'] += 1
+                if action.success:
+                    rule_metrics[action.rule_name]['successful_executions'] += 1
+                else:
+                    rule_metrics[action.rule_name]['failed_executions'] += 1
+                
+                # Add rule metadata
+                if rule:
+                    rule_metrics[action.rule_name]['automation_level'] = rule.automation_level.value
+                    rule_metrics[action.rule_name]['strategy'] = rule.strategy.value
+                    rule_metrics[action.rule_name]['priority'] = rule.priority
+                    
+                    # Update strategy metrics
+                    strategy_metrics[rule.strategy.value]['total_executions'] += 1
+                    if action.success:
+                        strategy_metrics[rule.strategy.value]['successful_executions'] += 1
+                    
+                    # Update automation level metrics
+                    automation_level_metrics[rule.automation_level.value]['total_executions'] += 1
+                    if action.success:
+                        automation_level_metrics[rule.automation_level.value]['successful_executions'] += 1
+            
+            # Calculate success rates
+            for rule_name, metrics in rule_metrics.items():
+                if metrics['total_executions'] > 0:
+                    metrics['success_rate'] = metrics['successful_executions'] / metrics['total_executions']
+            
+            for strategy, metrics in strategy_metrics.items():
+                if metrics['total_executions'] > 0:
+                    metrics['success_rate'] = metrics['successful_executions'] / metrics['total_executions']
+            
+            for level, metrics in automation_level_metrics.items():
+                if metrics['total_executions'] > 0:
+                    metrics['success_rate'] = metrics['successful_executions'] / metrics['total_executions']
+            
+            # Performance metrics
+            performance_metrics = {
+                'total_actions': total_actions,
+                'successful_actions': successful_actions,
+                'failed_actions': failed_actions,
+                'overall_success_rate': successful_actions / max(total_actions, 1),
+                'actions_per_hour': total_actions / max(time_window_hours, 1),
+                'avg_actions_per_rule': total_actions / max(len(self.rules), 1)
+            }
+            
+            # System health metrics
+            system_health = {
+                'active_rules': len([rule for rule in self.rules if rule.enabled]),
+                'total_rules': len(self.rules),
+                'rule_utilization_rate': len(rule_metrics) / max(len(self.rules), 1),
+                'automation_coverage': {
+                    'manual': automation_level_metrics.get('manual', {}).get('total_executions', 0),
+                    'semi_automatic': automation_level_metrics.get('semi_automatic', {}).get('total_executions', 0),
+                    'fully_automatic': automation_level_metrics.get('fully_automatic', {}).get('total_executions', 0)
+                }
+            }
+            
+            # Quality metrics
+            quality_metrics = {
+                'strategy_effectiveness': {
+                    strategy: metrics['success_rate']
+                    for strategy, metrics in strategy_metrics.items()
+                },
+                'automation_level_effectiveness': {
+                    level: metrics['success_rate']
+                    for level, metrics in automation_level_metrics.items()
+                },
+                'rule_reliability': {
+                    rule_name: metrics['success_rate']
+                    for rule_name, metrics in rule_metrics.items()
+                    if metrics['total_executions'] >= 3  # Only include rules with sufficient data
+                }
+            }
+            
+            # Execution frequency analysis
+            execution_frequency = {
+                'high_frequency_rules': [
+                    rule_name for rule_name, metrics in rule_metrics.items()
+                    if metrics['total_executions'] > (total_actions * 0.1)  # Rules with >10% of total executions
+                ],
+                'low_frequency_rules': [
+                    rule_name for rule_name, metrics in rule_metrics.items()
+                    if metrics['total_executions'] <= 1
+                ],
+                'most_active_rule': max(rule_metrics.items(), key=lambda x: x[1]['total_executions'], default=(None, None))[0],
+                'least_active_rule': min(
+                    [(name, metrics) for name, metrics in rule_metrics.items() if metrics['total_executions'] > 0],
+                    key=lambda x: x[1]['total_executions'],
+                    default=(None, None)
+                )[0]
+            }
+            
+            # Build comprehensive report
+            report = {
+                'metadata': {
+                    'source': self.source,
+                    'report_generated_at': timezone.now().isoformat(),
+                    'time_window_hours': time_window_hours,
+                    'cutoff_time': cutoff_time.isoformat(),
+                    'include_detailed': include_detailed
+                },
+                'performance_metrics': performance_metrics,
+                'system_health': system_health,
+                'quality_metrics': quality_metrics,
+                'execution_frequency': execution_frequency,
+                'rule_metrics_summary': {
+                    'total_rules_executed': len(rule_metrics),
+                    'rules_with_failures': len([m for m in rule_metrics.values() if m['failed_executions'] > 0]),
+                    'rules_with_100_percent_success': len([m for m in rule_metrics.values() if m['success_rate'] == 1.0 and m['total_executions'] > 0]),
+                    'average_rule_success_rate': sum(m['success_rate'] for m in rule_metrics.values()) / max(len(rule_metrics), 1)
+                }
+            }
+            
+            # Add detailed metrics if requested
+            if include_detailed:
+                report['detailed_metrics'] = {
+                    'rule_metrics': dict(rule_metrics),
+                    'strategy_metrics': dict(strategy_metrics),
+                    'automation_level_metrics': dict(automation_level_metrics),
+                    'recent_actions': [action.to_dict() for action in recent_actions[-50:]]  # Last 50 actions
+                }
+            
+            # Add trend analysis if sufficient data
+            if len(recent_actions) >= 10:
+                report['trend_analysis'] = await self._analyze_trends(recent_actions, time_window_hours)
+            
+            # Add recommendations
+            report['recommendations'] = self._generate_recommendations(rule_metrics, performance_metrics, system_health)
+            
+            logger.info(f"Generated automation metrics report for {self.source} covering {time_window_hours} hours")
+            return report
+            
+        except Exception as e:
+            logger.error(f"Error generating automation metrics report: {e}")
+            return {
+                'error': str(e),
+                'metadata': {
+                    'source': self.source,
+                    'report_generated_at': timezone.now().isoformat(),
+                    'time_window_hours': time_window_hours,
+                    'status': 'error'
+                }
+            }
+
+    async def _analyze_trends(self, actions: List[AutomationAction], time_window_hours: int) -> Dict[str, Any]:
+        """Analyze trends in automation actions"""
+        try:
+            # Group actions by hour
+            hourly_counts = defaultdict(int)
+            hourly_success_rates = defaultdict(list)
+            
+            for action in actions:
+                hour_key = action.timestamp.replace(minute=0, second=0, microsecond=0)
+                hourly_counts[hour_key] += 1
+                hourly_success_rates[hour_key].append(1 if action.success else 0)
+            
+            # Calculate trends
+            total_hours = len(hourly_counts)
+            avg_actions_per_hour = sum(hourly_counts.values()) / max(total_hours, 1)
+            
+            # Success rate trend
+            hourly_success_rates_avg = {
+                hour: sum(rates) / len(rates) if rates else 0
+                for hour, rates in hourly_success_rates.items()
+            }
+            
+            # Determine trend direction
+            if len(hourly_success_rates_avg) >= 2:
+                recent_half = list(hourly_success_rates_avg.values())[-len(hourly_success_rates_avg)//2:]
+                earlier_half = list(hourly_success_rates_avg.values())[:len(hourly_success_rates_avg)//2]
+                
+                recent_avg = sum(recent_half) / len(recent_half) if recent_half else 0
+                earlier_avg = sum(earlier_half) / len(earlier_half) if earlier_half else 0
+                
+                trend_direction = "improving" if recent_avg > earlier_avg else "declining" if recent_avg < earlier_avg else "stable"
+            else:
+                trend_direction = "insufficient_data"
+            
+            return {
+                'total_hours_analyzed': total_hours,
+                'avg_actions_per_hour': avg_actions_per_hour,
+                'peak_activity_hour': max(hourly_counts, key=hourly_counts.get, default=None),
+                'lowest_activity_hour': min(hourly_counts, key=hourly_counts.get, default=None),
+                'success_rate_trend': trend_direction,
+                'hourly_distribution': {
+                    'actions_per_hour': dict(hourly_counts),
+                    'success_rates_per_hour': hourly_success_rates_avg
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error analyzing automation trends: {e}")
+            return {'error': str(e)}
+
+    def _generate_recommendations(self, rule_metrics: Dict, performance_metrics: Dict, system_health: Dict) -> List[Dict[str, Any]]:
+        """Generate recommendations based on metrics analysis"""
+        recommendations = []
+        
+        try:
+            # Rule performance recommendations
+            for rule_name, metrics in rule_metrics.items():
+                if metrics['total_executions'] >= 3:  # Only for rules with sufficient data
+                    if metrics['success_rate'] < 0.5:
+                        recommendations.append({
+                            'type': 'rule_performance',
+                            'priority': 'high',
+                            'rule_name': rule_name,
+                            'issue': f"Low success rate: {metrics['success_rate']:.1%}",
+                            'recommendation': f"Review and optimize rule '{rule_name}' - consider adjusting parameters or trigger conditions"
+                        })
+                    elif metrics['success_rate'] < 0.8:
+                        recommendations.append({
+                            'type': 'rule_performance',
+                            'priority': 'medium',
+                            'rule_name': rule_name,
+                            'issue': f"Moderate success rate: {metrics['success_rate']:.1%}",
+                            'recommendation': f"Monitor rule '{rule_name}' and consider minor adjustments"
+                        })
+            
+            # System utilization recommendations
+            if system_health['rule_utilization_rate'] < 0.5:
+                recommendations.append({
+                    'type': 'system_optimization',
+                    'priority': 'medium',
+                    'issue': f"Low rule utilization: {system_health['rule_utilization_rate']:.1%}",
+                    'recommendation': "Consider reviewing inactive rules and their trigger conditions"
+                })
+            
+            # Performance recommendations
+            if performance_metrics['overall_success_rate'] < 0.7:
+                recommendations.append({
+                    'type': 'overall_performance',
+                    'priority': 'high',
+                    'issue': f"Low overall success rate: {performance_metrics['overall_success_rate']:.1%}",
+                    'recommendation': "Review automation strategy and consider rule optimization"
+                })
+            
+            # Automation coverage recommendations
+            automation_coverage = system_health['automation_coverage']
+            total_coverage = sum(automation_coverage.values())
+            
+            if total_coverage > 0:
+                manual_percentage = automation_coverage['manual'] / total_coverage
+                if manual_percentage > 0.3:
+                    recommendations.append({
+                        'type': 'automation_coverage',
+                        'priority': 'medium',
+                        'issue': f"High manual intervention rate: {manual_percentage:.1%}",
+                        'recommendation': "Consider upgrading manual rules to semi-automatic or fully automatic"
+                    })
+            
+            # Add general recommendations if no specific issues found
+            if not recommendations:
+                recommendations.append({
+                    'type': 'general',
+                    'priority': 'info',
+                    'issue': 'No significant issues detected',
+                    'recommendation': 'System is performing well. Continue monitoring for optimization opportunities.'
+                })
+            
+            return recommendations
+            
+        except Exception as e:
+            logger.error(f"Error generating recommendations: {e}")
+            return [{
+                'type': 'error',
+                'priority': 'high',
+                'issue': f'Error generating recommendations: {str(e)}',
+                'recommendation': 'Review system logs for detailed error information'
+            }]
+
+    async def get_metrics_summary(self, time_window_hours: int = 24) -> Dict[str, Any]:
+        """Get a summary of automation metrics
+        
+        Args:
+            time_window_hours: Time window for metrics collection (default: 24 hours)
+            
+        Returns:
+            Dictionary containing key metrics, health status, and top recommendations
+        """
+        try:
+            # Get full report
+            report = await self.report_metrics(time_window_hours=time_window_hours, include_detailed=False)
+            
+            # Extract key metrics
+            perf_metrics = report.get('performance_metrics', {})
+            system_health = report.get('system_health', {})
+            recommendations = report.get('recommendations', [])
+            
+            # Determine health status
+            health_status = self._determine_health_status(report)
+            
+            # Build summary
+            summary = {
+                'metadata': {
+                    'source': self.source,
+                    'time_window_hours': time_window_hours,
+                    'summary_generated_at': timezone.now().isoformat()
+                },
+                'key_metrics': {
+                    'total_actions': perf_metrics.get('total_actions', 0),
+                    'success_rate': perf_metrics.get('overall_success_rate', 0),
+                    'actions_per_hour': perf_metrics.get('actions_per_hour', 0),
+                    'active_rules': system_health.get('active_rules', 0),
+                    'rule_utilization': system_health.get('rule_utilization_rate', 0)
+                },
+                'health_status': health_status,
+                'top_recommendations': recommendations[:5]  # Top 5 recommendations
+            }
+            
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error generating metrics summary: {e}")
+            return {
+                'error': str(e),
+                'metadata': {
+                    'source': self.source,
+                    'time_window_hours': time_window_hours,
+                    'status': 'error'
+                }
+            }
+    
+    def _determine_health_status(self, report: Dict[str, Any]) -> str:
+        """Determine overall health status based on metrics
+        
+        Args:
+            report: Full metrics report
+            
+        Returns:
+            Health status string: 'excellent', 'good', 'fair', 'poor', or 'critical'
+        """
+        try:
+            perf_metrics = report.get('performance_metrics', {})
+            system_health = report.get('system_health', {})
+            
+            success_rate = perf_metrics.get('overall_success_rate', 0)
+            rule_utilization = system_health.get('rule_utilization_rate', 0)
+            total_actions = perf_metrics.get('total_actions', 0)
+            
+            # Calculate health score (0-100)
+            health_score = 0
+            
+            # Success rate component (40% weight)
+            if success_rate >= 0.95:
+                health_score += 40
+            elif success_rate >= 0.8:
+                health_score += 30
+            elif success_rate >= 0.6:
+                health_score += 20
+            elif success_rate >= 0.4:
+                health_score += 10
+            # else: 0 points
+            
+            # Rule utilization component (30% weight)
+            if rule_utilization >= 0.8:
+                health_score += 30
+            elif rule_utilization >= 0.6:
+                health_score += 20
+            elif rule_utilization >= 0.4:
+                health_score += 15
+            elif rule_utilization >= 0.2:
+                health_score += 10
+            # else: 0 points
+            
+            # Activity level component (30% weight)
+            if total_actions >= 50:
+                health_score += 30
+            elif total_actions >= 20:
+                health_score += 20
+            elif total_actions >= 10:
+                health_score += 15
+            elif total_actions >= 5:
+                health_score += 10
+            elif total_actions >= 1:
+                health_score += 5
+            # else: 0 points
+            
+            # Determine status based on score
+            if health_score >= 90:
+                return 'excellent'
+            elif health_score >= 75:
+                return 'good'
+            elif health_score >= 60:
+                return 'fair'
+            elif health_score >= 40:
+                return 'poor'
+            else:
+                return 'critical'
+                
+        except Exception as e:
+            logger.error(f"Error determining health status: {e}")
+            return 'unknown'
+    
+    def export_metrics_to_json(self, time_window_hours: int = 24) -> str:
+        """Export metrics to JSON format
+        
+        Args:
+            time_window_hours: Time window for metrics collection (default: 24 hours)
+            
+        Returns:
+            JSON string containing the metrics report
+        """
+        try:
+            import json
+            
+            # Get the full report synchronously for JSON export
+            # Note: This is a simplified version for JSON export
+            cutoff_time = timezone.now() - timedelta(hours=time_window_hours)
+            
+            # Filter actions within time window
+            recent_actions = [
+                action for action in self.action_history
+                if action.timestamp > cutoff_time
+            ]
+            
+            # Basic metrics
+            total_actions = len(recent_actions)
+            successful_actions = sum(1 for action in recent_actions if action.success)
+            
+            # Build simplified report for JSON export
+            report = {
+                'metadata': {
+                    'source': self.source,
+                    'export_generated_at': timezone.now().isoformat(),
+                    'time_window_hours': time_window_hours,
+                    'export_type': 'json'
+                },
+                'performance_metrics': {
+                    'total_actions': total_actions,
+                    'successful_actions': successful_actions,
+                    'failed_actions': total_actions - successful_actions,
+                    'overall_success_rate': successful_actions / max(total_actions, 1),
+                    'actions_per_hour': total_actions / max(time_window_hours, 1)
+                },
+                'system_health': {
+                    'active_rules': len([rule for rule in self.rules if rule.enabled]),
+                    'total_rules': len(self.rules)
+                },
+                'recent_actions': [
+                    {
+                        'rule_name': action.rule_name,
+                        'action_type': action.action_type,
+                        'success': action.success,
+                        'timestamp': action.timestamp.isoformat(),
+                        'message': action.message
+                    }
+                    for action in recent_actions[-20:]  # Last 20 actions
+                ]
+            }
+            
+            return json.dumps(report, indent=2, default=str)
+            
+        except Exception as e:
+            logger.error(f"Error exporting metrics to JSON: {e}")
+            return json.dumps({
+                'error': str(e),
+                'metadata': {
+                    'source': self.source,
+                    'time_window_hours': time_window_hours,
+                    'status': 'error'
+                }
+            })
+
+    async def get_metrics_summary(self, time_window_hours: int = 24) -> Dict[str, Any]:
+        """Get a summary of automation metrics
+        
+        Args:
+            time_window_hours: Time window for metrics collection (default: 24 hours)
+            
+        Returns:
+            Dictionary containing key metrics, health status, and top recommendations
+        """
+        try:
+            # Get full report
+            report = await self.report_metrics(time_window_hours=time_window_hours, include_detailed=False)
+            
+            # Extract key metrics
+            perf_metrics = report.get('performance_metrics', {})
+            system_health = report.get('system_health', {})
+            recommendations = report.get('recommendations', [])
+            
+            # Determine health status
+            health_status = self._determine_health_status(report)
+            
+            # Build summary
+            summary = {
+                'metadata': {
+                    'source': self.source,
+                    'time_window_hours': time_window_hours,
+                    'summary_generated_at': timezone.now().isoformat()
+                },
+                'key_metrics': {
+                    'total_actions': perf_metrics.get('total_actions', 0),
+                    'success_rate': perf_metrics.get('overall_success_rate', 0),
+                    'actions_per_hour': perf_metrics.get('actions_per_hour', 0),
+                    'active_rules': system_health.get('active_rules', 0),
+                    'rule_utilization': system_health.get('rule_utilization_rate', 0)
+                },
+                'health_status': health_status,
+                'top_recommendations': recommendations[:5]  # Top 5 recommendations
+            }
+            
+            return summary
+            
+        except Exception as e:
+            logger.error(f"Error generating metrics summary: {e}")
+            return {
+                'error': str(e),
+                'metadata': {
+                    'source': self.source,
+                    'time_window_hours': time_window_hours,
+                    'status': 'error'
+                }
+            }
+    
+    def _determine_health_status(self, report: Dict[str, Any]) -> str:
+        """Determine overall health status based on metrics
+        
+        Args:
+            report: Full metrics report
+            
+        Returns:
+            Health status string: 'excellent', 'good', 'fair', 'poor', or 'critical'
+        """
+        try:
+            perf_metrics = report.get('performance_metrics', {})
+            system_health = report.get('system_health', {})
+            
+            success_rate = perf_metrics.get('overall_success_rate', 0)
+            rule_utilization = system_health.get('rule_utilization_rate', 0)
+            total_actions = perf_metrics.get('total_actions', 0)
+            
+            # Calculate health score (0-100)
+            health_score = 0
+            
+            # Success rate component (40% weight)
+            if success_rate >= 0.95:
+                health_score += 40
+            elif success_rate >= 0.8:
+                health_score += 30
+            elif success_rate >= 0.6:
+                health_score += 20
+            elif success_rate >= 0.4:
+                health_score += 10
+            # else: 0 points
+            
+            # Rule utilization component (30% weight)
+            if rule_utilization >= 0.8:
+                health_score += 30
+            elif rule_utilization >= 0.6:
+                health_score += 20
+            elif rule_utilization >= 0.4:
+                health_score += 15
+            elif rule_utilization >= 0.2:
+                health_score += 10
+            # else: 0 points
+            
+            # Activity level component (30% weight)
+            if total_actions >= 50:
+                health_score += 30
+            elif total_actions >= 20:
+                health_score += 20
+            elif total_actions >= 10:
+                health_score += 15
+            elif total_actions >= 5:
+                health_score += 10
+            elif total_actions >= 1:
+                health_score += 5
+            # else: 0 points
+            
+            # Determine status based on score
+            if health_score >= 90:
+                return 'excellent'
+            elif health_score >= 75:
+                return 'good'
+            elif health_score >= 60:
+                return 'fair'
+            elif health_score >= 40:
+                return 'poor'
+            else:
+                return 'critical'
+                
+        except Exception as e:
+            logger.error(f"Error determining health status: {e}")
+            return 'unknown'
+    
+    def export_metrics_to_json(self, time_window_hours: int = 24) -> str:
+        """Export metrics to JSON format
+        
+        Args:
+            time_window_hours: Time window for metrics collection (default: 24 hours)
+            
+        Returns:
+            JSON string containing the metrics report
+        """
+        try:
+            import json
+            
+            # Get the full report synchronously for JSON export
+            # Note: This is a simplified version for JSON export
+            cutoff_time = timezone.now() - timedelta(hours=time_window_hours)
+            
+            # Filter actions within time window
+            recent_actions = [
+                action for action in self.action_history
+                if action.timestamp > cutoff_time
+            ]
+            
+            # Basic metrics
+            total_actions = len(recent_actions)
+            successful_actions = sum(1 for action in recent_actions if action.success)
+            
+            # Build simplified report for JSON export
+            report = {
+                'metadata': {
+                    'source': self.source,
+                    'export_generated_at': timezone.now().isoformat(),
+                    'time_window_hours': time_window_hours,
+                    'export_type': 'json'
+                },
+                'performance_metrics': {
+                    'total_actions': total_actions,
+                    'successful_actions': successful_actions,
+                    'failed_actions': total_actions - successful_actions,
+                    'overall_success_rate': successful_actions / max(total_actions, 1),
+                    'actions_per_hour': total_actions / max(time_window_hours, 1)
+                },
+                'system_health': {
+                    'active_rules': len([rule for rule in self.rules if rule.enabled]),
+                    'total_rules': len(self.rules)
+                },
+                'recent_actions': [
+                    {
+                        'rule_name': action.rule_name,
+                        'action_type': action.action_type,
+                        'success': action.success,
+                        'timestamp': action.timestamp.isoformat(),
+                        'message': action.message
+                    }
+                    for action in recent_actions[-20:]  # Last 20 actions
+                ]
+            }
+            
+            return json.dumps(report, indent=2, default=str)
+            
+        except Exception as e:
+            logger.error(f"Error exporting metrics to JSON: {e}")
+            return json.dumps({
+                'error': str(e),
+                'metadata': {
+                    'source': self.source,
+                    'time_window_hours': time_window_hours,
+                    'status': 'error'
+                }
+            })
+    
 class IntelligentScheduler:
     """Intelligent scheduling system for sync operations"""
     

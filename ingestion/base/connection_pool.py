@@ -214,6 +214,10 @@ class ConnectionPool:
             self.idle_connections.clear()
         
         logger.info(f"Connection pool {self.name} stopped")
+
+    async def close(self):
+        """Alias to stop() for cleanup compatibility"""
+        await self.stop()
     
     @asynccontextmanager
     async def get_connection(self):

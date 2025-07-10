@@ -202,6 +202,34 @@ class PerformanceMonitor:
         self.metrics.clear()
         self.aggregated_metrics.clear()
         self.active_operations.clear()
+    
+    def cleanup(self):
+        """Cleanup performance monitor resources and clear all data"""
+        try:
+            # Clear all metrics and active operations
+            self.clear_metrics()
+            
+            # Cancel any active operations with cleanup notification
+            for operation_id, metrics in list(self.active_operations.items()):
+                self.logger.info(f"Cleaning up active operation: {metrics.operation_name}")
+                metrics.finish(records_processed=0, errors_count=0)
+                self.metrics.append(metrics)
+            
+            # Clear active operations again after processing
+            self.active_operations.clear()
+            
+            # Reset aggregated metrics
+            self.aggregated_metrics.clear()
+            
+            self.logger.info(f"Performance monitor '{self.name}' cleaned up successfully")
+            
+        except Exception as e:
+            self.logger.error(f"Error during performance monitor cleanup: {e}")
+            # Ensure we clear what we can even if there's an error
+            self.metrics.clear()
+            self.active_operations.clear()
+            self.aggregated_metrics.clear()
+            raise
 
 # Global performance monitor instance
 performance_monitor = PerformanceMonitor("sync_operations")
