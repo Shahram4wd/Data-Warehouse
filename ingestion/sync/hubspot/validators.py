@@ -303,76 +303,6 @@ class HubSpotUrlValidator(BaseValidator):
     def get_error_message(self) -> str:
         return "URL must be a valid HTTP or HTTPS URL"
 
-class HubSpotDurationValidator(BaseValidator):
-    """HubSpot-specific duration validator that converts time formats to minutes"""
-    
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        # Support various time formats
-        self.time_patterns = [
-            # HH:MM:SS format
-            (r'^(\d{1,2}):(\d{2}):(\d{2})$', self._convert_hms_to_minutes),
-            # HH:MM format
-            (r'^(\d{1,2}):(\d{2})$', self._convert_hm_to_minutes),
-            # Just minutes as integer
-            (r'^(\d+)$', self._convert_minutes_to_minutes),
-            # Decimal hours (e.g., 2.5 hours)
-            (r'^(\d+\.?\d*)$', self._convert_decimal_hours_to_minutes),
-        ]
-    
-    def validate(self, value: Any) -> Optional[int]:
-        """Validate and convert duration to minutes"""
-        self._check_required(value)
-        
-        if value is None or value == '':
-            return None
-        
-        # If already an integer, return as is
-        if isinstance(value, int):
-            return max(0, value)
-        
-        # Convert to string for pattern matching
-        duration_str = str(value).strip()
-        
-        # Try each pattern
-        for pattern, converter in self.time_patterns:
-            match = re.match(pattern, duration_str)
-            if match:
-                try:
-                    minutes = converter(match.groups())
-                    return max(0, int(minutes))  # Ensure non-negative
-                except (ValueError, TypeError) as e:
-                    continue
-        
-        # If no pattern matches, raise validation error
-        raise ValidationException(
-            f"Invalid duration format: {value}. "
-            f"Supported formats: HH:MM:SS, HH:MM, minutes (integer), or decimal hours"
-        )
-    
-    def _convert_hms_to_minutes(self, groups) -> int:
-        """Convert HH:MM:SS to minutes"""
-        hours, minutes, seconds = groups
-        total_minutes = int(hours) * 60 + int(minutes) + int(seconds) / 60
-        return int(total_minutes)
-    
-    def _convert_hm_to_minutes(self, groups) -> int:
-        """Convert HH:MM to minutes"""
-        hours, minutes = groups
-        return int(hours) * 60 + int(minutes)
-    
-    def _convert_minutes_to_minutes(self, groups) -> int:
-        """Convert minutes string to integer"""
-        return int(groups[0])
-    
-    def _convert_decimal_hours_to_minutes(self, groups) -> int:
-        """Convert decimal hours to minutes"""
-        hours = float(groups[0])
-        return int(hours * 60)
-    
-    def get_error_message(self) -> str:
-        return "Duration must be in HH:MM:SS, HH:MM format, or integer minutes"
-
 # HubSpot-specific validator registry
 HUBSPOT_VALIDATORS = {
     'object_id': HubSpotObjectIdValidator,
@@ -385,7 +315,6 @@ HUBSPOT_VALIDATORS = {
     'zip_code': HubSpotZipCodeValidator,
     'state': HubSpotStateValidator,
     'url': HubSpotUrlValidator,
-    'duration': HubSpotDurationValidator,
 }
 
 def get_hubspot_validator(validator_type: str, **kwargs) -> BaseValidator:

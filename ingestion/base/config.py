@@ -2,13 +2,150 @@
 Dynamic configuration management for sync operations
 """
 import logging
-from typing import Dict, Any, Optional, Union, Type
+from typing import Dict, Any, Optional, Union, Type, Callable
 from datetime import datetime, timedelta
+from collections import defaultdict
 from django.core.cache import cache
 from django.conf import settings
 from ingestion.base.exceptions import ConfigurationException
 
 logger = logging.getLogger(__name__)
+
+class ConfigurationManager:
+    """Enterprise configuration management with hot-reload capabilities"""
+    
+    def __init__(self):
+        self.config_cache = {}
+        self.watchers = defaultdict(list)
+        self.change_listeners = []
+        self.environment = self._detect_environment()
+        self.validation_rules = {}
+        self.logger = logging.getLogger(__name__)
+    
+    def _detect_environment(self) -> str:
+        """Detect current environment"""
+        if hasattr(settings, 'ENVIRONMENT'):
+            return settings.ENVIRONMENT
+        elif settings.DEBUG:
+            return 'development'
+        else:
+            return 'production'
+    
+    async def get_config(self, key: str, default=None):
+        """Get configuration value with hierarchy support"""
+        # Try environment-specific config first
+        env_key = f"{self.environment}.{key}"
+        if env_key in self.config_cache:
+            return self.config_cache[env_key]
+        
+        # Fall back to general config
+        if key in self.config_cache:
+            return self.config_cache[key]
+        
+        # Try to load from database or settings
+        value = await self._load_config_value(key, default)
+        self.config_cache[key] = value
+        return value
+    
+    async def update_config(self, key: str, value: Any, validate: bool = True):
+        """Update configuration with validation"""
+        if validate and key in self.validation_rules:
+            await self._validate_config_value(key, value)
+        
+        old_value = self.config_cache.get(key)
+        self.config_cache[key] = value
+        
+        # Notify listeners
+        await self._notify_config_change(key, old_value, value)
+    
+    def watch_config(self, key: str, callback: Callable):
+        """Watch for configuration changes"""
+        self.watchers[key].append(callback)
+    
+    def is_stale(self, key: str) -> bool:
+        """Check if configuration is stale"""
+        # For now, always return False - can be enhanced later
+        return False
+    
+    async def refresh_config(self, key: str):
+        """Refresh specific configuration"""
+        if key in self.config_cache:
+            del self.config_cache[key]
+        await self.get_config(key)
+    
+    async def save_config(self, key: str, value: Any):
+        """Save configuration to persistent storage"""
+        # Save to cache for now
+        cache.set(f"config:{key}", value, timeout=3600)
+    
+    async def _load_config_value(self, key: str, default: Any) -> Any:
+        """Load configuration value from various sources"""
+        # Try cache first
+        cached_value = cache.get(f"config:{key}")
+        if cached_value is not None:
+            return cached_value
+        
+        # Try settings
+        if hasattr(settings, key.upper()):
+            return getattr(settings, key.upper())
+        
+        return default
+    
+    async def _validate_config_value(self, key: str, value: Any):
+        """Validate configuration value"""
+        validator = self.validation_rules.get(key)
+        if validator:
+            await validator.validate(value)
+    
+    async def _notify_config_change(self, key: str, old_value: Any, new_value: Any):
+        """Notify change listeners"""
+        for listener in self.change_listeners:
+            try:
+                await listener(key, old_value, new_value)
+            except Exception as e:
+                self.logger.error(f"Error notifying config change listener: {e}")
+        
+        # Notify key-specific watchers
+        for watcher in self.watchers.get(key, []):
+            try:
+                await watcher(old_value, new_value)
+            except Exception as e:
+                self.logger.error(f"Error notifying config watcher: {e}")
+
+class EnvironmentAwareConfig:
+    """Environment-aware configuration"""
+    
+    ENVIRONMENT_CONFIGS = {
+        'development': {
+            'hubspot.batch_size': 10,
+            'hubspot.rate_limit': 5,
+            'hubspot.timeout': 30,
+            'validation.strict_mode': False,
+            'monitoring.enabled': False,
+            'logging.level': 'DEBUG'
+        },
+        'staging': {
+            'hubspot.batch_size': 50,
+            'hubspot.rate_limit': 25,
+            'hubspot.timeout': 60,
+            'validation.strict_mode': True,
+            'monitoring.enabled': True,
+            'logging.level': 'INFO'
+        },
+        'production': {
+            'hubspot.batch_size': 500,
+            'hubspot.rate_limit': 100,
+            'hubspot.timeout': 120,
+            'validation.strict_mode': True,
+            'monitoring.enabled': True,
+            'logging.level': 'WARNING',
+            'performance.profiling': True
+        }
+    }
+    
+    def get_environment_config(self, environment: str) -> Dict:
+        """Get environment-specific configuration"""
+        return self.ENVIRONMENT_CONFIGS.get(environment, {})
 
 class SyncConfiguration:
     """Dynamic configuration manager for sync operations"""

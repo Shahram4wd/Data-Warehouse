@@ -67,7 +67,8 @@ class AutomationAction:
 class SelfHealingSystem:
     """Self-healing automation system"""
     
-    def __init__(self):
+    def __init__(self, source=None):
+        self.source = source or 'default'
         self.rules = []
         self.action_history = []
         self.execution_counter = defaultdict(int)
@@ -659,6 +660,28 @@ class SelfHealingSystem:
             'rule_execution_stats': dict(rule_stats)
         }
 
+    async def cleanup(self):
+        """Cleanup automation engine resources"""
+        try:
+            if hasattr(self, 'performance_monitor'):
+                await self.performance_monitor.cleanup()
+        except Exception as e:
+            logger.warning(f"Error cleaning up performance monitor: {e}")
+        
+        try:
+            if hasattr(self, 'alert_manager'):
+                await self.alert_manager.cleanup()
+        except Exception as e:
+            logger.warning(f"Error cleaning up alert manager: {e}")
+        
+        # Clear rules and history
+        self.rules.clear()
+        self.action_history.clear()
+        self.execution_counter.clear()
+        self.last_execution.clear()
+        
+        logger.info(f"Automation engine for {self.source} cleaned up successfully")
+
 class IntelligentScheduler:
     """Intelligent scheduling system for sync operations"""
     
@@ -887,3 +910,6 @@ class AutomationAPI:
 
 # Global automation API instance
 automation_api = AutomationAPI()
+
+# Alias for backward compatibility
+AutomationEngine = SelfHealingSystem

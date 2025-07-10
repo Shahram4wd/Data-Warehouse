@@ -7,7 +7,6 @@ from typing import Dict, Any, List, Optional
 from django.utils import timezone
 from ingestion.base.exceptions import ValidationException
 from ingestion.sync.hubspot.processors.base import HubSpotBaseProcessor
-from ingestion.sync.hubspot.validators import HubSpotDurationValidator
 from ingestion.models.hubspot import Hubspot_Appointment
 
 logger = logging.getLogger(__name__)
@@ -17,7 +16,6 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
     
     def __init__(self, **kwargs):
         super().__init__(Hubspot_Appointment, **kwargs)
-        self.duration_validator = HubSpotDurationValidator()
     
     def get_field_mappings(self) -> Dict[str, str]:
         """Return field mappings from HubSpot to model"""
@@ -49,7 +47,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'hs_appointment_name': properties.get('hs_appointment_name'),
             'hs_appointment_start': self._parse_datetime(properties.get('hs_appointment_start')),
             'hs_appointment_end': self._parse_datetime(properties.get('hs_appointment_end')),
-            'hs_duration': self._transform_duration(properties.get('hs_duration')),
+            'hs_duration': properties.get('hs_duration'),
             'hs_object_id': properties.get('hs_object_id'),
             'hs_createdate': self._parse_datetime(properties.get('hs_createdate')),
             'hs_lastmodifieddate': self._parse_datetime(properties.get('hs_lastmodifieddate')),
@@ -69,7 +67,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             # Appointment details
             'date': self._parse_datetime(properties.get('date')),
             'time': properties.get('time'),
-            'duration': self._transform_duration(properties.get('duration')),
+            'duration': properties.get('duration'),
             'appointment_status': properties.get('appointment_status'),
             'appointment_response': properties.get('appointment_response'),
             'is_complete': self._parse_boolean(properties.get('is_complete')),
@@ -136,17 +134,6 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
         if record.get('canvasser_email'):
             record['canvasser_email'] = self.validate_field('canvasser_email', record['canvasser_email'], 'email')
         
-        # Validate duration fields using the duration validator
-        duration_fields = ['hs_duration', 'duration']
-        for field in duration_fields:
-            if record.get(field) is not None:
-                try:
-                    record[field] = self.duration_validator.validate(record[field])
-                except ValidationException as e:
-                    logger.error(f"Duration validation failed for appointment {record.get('id')} field {field}: {e}")
-                    # Set to 0 for invalid durations
-                    record[field] = 0
-        
         # Validate address fields
         if record.get('zip'):
             try:
@@ -188,12 +175,3 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
                     record[field] = self._parse_boolean(record[field])
         
         return record
-
-    def _transform_duration(self, value: Any) -> Optional[int]:
-        """Transform duration to minutes using enterprise validator"""
-        try:
-            return self.duration_validator.validate(value)
-        except ValidationException as e:
-            logger.error(f"Duration validation failed for value '{value}': {e}")
-            # Return 0 for invalid durations as default
-            return 0

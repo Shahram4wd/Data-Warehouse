@@ -324,6 +324,32 @@ class AlertManager:
             alert for alert in self.alert_history
             if alert.timestamp > cutoff_time
         ]
+    
+    async def cleanup(self):
+        """Cleanup alert manager resources"""
+        try:
+            # Clear active alerts
+            self.active_alerts.clear()
+            
+            # Clear alert history (keep last 100 for reference)
+            if len(self.alert_history) > 100:
+                self.alert_history = self.alert_history[-100:]
+            
+            # Clear cooldown tracking
+            self.cooldown_tracker.clear()
+            
+            # Reset alert counters
+            self.alert_counter.clear()
+            
+            # Cleanup notification channels
+            for channel in self.notification_channels:
+                if hasattr(channel, 'cleanup'):
+                    await channel.cleanup()
+                    
+            logger.info("Alert manager cleaned up successfully")
+            
+        except Exception as e:
+            logger.error(f"Error during alert manager cleanup: {e}")
 
 class NotificationChannel:
     """Base class for notification channels"""
@@ -579,6 +605,9 @@ class DatabaseNotificationChannel(NotificationChannel):
 
 # Global alert manager instance
 alert_manager = AlertManager()
+
+# Alias for backward compatibility
+AlertSystem = AlertManager
 
 # Async task for periodic alert checking
 async def periodic_alert_check():
