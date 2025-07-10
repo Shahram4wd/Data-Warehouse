@@ -217,6 +217,10 @@ LOGIN_REDIRECT_URL = '/explorer/'  # Set SQL Explorer as the default page after 
 # Redirect unauthenticated users to the login page
 LOGIN_URL = '/accounts/login/'
 
+# Create logs directory
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOGS_DIR, exist_ok=True)
+
 # Add logging configuration to track performance issues
 LOGGING = {
     'version': 1,
@@ -226,25 +230,104 @@ LOGGING = {
             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
             'style': '{',
         },
+        'simple': {
+            'format': '{levelname} {asctime} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
+        'ingestion_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'ingestion.log'),
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'reports_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'reports.log'),
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'general_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'general.log'),
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+        'connection_pool_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'connection_pool.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 3,
+            'formatter': 'verbose',
+        },
+        'sync_engines_file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'sync_engines.log'),
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
     },
     'root': {
-        'handlers': ['console'],
+        'handlers': ['console', 'general_file'],
         'level': 'INFO',
     },
     'loggers': {
         'django.db.backends': {
-            'handlers': ['console'],
+            'handlers': ['console', 'general_file'],
             'level': 'WARNING',  # Only log slow queries
             'propagate': False,
         },
         'ingestion': {
-            'handlers': ['console'],
+            'handlers': ['console', 'ingestion_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'ingestion.base.connection_pool': {
+            'handlers': ['console', 'connection_pool_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'ingestion.sync': {
+            'handlers': ['console', 'sync_engines_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'ingestion.sync.hubspot': {
+            'handlers': ['console', 'sync_engines_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'ingestion.sync.genius': {
+            'handlers': ['console', 'sync_engines_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'reports': {
+            'handlers': ['console', 'reports_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'celery': {
+            'handlers': ['console', 'ingestion_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django': {
+            'handlers': ['console', 'general_file'],
             'level': 'INFO',
             'propagate': False,
         },
