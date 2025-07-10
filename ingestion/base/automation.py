@@ -9,6 +9,7 @@ from typing import Dict, List, Any, Optional, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from collections import defaultdict
+from types import SimpleNamespace
 from django.utils import timezone
 from django.core.cache import cache
 from ingestion.models.common import SyncHistory, SyncConfiguration
@@ -18,6 +19,12 @@ from ingestion.monitoring.dashboard import MonitoringDashboard
 from ingestion.base.config import ConfigurationManager
 
 logger = logging.getLogger(__name__)
+
+def dict_to_namespace(d):
+    """Convert nested dictionary to SimpleNamespace for dot notation support"""
+    if isinstance(d, dict):
+        return SimpleNamespace(**{k: dict_to_namespace(v) for k, v in d.items()})
+    return d
 
 class AutomationLevel(Enum):
     """Automation levels"""
@@ -238,19 +245,80 @@ class SelfHealingSystem:
         return await self.evaluate_trigger_condition(rule.trigger_condition, context)
     
     async def evaluate_trigger_condition(self, condition: str, context: Dict[str, Any]) -> bool:
-        """Evaluate trigger condition"""
+        """Evaluate trigger condition using SimpleNamespace for dot notation support"""
         try:
-            # Simple expression evaluator
-            # In production, use a proper expression parser
+            # Create a safe evaluation environment
+            safe_context = {}
             
-            # Replace context variables
+            # Parse context keys and create nested dictionary structure
             for key, value in context.items():
-                condition = condition.replace(f"{key}", str(value))
+                parts = key.split('.')
+                current = safe_context
+                
+                # Navigate/create nested structure
+                for part in parts[:-1]:
+                    if part not in current:
+                        current[part] = {}
+                    current = current[part]
+                
+                # Set the final value
+                current[parts[-1]] = value
             
-            # Evaluate the condition
-            return eval(condition)
+            # Add default values for common missing variables
+            if 'errors' not in safe_context:
+                safe_context['errors'] = {
+                    'cache_related': 0,
+                    'rate_limit_exceeded': 0,
+                    'total': 0
+                }
+            
+            if 'sync' not in safe_context:
+                safe_context['sync'] = {
+                    'consecutive_failures': 0,
+                    'duration': 0,
+                    'batch_size': 100,
+                    'id': None
+                }
+            
+            if 'credentials' not in safe_context:
+                safe_context['credentials'] = {
+                    'age_days': 0
+                }
+            
+            if 'performance' not in safe_context:
+                safe_context['performance'] = {}
+            
+            # Ensure performance has required fields
+            performance_defaults = {
+                'records_processed': 0,
+                'operation_duration': 0,
+                'throughput': 0,
+                'cpu_usage': 0,
+                'memory_usage': 0,
+                'trend_declining': False,
+                'error_rate_increasing': False
+            }
+            
+            for key, default_value in performance_defaults.items():
+                if key not in safe_context['performance']:
+                    safe_context['performance'][key] = default_value
+            
+            # Replace AND/OR operators with Python equivalents
+            condition = condition.replace(' AND ', ' and ')
+            condition = condition.replace(' OR ', ' or ')
+            condition = condition.replace(' NOT ', ' not ')
+            
+            # Convert to SimpleNamespace for dot notation support
+            ns_context = dict_to_namespace(safe_context)
+            
+            # Evaluate the condition safely using SimpleNamespace
+            result = eval(condition, {"__builtins__": {}}, vars(ns_context))
+            return bool(result)
+            
         except Exception as e:
             logger.error(f"Error evaluating condition '{condition}': {e}")
+            # Log the context for debugging
+            logger.debug(f"Context keys: {list(context.keys())}")
             return False
     
     def is_out_of_cooldown(self, rule: AutomationRule) -> bool:

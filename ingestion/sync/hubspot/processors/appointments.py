@@ -70,7 +70,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'duration': self.parse_duration(properties.get('duration')),
             'appointment_status': properties.get('appointment_status'),
             'appointment_response': properties.get('appointment_response'),
-            'is_complete': self._parse_boolean(properties.get('is_complete')),
+            'is_complete': self._parse_boolean_not_null(properties.get('is_complete')),
             'appointment_services': properties.get('appointment_services'),
             'lead_services': properties.get('lead_services'),
             'type_id': properties.get('type_id'),
@@ -164,7 +164,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
                     record[field] = self._parse_datetime(record[field])
         
         # Validate boolean fields
-        boolean_fields = ['is_complete', 'spouses_present']
+        boolean_fields = ['spouses_present']
         for field in boolean_fields:
             if record.get(field) is not None:
                 try:
@@ -174,4 +174,20 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
                     logger.warning(f"Using legacy boolean parsing for {field}: {e}")
                     record[field] = self._parse_boolean(record[field])
         
+        # Handle is_complete specifically - convert null to False
+        if 'is_complete' in record:
+            try:
+                record['is_complete'] = self.validate_field('is_complete', record['is_complete'], 'boolean')
+                if record['is_complete'] is None:
+                    record['is_complete'] = False
+            except ValidationException as e:
+                # Use legacy parsing as fallback
+                logger.warning(f"Using legacy boolean parsing for is_complete: {e}")
+                record['is_complete'] = self._parse_boolean_not_null(record['is_complete'])
+        
         return record
+    
+    def _parse_boolean_not_null(self, value: Any) -> bool:
+        """Parse boolean value and convert None/null to False"""
+        parsed_value = self._parse_boolean(value)
+        return parsed_value if parsed_value is not None else False
