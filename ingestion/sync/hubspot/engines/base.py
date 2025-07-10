@@ -170,14 +170,11 @@ class HubSpotBaseSyncEngine(BaseSyncEngine):
             
     async def report_sync_metrics(self, metrics: Dict[str, Any]) -> None:
         """Report sync metrics to monitoring system"""
-        try:
-            if self.automation_engine:
-                # Report metrics with default time window (24 hours)
-                await self.automation_engine.report_metrics(time_window_hours=24, include_detailed=False)
-        except Exception as e:
-            logger.warning(f"Failed to report metrics to automation engine: {e}")
-            
-        # Send success alert if needed
+        # Log batch completion metrics for operational monitoring
+        logger.info(f"Batch metrics - Entity: {self.entity_type}, Processed: {metrics.get('processed', 0)}, "
+                   f"Success Rate: {metrics.get('success_rate', 0):.2%}")
+        
+        # Send performance alert if needed (but don't generate full automation reports per batch)
         try:
             if self.alert_system and metrics.get('success_rate', 0) < 0.95:
                 await self.alert_system.send_alert(
@@ -188,3 +185,6 @@ class HubSpotBaseSyncEngine(BaseSyncEngine):
                 )
         except Exception as e:
             logger.warning(f"Failed to send performance alert: {e}")
+            
+        # Note: Full automation metrics reports should be generated on schedule, 
+        # not per batch. See automation_engine.report_metrics() for scheduled reporting.
