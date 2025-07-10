@@ -120,31 +120,31 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
         
         # Validate HubSpot object ID
         if record.get('hs_object_id'):
-            record['hs_object_id'] = self.validate_field('hs_object_id', record['hs_object_id'], 'object_id')
+            record['hs_object_id'] = self.validate_field('hs_object_id', record['hs_object_id'], 'object_id', record)
         
         # Validate phone numbers
         if record.get('phone1'):
-            record['phone1'] = self.validate_field('phone1', record['phone1'], 'phone')
+            record['phone1'] = self.validate_field('phone1', record['phone1'], 'phone', record)
         if record.get('phone2'):
-            record['phone2'] = self.validate_field('phone2', record['phone2'], 'phone')
+            record['phone2'] = self.validate_field('phone2', record['phone2'], 'phone', record)
         
         # Validate email format if present
         if record.get('email'):
-            record['email'] = self.validate_field('email', record['email'], 'email')
+            record['email'] = self.validate_field('email', record['email'], 'email', record)
         if record.get('canvasser_email'):
-            record['canvasser_email'] = self.validate_field('canvasser_email', record['canvasser_email'], 'email')
+            record['canvasser_email'] = self.validate_field('canvasser_email', record['canvasser_email'], 'email', record)
         
         # Validate address fields
         if record.get('zip'):
             try:
-                record['zip'] = self.validate_field('zip', record['zip'], 'zip_code')
+                record['zip'] = self.validate_field('zip', record['zip'], 'zip_code', record)
             except ValidationException as e:
                 logger.warning(f"Invalid zip code for appointment {record['id']}: {e}")
                 # Keep original value if validation fails
         
         if record.get('state'):
             try:
-                record['state'] = self.validate_field('state', record['state'], 'state')
+                record['state'] = self.validate_field('state', record['state'], 'state', record)
             except ValidationException as e:
                 logger.warning(f"Invalid state code for appointment {record['id']}: {e}")
                 # Keep original value if validation fails
@@ -157,7 +157,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
         for field in datetime_fields:
             if record.get(field):
                 try:
-                    record[field] = self.validate_field(field, record[field], 'datetime')
+                    record[field] = self.validate_field(field, record[field], 'datetime', record)
                 except ValidationException as e:
                     # Use legacy parsing as fallback
                     logger.warning(f"Using legacy datetime parsing for {field}: {e}")
@@ -168,7 +168,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
         for field in boolean_fields:
             if record.get(field) is not None:
                 try:
-                    record[field] = self.validate_field(field, record[field], 'boolean')
+                    record[field] = self.validate_field(field, record[field], 'boolean', record)
                 except ValidationException as e:
                     # Use legacy parsing as fallback
                     logger.warning(f"Using legacy boolean parsing for {field}: {e}")
@@ -177,7 +177,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
         # Handle is_complete specifically - convert null to False
         if 'is_complete' in record:
             try:
-                record['is_complete'] = self.validate_field('is_complete', record['is_complete'], 'boolean')
+                record['is_complete'] = self.validate_field('is_complete', record['is_complete'], 'boolean', record)
                 if record['is_complete'] is None:
                     record['is_complete'] = False
             except ValidationException as e:

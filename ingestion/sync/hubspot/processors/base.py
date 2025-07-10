@@ -83,8 +83,8 @@ class HubSpotBaseProcessor(BaseDataProcessor):
             logger.warning(f"Failed to parse duration '{value}': {e}")
             return 0  # Return 0 instead of raising exception for data integrity
     
-    def validate_field(self, field_name: str, value: Any, field_type: str = 'string') -> Any:
-        """Validate a field using appropriate validator"""
+    def validate_field(self, field_name: str, value: Any, field_type: str = 'string', context: Dict[str, Any] = None) -> Any:
+        """Validate a field using appropriate validator with optional context"""
         # Check if validation is enabled
         if not self.config.is_validation_enabled():
             return value
@@ -117,14 +117,29 @@ class HubSpotBaseProcessor(BaseDataProcessor):
                 return StringValidator().validate(value)
         except ValidationException as e:
             # Handle validation errors based on strict mode
+            context_info = ""
+            if context:
+                # Build context string with available identifiers
+                identifiers = []
+                for id_field in ['id']:
+                    if context.get(id_field):
+                        identifiers.append(f"{id_field}={context[id_field]}")
+                
+                if identifiers:
+                    context_info = f" (Record: {', '.join(identifiers)})"
+            
             if self.config.is_strict_validation():
-                logger.error(f"Strict validation failed for field '{field_name}': {e}")
+                logger.error(f"Strict validation failed for field '{field_name}'{context_info}: {e}")
                 raise ValidationException(f"Field '{field_name}': {e}")
             else:
-                logger.warning(f"Validation warning for field '{field_name}': {e}")
+                logger.warning(f"Validation warning for field '{field_name}'{context_info}: {e}")
                 return value  # Return original value in non-strict mode
         except Exception as e:
-            logger.error(f"Unexpected error validating field '{field_name}': {e}")
+            context_info = ""
+            if context and context.get('id'):
+                context_info = f" (Record ID: {context['id']})"
+            
+            logger.error(f"Unexpected error validating field '{field_name}'{context_info}: {e}")
             if self.config.is_strict_validation():
                 raise ValidationException(f"Field '{field_name}': Validation error")
             return value

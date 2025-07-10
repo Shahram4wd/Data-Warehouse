@@ -78,27 +78,27 @@ class HubSpotDivisionProcessor(HubSpotBaseProcessor):
         
         # Validate HubSpot object ID
         if record.get('hs_object_id'):
-            record['hs_object_id'] = self.validate_field('hs_object_id', record['hs_object_id'], 'object_id')
+            record['hs_object_id'] = self.validate_field('hs_object_id', record['hs_object_id'], 'object_id', record)
         
         # Validate phone number
         if record.get('phone'):
-            record['phone'] = self.validate_field('phone', record['phone'], 'phone')
+            record['phone'] = self.validate_field('phone', record['phone'], 'phone', record)
         
         # Validate manager email format if present
         if record.get('manager_email'):
-            record['manager_email'] = self.validate_field('manager_email', record['manager_email'], 'email')
+            record['manager_email'] = self.validate_field('manager_email', record['manager_email'], 'email', record)
         
         # Validate address fields
         if record.get('zip'):
             try:
-                record['zip'] = self.validate_field('zip', record['zip'], 'zip_code')
+                record['zip'] = self.validate_field('zip', record['zip'], 'zip_code', record)
             except ValidationException as e:
                 logger.warning(f"Invalid zip code for division {record['id']}: {e}")
                 # Keep original value if validation fails
         
         if record.get('state'):
             try:
-                record['state'] = self.validate_field('state', record['state'], 'state')
+                record['state'] = self.validate_field('state', record['state'], 'state', record)
             except ValidationException as e:
                 logger.warning(f"Invalid state code for division {record['id']}: {e}")
                 # Keep original value if validation fails
@@ -108,7 +108,7 @@ class HubSpotDivisionProcessor(HubSpotBaseProcessor):
         for field in datetime_fields:
             if record.get(field):
                 try:
-                    record[field] = self.validate_field(field, record[field], 'datetime')
+                    record[field] = self.validate_field(field, record[field], 'datetime', record)
                 except ValidationException as e:
                     # Use legacy parsing as fallback
                     logger.warning(f"Using legacy datetime parsing for {field}: {e}")
