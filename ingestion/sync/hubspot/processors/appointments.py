@@ -66,7 +66,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'zip': properties.get('zip'),
             # Appointment details
             'date': self._parse_datetime(properties.get('date')),
-            'time': properties.get('time'),
+            'time': self.validate_field('time', properties.get('time'), 'time'),
             'duration': self.parse_duration(properties.get('duration')),
             'appointment_status': properties.get('appointment_status'),
             'appointment_response': properties.get('appointment_response'),

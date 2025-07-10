@@ -13,7 +13,7 @@ from ingestion.base.exceptions import (
     ValidationException, RetryableException, NonRetryableException
 )
 from ingestion.base.validators import (
-    EmailValidator, PhoneValidator, DateValidator, 
+    EmailValidator, PhoneValidator, DateValidator, TimeValidator,
     DecimalValidator, BooleanValidator, StringValidator
 )
 from ingestion.base.retry import retry_with_backoff, RetryConfig
@@ -46,6 +46,7 @@ class HubSpotBaseProcessor(BaseDataProcessor):
         self.state_validator = HubSpotStateValidator()
         self.url_validator = HubSpotUrlValidator()
         self.date_validator = DateValidator()
+        self.time_validator = TimeValidator()
         self.decimal_validator = DecimalValidator()
         self.boolean_validator = BooleanValidator()
         
@@ -130,6 +131,8 @@ class HubSpotBaseProcessor(BaseDataProcessor):
                 return self.url_validator.validate(value)
             elif field_type == 'date' or field_type == 'datetime':
                 return self.date_validator.validate(value)
+            elif field_type == 'time':
+                return self.time_validator.validate(value)
             elif field_type == 'decimal':
                 return self.decimal_validator.validate(value)
             elif field_type == 'boolean':

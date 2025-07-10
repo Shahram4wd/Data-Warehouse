@@ -352,6 +352,86 @@ class ChoiceValidator(BaseValidator):
     def get_error_message(self) -> str:
         return f"Must be one of: {self.choices}"
 
+class TimeValidator(BaseValidator):
+    """Time validator that extracts time from datetime strings"""
+    
+    def __init__(self, formats: List[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        self.formats = formats or [
+            '%H:%M:%S',
+            '%H:%M',
+            '%H:%M:%S.%f',
+        ]
+    
+    def validate(self, value: Any) -> Optional[str]:
+        """Validate and extract time from datetime string"""
+        self._check_required(value)
+        
+        if not value:
+            return None
+        
+        # If it's already a time object, format it
+        if hasattr(value, 'time'):
+            return value.time().strftime('%H:%M:%S')
+        
+        value_str = str(value).strip()
+        
+        # Handle full datetime strings like "2025-06-10T14:00:00"
+        if 'T' in value_str:
+            try:
+                # Split on T and take the time part
+                datetime_part = value_str.split('T')[1]
+                # Remove timezone info if present
+                time_part = datetime_part.split('+')[0].split('Z')[0].split('-')[0]
+                
+                # Validate time format
+                if ':' in time_part:
+                    parts = time_part.split(':')
+                    if len(parts) >= 2:
+                        hour = int(parts[0])
+                        minute = int(parts[1])
+                        second = int(parts[2]) if len(parts) > 2 else 0
+                        
+                        # Validate ranges
+                        if 0 <= hour <= 23 and 0 <= minute <= 59 and 0 <= second <= 59:
+                            return f"{hour:02d}:{minute:02d}:{second:02d}"
+                        else:
+                            raise ValidationException(f"Invalid time values: {hour}:{minute}:{second}")
+            except (ValueError, IndexError) as e:
+                raise ValidationException(f"Invalid datetime format for time extraction: '{value}' - {e}")
+        
+        # Handle time-only strings like "14:00:00" or "14:00"
+        elif ':' in value_str:
+            try:
+                parts = value_str.split(':')
+                if len(parts) >= 2:
+                    hour = int(parts[0])
+                    minute = int(parts[1])
+                    second = int(parts[2]) if len(parts) > 2 else 0
+                    
+                    # Validate ranges
+                    if 0 <= hour <= 23 and 0 <= minute <= 59 and 0 <= second <= 59:
+                        return f"{hour:02d}:{minute:02d}:{second:02d}"
+                    else:
+                        raise ValidationException(f"Invalid time values: {hour}:{minute}:{second}")
+            except (ValueError, IndexError) as e:
+                raise ValidationException(f"Invalid time format: '{value}' - {e}")
+        
+        # Try parsing as full datetime and extract time
+        try:
+            # Use DateValidator to parse the datetime
+            date_validator = DateValidator()
+            parsed_datetime = date_validator.validate(value)
+            if parsed_datetime and hasattr(parsed_datetime, 'time'):
+                return parsed_datetime.time().strftime('%H:%M:%S')
+        except ValidationException:
+            pass
+        
+        raise ValidationException(f"Invalid time format: '{value}'. Expected HH:MM:SS or datetime string.")
+    
+    def get_error_message(self) -> str:
+        return "Time must be in HH:MM:SS format or extractable from datetime string"
+
 # Validation registry for easy access
 VALIDATORS = {
     'phone': PhoneValidator,
@@ -362,6 +442,7 @@ VALIDATORS = {
     'boolean': BooleanValidator,
     'string': StringValidator,
     'choice': ChoiceValidator,
+    'time': TimeValidator,
 }
 
 def get_validator(validator_type: str, **kwargs) -> BaseValidator:
