@@ -53,10 +53,13 @@ class HubSpotBaseProcessor(BaseDataProcessor):
         self.retry_config = RetryConfig(**self.config.get_retry_config())
     
     def parse_duration(self, value: str) -> int:
-        """Convert 'HH:MM:SS' to minutes
+        """Convert duration to minutes
         
         Args:
-            value: Duration string in 'HH:MM:SS' format (e.g., '2:00:00')
+            value: Duration string in various formats:
+                - 'HH:MM:SS' format (e.g., '2:00:00')
+                - Numeric string representing seconds (e.g., '7200')
+                - Numeric string representing milliseconds (e.g., '7200000')
             
         Returns:
             Duration in minutes as integer
@@ -70,9 +73,28 @@ class HubSpotBaseProcessor(BaseDataProcessor):
             
             # Handle string input    
             if isinstance(value, str):
-                # Split by colons and convert to integers
-                h, m, s = map(int, value.split(":"))
-                return h * 60 + m + s // 60
+                # Check if it's in HH:MM:SS format (contains colons)
+                if ':' in value:
+                    parts = value.split(":")
+                    if len(parts) == 3:
+                        h, m, s = map(int, parts)
+                        return h * 60 + m + s // 60
+                    elif len(parts) == 2:
+                        # MM:SS format
+                        m, s = map(int, parts)
+                        return m + s // 60
+                    else:
+                        # Invalid colon format, treat as numeric
+                        numeric_value = float(value.replace(':', ''))
+                else:
+                    # Numeric string - determine if it's seconds or milliseconds
+                    numeric_value = float(value)
+                
+                # Convert numeric value to minutes
+                if numeric_value > 86400:  # > 24 hours in seconds, likely milliseconds
+                    return int(numeric_value / 1000 / 60)  # milliseconds to minutes
+                else:  # likely seconds
+                    return int(numeric_value / 60)  # seconds to minutes
             
             # Handle numeric input (assume it's already in minutes)
             if isinstance(value, (int, float)):
