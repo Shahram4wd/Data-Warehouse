@@ -407,6 +407,10 @@ class HTTPConnectionPool(ConnectionPool):
             return not conn.closed
         except Exception:
             return False
+    
+    async def get_session(self):
+        """Get a session from the connection pool (backward compatibility method)"""
+        return await self.acquire_connection()
 
 class DatabaseConnectionPool(ConnectionPool):
     """Database connection pool implementation"""
