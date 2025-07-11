@@ -432,6 +432,112 @@ class TimeValidator(BaseValidator):
     def get_error_message(self) -> str:
         return "Time must be in HH:MM:SS format or extractable from datetime string"
 
+class ZipValidator(BaseValidator):
+    """ZIP/Postal code validator with international support"""
+    
+    def __init__(self, country: str = 'US', **kwargs):
+        super().__init__(**kwargs)
+        self.country = country.upper()
+    
+    def validate(self, value: Any) -> Optional[str]:
+        """Validate ZIP/postal code based on country"""
+        self._check_required(value)
+        
+        if not value:
+            return None
+        
+        zip_code = str(value).strip()
+        
+        if self.country == 'US':
+            # US ZIP codes: 12345 or 12345-6789
+            us_zip_pattern = re.compile(r'^\d{5}(-\d{4})?$')
+            if us_zip_pattern.match(zip_code):
+                return zip_code
+            else:
+                # Check if it's a 4-digit zip that needs leading zero
+                if re.match(r'^\d{4}$', zip_code):
+                    # For 4-digit zips, pad with leading zero
+                    padded_zip = zip_code.zfill(5)
+                    return padded_zip
+                raise ValidationException(f"Invalid zip code format: '{zip_code}'. Expected: 12345 or 12345-6789")
+        
+        elif self.country == 'CA':
+            # Canadian postal codes: A1A 1A1
+            ca_postal_pattern = re.compile(r'^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$')
+            if ca_postal_pattern.match(zip_code):
+                return zip_code.upper()
+            raise ValidationException(f"Invalid Canadian postal code: '{zip_code}'. Expected: A1A 1A1")
+        
+        else:
+            # International - basic length check (3-10 characters)
+            if 3 <= len(zip_code) <= 10:
+                return zip_code
+            raise ValidationException(f"Invalid postal code length: '{zip_code}'. Expected: 3-10 characters")
+    
+    def get_error_message(self) -> str:
+        if self.country == 'US':
+            return "ZIP code must be in format 12345 or 12345-6789"
+        elif self.country == 'CA':
+            return "Postal code must be in format A1A 1A1"
+        else:
+            return "Postal code must be 3-10 characters"
+
+class URLValidator(BaseValidator):
+    """URL validator with protocol verification"""
+    
+    def __init__(self, require_protocol: bool = False, allowed_protocols: List[str] = None, **kwargs):
+        super().__init__(**kwargs)
+        self.require_protocol = require_protocol
+        self.allowed_protocols = allowed_protocols or ['http', 'https', 'ftp']
+        
+        # Comprehensive URL regex
+        self.url_pattern = re.compile(
+            r'^(?:(?P<protocol>[a-z][a-z0-9+.-]*):\/\/)?'  # Protocol (optional)
+            r'(?:(?P<username>[a-zA-Z0-9._~!$&\'()*+,;=%-]+)'  # Username (optional)
+            r'(?::(?P<password>[a-zA-Z0-9._~!$&\'()*+,;=%-]+))?@)?'  # Password (optional)
+            r'(?P<host>'
+            r'(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*'  # Domain
+            r'[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?'
+            r'|'
+            r'\[[0-9a-fA-F:]+\]'  # IPv6
+            r')'
+            r'(?::(?P<port>\d+))?'  # Port (optional)
+            r'(?P<path>\/[^\s]*)?$',  # Path (optional)
+            re.IGNORECASE
+        )
+    
+    def validate(self, value: Any) -> Optional[str]:
+        """Validate URL format and protocol"""
+        self._check_required(value)
+        
+        if not value:
+            return None
+        
+        url = str(value).strip()
+        
+        # Basic format validation
+        match = self.url_pattern.match(url)
+        if not match:
+            raise ValidationException(f"Invalid URL format: '{url}'")
+        
+        protocol = match.group('protocol')
+        
+        # Check protocol requirements
+        if self.require_protocol and not protocol:
+            raise ValidationException(f"URL must include protocol: '{url}'")
+        
+        if protocol and protocol.lower() not in self.allowed_protocols:
+            raise ValidationException(f"URL protocol '{protocol}' not allowed. Allowed: {self.allowed_protocols}")
+        
+        # Add default protocol if missing
+        if not protocol and '://' not in url:
+            url = f"https://{url}"
+        
+        return url
+    
+    def get_error_message(self) -> str:
+        return f"URL must be valid format. Allowed protocols: {self.allowed_protocols}"
+
 # Validation registry for easy access
 VALIDATORS = {
     'phone': PhoneValidator,
@@ -443,6 +549,8 @@ VALIDATORS = {
     'string': StringValidator,
     'choice': ChoiceValidator,
     'time': TimeValidator,
+    'zip': ZipValidator,
+    'url': URLValidator,
 }
 
 def get_validator(validator_type: str, **kwargs) -> BaseValidator:

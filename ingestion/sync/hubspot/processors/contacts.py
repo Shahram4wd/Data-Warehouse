@@ -40,9 +40,10 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
         }
     
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform HubSpot contact record to model format"""
+        """Transform HubSpot contact record to model format using enterprise validation framework"""
         properties = record.get('properties', {})
         
+        # Enterprise transformation with comprehensive validation
         return {
             'id': self.validate_field('id', record.get('id'), 'object_id', record),
             'firstname': self.validate_field('firstname', properties.get('firstname'), 'string', record),
@@ -52,7 +53,7 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
             'address': self.validate_field('address', properties.get('address'), 'string', record),
             'city': self.validate_field('city', properties.get('city'), 'string', record),
             'state': self.validate_field('state', properties.get('state'), 'string', record),
-            'zip': self.validate_field('zip', properties.get('zip'), 'string', record),
+            'zip': self.validate_field('zip', properties.get('zip'), 'zip', record),  # Enhanced zip validation
             'createdate': self.validate_field('createdate', properties.get('createdate'), 'datetime', record),
             'lastmodifieddate': self.validate_field('lastmodifieddate', properties.get('lastmodifieddate'), 'datetime', record),
             'campaign_name': self.validate_field('campaign_name', properties.get('campaign_name'), 'string', record),
@@ -74,7 +75,7 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
             'reference_code': self.validate_field('reference_code', properties.get('reference_code'), 'string', record),
             'search_terms': self.validate_field('search_terms', properties.get('search_terms'), 'string', record),
             'tier': self.validate_field('tier', properties.get('tier'), 'string', record),
-            'trustedform_cert_url': self.validate_field('trustedform_cert_url', properties.get('trustedform_cert_url'), 'string', record),
+            'trustedform_cert_url': self.validate_field('trustedform_cert_url', properties.get('trustedform_cert_url'), 'url', record),  # Enhanced URL validation
             'vendorleadid': self.validate_field('vendorleadid', properties.get('vendorleadid'), 'string', record),
             'vertical': self.validate_field('vertical', properties.get('vertical'), 'string', record),
         }

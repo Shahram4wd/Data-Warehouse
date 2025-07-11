@@ -123,7 +123,7 @@ class HubSpotBaseProcessor(BaseDataProcessor):
                 return self.timestamp_validator.validate(value)
             elif field_type == 'currency':
                 return self.currency_validator.validate(value)
-            elif field_type == 'zip_code':
+            elif field_type == 'zip_code' or field_type == 'zip':
                 return self.zip_code_validator.validate(value)
             elif field_type == 'state':
                 return self.state_validator.validate(value)
