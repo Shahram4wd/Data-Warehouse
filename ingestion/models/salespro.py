@@ -88,3 +88,203 @@ class SalesPro_SyncHistory(models.Model):
     
     def __str__(self):
         return f"{self.sync_type} - {self.started_at.strftime('%Y-%m-%d %H:%M')}"
+
+class SalesPro_CreditApplication(models.Model):
+    leap_credit_app_id = models.CharField(max_length=255, primary_key=True)
+    company_id = models.CharField(max_length=255)
+    company_name = models.CharField(max_length=255)
+    sales_rep_id = models.CharField(max_length=255)
+    customer_id = models.CharField(max_length=255)
+    credit_app_vendor = models.CharField(max_length=255)
+    credit_app_vendor_id = models.CharField(max_length=255)
+    credit_app_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    credit_app_status = models.CharField(max_length=255)
+    credit_app_note = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'ingestion_salespro_credit_applications'
+        verbose_name = 'Credit Application'
+        verbose_name_plural = 'Credit Applications'
+
+    def __str__(self):
+        return f"{self.customer_id} - {self.credit_app_vendor}"
+
+
+class SalesPro_Customer(models.Model):
+    customer_id = models.CharField(max_length=255, primary_key=True)
+    estimate_id = models.CharField(max_length=255)
+    company_id = models.CharField(max_length=255)
+    company_name = models.CharField(max_length=255)
+    customer_first_name = models.CharField(max_length=255)
+    customer_last_name = models.CharField(max_length=255)
+    crm_source = models.CharField(max_length=255)
+    crm_source_id = models.CharField(max_length=255)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'ingestion_salespro_customer'
+        verbose_name = 'Customer'
+        verbose_name_plural = 'Customers'
+
+    def __str__(self):
+        return f"{self.customer_first_name} {self.customer_last_name}"
+
+
+class SalesPro_Estimate(models.Model):
+    estimate_id = models.CharField(max_length=255, primary_key=True)
+    company_id = models.CharField(max_length=255)
+    company_name = models.CharField(max_length=255)
+    office_id = models.CharField(max_length=255)
+    office_name = models.CharField(max_length=255)
+    sales_rep_id = models.CharField(max_length=255)
+    sales_rep_first_name = models.CharField(max_length=255)
+    sales_rep_last_name = models.CharField(max_length=255)
+    customer_id = models.CharField(max_length=255)
+    customer_first_name = models.CharField(max_length=255)
+    customer_last_name = models.CharField(max_length=255)
+    street_address = models.CharField(max_length=255)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    zip_code = models.CharField(max_length=20)
+    sale_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    is_sale = models.BooleanField(default=False)
+    job_type = models.CharField(max_length=100)
+    finance_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    bank_name = models.CharField(max_length=255)
+    loan_name = models.CharField(max_length=255)
+    down_payment = models.DecimalField(max_digits=12, decimal_places=2)
+    has_credit_app = models.BooleanField(default=False)
+    document_count = models.BigIntegerField()
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'ingestion_salespro_estimate'
+        verbose_name = 'Estimate'
+        verbose_name_plural = 'Estimates'
+
+    def __str__(self):
+        return self.estimate_id
+
+
+class SalesPro_LeadResult(models.Model):
+    estimate_id = models.CharField(max_length=255)
+    company_id = models.CharField(max_length=255)
+    lead_results = models.TextField()
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'ingestion_salespro_lead_results'
+        verbose_name = 'Lead Result'
+        verbose_name_plural = 'Lead Results'
+
+    def __str__(self):
+        return self.estimate_id
+
+
+class SalesPro_MeasureSheet(models.Model):
+    estimate_id = models.CharField(max_length=255)
+    office_id = models.CharField(max_length=255)
+    office_name = models.CharField(max_length=255)
+    company_id = models.CharField(max_length=255)
+    company_name = models.CharField(max_length=255)
+    measure_sheet_item_id = models.CharField(max_length=255)
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    category = models.CharField(max_length=255)
+    measurement_type = models.CharField(max_length=255)
+    measure_sheet_item_name = models.CharField(max_length=255)
+    measure_sheet_item_price = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'ingestion_salespro_measure_sheet'
+        verbose_name = 'Measure Sheet'
+        verbose_name_plural = 'Measure Sheets'
+
+    def __str__(self):
+        return f"{self.estimate_id} - {self.measure_sheet_item_name}"
+
+
+class SalesPro_Payment(models.Model):
+    payment_id = models.CharField(max_length=255, primary_key=True)
+    company_id = models.CharField(max_length=255)
+    company_name = models.CharField(max_length=255)
+    customer_id = models.CharField(max_length=255)
+    payment_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_type = models.CharField(max_length=100)
+    payment_description = models.CharField(max_length=255)
+    payment_success = models.BooleanField(default=False)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        db_table = 'ingestion_salespro_payments'
+        verbose_name = 'Payment'
+        verbose_name_plural = 'Payments'
+
+    def __str__(self):
+        return self.payment_id
+
+
+class SalesPro_UserActivity(models.Model):
+    created_at = models.DateTimeField()
+    user_id = models.CharField(max_length=255)
+    company_id = models.CharField(max_length=255)
+    company_name = models.CharField(max_length=255)
+    local_customer_uuid = models.CharField(max_length=255)
+    customer_id = models.CharField(max_length=255)
+    activity_note = models.TextField()
+    key_metric = models.CharField(max_length=255)
+    activity_identifier = models.CharField(max_length=255)
+    price_type = models.CharField(max_length=255)
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    original_row_num = models.BigIntegerField()
+
+    class Meta:
+        db_table = 'ingestion_salespro_user_activity'
+        verbose_name = 'User Activity'
+        verbose_name_plural = 'User Activities'
+
+    def __str__(self):
+        return f"{self.user_id} - {self.activity_identifier}"
+
+
+class SalesPro_EstimatePriceBreakdown(models.Model):
+    estimate_date = models.DateTimeField()
+    company_name = models.CharField(max_length=255)
+    estimate_id = models.CharField(max_length=255)
+    trade_type = models.CharField(max_length=255)
+    price_guide_amount = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'ingestion_salespro_estimate_price_breakdown'
+        verbose_name = 'Estimate Price Breakdown'
+        verbose_name_plural = 'Estimate Price Breakdowns'
+
+    def __str__(self):
+        return self.estimate_id
+
+
+class SalesPro_GeographicHotspot(models.Model):
+    company_id = models.CharField(max_length=255)
+    company_name = models.CharField(max_length=255)
+    state = models.CharField(max_length=50)
+    city = models.CharField(max_length=100)
+    total_estimates = models.BigIntegerField()
+    sales = models.BigIntegerField()
+    close_rate = models.DecimalField(max_digits=6, decimal_places=2)
+    avg_sale_value = models.DecimalField(max_digits=12, decimal_places=2)
+    active_sales_reps = models.BigIntegerField()
+
+    class Meta:
+        db_table = 'ingestion_salespro_geographic_hotspots'
+        verbose_name = 'Geographic Hotspot'
+        verbose_name_plural = 'Geographic Hotspots'
+
+    def __str__(self):
+        return f"{self.city}, {self.state}"
