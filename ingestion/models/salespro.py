@@ -187,6 +187,9 @@ class SalesPro_LeadResult(models.Model):
 
 
 class SalesPro_MeasureSheet(models.Model):
+    # Remove auto-incrementing ID since this is a measure sheet items table
+    id = None
+    
     estimate_id = models.CharField(max_length=255, blank=True, null=True)
     office_id = models.CharField(max_length=255, blank=True, null=True)
     office_name = models.CharField(max_length=255, blank=True, null=True)
@@ -205,6 +208,9 @@ class SalesPro_MeasureSheet(models.Model):
         db_table = 'ingestion_salespro_measure_sheet'
         verbose_name = 'Measure Sheet'
         verbose_name_plural = 'Measure Sheets'
+        unique_together = [['created_at', 'updated_at', 'estimate_id', 'measure_sheet_item_name']]
+        # Order by created_at by default
+        ordering = ['created_at']
 
     def __str__(self):
         return f"{self.estimate_id} - {self.measure_sheet_item_name}"
@@ -232,9 +238,6 @@ class SalesPro_Payment(models.Model):
 
 
 class SalesPro_UserActivity(models.Model):
-    # Remove auto-incrementing ID since this is a log table
-    id = None
-    
     created_at = models.DateTimeField()
     user_id = models.CharField(max_length=255, blank=True, null=True)
     company_id = models.CharField(max_length=255, blank=True, null=True)

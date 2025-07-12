@@ -18,7 +18,7 @@ class SalesProPaymentSyncEngine(BaseSalesProSyncEngine):
     
     def __init__(self, **kwargs):
         super().__init__(
-            table_name='payment',  # Use simple table name from your working example
+            table_name='payments',  # Try plural form like many other tables
             model_class=SalesPro_Payment,
             **kwargs
         )
@@ -130,28 +130,6 @@ class SalesProPaymentSyncEngine(BaseSalesProSyncEngine):
             return Decimal(str(value))
         except (ValueError, TypeError):
             return None
-        if not value:
-            return None
-        try:
-            if isinstance(value, datetime):
-                return value
-            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S']:
-                try:
-                    return datetime.strptime(str(value), fmt)
-                except ValueError:
-                    continue
-            return None
-        except Exception:
-            return None
-            
-    def _parse_decimal(self, value):
-        if value is None:
-            return None
-        try:
-            from decimal import Decimal
-            return Decimal(str(value))
-        except (ValueError, TypeError):
-            return None
 
 class Command(BaseSalesProSyncCommand):
     """Sync payments from SalesPro AWS Athena database"""
@@ -159,10 +137,12 @@ class Command(BaseSalesProSyncCommand):
     help = "Sync payments from SalesPro AWS Athena database"
     
     def get_sync_engine(self, **options):
+        """Get the payment sync engine"""
         return SalesProPaymentSyncEngine(
             batch_size=options.get('batch_size', 500),
             dry_run=options.get('dry_run', False)
         )
     
     def get_sync_name(self) -> str:
+        """Get the sync operation name"""
         return "payment"

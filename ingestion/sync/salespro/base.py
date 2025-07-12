@@ -127,9 +127,9 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         max_records = kwargs.get('max_records', 0)
         if max_records > 0:
             query += f" LIMIT {max_records}"
-        elif self.table_name == 'user_activity' and not since_date:
+        elif self.table_name in ['user_activity', 'measure_sheet'] and not since_date:
             # For full sync of large tables, use a reasonable default limit
-            default_limit = 50000  # Process 50k records at a time for large tables
+            default_limit = 10000 if self.table_name == 'measure_sheet' else 50000
             query += f" LIMIT {default_limit}"
             logger.warning(f"Large table '{self.table_name}' detected. Limiting to {default_limit} records per sync. Use --max-records or incremental sync for better control.")
             
