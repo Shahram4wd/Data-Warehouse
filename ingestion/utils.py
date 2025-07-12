@@ -84,3 +84,37 @@ def get_mysql_connection():
         password=db_password,
         port=db_port
     )
+
+
+def get_athena_connection():
+    """
+    Create and return an Athena client using boto3.
+    This replaces the pyathena connection approach.
+    """
+    from ingestion.athena_client import get_athena_client
+    return get_athena_client()
+
+
+def get_athena_client():
+    """
+    Establish and return an Athena client using boto3 and environment variables.
+    """
+    from ingestion.athena_client import AthenaClient
+    
+    # Get AWS credentials and configuration from environment variables
+    aws_access_key_id = os.getenv("SALESPRO_ACCESS_KEY_ID")
+    aws_secret_access_key = os.getenv("SALESPRO_SECRETE_ACCESS_KEY")
+    region_name = os.getenv("SALESPRO_SERVER_REGION", "us-east-1")
+    s3_staging_dir = os.getenv("SALESPRO_S3_LOCATION")
+
+    if not all([aws_access_key_id, aws_secret_access_key, s3_staging_dir]):
+        raise ValueError("AWS Athena connection details are missing in environment variables.")
+    
+    return AthenaClient(
+        region=region_name,
+        aws_key=aws_access_key_id,
+        aws_secret=aws_secret_access_key,
+        s3_output=s3_staging_dir,
+        workgroup='primary',
+        database='default'
+    )

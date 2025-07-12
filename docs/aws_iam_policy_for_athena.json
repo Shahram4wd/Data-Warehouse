@@ -1,0 +1,54 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AthenaQueryExecution",
+            "Effect": "Allow",
+            "Action": [
+                "athena:StartQueryExecution",
+                "athena:GetQueryExecution",
+                "athena:GetQueryResults",
+                "athena:StopQueryExecution",
+                "athena:GetWorkGroup",
+                "athena:ListQueryExecutions"
+            ],
+            "Resource": [
+                "arn:aws:athena:us-east-1:701766740146:workgroup/*",
+                "arn:aws:athena:us-east-1:701766740146:datacatalog/*"
+            ]
+        },
+        {
+            "Sid": "GlueDataCatalogAccess",
+            "Effect": "Allow",
+            "Action": [
+                "glue:GetDatabase",
+                "glue:GetDatabases",
+                "glue:GetTable",
+                "glue:GetTables",
+                "glue:GetPartition",
+                "glue:GetPartitions"
+            ],
+            "Resource": [
+                "arn:aws:glue:us-east-1:701766740146:catalog",
+                "arn:aws:glue:us-east-1:701766740146:database/*",
+                "arn:aws:glue:us-east-1:701766740146:table/*/*"
+            ]
+        },
+        {
+            "Sid": "S3AccessForAthenaResults",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetBucketLocation",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:PutObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::customer-analytics-data-vault-staging",
+                "arn:aws:s3:::customer-analytics-data-vault-staging/*",
+                "arn:aws:s3:::aws-athena-query-results-*"
+            ]
+        }
+    ]
+}

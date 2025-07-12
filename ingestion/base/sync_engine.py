@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional, AsyncGenerator
 import asyncio
 import logging
+from datetime import datetime
 from django.utils import timezone
 from asgiref.sync import sync_to_async
 from ingestion.base.exceptions import SyncException, ValidationException
@@ -83,9 +84,19 @@ class BaseSyncEngine(ABC):
         # Prepare configuration for JSON serialization
         config = kwargs.copy()
         
-        # Convert datetime to string for JSON serialization
-        if 'last_sync' in config and config['last_sync']:
-            config['last_sync'] = config['last_sync'].isoformat()
+        # Convert datetime objects to strings for JSON serialization
+        def serialize_datetime_objects(obj):
+            """Recursively convert datetime objects to ISO strings for JSON serialization"""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, dict):
+                return {k: serialize_datetime_objects(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [serialize_datetime_objects(item) for item in obj]
+            else:
+                return obj
+        
+        config = serialize_datetime_objects(config)
         
         self.sync_history = await sync_to_async(SyncHistory.objects.create)(
             crm_source=self.crm_source,

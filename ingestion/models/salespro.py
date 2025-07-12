@@ -91,14 +91,14 @@ class SalesPro_SyncHistory(models.Model):
 
 class SalesPro_CreditApplication(models.Model):
     leap_credit_app_id = models.CharField(max_length=255, primary_key=True)
-    company_id = models.CharField(max_length=255)
-    company_name = models.CharField(max_length=255)
-    sales_rep_id = models.CharField(max_length=255)
-    customer_id = models.CharField(max_length=255)
-    credit_app_vendor = models.CharField(max_length=255)
-    credit_app_vendor_id = models.CharField(max_length=255)
-    credit_app_amount = models.DecimalField(max_digits=12, decimal_places=2)
-    credit_app_status = models.CharField(max_length=255)
+    company_id = models.CharField(max_length=255, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    sales_rep_id = models.CharField(max_length=255, blank=True, null=True)
+    customer_id = models.CharField(max_length=255, blank=True, null=True)
+    credit_app_vendor = models.CharField(max_length=255, blank=True, null=True)
+    credit_app_vendor_id = models.CharField(max_length=255, blank=True, null=True)
+    credit_app_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    credit_app_status = models.CharField(max_length=255, blank=True, null=True)
     credit_app_note = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
@@ -114,13 +114,13 @@ class SalesPro_CreditApplication(models.Model):
 
 class SalesPro_Customer(models.Model):
     customer_id = models.CharField(max_length=255, primary_key=True)
-    estimate_id = models.CharField(max_length=255)
-    company_id = models.CharField(max_length=255)
-    company_name = models.CharField(max_length=255)
-    customer_first_name = models.CharField(max_length=255)
-    customer_last_name = models.CharField(max_length=255)
-    crm_source = models.CharField(max_length=255)
-    crm_source_id = models.CharField(max_length=255)
+    estimate_id = models.CharField(max_length=255, blank=True, null=True)
+    company_id = models.CharField(max_length=255, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    customer_first_name = models.CharField(max_length=255, blank=True, null=True)
+    customer_last_name = models.CharField(max_length=255, blank=True, null=True)
+    crm_source = models.CharField(max_length=255, blank=True, null=True)
+    crm_source_id = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
 
@@ -135,29 +135,29 @@ class SalesPro_Customer(models.Model):
 
 class SalesPro_Estimate(models.Model):
     estimate_id = models.CharField(max_length=255, primary_key=True)
-    company_id = models.CharField(max_length=255)
-    company_name = models.CharField(max_length=255)
-    office_id = models.CharField(max_length=255)
-    office_name = models.CharField(max_length=255)
-    sales_rep_id = models.CharField(max_length=255)
-    sales_rep_first_name = models.CharField(max_length=255)
-    sales_rep_last_name = models.CharField(max_length=255)
-    customer_id = models.CharField(max_length=255)
-    customer_first_name = models.CharField(max_length=255)
-    customer_last_name = models.CharField(max_length=255)
-    street_address = models.CharField(max_length=255)
-    city = models.CharField(max_length=100)
-    state = models.CharField(max_length=100)
-    zip_code = models.CharField(max_length=20)
-    sale_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    company_id = models.CharField(max_length=255, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    office_id = models.CharField(max_length=255, blank=True, null=True)
+    office_name = models.CharField(max_length=255, blank=True, null=True)
+    sales_rep_id = models.CharField(max_length=255, blank=True, null=True)
+    sales_rep_first_name = models.CharField(max_length=255, blank=True, null=True)
+    sales_rep_last_name = models.CharField(max_length=255, blank=True, null=True)
+    customer_id = models.CharField(max_length=255, blank=True, null=True)
+    customer_first_name = models.CharField(max_length=255, blank=True, null=True)
+    customer_last_name = models.CharField(max_length=255, blank=True, null=True)
+    street_address = models.CharField(max_length=255, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    zip_code = models.CharField(max_length=20, blank=True, null=True)
+    sale_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     is_sale = models.BooleanField(default=False)
-    job_type = models.CharField(max_length=100)
-    finance_amount = models.DecimalField(max_digits=12, decimal_places=2)
-    bank_name = models.CharField(max_length=255)
-    loan_name = models.CharField(max_length=255)
-    down_payment = models.DecimalField(max_digits=12, decimal_places=2)
+    job_type = models.CharField(max_length=100, blank=True, null=True)
+    finance_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    bank_name = models.CharField(max_length=255, blank=True, null=True)
+    loan_name = models.CharField(max_length=255, blank=True, null=True)
+    down_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     has_credit_app = models.BooleanField(default=False)
-    document_count = models.BigIntegerField()
+    document_count = models.BigIntegerField(blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
 
@@ -171,9 +171,9 @@ class SalesPro_Estimate(models.Model):
 
 
 class SalesPro_LeadResult(models.Model):
-    estimate_id = models.CharField(max_length=255)
-    company_id = models.CharField(max_length=255)
-    lead_results = models.TextField()
+    estimate_id = models.CharField(max_length=255, blank=True, null=True)
+    company_id = models.CharField(max_length=255, blank=True, null=True)
+    lead_results = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
 
@@ -187,17 +187,17 @@ class SalesPro_LeadResult(models.Model):
 
 
 class SalesPro_MeasureSheet(models.Model):
-    estimate_id = models.CharField(max_length=255)
-    office_id = models.CharField(max_length=255)
-    office_name = models.CharField(max_length=255)
-    company_id = models.CharField(max_length=255)
-    company_name = models.CharField(max_length=255)
-    measure_sheet_item_id = models.CharField(max_length=255)
-    quantity = models.DecimalField(max_digits=12, decimal_places=2)
-    category = models.CharField(max_length=255)
-    measurement_type = models.CharField(max_length=255)
-    measure_sheet_item_name = models.CharField(max_length=255)
-    measure_sheet_item_price = models.DecimalField(max_digits=12, decimal_places=2)
+    estimate_id = models.CharField(max_length=255, blank=True, null=True)
+    office_id = models.CharField(max_length=255, blank=True, null=True)
+    office_name = models.CharField(max_length=255, blank=True, null=True)
+    company_id = models.CharField(max_length=255, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    measure_sheet_item_id = models.CharField(max_length=255, blank=True, null=True)
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    category = models.CharField(max_length=255, blank=True, null=True)
+    measurement_type = models.CharField(max_length=255, blank=True, null=True)
+    measure_sheet_item_name = models.CharField(max_length=255, blank=True, null=True)
+    measure_sheet_item_price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
 
@@ -212,12 +212,12 @@ class SalesPro_MeasureSheet(models.Model):
 
 class SalesPro_Payment(models.Model):
     payment_id = models.CharField(max_length=255, primary_key=True)
-    company_id = models.CharField(max_length=255)
-    company_name = models.CharField(max_length=255)
-    customer_id = models.CharField(max_length=255)
-    payment_amount = models.DecimalField(max_digits=12, decimal_places=2)
-    payment_type = models.CharField(max_length=100)
-    payment_description = models.CharField(max_length=255)
+    company_id = models.CharField(max_length=255, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    customer_id = models.CharField(max_length=255, blank=True, null=True)
+    payment_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    payment_type = models.CharField(max_length=100, blank=True, null=True)
+    payment_description = models.CharField(max_length=255, blank=True, null=True)
     payment_success = models.BooleanField(default=False)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
@@ -232,34 +232,41 @@ class SalesPro_Payment(models.Model):
 
 
 class SalesPro_UserActivity(models.Model):
+    # Remove auto-incrementing ID since this is a log table
+    id = None
+    
     created_at = models.DateTimeField()
-    user_id = models.CharField(max_length=255)
-    company_id = models.CharField(max_length=255)
-    company_name = models.CharField(max_length=255)
-    local_customer_uuid = models.CharField(max_length=255)
-    customer_id = models.CharField(max_length=255)
-    activity_note = models.TextField()
-    key_metric = models.CharField(max_length=255)
-    activity_identifier = models.CharField(max_length=255)
-    price_type = models.CharField(max_length=255)
-    price = models.DecimalField(max_digits=12, decimal_places=2)
-    original_row_num = models.BigIntegerField()
+    user_id = models.CharField(max_length=255, blank=True, null=True)
+    company_id = models.CharField(max_length=255, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    local_customer_uuid = models.CharField(max_length=255, blank=True, null=True)
+    customer_id = models.CharField(max_length=255, blank=True, null=True)
+    activity_note = models.TextField(blank=True, null=True)
+    key_metric = models.CharField(max_length=255, blank=True, null=True)
+    activity_identifier = models.CharField(max_length=255, blank=True, null=True)
+    price_type = models.CharField(max_length=255, blank=True, null=True)
+    price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    original_row_num = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
         db_table = 'ingestion_salespro_user_activity'
         verbose_name = 'User Activity'
         verbose_name_plural = 'User Activities'
+        # Use combination of created_at, user_id, and activity_note as unique constraint
+        unique_together = [['created_at', 'user_id', 'activity_note']]
+        # Order by created_at by default
+        ordering = ['created_at']
 
     def __str__(self):
         return f"{self.user_id} - {self.activity_identifier}"
 
 
 class SalesPro_EstimatePriceBreakdown(models.Model):
-    estimate_date = models.DateTimeField()
-    company_name = models.CharField(max_length=255)
-    estimate_id = models.CharField(max_length=255)
-    trade_type = models.CharField(max_length=255)
-    price_guide_amount = models.CharField(max_length=255)
+    estimate_date = models.DateTimeField(blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    estimate_id = models.CharField(max_length=255, blank=True, null=True)
+    trade_type = models.CharField(max_length=255, blank=True, null=True)
+    price_guide_amount = models.CharField(max_length=255, blank=True, null=True)
 
     class Meta:
         db_table = 'ingestion_salespro_estimate_price_breakdown'
@@ -271,15 +278,15 @@ class SalesPro_EstimatePriceBreakdown(models.Model):
 
 
 class SalesPro_GeographicHotspot(models.Model):
-    company_id = models.CharField(max_length=255)
-    company_name = models.CharField(max_length=255)
-    state = models.CharField(max_length=50)
-    city = models.CharField(max_length=100)
-    total_estimates = models.BigIntegerField()
-    sales = models.BigIntegerField()
-    close_rate = models.DecimalField(max_digits=6, decimal_places=2)
-    avg_sale_value = models.DecimalField(max_digits=12, decimal_places=2)
-    active_sales_reps = models.BigIntegerField()
+    company_id = models.CharField(max_length=255, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+    state = models.CharField(max_length=50, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    total_estimates = models.BigIntegerField(blank=True, null=True)
+    sales = models.BigIntegerField(blank=True, null=True)
+    close_rate = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
+    avg_sale_value = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    active_sales_reps = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
         db_table = 'ingestion_salespro_geographic_hotspots'
