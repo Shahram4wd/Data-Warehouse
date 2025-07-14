@@ -77,7 +77,7 @@ class Genius_Prospect(models.Model):
     add_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
     marketsharp_id = models.CharField(max_length=100, null=True, blank=True)
     leap_customer_id = models.CharField(max_length=100, null=True, blank=True)
-    third_party_source_id = models.IntegerField(null=True, blank=True)
+    hubspot_contact_id = models.BigIntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name or ''}".strip()
@@ -155,7 +155,7 @@ class Genius_Appointment(models.Model):
     marketsharp_id = models.CharField(max_length=100, null=True, blank=True)
     marketsharp_appt_type = models.CharField(max_length=100, null=True, blank=True)
     leap_estimate_id = models.CharField(max_length=100, null=True, blank=True)
-    third_party_source_id = models.BigIntegerField(null=True, blank=True)
+    hubspot_appointment_id = models.BigIntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"Appointment {self.id} for Prospect {self.prospect_id}"

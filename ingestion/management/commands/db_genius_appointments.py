@@ -31,16 +31,35 @@ class Command(BaseCommand):
             default=1,
             help="Starting page number (each page is BATCH_SIZE records). Defaults to 1. Overrides --start-offset if provided."
         )
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Run the command without making any database changes. Shows what would be processed."
+        )
+        parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Enable debug mode with verbose logging and detailed output."
+        )
 
     def handle(self, *args, **options):
         table_name = options["table"]
         start_offset = options["start_offset"]
         start_page = options["page"]
+        dry_run = options.get("dry_run", False)
+        debug = options.get("debug", False)
         connection = None
         
         # Initialize counters
         self.corrupted_count = 0
         self.processed_count = 0
+        self.dry_run = dry_run
+        self.debug = debug
+        
+        if dry_run:
+            self.stdout.write(self.style.WARNING("🔍 DRY RUN MODE - No database changes will be made"))
+        if debug:
+            self.stdout.write(self.style.SUCCESS("🐛 DEBUG MODE - Verbose logging enabled"))
 
         try:
             # Database connection and preloading data
@@ -72,9 +91,18 @@ class Command(BaseCommand):
             
             # Process records in batches starting from the calculated offset
             for offset in tqdm(range(start_offset, total_records, BATCH_SIZE), desc="Processing batches"):
+                # Use JOIN to get HubSpot appointment ID directly from third_party_source table
                 cursor.execute(f"""
-                    SELECT id, prospect_id, prospect_source_id, user_id, type_id, date, time, duration, address1, address2, city, state, zip, email, notes, add_user_id, add_date, assign_date, confirm_user_id, confirm_date, confirm_with, spouses_present, is_complete, complete_outcome_id, complete_user_id, complete_date, marketsharp_id, marketsharp_appt_type, leap_estimate_id, third_party_source_id
-                    FROM appointment
+                    SELECT a.id, a.prospect_id, a.prospect_source_id, a.user_id, a.type_id, a.date, a.time, a.duration, 
+                           a.address1, a.address2, a.city, a.state, a.zip, a.email, a.notes, a.add_user_id, a.add_date, 
+                           a.assign_date, a.confirm_user_id, a.confirm_date, a.confirm_with, a.spouses_present, 
+                           a.is_complete, a.complete_outcome_id, a.complete_user_id, a.complete_date, a.marketsharp_id, 
+                           a.marketsharp_appt_type, a.leap_estimate_id, a.third_party_source_id, tps.third_party_id AS hubspot_appointment_id
+                    FROM {table_name} AS a
+                    LEFT JOIN third_party_source AS tps 
+                      ON tps.id = a.third_party_source_id
+                    LEFT JOIN third_party_source_type AS tpst 
+                      ON tpst.id = tps.third_party_source_type_id AND tpst.label = 'hubspot'
                     LIMIT {BATCH_SIZE} OFFSET {offset}
                 """)
                 rows = cursor.fetchall()
@@ -83,10 +111,16 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
             
             # Print summary
-            if self.corrupted_count > 0:
-                self.stdout.write(self.style.WARNING(f"Summary: {self.processed_count} records processed, {self.corrupted_count} records had corrupted data that was cleaned."))
+            if dry_run:
+                if self.corrupted_count > 0:
+                    self.stdout.write(self.style.WARNING(f"DRY RUN Summary: {self.processed_count} records would be processed, {self.corrupted_count} records had corrupted data that would be cleaned (no database changes made)."))
+                else:
+                    self.stdout.write(self.style.WARNING(f"DRY RUN Summary: {self.processed_count} records would be processed successfully with no data corruption detected (no database changes made)."))
             else:
-                self.stdout.write(self.style.SUCCESS(f"Summary: {self.processed_count} records processed successfully with no data corruption detected."))
+                if self.corrupted_count > 0:
+                    self.stdout.write(self.style.WARNING(f"Summary: {self.processed_count} records processed, {self.corrupted_count} records had corrupted data that was cleaned."))
+                else:
+                    self.stdout.write(self.style.SUCCESS(f"Summary: {self.processed_count} records processed successfully with no data corruption detected."))
             
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"An error occurred: {e}"))
@@ -103,25 +137,15 @@ class Command(BaseCommand):
         appointment_types = {appt_type.id: appt_type for appt_type in Genius_AppointmentType.objects.all()}
         appointment_outcomes = {outcome.id: outcome for outcome in Genius_AppointmentOutcome.objects.all()}
         
-        # Load Hubspot source IDs
-        cursor.execute("""
-            SELECT tps.id, tps.third_party_id
-            FROM third_party_source AS tps
-            LEFT JOIN third_party_source_type AS tpst ON tps.third_party_source_type_id = tpst.id
-            WHERE tpst.label = "hubspot"
-        """)
-        hubspot_sources = {row[0]: row[1] for row in cursor.fetchall()}
-        
         return {
             'prospects': prospects,
             'prospect_sources': prospect_sources,
             'appointment_types': appointment_types,
-            'appointment_outcomes': appointment_outcomes,
-            'hubspot_sources': hubspot_sources
+            'appointment_outcomes': appointment_outcomes
         }
     
     def _process_batch(self, rows, prospects, prospect_sources, appointment_types, 
-                      appointment_outcomes, hubspot_sources):
+                      appointment_outcomes):
         """Process a batch of appointment records."""
         to_create = []
         to_update = []
@@ -130,8 +154,8 @@ class Command(BaseCommand):
         for row in rows:
             try:
                 # Validate row length first
-                if len(row) != 30:  # Expected number of columns
-                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 30. Skipping record."))
+                if len(row) != 31:  # Updated to 31 columns (added third_party_source_id)
+                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 31. Skipping record."))
                     continue
                 
                 # Extract fields from row with debugging
@@ -139,9 +163,10 @@ class Command(BaseCommand):
                     (
                         record_id, prospect_id, prospect_source_id, user_id, type_id, date, time, duration,
                         address1, address2, city, state, zip, email, notes, add_user_id, add_date,
-                        assign_date, confirm_user_id, confirm_date, confirm_with, spouses_present,
+                        assign_date, confirm_user_id, confirm_date, confirm_with, spouses_present, 
                         is_complete, complete_outcome_id, complete_user_id, complete_date,
-                        marketsharp_id, marketsharp_appt_type, leap_estimate_id, third_party_source_id
+                        marketsharp_id, marketsharp_appt_type, leap_estimate_id, third_party_source_id, 
+                        hubspot_appointment_id
                     ) = row
                 except ValueError as e:
                     self.stdout.write(self.style.ERROR(f"Error unpacking row for record_id {row[0] if row else 'unknown'}: {e}"))
@@ -153,10 +178,19 @@ class Command(BaseCommand):
                 prospect_source = prospect_sources.get(prospect_source_id)
                 appointment_type = appointment_types.get(type_id)
                 complete_outcome = appointment_outcomes.get(complete_outcome_id)
-                hubspot_id = hubspot_sources.get(third_party_source_id) if third_party_source_id is not None else None
+                
+                # The hubspot_appointment_id is already resolved by the SQL JOIN
+                # No additional lookup needed since the JOIN handles the mapping
+                hubspot_id = hubspot_appointment_id
 
                 # Increment processed count
                 self.processed_count += 1
+                
+                if self.debug:
+                    if hubspot_id:
+                        self.stdout.write(f"📝 DEBUG: Processing appointment {record_id} for prospect {prospect_id} (Type: {type_id}, HubSpot: {hubspot_id}, Third Party Source: {third_party_source_id})")
+                    else:
+                        self.stdout.write(f"📝 DEBUG: Processing appointment {record_id} for prospect {prospect_id} (Type: {type_id}, No HubSpot ID)")
 
                 # Skip records with missing required foreign keys
                 if not prospect:
@@ -196,7 +230,25 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"Error processing record ID {row[0] if row else 'unknown'}: {e}"))
 
         # Save records to database
-        self._save_records(to_create, to_update)
+        if not self.dry_run:
+            self._save_records(to_create, to_update)
+        else:
+            # In dry run mode, just show what would be saved
+            if to_create:
+                self.stdout.write(self.style.WARNING(f"DRY RUN: Would create {len(to_create)} new appointment records"))
+                if self.debug:
+                    for record in to_create[:5]:  # Show first 5 records in debug mode
+                        self.stdout.write(f"  🆕 Would create: Appointment {record.id} for prospect {record.prospect_id}")
+                    if len(to_create) > 5:
+                        self.stdout.write(f"  ... and {len(to_create) - 5} more records")
+            
+            if to_update:
+                self.stdout.write(self.style.WARNING(f"DRY RUN: Would update {len(to_update)} existing appointment records"))
+                if self.debug:
+                    for record in to_update[:5]:  # Show first 5 records in debug mode
+                        self.stdout.write(f"  ♻️  Would update: Appointment {record.id} for prospect {record.prospect_id}")
+                    if len(to_update) > 5:
+                        self.stdout.write(f"  ... and {len(to_update) - 5} more records")
     
     def _process_field_values(self, date_val, time_val, duration_val, add_date, assign_date, 
                              confirm_date, complete_date, spouses_present, is_complete, original_row=None):
@@ -317,7 +369,7 @@ class Command(BaseCommand):
         record.marketsharp_id = marketsharp_id
         record.marketsharp_appt_type = marketsharp_appt_type
         record.leap_estimate_id = self._safe_string_convert(leap_estimate_id)
-        record.third_party_source_id = self._safe_int_convert(hubspot_id, is_bigint=True, field_name="third_party_source_id", original_row=original_row)
+        record.hubspot_appointment_id = self._safe_int_convert(hubspot_id, is_bigint=True, field_name="hubspot_appointment_id", original_row=original_row)
         
         return record
     
@@ -357,7 +409,7 @@ class Command(BaseCommand):
             marketsharp_id=marketsharp_id,
             marketsharp_appt_type=marketsharp_appt_type,
             leap_estimate_id=self._safe_string_convert(leap_estimate_id),
-            third_party_source_id=self._safe_int_convert(hubspot_id, is_bigint=True, field_name="third_party_source_id", original_row=original_row)
+            hubspot_appointment_id=self._safe_int_convert(hubspot_id, is_bigint=True, field_name="hubspot_appointment_id", original_row=original_row)
         )
     
     def _save_records(self, to_create, to_update):
@@ -375,7 +427,7 @@ class Command(BaseCommand):
                         'add_date', 'assign_date', 'confirm_user_id', 'confirm_date', 'confirm_with',
                         'spouses_present', 'is_complete', 'complete_outcome', 'complete_user_id',
                         'complete_date', 'marketsharp_id', 'marketsharp_appt_type', 'leap_estimate_id',
-                        'third_party_source_id'
+                        'hubspot_appointment_id'
                     ],
                     batch_size=BATCH_SIZE
                 )
