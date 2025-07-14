@@ -28,12 +28,10 @@ class Command(BaseCommand):
         ('customers', SalesProCustomerSyncEngine),
         ('creditapplications', SalesProCreditApplicationSyncEngine),
         ('estimates', SalesProEstimateSyncEngine),
-        ('estimatepricebreakdowns', SalesProEstimatePriceBreakdownSyncEngine),
         ('measuresheets', SalesProMeasureSheetSyncEngine),
         ('payments', SalesProPaymentSyncEngine),
         ('leadresults', SalesProLeadResultSyncEngine),
         ('useractivities', SalesProUserActivitySyncEngine),
-        ('geographichotspots', SalesProGeographicHotspotSyncEngine),
     ]
     
     def add_arguments(self, parser):
@@ -70,13 +68,7 @@ class Command(BaseCommand):
             type=str,
             help="Sync records modified since this date (YYYY-MM-DD format)"
         )
-        parser.add_argument(
-            "--entities",
-            type=str,
-            nargs='+',
-            help="Specific entities to sync (space-separated). Available: " + 
-                 ", ".join([name for name, _ in SYNC_ENGINES])
-        )
+
         parser.add_argument(
             "--parallel",
             action="store_true",
