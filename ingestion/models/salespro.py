@@ -266,35 +266,3 @@ class SalesPro_UserActivity(models.Model):
 
 class SalesPro_EstimatePriceBreakdown(models.Model):
     estimate_date = models.DateTimeField(blank=True, null=True)
-    company_name = models.CharField(max_length=255, blank=True, null=True)
-    estimate_id = models.CharField(max_length=255, blank=True, null=True)
-    trade_type = models.CharField(max_length=255, blank=True, null=True)
-    price_guide_amount = models.CharField(max_length=255, blank=True, null=True)
-
-    class Meta:
-        db_table = 'ingestion_salespro_estimate_price_breakdown'
-        verbose_name = 'Estimate Price Breakdown'
-        verbose_name_plural = 'Estimate Price Breakdowns'
-
-    def __str__(self):
-        return self.estimate_id
-
-
-class SalesPro_GeographicHotspot(models.Model):
-    company_id = models.CharField(max_length=255, blank=True, null=True)
-    company_name = models.CharField(max_length=255, blank=True, null=True)
-    state = models.CharField(max_length=50, blank=True, null=True)
-    city = models.CharField(max_length=100, blank=True, null=True)
-    total_estimates = models.BigIntegerField(blank=True, null=True)
-    sales = models.BigIntegerField(blank=True, null=True)
-    close_rate = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
-    avg_sale_value = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    active_sales_reps = models.BigIntegerField(blank=True, null=True)
-
-    class Meta:
-        db_table = 'ingestion_salespro_geographic_hotspots'
-        verbose_name = 'Geographic Hotspot'
-        verbose_name_plural = 'Geographic Hotspots'
-
-    def __str__(self):
-        return f"{self.city}, {self.state}"

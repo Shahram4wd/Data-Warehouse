@@ -99,7 +99,16 @@ class AthenaClient:
                     break
                 elif state in ["FAILED", "CANCELLED"]:
                     error_reason = status_response["QueryExecution"]["Status"].get("StateChangeReason", "Unknown error")
-                    logger.error(f"Athena query {state.lower()}: {error_reason}")
+                    
+                    # Check for specific permission errors and provide helpful guidance
+                    if "glue:GetDatabase" in error_reason and "not authorized" in error_reason:
+                        logger.error(f"AWS Glue permissions error: {error_reason}")
+                        logger.error("SOLUTION: The IAM user needs 'glue:GetDatabase' permission. See docs/aws_athena_permissions_troubleshooting.md for detailed instructions.")
+                    elif "Insufficient permissions" in error_reason:
+                        logger.error(f"AWS permissions error: {error_reason}")
+                        logger.error("SOLUTION: Check IAM permissions for the user. See docs/aws_iam_policy_for_athena.json for required permissions.")
+                    else:
+                        logger.error(f"Athena query {state.lower()}: {error_reason}")
                     return None
                 elif state in ["QUEUED", "RUNNING"]:
                     logger.debug(f"Query status: {state}")
@@ -114,7 +123,16 @@ class AthenaClient:
         except ClientError as e:
             error_code = e.response.get('Error', {}).get('Code', 'Unknown')
             error_message = e.response.get('Error', {}).get('Message', str(e))
-            logger.error(f"AWS Athena error [{error_code}]: {error_message}")
+            
+            # Check for specific AWS errors and provide helpful guidance
+            if error_code == 'AccessDenied' or 'glue:GetDatabase' in error_message:
+                logger.error(f"AWS Glue permissions error [{error_code}]: {error_message}")
+                logger.error("SOLUTION: The IAM user needs AWS Glue permissions. See docs/aws_athena_permissions_troubleshooting.md for setup instructions.")
+            elif error_code in ['InvalidUserPoolConfigurationException', 'UnauthorizedOperation']:
+                logger.error(f"AWS authorization error [{error_code}]: {error_message}")
+                logger.error("SOLUTION: Check IAM permissions. See docs/aws_iam_policy_for_athena.json for required policy.")
+            else:
+                logger.error(f"AWS Athena error [{error_code}]: {error_message}")
             return None
         except NoCredentialsError:
             logger.error("AWS credentials not found or invalid")
@@ -218,7 +236,16 @@ class AthenaClient:
                     break
                 elif state in ["FAILED", "CANCELLED"]:
                     error_reason = status_response["QueryExecution"]["Status"].get("StateChangeReason", "Unknown error")
-                    logger.error(f"Athena query {state.lower()}: {error_reason}")
+                    
+                    # Check for specific permission errors and provide helpful guidance
+                    if "glue:GetDatabase" in error_reason and "not authorized" in error_reason:
+                        logger.error(f"AWS Glue permissions error: {error_reason}")
+                        logger.error("SOLUTION: The IAM user needs 'glue:GetDatabase' permission. See docs/aws_athena_permissions_troubleshooting.md for detailed instructions.")
+                    elif "Insufficient permissions" in error_reason:
+                        logger.error(f"AWS permissions error: {error_reason}")
+                        logger.error("SOLUTION: Check IAM permissions for the user. See docs/aws_iam_policy_for_athena.json for required permissions.")
+                    else:
+                        logger.error(f"Athena query {state.lower()}: {error_reason}")
                     return None, None
                 elif state in ["QUEUED", "RUNNING"]:
                     time.sleep(2)
@@ -228,6 +255,23 @@ class AthenaClient:
             # Fetch results with column information
             return self._fetch_query_results_with_columns(query_execution_id)
             
+        except ClientError as e:
+            error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+            error_message = e.response.get('Error', {}).get('Message', str(e))
+            
+            # Check for specific AWS errors and provide helpful guidance
+            if error_code == 'AccessDenied' or 'glue:GetDatabase' in error_message:
+                logger.error(f"AWS Glue permissions error [{error_code}]: {error_message}")
+                logger.error("SOLUTION: The IAM user needs AWS Glue permissions. See docs/aws_athena_permissions_troubleshooting.md for setup instructions.")
+            elif error_code in ['InvalidUserPoolConfigurationException', 'UnauthorizedOperation']:
+                logger.error(f"AWS authorization error [{error_code}]: {error_message}")
+                logger.error("SOLUTION: Check IAM permissions. See docs/aws_iam_policy_for_athena.json for required policy.")
+            else:
+                logger.error(f"AWS Athena error [{error_code}]: {error_message}")
+            return None, None
+        except NoCredentialsError:
+            logger.error("AWS credentials not found or invalid")
+            return None, None
         except Exception as e:
             logger.exception(f"Error executing Athena query with columns: {e}")
             return None, None

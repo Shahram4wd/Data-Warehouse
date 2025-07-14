@@ -35,37 +35,40 @@ class SalesProEstimateSyncEngine(BaseSalesProSyncEngine):
                 estimate_id = record.get('estimate_id')
             else:
                 # If record is a tuple/list (raw from Athena), map by position
-                # Based on estimate table structure, adjust the field mapping as needed
-                if isinstance(record, (tuple, list)) and len(record) >= 1:
+                # Based on the model structure: estimate_id, company_id, company_name, office_id, office_name, sales_rep_id,
+                # sales_rep_first_name, sales_rep_last_name, customer_id, customer_first_name, customer_last_name,
+                # street_address, city, state, zip_code, sale_amount, is_sale, job_type, finance_amount, bank_name,
+                # loan_name, down_payment, has_credit_app, document_count, created_at, updated_at
+                if isinstance(record, (tuple, list)) and len(record) >= 26:
                     logger.info(f"Processing tuple record with {len(record)} fields")
                     estimate_id = record[0]
                     transformed = {
                         'estimate_id': record[0],
-                        'company_id': record[1] if len(record) > 1 else '',
-                        'company_name': record[2] if len(record) > 2 else '',
-                        'office_id': record[3] if len(record) > 3 else '',
-                        'office_name': record[4] if len(record) > 4 else '',
-                        'sales_rep_id': record[5] if len(record) > 5 else '',
-                        'sales_rep_first_name': record[6] if len(record) > 6 else '',
-                        'sales_rep_last_name': record[7] if len(record) > 7 else '',
-                        'customer_id': record[8] if len(record) > 8 else '',
-                        'customer_first_name': record[9] if len(record) > 9 else '',
-                        'customer_last_name': record[10] if len(record) > 10 else '',
-                        'street_address': record[11] if len(record) > 11 else '',
-                        'city': record[12] if len(record) > 12 else '',
-                        'state': record[13] if len(record) > 13 else '',
-                        'zip_code': record[14] if len(record) > 14 else '',
+                        'company_id': record[1] or '',
+                        'company_name': record[2] or '',
+                        'office_id': record[3] or '',
+                        'office_name': record[4] or '',
+                        'sales_rep_id': record[5] or '',
+                        'sales_rep_first_name': record[6] or '',
+                        'sales_rep_last_name': record[7] or '',
+                        'customer_id': record[8] or '',
+                        'customer_first_name': record[9] or '',
+                        'customer_last_name': record[10] or '',
+                        'street_address': record[11] or '',
+                        'city': record[12] or '',
+                        'state': record[13] or '',
+                        'zip_code': record[14] or '',
                         'sale_amount': self._parse_decimal(record[15]) if len(record) > 15 else None,
-                        'is_sale': bool(record[16]) if len(record) > 16 else False,
-                        'job_type': record[17] if len(record) > 17 else '',
+                        'is_sale': bool(record[16]) if len(record) > 16 and record[16] is not None else False,
+                        'job_type': record[17] or '' if len(record) > 17 else '',
                         'finance_amount': self._parse_decimal(record[18]) if len(record) > 18 else None,
-                        'bank_name': record[19] if len(record) > 19 else '',
-                        'loan_name': record[20] if len(record) > 20 else '',
+                        'bank_name': record[19] or '' if len(record) > 19 else '',
+                        'loan_name': record[20] or '' if len(record) > 20 else '',
                         'down_payment': self._parse_decimal(record[21]) if len(record) > 21 else None,
-                        'has_credit_app': bool(record[22]) if len(record) > 22 else False,
+                        'has_credit_app': bool(record[22]) if len(record) > 22 and record[22] is not None else False,
                         'document_count': int(record[23]) if len(record) > 23 and record[23] is not None else None,
-                        'created_at': record[24] if len(record) > 24 else None,
-                        'updated_at': record[25] if len(record) > 25 else None,
+                        'created_at': self._parse_datetime(record[24]) if len(record) > 24 else None,
+                        'updated_at': self._parse_datetime(record[25]) if len(record) > 25 else None,
                     }
                     
                     logger.info(f"Transformed from tuple: {transformed}")
@@ -108,7 +111,7 @@ class SalesProEstimateSyncEngine(BaseSalesProSyncEngine):
                 'updated_at': self._parse_datetime(record.get('updated_at')),
             }
             
-            logger.info(f"Transformed estimate record: ID={estimate_id}")
+            logger.info(f"Transformed estimate record: ID={estimate_id}, customer={transformed['customer_first_name']} {transformed['customer_last_name']}, amount=${transformed['sale_amount']}")
             return transformed
             
         except Exception as e:
@@ -169,10 +172,12 @@ class Command(BaseSalesProSyncCommand):
     help = "Sync estimates from SalesPro AWS Athena database"
     
     def get_sync_engine(self, **options):
+        """Get the estimate sync engine"""
         return SalesProEstimateSyncEngine(
             batch_size=options.get('batch_size', 500),
             dry_run=options.get('dry_run', False)
         )
     
     def get_sync_name(self) -> str:
+        """Get the sync operation name"""
         return "estimate"

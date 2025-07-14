@@ -16,9 +16,6 @@ from ingestion.management.commands.db_salespro_leadresult import SalesProLeadRes
 from ingestion.management.commands.db_salespro_measuresheet import SalesProMeasureSheetSyncEngine
 from ingestion.management.commands.db_salespro_payment import SalesProPaymentSyncEngine
 from ingestion.management.commands.db_salespro_useractivity import SalesProUserActivitySyncEngine
-from ingestion.management.commands.db_salespro_estimatepricebreakdown import SalesProEstimatePriceBreakdownSyncEngine
-from ingestion.management.commands.db_salespro_geographichotspot import SalesProGeographicHotspotSyncEngine
-
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
