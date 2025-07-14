@@ -3,6 +3,31 @@ from pathlib import Path
 from decouple import config, Csv
 import dj_database_url
 from dotenv import load_dotenv
+import logging.handlers
+
+# Custom Rotating File Handler that puts the number before the extension
+class CustomRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    def rotation_filename(self, default_name):
+        """
+        Modify the filename of a log file when rotating.
+        
+        This changes the default behavior from filename.log.1 to filename.1.log
+        
+        :param default_name: The default name for the log file.
+        """
+        if not callable(self.namer):
+            result = default_name
+        else:
+            result = self.namer(default_name)
+        
+        # Custom logic to put number before extension
+        import re
+        match = re.match(r'(.+)\.([^.]+)\.(\d+)$', result)
+        if match:
+            filename, ext, number = match.groups()
+            result = f"{filename}.{number}.{ext}"
+        
+        return result
 
 # Load environment variables from .env file
 load_dotenv()
@@ -242,7 +267,7 @@ LOGGING = {
         },
         'ingestion_file': {
             'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'data_warehouse.settings.CustomRotatingFileHandler',
             'filename': os.path.join(LOGS_DIR, 'ingestion.log'),
             'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
@@ -250,7 +275,7 @@ LOGGING = {
         },
         'reports_file': {
             'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'data_warehouse.settings.CustomRotatingFileHandler',
             'filename': os.path.join(LOGS_DIR, 'reports.log'),
             'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
@@ -258,7 +283,7 @@ LOGGING = {
         },
         'general_file': {
             'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'data_warehouse.settings.CustomRotatingFileHandler',
             'filename': os.path.join(LOGS_DIR, 'general.log'),
             'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
@@ -266,7 +291,7 @@ LOGGING = {
         },
         'connection_pool_file': {
             'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'data_warehouse.settings.CustomRotatingFileHandler',
             'filename': os.path.join(LOGS_DIR, 'connection_pool.log'),
             'maxBytes': 5 * 1024 * 1024,  # 5MB
             'backupCount': 3,
@@ -274,7 +299,7 @@ LOGGING = {
         },
         'sync_engines_file': {
             'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': 'data_warehouse.settings.CustomRotatingFileHandler',
             'filename': os.path.join(LOGS_DIR, 'sync_engines.log'),
             'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
