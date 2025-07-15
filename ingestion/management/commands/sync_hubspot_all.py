@@ -62,7 +62,9 @@ class Command(BaseCommand):
                 ('contact-deal associations', 'sync_hubspot_associations', 
                  ['--from-object', 'contacts', '--to-object', 'deals']),
                 ('contact-appointment associations', 'sync_hubspot_associations', 
-                 ['--from-object', 'contacts', '--to-object', 'appointments']),
+                 ['--from-object', 'contacts', '--to-object', '0-421']),
+                ('division-contact associations', 'sync_hubspot_associations', 
+                 ['--from-object', '2-37778609', '--to-object', 'contacts']),
             ])
         
         # Common arguments for all commands

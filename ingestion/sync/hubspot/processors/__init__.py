@@ -6,6 +6,11 @@ from .contacts import HubSpotContactProcessor
 from .appointments import HubSpotAppointmentProcessor
 from .divisions import HubSpotDivisionProcessor
 from .deals import HubSpotDealProcessor
+from .associations import (
+    HubSpotAssociationProcessor,
+    HubSpotAppointmentContactAssociationProcessor,
+    HubSpotContactDivisionAssociationProcessor
+)
 
 __all__ = [
     'HubSpotBaseProcessor',
@@ -13,4 +18,7 @@ __all__ = [
     'HubSpotAppointmentProcessor',
     'HubSpotDivisionProcessor',
     'HubSpotDealProcessor',
+    'HubSpotAssociationProcessor',
+    'HubSpotAppointmentContactAssociationProcessor',
+    'HubSpotContactDivisionAssociationProcessor',
 ]
