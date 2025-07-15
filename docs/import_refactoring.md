@@ -1647,56 +1647,137 @@ class [CRM][Entity]SyncEngine(BaseSyncEngine):
 
 ## CRM-Specific Recommendations
 
-### Standard Implementation Patterns
-All CRM integrations should follow these unified patterns established from HubSpot implementation:
 
-#### Architecture Standards
-1. **Sync History**: Use unified `SyncHistory` model from `ingestion.models.common`
-2. **Client Architecture**: Multiple specialized clients (one per entity type)
-3. **Validation Framework**: Full enterprise-level validation matching HubSpot standards
-4. **Enterprise Features**: Implement all enterprise features (monitoring, connection pooling, encryption, automation)
-5. **Management Commands**: Individual commands per entity type + unified "sync_all" command
-6. **Base Classes**: All implementations inherit from unified base classes
+## Generic CRM Sync/Removal Command Architecture (Unified Pattern)
 
-#### Batch Size Guidelines
-- **Default**: Use global batch size recommendations
-- **API Rate Limited**: Reduce batch size (e.g., HubSpot: 100)
-- **High Performance APIs**: Increase batch size if testing shows significant improvement (e.g., Arrivy: 1000)
+### 1. Modular Entity Structure
+For every CRM and entity (e.g., contacts, appointments, deals, zipcodes), implement the following modules:
 
-### Genius CRM
-- **Batch Size**: 500 (database direct access allows larger batches)
-- **Key Features**: Direct database sync, API sync, foreign key resolution
-- **Error Handling**: Exponential backoff for API, connection retry for database
-- **Special Considerations**: Handle both MySQL direct and API endpoints
-- **Architecture**: Follow unified patterns with specialized database and API clients
+```
+ingestion/sync/<crm>/clients/<entity>_client.py      # API client for entity
+ingestion/sync/<crm>/processors/<entity>_processor.py # Data processor for entity
+ingestion/sync/<crm>/engines/<entity>_engine.py      # Sync engine for entity
+ingestion/management/commands/sync_<crm>_<entity>.py # Management command for entity sync
+ingestion/management/commands/sync_<crm>_<entity>_removal.py # Management command for entity removal (if applicable)
+```
 
-### HubSpot (Reference Implementation)
-- **Batch Size**: 100 (API rate limits require smaller batches)
-- **Key Features**: Complex associations, webhook support, OAuth2
-- **Error Handling**: Adaptive retry based on rate limit headers
-- **Special Considerations**: Handle nested object relationships, respect rate limits
-- **Architecture**: Full enterprise implementation with modular clients, processors, engines
+### 2. Inheritance and Base Classes
+- All engines inherit from `BaseSyncEngine` (or a CRM-specific base, e.g., `HubSpotBaseSyncEngine`).
+- All clients inherit from `BaseAPIClient` (or CRM-specific base).
+- All processors inherit from `BaseDataProcessor` (or CRM-specific base).
+- Removal engines/clients/processors should inherit from the same base classes, and may override only the methods needed for removal logic.
 
-### MarketSharp
-- **Batch Size**: 200 (XML processing overhead)
-- **Key Features**: XML/OData API, field mapping configuration
-- **Error Handling**: XML parsing error recovery, connection retry
-- **Special Considerations**: Complex XML structure transformation
-- **Architecture**: Follow unified patterns with XML-specific processors
+### 3. Command Structure
+**Sync Command:**
+```python
+# ingestion/management/commands/sync_<crm>_<entity>.py
+import asyncio
+from django.core.management.base import BaseCommand
+from ingestion.sync.<crm>.engines.<entity>_engine import <CRM><Entity>SyncEngine
 
-### ActiveProspect
-- **Batch Size**: 100 (event-based processing)
-- **Key Features**: Event streaming, webhook support, real-time processing
-- **Error Handling**: Event-level error handling, retry with backoff
-- **Special Considerations**: Event deduplication, real-time processing
-- **Architecture**: Follow unified patterns with event-specific processors
+class Command(BaseCommand):
+    help = "Sync <entity> from <CRM>"
 
-### SalesPro
-- **Batch Size**: 500 (CSV processing)
-- **Key Features**: CSV import only, batch processing
-- **Error Handling**: Individual record fallback, CSV parsing errors
-- **Special Considerations**: File processing, header mapping
-- **Architecture**: Follow unified patterns with file-specific processors
+    def add_arguments(self, parser):
+        parser.add_argument('--batch-size', type=int, help='Batch size for processing')
+        parser.add_argument('--limit', type=int, help='Limit number of records to process')
+
+    def handle(self, *args, **options):
+        asyncio.run(self.async_handle(**options))
+
+    async def async_handle(self, **options):
+        engine = <CRM><Entity>SyncEngine(**options)
+        await engine.run_sync(**options)
+```
+
+**Removal Command:**
+```python
+# ingestion/management/commands/sync_<crm>_<entity>_removal.py
+import asyncio
+from django.core.management.base import BaseCommand
+from ingestion.sync.<crm>.engines.<entity>_removal_engine import <CRM><Entity>RemovalSyncEngine
+
+class Command(BaseCommand):
+    help = "Remove <entity> records locally that no longer exist in <CRM>"
+
+    def add_arguments(self, parser):
+        parser.add_argument('--batch-size', type=int, help='Batch size for processing')
+        parser.add_argument('--limit', type=int, help='Limit number of records to check')
+        parser.add_argument('--dry-run', action='store_true', help='Show what would be removed')
+
+    def handle(self, *args, **options):
+        asyncio.run(self.async_handle(**options))
+
+    async def async_handle(self, **options):
+        engine = <CRM><Entity>RemovalSyncEngine(**options)
+        await engine.run_removal(**options)
+```
+
+### 4. Engine/Client/Processor Patterns
+**Sync Engine:**
+```python
+# ingestion/sync/<crm>/engines/<entity>_engine.py
+from ingestion.base.sync_engine import BaseSyncEngine
+from ingestion.sync.<crm>.clients.<entity>_client import <CRM><Entity>Client
+from ingestion.sync.<crm>.processors.<entity>_processor import <CRM><Entity>Processor
+
+class <CRM><Entity>SyncEngine(BaseSyncEngine):
+    def __init__(self, **kwargs):
+        super().__init__('<crm>', '<entity>', **kwargs)
+        self.client = <CRM><Entity>Client()
+        self.processor = <CRM><Entity>Processor()
+    # Implement required abstract methods
+```
+
+**Removal Engine:**
+```python
+# ingestion/sync/<crm>/engines/<entity>_removal_engine.py
+from ingestion.base.sync_engine import BaseSyncEngine
+from ingestion.sync.<crm>.clients.<entity>_removal_client import <CRM><Entity>RemovalClient
+
+class <CRM><Entity>RemovalSyncEngine(BaseSyncEngine):
+    def __init__(self, **kwargs):
+        super().__init__('<crm>', '<entity>_removal', **kwargs)
+        self.client = <CRM><Entity>RemovalClient()
+    # Implement required abstract methods for removal
+```
+
+**Client:**
+```python
+# ingestion/sync/<crm>/clients/<entity>_client.py
+from ingestion.base.client import BaseAPIClient
+
+class <CRM><Entity>Client(BaseAPIClient):
+    # Implement entity-specific API logic
+    pass
+```
+
+**Processor:**
+```python
+# ingestion/sync/<crm>/processors/<entity>_processor.py
+from ingestion.base.processor import BaseDataProcessor
+
+class <CRM><Entity>Processor(BaseDataProcessor):
+    # Implement entity-specific transformation/validation
+    pass
+```
+
+### 5. Best Practices
+- **No business logic in management commands:** All business logic must reside in engine/client/processor modules.
+- **Batch operations:** Use batch APIs and bulk DB operations for performance.
+- **Progress reporting:** Engines should handle progress bars and logging.
+- **Async everywhere:** All network and DB operations should be async.
+- **Extensible for new CRMs:** Follow the same pattern for any new CRM (e.g., Genius, MarketSharp, etc.).
+
+### 6. Example: HubSpot Contacts Sync/Removal
+See `ingestion/sync/hubspot/engines/contacts_engine.py`, `contacts_removal_engine.py`, `clients/contacts_client.py`, `clients/contacts_removal_client.py`, and their management commands for a reference implementation.
+
+---
+This generic modular pattern ensures all CRM sync/removal commands are:
+- Consistent
+- Extensible
+- Testable
+- Easy to maintain and onboard for new CRMs/entities
 
 ### Arrivy
 - **Batch Size**: 1000 (API allows larger batches for better performance)

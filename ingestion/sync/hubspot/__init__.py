@@ -19,6 +19,8 @@ __all__ = [
     'HubSpotDealsClient',
     'HubSpotDivisionsClient',
     'HubSpotAssociationsClient',
+    'HubSpotContactsRemovalClient',
+    'HubSpotAppointmentsRemovalClient',
     
     # Engines
     'HubSpotBaseSyncEngine',
@@ -27,6 +29,8 @@ __all__ = [
     'HubSpotDealSyncEngine',
     'HubSpotDivisionSyncEngine',
     'HubSpotAssociationSyncEngine',
+    'HubSpotContactsRemovalSyncEngine',
+    'HubSpotAppointmentsRemovalSyncEngine',
     
     # Processors
     'HubSpotBaseProcessor',
@@ -39,7 +43,9 @@ __all__ = [
 # Legacy imports for backward compatibility
 from .clients.base import HubSpotBaseClient as HubSpotClient
 from .engines.contacts import HubSpotContactSyncEngine
+from .engines.contacts_removal import HubSpotContactsRemovalSyncEngine
 from .engines.appointments import HubSpotAppointmentSyncEngine
+from .engines.appointments_removal import HubSpotAppointmentsRemovalSyncEngine
 from .engines.deals import HubSpotDealSyncEngine
 from .engines.divisions import HubSpotDivisionSyncEngine
 from .engines.associations import HubSpotAssociationSyncEngine

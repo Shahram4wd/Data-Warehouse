@@ -1,7 +1,9 @@
+
+
 import logging
 from django.core.management.base import BaseCommand
-from ingestion.hubspot.hubspot_client import HubspotClient
-from django.db import transaction
+from ingestion.sync.hubspot.engines.appointments_removal import HubSpotAppointmentsRemovalSyncEngine
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -24,43 +26,43 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        asyncio.run(self.async_handle(**options))
+
+    async def async_handle(self, **options):
         limit = options["limit"]
         hs_appointment_start_after = options["hs_appointment_start_after"]
         dry_run = options["dry_run"]
 
-        self.stdout.write("Starting check for locally stored appointments that no longer exist in HubSpot...")
-        
-        if dry_run:
-            self.stdout.write(self.style.WARNING("🔍 DRY RUN MODE - No deletions will be performed"))
+        engine = HubSpotAppointmentsRemovalSyncEngine()
+        await engine.run_removal(
+            limit=limit,
+            start_after=hs_appointment_start_after,
+            dry_run=dry_run,
+            stdout=self.stdout
+        )
 
-        # Get local appointments to check
-        local_appointments = self._get_local_appointments(hs_appointment_start_after, limit)
-        
-        if not local_appointments:
-            self.stdout.write("No local appointments found to check.")
-            return
+    def _check_appointments_in_hubspot(self, client, local_appointments):
+        self.stdout.write(f"Checking {len(local_appointments)} appointments in HubSpot...")
+        local_ids = [apt['id'] for apt in local_appointments]
+        batch_size = 100
+        missing_appointments = []
 
-        # Initialize HubSpot client
-        client = HubspotClient()
+        async def check_hubspot_existence():
+            for i in range(0, len(local_ids), batch_size):
+                batch_ids = local_ids[i:i + batch_size]
+                self.stdout.write(f"Checking batch {i//batch_size + 1}: {len(batch_ids)} appointments...")
+                try:
+                    existing_in_hubspot = await client.batch_check_appointments(batch_ids)
+                except Exception:
+                    existing_in_hubspot = await client.check_individual_appointments(batch_ids)
+                existing_ids = set(existing_in_hubspot)
+                missing_ids = set(batch_ids) - existing_ids
+                missing_in_batch = [apt for apt in local_appointments if apt['id'] in missing_ids]
+                missing_appointments.extend(missing_in_batch)
+                self.stdout.write(f"Batch {i//batch_size + 1}: {len(missing_in_batch)} appointments not found in HubSpot")
+            return missing_appointments
 
-        # Check which local appointments still exist in HubSpot
-        removed_appointments = self._check_appointments_in_hubspot(client, local_appointments)
-
-        # Remove the appointments that no longer exist in HubSpot
-        if removed_appointments:
-            deleted_count = self._remove_local_appointments(removed_appointments, dry_run)
-            if dry_run:
-                self.stdout.write(
-                    self.style.WARNING(f"🔍 DRY RUN: Would delete {deleted_count} appointments from local database.")
-                )
-            else:
-                self.stdout.write(
-                    self.style.SUCCESS(f"✓ Deleted {deleted_count} appointments that no longer exist in HubSpot.")
-                )
-        else:
-            self.stdout.write(
-                self.style.SUCCESS("✓ All local appointments still exist in HubSpot. No deletions needed.")
-            )
+        return asyncio.run(check_hubspot_existence())
 
     def _get_local_appointments(self, start_after, limit):
         """Get appointments from local database to check against HubSpot."""
