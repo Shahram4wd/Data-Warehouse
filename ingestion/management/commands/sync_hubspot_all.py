@@ -55,8 +55,9 @@ class Command(BaseCommand):
             ('appointments', 'sync_hubspot_appointments'),
             ('deals', 'sync_hubspot_deals'),
             ('zipcodes', 'sync_hubspot_zipcodes'),
-            ('check removed hubspot contacts', 'check_removed_hubspot_contacts'),
-            ('check removed hubspot appointments', 'check_removed_hubspot_appointments'),
+            ('genius users', 'sync_hubspot_genius_users'),
+            ('removed hubspot contacts', 'sync_hubspot_contacts_removal'),
+            ('removed hubspot appointments', 'sync_hubspot_appointments_removal'),
         ]
         
         # Add association commands if not skipped

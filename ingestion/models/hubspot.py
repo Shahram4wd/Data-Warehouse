@@ -384,3 +384,35 @@ class Hubspot_ZipCode(models.Model):
     
     def __str__(self):
         return f"{self.zipcode} - {self.city}, {self.state}"
+
+# Genius User model for HubSpot
+class Hubspot_GeniusUser(models.Model):
+
+    id = models.CharField(max_length=50, primary_key=True)  # HubSpot object id
+    hs_object_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_createdate = models.DateTimeField(null=True, blank=True)
+    hs_lastmodifieddate = models.DateTimeField(null=True, blank=True)
+    archived = models.BooleanField(default=False)
+
+    arrivy_user_id = models.CharField(max_length=255, blank=True, null=True)
+    division = models.CharField(max_length=255, blank=True, null=True)
+    division_id = models.CharField(max_length=255, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    job_title = models.CharField(max_length=255, blank=True, null=True)
+    name = models.CharField(max_length=255)
+    title_id = models.CharField(max_length=255, blank=True, null=True)
+    user_account_type = models.CharField(max_length=255, blank=True, null=True)
+    user_id = models.CharField(max_length=255, blank=True, null=True)
+    user_status_inactive = models.CharField(max_length=255, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ingestion_hubspot_geniususer'
+        verbose_name = 'HubSpot Genius User'
+        verbose_name_plural = 'HubSpot Genius Users'
+
+
+    def __str__(self):
+        return f"{self.id} - {self.name}"
