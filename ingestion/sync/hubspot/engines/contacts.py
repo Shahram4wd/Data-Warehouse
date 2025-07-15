@@ -138,62 +138,28 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
         return results
     
     async def _bulk_save_contacts(self, validated_data: List[Dict]) -> Dict[str, int]:
-        """Attempt bulk save operation for better performance"""
+        """True bulk upsert for contacts using bulk_create with update_conflicts=True"""
         results = {'created': 0, 'updated': 0, 'failed': 0}
-        
-        # Separate existing vs new contacts
-        contact_ids = [record['id'] for record in validated_data if record.get('id')]
-        existing_contacts = await sync_to_async(list)(
-            Hubspot_Contact.objects.filter(id__in=contact_ids).values_list('id', flat=True)
-        )
-        existing_set = set(existing_contacts)
-        
-        to_create = []
-        to_update = []
-        
-        for record in validated_data:
-            if record.get('id') in existing_set:
-                to_update.append(record)
-            else:
-                to_create.append(record)
-        
-        # Bulk create new contacts
-        if to_create:
-            try:
-                contact_objects = [Hubspot_Contact(**record) for record in to_create]
-                created_contacts = await sync_to_async(Hubspot_Contact.objects.bulk_create)(
-                    contact_objects, batch_size=self.batch_size
-                )
-                results['created'] = len(created_contacts)
-            except Exception as e:
-                logger.error(f"Bulk create failed: {e}")
-                # Fall back to individual saves for create batch
-                for record in to_create:
-                    try:
-                        await sync_to_async(Hubspot_Contact.objects.create)(**record)
-                        results['created'] += 1
-                    except Exception:
-                        results['failed'] += 1
-        
-        # Bulk update existing contacts
-        if to_update:
-            try:
-                await self._bulk_update_contacts(to_update)
-                results['updated'] = len(to_update)
-            except Exception as e:
-                logger.error(f"Bulk update failed: {e}")
-                # Fall back to individual saves for update batch
-                for record in to_update:
-                    try:
-                        contact = await sync_to_async(Hubspot_Contact.objects.get)(id=record['id'])
-                        for field, value in record.items():
-                            if hasattr(contact, field):
-                                setattr(contact, field, value)
-                        await sync_to_async(contact.save)()
-                        results['updated'] += 1
-                    except Exception:
-                        results['failed'] += 1
-        
+        if not validated_data:
+            return results
+
+        # Prepare objects
+        contact_objects = [Hubspot_Contact(**record) for record in validated_data]
+        try:
+            created_contacts = await sync_to_async(Hubspot_Contact.objects.bulk_create)(
+                contact_objects,
+                batch_size=self.batch_size,
+                update_conflicts=True,
+                update_fields=[
+                    "address", "adgroupid", "ap_leadid", "campaign_content", "campaign_name", "city", "clickcheck", "clicktype", "comments", "createdate", "division", "email", "firstname", "hs_google_click_id", "hs_object_id", "lastmodifieddate", "lastname", "lead_salesrabbit_lead_id", "marketsharp_id", "msm_source", "original_lead_source", "original_lead_source_created", "phone", "price", "reference_code", "search_terms", "state", "tier", "trustedform_cert_url", "vendorleadid", "vertical", "zip", "archived", "updated_at"
+                ],
+                unique_fields=["id"]
+            )
+            results['created'] = len([obj for obj in created_contacts if obj._state.adding])
+            results['updated'] = len(validated_data) - results['created']
+        except Exception as e:
+            logger.error(f"Bulk upsert failed: {e}")
+            results['failed'] = len(validated_data)
         return results
     
     async def _bulk_update_contacts(self, update_data: List[Dict]) -> None:
