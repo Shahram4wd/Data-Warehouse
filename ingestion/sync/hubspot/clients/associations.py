@@ -221,8 +221,11 @@ class HubSpotAssociationsClient(HubSpotBaseClient):
                     object_ids=batch_ids
                 )
                 
+                logger.info(f"Raw associations from API: {len(associations)} records")
+                
                 # Flatten associations for database storage
                 flattened = self._flatten_associations(associations, association_type)
+                logger.info(f"After flattening: {len(flattened)} records")
                 all_associations.extend(flattened)
                 
             except Exception as e:
@@ -273,26 +276,60 @@ class HubSpotAssociationsClient(HubSpotBaseClient):
                 break
             
             batch_ids = source_ids[i:i + batch_size]
+            logger.info(f"Processing batch {i//batch_size + 1}: {len(batch_ids)} source IDs")
             
             try:
-                associations = await self._fetch_associations_by_type(
-                    association_type,
-                    batch_ids,
-                    batch_size
-                )
+                # Process contact IDs in smaller sub-batches for association fetching
+                sub_batch_size = min(10, len(batch_ids))  # Process 10 contacts at a time
+                association_batch = []
                 
-                if associations:
+                for j in range(0, len(batch_ids), sub_batch_size):
+                    if max_records > 0 and records_fetched >= max_records:
+                        break
+                        
+                    sub_batch_ids = batch_ids[j:j + sub_batch_size]
+                    
+                    # Fetch associations for this sub-batch of contacts
+                    sub_associations = await self._fetch_associations_by_type(
+                        association_type,
+                        sub_batch_ids,
+                        sub_batch_size
+                    )
+                    
+                    logger.info(f"Sub-batch {j//sub_batch_size + 1}: got {len(sub_associations)} associations from {len(sub_batch_ids)} contacts")
+                    
+                    # Add to current batch
+                    association_batch.extend(sub_associations)
+                    
+                    # Yield when we reach the desired batch size or have collected enough
+                    if len(association_batch) >= batch_size or (max_records > 0 and records_fetched + len(association_batch) >= max_records):
+                        # Limit to max_records if specified
+                        if max_records > 0:
+                            remaining = max_records - records_fetched
+                            if len(association_batch) > remaining:
+                                association_batch = association_batch[:remaining]
+                        
+                        if association_batch:
+                            records_fetched += len(association_batch)
+                            logger.info(f"Yielding batch with {len(association_batch)} associations (total fetched: {records_fetched})")
+                            yield association_batch
+                            association_batch = []  # Reset for next batch
+                            
+                            if max_records > 0 and records_fetched >= max_records:
+                                break
+                
+                # Yield any remaining associations in the final batch
+                if association_batch:
                     # Limit to max_records if specified
                     if max_records > 0:
                         remaining = max_records - records_fetched
-                        if len(associations) > remaining:
-                            associations = associations[:remaining]
+                        if len(association_batch) > remaining:
+                            association_batch = association_batch[:remaining]
                     
-                    records_fetched += len(associations)
-                    yield associations
-                    
-                    if max_records > 0 and records_fetched >= max_records:
-                        break
+                    if association_batch:
+                        records_fetched += len(association_batch)
+                        logger.info(f"Yielding final batch with {len(association_batch)} associations (total fetched: {records_fetched})")
+                        yield association_batch
                         
             except Exception as e:
                 logger.error(f"Error fetching associations batch: {e}")
@@ -348,6 +385,7 @@ class HubSpotAssociationsClient(HubSpotBaseClient):
             List of flattened association records ready for database storage
         """
         flattened = []
+        logger.info(f"Flattening {len(associations)} raw associations for {association_type.name}")
         
         for association in associations:
             from_object = association.get("from", {})
@@ -355,11 +393,16 @@ class HubSpotAssociationsClient(HubSpotBaseClient):
             
             from_id = from_object.get("id")
             if not from_id:
+                logger.debug(f"Skipping association with no from_id: {association}")
                 continue
             
+            logger.debug(f"Processing association from {from_id} to {len(to_objects)} objects")
+            
             for to_object in to_objects:
-                to_id = to_object.get("id")
+                # HubSpot API returns 'toObjectId' field, not 'id'
+                to_id = to_object.get("id") or to_object.get("toObjectId")
                 if not to_id:
+                    logger.debug(f"Skipping to_object with no id or toObjectId: {to_object}")
                     continue
                 
                 # Create record based on association type
@@ -398,8 +441,10 @@ class HubSpotAssociationsClient(HubSpotBaseClient):
                     "raw_to": to_object
                 })
                 
+                logger.debug(f"Created flattened record: {record}")
                 flattened.append(record)
         
+        logger.info(f"Flattening complete: {len(flattened)} records created")
         return flattened
     
     async def _get_all_contact_ids(self) -> List[str]:

@@ -52,6 +52,19 @@ class HubSpotBaseProcessor(BaseDataProcessor):
         
         # Initialize retry configuration
         self.retry_config = RetryConfig(**self.config.get_retry_config())
+
+    def apply_field_mappings(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply field mappings to transform a record"""
+        field_mappings = self.get_field_mappings()
+        transformed = {}
+        
+        for source_field, target_field in field_mappings.items():
+            # Handle nested fields using dot notation
+            value = self._get_nested_value(record, source_field)
+            if value is not None:
+                transformed[target_field] = value
+        
+        return transformed
     
     def parse_duration(self, value: str) -> int:
         """Convert duration to minutes
