@@ -10,6 +10,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--limit", type=int, default=None, help="Limit the number of local records to check.")
         parser.add_argument(
+            "--batch-size",
+            type=int,
+            default=100,
+            help="Batch size for processing records.",
+        )
+        parser.add_argument(
             "--hs_contact_created_after",
             type=str,
             default=None,

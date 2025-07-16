@@ -13,6 +13,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--limit", type=int, default=None, help="Limit the number of local records to check.")
         parser.add_argument(
+            "--batch-size",
+            type=int,
+            default=100,
+            help="Batch size for processing records.",
+        )
+        parser.add_argument(
             "--hs_appointment_start_after",
             type=str,
             default=None,
@@ -33,7 +39,10 @@ class Command(BaseCommand):
         hs_appointment_start_after = options["hs_appointment_start_after"]
         dry_run = options["dry_run"]
 
-        engine = HubSpotAppointmentsRemovalSyncEngine()
+        engine = HubSpotAppointmentsRemovalSyncEngine(
+            batch_size=options.get('batch_size', 100),
+            dry_run=dry_run
+        )
         await engine.run_removal(
             limit=limit,
             start_after=hs_appointment_start_after,
@@ -95,38 +104,49 @@ class Command(BaseCommand):
         return appointments
 
     def _check_appointments_in_hubspot(self, client, local_appointments):
-        """Check which local appointments no longer exist in HubSpot."""
+        """Check which local appointments no longer exist in HubSpot, only after confirming with individual 404."""
         import asyncio
-        
         self.stdout.write(f"Checking {len(local_appointments)} appointments in HubSpot...")
-        
         local_ids = [apt['id'] for apt in local_appointments]
-        
+        batch_size = 100
+        truly_missing_appointments = []
+
         async def check_hubspot_existence():
-            # Check appointments in batches to avoid overwhelming the API
-            batch_size = 100
-            missing_appointments = []
-            
             for i in range(0, len(local_ids), batch_size):
                 batch_ids = local_ids[i:i + batch_size]
                 self.stdout.write(f"Checking batch {i//batch_size + 1}: {len(batch_ids)} appointments...")
-                
-                # Try to fetch these appointments from HubSpot
+                # Try to fetch these appointments from HubSpot (batch)
                 existing_in_hubspot = await self._check_hubspot_batch(client, batch_ids)
-                
-                # Find which ones are missing
                 existing_ids = set(existing_in_hubspot)
                 missing_ids = set(batch_ids) - existing_ids
-                
-                # Get the full local appointment data for missing ones
-                missing_in_batch = [apt for apt in local_appointments if apt['id'] in missing_ids]
-                missing_appointments.extend(missing_in_batch)
-                
-                self.stdout.write(f"Batch {i//batch_size + 1}: {len(missing_in_batch)} appointments not found in HubSpot")
-            
-            return missing_appointments
-        
+                self.stdout.write(f"Batch {i//batch_size + 1}: {len(missing_ids)} appointments not found in batch API, confirming individually...")
+                # Confirm missing ones with individual check (must get 404)
+                if missing_ids:
+                    confirmed_missing = await self._confirm_missing_with_individual(client, list(missing_ids))
+                    truly_missing_appointments.extend([apt for apt in local_appointments if apt['id'] in confirmed_missing])
+                    self.stdout.write(f"Batch {i//batch_size + 1}: {len(confirmed_missing)} appointments confirmed missing after 404 check.")
+            return truly_missing_appointments
+
         return asyncio.run(check_hubspot_existence())
+
+    async def _confirm_missing_with_individual(self, client, appointment_ids):
+        """Return only those IDs that are confirmed missing by a 404 from HubSpot."""
+        import aiohttp
+        confirmed_missing = []
+        async with aiohttp.ClientSession() as session:
+            for apt_id in appointment_ids:
+                try:
+                    url = f"{client.BASE_URL}/crm/v3/objects/0-421/{apt_id}"
+                    async with session.get(url, headers=client.headers, timeout=30) as response:
+                        if response.status == 404:
+                            confirmed_missing.append(apt_id)
+                        elif response.status == 200:
+                            continue  # Exists
+                        else:
+                            self.stdout.write(f"Warning: Unexpected status {response.status} for appointment {apt_id}, skipping removal.")
+                except Exception as e:
+                    self.stdout.write(f"Error checking appointment {apt_id}: {str(e)}. Skipping removal.")
+        return confirmed_missing
 
     async def _check_hubspot_batch(self, client, appointment_ids):
         """Check a batch of appointment IDs in HubSpot and return which ones exist."""
