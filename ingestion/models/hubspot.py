@@ -137,8 +137,14 @@ class Hubspot_Appointment(models.Model):
     
     # Appointment status and response
     appointment_status = models.CharField(max_length=100, null=True, blank=True)
+    appointment_confirmed = models.CharField(max_length=100, null=True, blank=True)  # Added missing field
     appointment_response = models.CharField(max_length=100, null=True, blank=True)
     is_complete = models.BooleanField(default=False)
+    
+    # Cancel reasons - Added missing fields
+    cancel_reason = models.CharField(max_length=255, null=True, blank=True)
+    div_cancel_reasons = models.CharField(max_length=255, null=True, blank=True)
+    qc_cancel_reasons = models.CharField(max_length=255, null=True, blank=True)
     
     # Services and interests
     appointment_services = models.TextField(null=True, blank=True)
@@ -157,6 +163,7 @@ class Hubspot_Appointment(models.Model):
     
     # Division and organizational info
     division_id = models.CharField(max_length=255, null=True, blank=True)
+    division = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
     
     # Source tracking
     primary_source = models.CharField(max_length=255, null=True, blank=True)
@@ -164,35 +171,42 @@ class Hubspot_Appointment(models.Model):
     prospect_id = models.CharField(max_length=255, null=True, blank=True)
     prospect_source_id = models.CharField(max_length=255, null=True, blank=True)
     hscontact_id = models.CharField(max_length=255, null=True, blank=True)
+    sourcefield = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
     
     # Appointment type and completion
-    type_id = models.CharField(max_length=255, null=True, blank=True)
+    type_id = models.IntegerField(null=True, blank=True)  # Fixed: Changed from CharField to IntegerField
     type_id_text = models.CharField(max_length=255, null=True, blank=True)
     marketsharp_appt_type = models.CharField(max_length=255, null=True, blank=True)
     
     # Completion details
     complete_date = models.DateTimeField(null=True, blank=True)
-    complete_outcome_id = models.CharField(max_length=255, null=True, blank=True)
+    complete_outcome_id = models.IntegerField(null=True, blank=True)  # Fixed: Changed from CharField to IntegerField
     complete_outcome_id_text = models.CharField(max_length=255, null=True, blank=True)
-    complete_user_id = models.CharField(max_length=255, null=True, blank=True)
+    complete_user_id = models.IntegerField(null=True, blank=True)  # Fixed: Changed from CharField to IntegerField
     
     # Confirmation details
     confirm_date = models.DateTimeField(null=True, blank=True)
-    confirm_user_id = models.CharField(max_length=255, null=True, blank=True)
+    confirm_user_id = models.IntegerField(null=True, blank=True)  # Fixed: Changed from CharField to IntegerField
     confirm_with = models.CharField(max_length=255, null=True, blank=True)
     
     # Assignment details
     assign_date = models.DateTimeField(null=True, blank=True)
     add_date = models.DateTimeField(null=True, blank=True)
-    add_user_id = models.CharField(max_length=255, null=True, blank=True)
+    add_user_id = models.IntegerField(null=True, blank=True)  # Fixed: Changed from CharField to IntegerField
     
     # Arrivy integration fields
     arrivy_appt_date = models.DateTimeField(null=True, blank=True)
     arrivy_confirm_date = models.DateTimeField(null=True, blank=True)
     arrivy_confirm_user = models.CharField(max_length=255, null=True, blank=True)
     arrivy_created_by = models.CharField(max_length=255, null=True, blank=True)
+    arrivy_details = models.TextField(null=True, blank=True)  # Added missing field
+    arrivy_notes = models.TextField(null=True, blank=True)  # Added missing field
     arrivy_object_id = models.CharField(max_length=255, null=True, blank=True)
+    arrivy_result_full_string = models.TextField(null=True, blank=True)  # Added missing field
+    arrivy_salesrep_first_name = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
+    arrivy_salesrep_last_name = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
     arrivy_status = models.CharField(max_length=255, null=True, blank=True)
+    arrivy_status_title = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
     arrivy_user = models.CharField(max_length=255, null=True, blank=True)
     arrivy_user_divison_id = models.CharField(max_length=255, null=True, blank=True)
     arrivy_user_external_id = models.CharField(max_length=255, null=True, blank=True)
@@ -200,8 +214,11 @@ class Hubspot_Appointment(models.Model):
     
     # SalesPro integration fields
     salespro_both_homeowners = models.BooleanField(null=True, blank=True)
+    salespro_consider_solar = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
+    salespro_customer_id = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
     salespro_deadline = models.DateField(null=True, blank=True)
     salespro_deposit_type = models.CharField(max_length=255, null=True, blank=True)
+    salespro_estimate_id = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
     salespro_fileurl_contract = models.URLField(null=True, blank=True)
     salespro_fileurl_estimate = models.URLField(null=True, blank=True)
     salespro_financing = models.TextField(null=True, blank=True)
@@ -221,12 +238,25 @@ class Hubspot_Appointment(models.Model):
     notes = models.TextField(null=True, blank=True)
     log = models.TextField(null=True, blank=True)
     title = models.CharField(max_length=255, null=True, blank=True)
-    marketing_task_id = models.CharField(max_length=255, null=True, blank=True)
+    marketing_task_id = models.IntegerField(null=True, blank=True)  # Fixed: Changed from CharField to IntegerField
     leap_estimate_id = models.CharField(max_length=255, null=True, blank=True)
     spouses_present = models.BooleanField(null=True, blank=True)
     year_built = models.IntegerField(null=True, blank=True)
     error_details = models.TextField(null=True, blank=True)
     tester_test = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Additional missing fields
+    created_by_make = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
+    f9_tfuid = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
+    set_date = models.DateField(null=True, blank=True)  # Added missing field
+    
+    # Genius integration fields - Added missing fields
+    genius_quote_id = models.CharField(max_length=255, null=True, blank=True)
+    genius_quote_response = models.TextField(null=True, blank=True)
+    genius_quote_response_status = models.CharField(max_length=255, null=True, blank=True)
+    genius_response = models.TextField(null=True, blank=True)
+    genius_response_status = models.CharField(max_length=255, null=True, blank=True)
+    genius_resubmit = models.CharField(max_length=255, null=True, blank=True)
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
