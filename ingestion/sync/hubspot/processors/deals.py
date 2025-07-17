@@ -38,11 +38,12 @@ class HubSpotDealProcessor(HubSpotBaseProcessor):
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform HubSpot deal record to model format"""
         properties = record.get('properties', {})
+        record_id = record.get('id', 'UNKNOWN')
         
         return {
             'id': record.get('id'),
             'dealname': properties.get('dealname'),
-            'amount': self._parse_decimal(properties.get('amount')),
+            'amount': self._parse_decimal(properties.get('amount'), record_id, 'amount'),
             'closedate': self._parse_datetime(properties.get('closedate')),
             'createdate': self._parse_datetime(properties.get('createdate')),
             'dealstage': properties.get('dealstage'),
@@ -78,11 +79,12 @@ class HubSpotDealProcessor(HubSpotBaseProcessor):
                 record['amount'] = self.validate_field('amount', record['amount'], 'currency', record)
                 # Ensure amount is positive
                 if record['amount'] and record['amount'] < 0:
-                    logger.warning(f"Deal {record['id']} has negative amount: {record['amount']}")
+                    logger.warning(f"Deal {record.get('id', 'UNKNOWN')} has negative amount: {record['amount']}")
             except ValidationException as e:
                 # Use legacy parsing as fallback
-                logger.warning(f"Using legacy decimal parsing for amount: {e}")
-                record['amount'] = self._parse_decimal(record['amount'])
+                record_id = record.get('id', 'UNKNOWN')
+                logger.warning(f"Using legacy decimal parsing for amount '{record['amount']}' for deal {record_id}: {e}")
+                record['amount'] = self._parse_decimal(record['amount'], record_id, 'amount')
         
         # Validate datetime fields
         datetime_fields = ['closedate', 'createdate']
@@ -92,7 +94,19 @@ class HubSpotDealProcessor(HubSpotBaseProcessor):
                     record[field] = self.validate_field(field, record[field], 'datetime', record)
                 except ValidationException as e:
                     # Use legacy parsing as fallback
-                    logger.warning(f"Using legacy datetime parsing for {field}: {e}")
+                    logger.warning(f"Using legacy datetime parsing for field '{field}' with value '{record[field]}' for deal {record.get('id', 'UNKNOWN')}: {e}")
                     record[field] = self._parse_datetime(record[field])
         
         return record
+    
+    def _parse_decimal(self, value: Any, record_id: str = None, field_name: str = None) -> Optional[float]:
+        """Parse decimal value safely"""
+        if value is None or value == '':
+            return None
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            record_context = f" for deal {record_id}" if record_id else ""
+            field_context = f" in field '{field_name}'" if field_name else ""
+            logger.warning(f"Failed to parse decimal value: '{value}'{field_context}{record_context}")
+            return None

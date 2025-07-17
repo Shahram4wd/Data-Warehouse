@@ -169,6 +169,34 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
         except Exception as e:
             logger.error(f"Bulk upsert failed: {e}")
             results['failed'] = len(validated_data)
+            
+            # Log detailed information about the failed batch for debugging
+            logger.error(f"Failed batch details: {len(validated_data)} contacts")
+            for record in validated_data:
+                record_id = record.get('id', 'UNKNOWN')
+                hubspot_url = f"https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-1/{record_id}"
+                logger.error(f"Failed record in batch - Contact ID: {record_id} - HubSpot URL: {hubspot_url}")
+                
+                # Check for potential field length issues
+                long_fields = []
+                for field_name, field_value in record.items():
+                    if field_value and isinstance(field_value, str):
+                        if len(field_value) > 255:
+                            long_fields.append(f"{field_name}({len(field_value)} chars): '{field_value[:50]}...'")
+                        elif len(field_value) > 100:
+                            long_fields.append(f"{field_name}({len(field_value)} chars): '{field_value[:30]}...'")
+                
+                if long_fields:
+                    logger.error(f"Record {record_id} potential long fields: {'; '.join(long_fields)}")
+            
+            # Attempt individual record processing to save what we can
+            logger.info(f"Attempting individual record processing for {len(validated_data)} failed records")
+            individual_results = await self._individual_save_contacts(validated_data)
+            
+            # Update results with individual processing outcomes
+            results['created'] = individual_results['created']
+            results['updated'] = individual_results['updated']
+            results['failed'] = individual_results['failed']
         return results
     
     async def _bulk_update_contacts(self, update_data: List[Dict]) -> None:
@@ -187,41 +215,105 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
         
         for record in validated_data:
             try:
-                # Check if contact exists
                 contact_id = record.get('id')
                 if not contact_id:
                     logger.error(f"Contact record missing ID: {record}")
                     results['failed'] += 1
                     continue
+
+                hubspot_url = f"https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-1/{contact_id}"
                 
-                # Use get_or_create to handle duplicates
-                contact, created = await sync_to_async(Hubspot_Contact.objects.get_or_create)(
-                    id=contact_id,
-                    defaults=record
-                )
+                # Check if contact exists
+                contact_exists = await sync_to_async(Hubspot_Contact.objects.filter(id=contact_id).exists)()
                 
-                # Update existing contact with new data
-                if not created:
-                    for field, value in record.items():
-                        if hasattr(contact, field):
-                            setattr(contact, field, value)
-                    await sync_to_async(contact.save)()
-                
-                if created:
-                    results['created'] += 1
+                if contact_exists:
+                    # Update existing contact
+                    try:
+                        existing_contact = await sync_to_async(Hubspot_Contact.objects.get)(id=contact_id)
+                        
+                        # Validate field lengths before saving to prevent database errors
+                        validated_record = self._validate_field_lengths(record, contact_id)
+                        
+                        for field, value in validated_record.items():
+                            if hasattr(existing_contact, field):
+                                setattr(existing_contact, field, value)
+                        
+                        await sync_to_async(existing_contact.save)()
+                        results['updated'] += 1
+                        logger.debug(f"Updated contact {contact_id}")
+                        
+                    except Exception as save_error:
+                        logger.error(f"Database save failed for contact {contact_id}: {save_error} - HubSpot URL: {hubspot_url}")
+                        
+                        # Log specific field information for database errors
+                        if hasattr(self.processor, 'log_database_error'):
+                            self.processor.log_database_error(save_error, record, "update")
+                        
+                        results['failed'] += 1
                 else:
-                    results['updated'] += 1
+                    # Create new contact
+                    try:
+                        # Validate field lengths before creating
+                        validated_record = self._validate_field_lengths(record, contact_id)
+                        
+                        contact = Hubspot_Contact(**validated_record)
+                        await sync_to_async(contact.save)()
+                        results['created'] += 1
+                        logger.debug(f"Created contact {contact_id}")
+                        
+                    except Exception as save_error:
+                        logger.error(f"Database save failed for new contact {contact_id}: {save_error} - HubSpot URL: {hubspot_url}")
+                        
+                        # Log specific field information for database errors
+                        if hasattr(self.processor, 'log_database_error'):
+                            self.processor.log_database_error(save_error, record, "create")
+                        
+                        results['failed'] += 1
                     
             except Exception as e:
-                logger.error(f"Error saving contact {record.get('id')}: {e}")
+                record_id = record.get('id', 'UNKNOWN')
+                hubspot_url = f"https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-1/{record_id}"
+                logger.error(f"Error processing contact {record_id}: {e} - HubSpot URL: {hubspot_url}")
                 results['failed'] += 1
                 
-                # Report individual contact errors to enterprise error handling
-                await self.handle_sync_error(e, {
-                    'operation': 'save_contact',
-                    'contact_id': record.get('id'),
-                    'record': record
-                })
+        return results
+
+    def _validate_field_lengths(self, record: Dict[str, Any], record_id: str) -> Dict[str, Any]:
+        """Validate and truncate field lengths to prevent database errors"""
+        validated_record = record.copy()
+        
+        # Define field length limits based on database schema
+        field_limits = {
+            'state': 10,
+            'zip': 10,
+            'phone': 50,
+            'email': 100,
+            'firstname': 100,
+            'lastname': 100,
+            'city': 100,
+            'address': 255,
+            'campaign_name': 255,
+            'campaign_content': 255,
+            'comments': 500,
+            'original_lead_source': 100,
+            'search_terms': 255,
+            'reference_code': 100,
+            'trustedform_cert_url': 500,
+            'tier': 50,
+            'vertical': 100,
+            'division': 100,
+        }
+        
+        hubspot_url = f"https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-1/{record_id}"
+        
+        for field_name, max_length in field_limits.items():
+            if field_name in validated_record and validated_record[field_name]:
+                field_value = str(validated_record[field_name])
+                if len(field_value) > max_length:
+                    logger.warning(f"Field '{field_name}' too long ({len(field_value)} chars), truncating to {max_length} for contact {record_id}: '{field_value[:50]}{'...' if len(field_value) > 50 else ''}' - HubSpot URL: {hubspot_url}")
+                    validated_record[field_name] = field_value[:max_length]
+        
+        return validated_record
         
         return results
     

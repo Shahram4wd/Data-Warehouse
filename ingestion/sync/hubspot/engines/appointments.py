@@ -165,11 +165,140 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
         except Exception as e:
             logger.error(f"Bulk upsert failed: {e}")
             results['failed'] = len(validated_data)
+            
+            # Log detailed information about the failed batch for debugging
+            logger.error(f"Failed batch details: {len(validated_data)} appointments")
+            for record in validated_data:
+                record_id = record.get('id', 'UNKNOWN')
+                hubspot_url = f"https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-421/{record_id}"
+                logger.error(f"Failed record in batch - Appointment ID: {record_id} - HubSpot URL: {hubspot_url}")
+                
+                # Check for potential field length issues
+                long_fields = []
+                for field_name, field_value in record.items():
+                    if field_value and isinstance(field_value, str):
+                        if len(field_value) > 255:
+                            long_fields.append(f"{field_name}({len(field_value)} chars): '{field_value[:50]}...'")
+                        elif len(field_value) > 100:
+                            long_fields.append(f"{field_name}({len(field_value)} chars): '{field_value[:30]}...'")
+                
+                if long_fields:
+                    logger.error(f"Record {record_id} potential long fields: {'; '.join(long_fields)}")
+            
+            # Attempt individual record processing to save what we can
+            logger.info(f"Attempting individual record processing for {len(validated_data)} failed records")
+            individual_results = await self._individual_save_appointments(validated_data)
+            
+            # Update results with individual processing outcomes
+            results['created'] = individual_results['created']
+            results['updated'] = individual_results['updated']
+            results['failed'] = individual_results['failed']
         return results
 
     async def _individual_save_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
         """Fallback individual save operation with detailed error handling"""
         results = {'created': 0, 'updated': 0, 'failed': 0}
+        
+        for record in validated_data:
+            try:
+                appointment_id = record.get('id')
+                if not appointment_id:
+                    logger.error(f"Appointment record missing ID: {record}")
+                    results['failed'] += 1
+                    continue
+
+                hubspot_url = f"https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-421/{appointment_id}"
+                
+                # Check if appointment exists
+                appointment_exists = await sync_to_async(Hubspot_Appointment.objects.filter(id=appointment_id).exists)()
+                
+                if appointment_exists:
+                    # Update existing appointment
+                    try:
+                        existing_appointment = await sync_to_async(Hubspot_Appointment.objects.get)(id=appointment_id)
+                        
+                        # Validate field lengths before saving to prevent database errors
+                        validated_record = self._validate_field_lengths(record, appointment_id)
+                        
+                        for field, value in validated_record.items():
+                            if hasattr(existing_appointment, field):
+                                setattr(existing_appointment, field, value)
+                        
+                        await sync_to_async(existing_appointment.save)()
+                        results['updated'] += 1
+                        logger.debug(f"Updated appointment {appointment_id}")
+                        
+                    except Exception as save_error:
+                        logger.error(f"Database save failed for appointment {appointment_id}: {save_error} - HubSpot URL: {hubspot_url}")
+                        
+                        # Log specific field information for database errors
+                        if hasattr(self.processor, 'log_database_error'):
+                            self.processor.log_database_error(save_error, record, "update")
+                        
+                        results['failed'] += 1
+                else:
+                    # Create new appointment
+                    try:
+                        # Validate field lengths before creating
+                        validated_record = self._validate_field_lengths(record, appointment_id)
+                        
+                        appointment = Hubspot_Appointment(**validated_record)
+                        await sync_to_async(appointment.save)()
+                        results['created'] += 1
+                        logger.debug(f"Created appointment {appointment_id}")
+                        
+                    except Exception as save_error:
+                        logger.error(f"Database save failed for new appointment {appointment_id}: {save_error} - HubSpot URL: {hubspot_url}")
+                        
+                        # Log specific field information for database errors
+                        if hasattr(self.processor, 'log_database_error'):
+                            self.processor.log_database_error(save_error, record, "create")
+                        
+                        results['failed'] += 1
+                    
+            except Exception as e:
+                record_id = record.get('id', 'UNKNOWN')
+                hubspot_url = f"https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-421/{record_id}"
+                logger.error(f"Error processing appointment {record_id}: {e} - HubSpot URL: {hubspot_url}")
+                results['failed'] += 1
+                
+        return results
+
+    def _validate_field_lengths(self, record: Dict[str, Any], record_id: str) -> Dict[str, Any]:
+        """Validate and truncate field lengths to prevent database errors"""
+        validated_record = record.copy()
+        
+        # Define field length limits based on database schema
+        field_limits = {
+            'state': 10,
+            'zip': 10,
+            'phone1': 50,
+            'phone2': 50,
+            'email': 100,
+            'canvasser_email': 100,
+            'first_name': 100,
+            'last_name': 100,
+            'city': 100,
+            'address1': 255,
+            'address2': 255,
+            'appointment_status': 50,
+            'cancel_reason': 255,
+            'div_cancel_reasons': 255,
+            'qc_cancel_reasons': 255,
+            'division': 100,
+            'sourcefield': 100,
+        }
+        
+        hubspot_url = f"https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-421/{record_id}"
+        
+        for field_name, max_length in field_limits.items():
+            if field_name in validated_record and validated_record[field_name]:
+                field_value = str(validated_record[field_name])
+                if len(field_value) > max_length:
+                    logger.warning(f"Field '{field_name}' too long ({len(field_value)} chars), truncating to {max_length} for appointment {record_id}: '{field_value[:50]}{'...' if len(field_value) > 50 else ''}' - HubSpot URL: {hubspot_url}")
+                    validated_record[field_name] = field_value[:max_length]
+        
+        return validated_record
         for record in validated_data:
             try:
                 appointment_id = record.get('id')
@@ -242,6 +371,33 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
         except Exception as e:
             logger.error(f"Force bulk overwrite failed: {e}")
             results['failed'] = len(validated_data)
+            
+            # Log problematic records with HubSpot URLs for debugging
+            for record in validated_data:
+                record_id = record.get('id', 'UNKNOWN')
+                hubspot_url = f"https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-421/{record_id}"
+                logger.error(f"Failed record in batch - Appointment ID: {record_id} - HubSpot URL: {hubspot_url}")
+                
+                # Log key field values for debugging database constraint issues
+                debug_fields = ['first_name', 'last_name', 'email', 'phone1', 'state', 'zip', 'city', 'address1']
+                field_values = []
+                for field in debug_fields:
+                    if field in record and record[field]:
+                        value = str(record[field])
+                        display_value = value[:30] + ('...' if len(value) > 30 else '')
+                        field_values.append(f"{field}='{display_value}'")
+                
+                if field_values:
+                    logger.error(f"Record {record_id} debug fields: {', '.join(field_values)}")
+            
+            # Attempt individual record processing to save what we can
+            logger.info(f"Attempting individual record processing for {len(validated_data)} failed records")
+            individual_results = await self._individual_force_save_appointments(validated_data)
+            
+            # Update results with individual processing outcomes
+            results['created'] = individual_results['created']
+            results['updated'] = individual_results['updated'] 
+            results['failed'] = individual_results['failed']
             
         return results
 
