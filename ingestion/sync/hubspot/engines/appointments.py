@@ -299,30 +299,6 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
                     validated_record[field_name] = field_value[:max_length]
         
         return validated_record
-        for record in validated_data:
-            try:
-                appointment_id = record.get('id')
-                if not appointment_id:
-                    logger.error(f"Appointment record missing ID: {record}")
-                    results['failed'] += 1
-                    continue
-                appointment, created = await sync_to_async(Hubspot_Appointment.objects.get_or_create)(
-                    id=appointment_id,
-                    defaults=record
-                )
-                if not created:
-                    for field, value in record.items():
-                        if hasattr(appointment, field):
-                            setattr(appointment, field, value)
-                    await sync_to_async(appointment.save)()
-                if created:
-                    results['created'] += 1
-                else:
-                    results['updated'] += 1
-            except Exception as e:
-                logger.error(f"Error saving appointment {record.get('id')}: {e}")
-                results['failed'] += 1
-        return results
 
     async def _force_overwrite_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
         """Force overwrite all appointments using bulk operations, ignoring timestamps"""

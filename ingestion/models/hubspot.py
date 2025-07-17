@@ -29,7 +29,7 @@ class Hubspot_Contact(models.Model):  # Updated table name
     price = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     reference_code = models.CharField(max_length=255, null=True, blank=True)
     search_terms = models.CharField(max_length=255, null=True, blank=True)
-    state = models.CharField(max_length=255, null=True, blank=True)
+    state = models.CharField(max_length=50, null=True, blank=True)
     tier = models.CharField(max_length=255, null=True, blank=True)
     trustedform_cert_url = models.URLField(null=True, blank=True)
     vendorleadid = models.CharField(max_length=255, null=True, blank=True)
@@ -127,7 +127,7 @@ class Hubspot_Appointment(models.Model):
     address1 = models.CharField(max_length=255, null=True, blank=True)
     address2 = models.CharField(max_length=255, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
-    state = models.CharField(max_length=10, null=True, blank=True)
+    state = models.CharField(max_length=50, null=True, blank=True)
     zip = models.CharField(max_length=20, null=True, blank=True)
     
     # Appointment scheduling
@@ -378,7 +378,7 @@ class Hubspot_Division(models.Model):
     address1 = models.CharField(max_length=255, null=True, blank=True)
     address2 = models.CharField(max_length=255, null=True, blank=True)
     city = models.CharField(max_length=100, null=True, blank=True)
-    state = models.CharField(max_length=10, null=True, blank=True)
+    state = models.CharField(max_length=50, null=True, blank=True)
     zip = models.CharField(max_length=20, null=True, blank=True)
     
     # Timestamps
