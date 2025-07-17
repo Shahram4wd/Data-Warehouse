@@ -67,11 +67,19 @@ class HubSpotDealProcessor(HubSpotBaseProcessor):
         
         # Validate HubSpot object ID
         if record.get('hs_object_id'):
-            record['hs_object_id'] = self.validate_field('hs_object_id', record['hs_object_id'], 'object_id', record)
+            try:
+                record['hs_object_id'] = self.validate_field('hs_object_id', record['hs_object_id'], 'object_id', record)
+            except ValidationException as e:
+                record_id = record.get('id', 'UNKNOWN')
+                logger.warning(f"Invalid HubSpot object ID '{record['hs_object_id']}' for deal {record_id}: {e}")
         
         # Validate HubSpot owner ID
         if record.get('hubspot_owner_id'):
-            record['hubspot_owner_id'] = self.validate_field('hubspot_owner_id', record['hubspot_owner_id'], 'object_id', record)
+            try:
+                record['hubspot_owner_id'] = self.validate_field('hubspot_owner_id', record['hubspot_owner_id'], 'object_id', record)
+            except ValidationException as e:
+                record_id = record.get('id', 'UNKNOWN')
+                logger.warning(f"Invalid HubSpot owner ID '{record['hubspot_owner_id']}' for deal {record_id}: {e}")
         
         # Validate currency amount
         if record.get('amount'):
@@ -79,7 +87,8 @@ class HubSpotDealProcessor(HubSpotBaseProcessor):
                 record['amount'] = self.validate_field('amount', record['amount'], 'currency', record)
                 # Ensure amount is positive
                 if record['amount'] and record['amount'] < 0:
-                    logger.warning(f"Deal {record.get('id', 'UNKNOWN')} has negative amount: {record['amount']}")
+                    record_id = record.get('id', 'UNKNOWN')
+                    logger.warning(f"Deal amount is negative: '{record['amount']}' for deal {record_id}")
             except ValidationException as e:
                 # Use legacy parsing as fallback
                 record_id = record.get('id', 'UNKNOWN')
@@ -94,7 +103,8 @@ class HubSpotDealProcessor(HubSpotBaseProcessor):
                     record[field] = self.validate_field(field, record[field], 'datetime', record)
                 except ValidationException as e:
                     # Use legacy parsing as fallback
-                    logger.warning(f"Using legacy datetime parsing for field '{field}' with value '{record[field]}' for deal {record.get('id', 'UNKNOWN')}: {e}")
+                    record_id = record.get('id', 'UNKNOWN')
+                    logger.warning(f"Using legacy datetime parsing for field '{field}' with value '{record[field]}' for deal {record_id}: {e}")
                     record[field] = self._parse_datetime(record[field])
         
         return record
@@ -106,7 +116,5 @@ class HubSpotDealProcessor(HubSpotBaseProcessor):
         try:
             return float(value)
         except (ValueError, TypeError):
-            record_context = f" for deal {record_id}" if record_id else ""
-            field_context = f" in field '{field_name}'" if field_name else ""
-            logger.warning(f"Failed to parse decimal value: '{value}'{field_context}{record_context}")
+            logger.warning(f"Failed to parse decimal value: '{value}' in field '{field_name}' for deal {record_id}")
             return None

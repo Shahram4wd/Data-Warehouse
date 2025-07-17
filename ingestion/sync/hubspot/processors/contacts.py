@@ -97,14 +97,14 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
         
         # ID validation
         try:
-            validated_record['id'] = self.validate_field('id', record['id'], 'object_id')
+            validated_record['id'] = self.validate_field('id', record['id'], 'object_id', record)
         except ValidationException as e:
             raise ValidationException(f"Invalid contact ID '{record['id']}': {e}")
         
         # Email validation (if present)
         if record.get('email'):
             try:
-                validated_record['email'] = self.validate_field('email', record['email'], 'email')
+                validated_record['email'] = self.validate_field('email', record['email'], 'email', record)
             except ValidationException as e:
                 logger.warning(f"Invalid email '{record['email']}' for contact {record_id}: {e}")
                 validated_record['email'] = None
@@ -112,7 +112,7 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
         # Phone validation (if present)
         if record.get('phone'):
             try:
-                validated_record['phone'] = self.validate_field('phone', record['phone'], 'phone')
+                validated_record['phone'] = self.validate_field('phone', record['phone'], 'phone', record)
             except ValidationException as e:
                 logger.warning(f"Invalid phone '{record['phone']}' for contact {record_id}: {e}")
                 validated_record['phone'] = record['phone']  # Keep original if validation fails
@@ -120,7 +120,7 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
         # HubSpot object ID validation
         if record.get('hs_object_id'):
             try:
-                validated_record['hs_object_id'] = self.validate_field('hs_object_id', record['hs_object_id'], 'object_id')
+                validated_record['hs_object_id'] = self.validate_field('hs_object_id', record['hs_object_id'], 'object_id', record)
             except ValidationException as e:
                 logger.warning(f"Invalid HubSpot object ID '{record['hs_object_id']}' for contact {record_id}: {e}")
                 validated_record['hs_object_id'] = None
@@ -128,7 +128,7 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
         # Zip code validation
         if record.get('zip'):
             try:
-                validated_record['zip'] = self.validate_field('zip', record['zip'], 'zip_code')
+                validated_record['zip'] = self.validate_field('zip', record['zip'], 'zip_code', record)
             except ValidationException as e:
                 logger.warning(f"Invalid zip code '{record['zip']}' for contact {record_id}: {e}")
                 validated_record['zip'] = record['zip']  # Keep original if validation fails
@@ -136,7 +136,7 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
         # URL validation
         if record.get('trustedform_cert_url'):
             try:
-                validated_record['trustedform_cert_url'] = self.validate_field('trustedform_cert_url', record['trustedform_cert_url'], 'url')
+                validated_record['trustedform_cert_url'] = self.validate_field('trustedform_cert_url', record['trustedform_cert_url'], 'url', record)
             except ValidationException as e:
                 logger.warning(f"Invalid trustedform_cert_url '{record['trustedform_cert_url']}' for contact {record_id}: {e}")
                 validated_record['trustedform_cert_url'] = record['trustedform_cert_url']  # Keep original if validation fails
@@ -144,7 +144,7 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
         # Decimal validation
         if record.get('price'):
             try:
-                validated_record['price'] = self.validate_field('price', record['price'], 'decimal')
+                validated_record['price'] = self.validate_field('price', record['price'], 'decimal', record)
             except ValidationException as e:
                 logger.warning(f"Invalid price '{record['price']}' for contact {record_id}: {e}")
                 validated_record['price'] = None

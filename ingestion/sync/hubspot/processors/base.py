@@ -157,6 +157,8 @@ class HubSpotBaseProcessor(BaseDataProcessor):
             # Handle validation errors based on strict mode
             context_info = ""
             hubspot_url = ""
+            record_id = None
+            
             if context:
                 # Build context string with available identifiers
                 identifiers = []
@@ -167,9 +169,15 @@ class HubSpotBaseProcessor(BaseDataProcessor):
                 
                 if identifiers:
                     context_info = f" (Record: {', '.join(identifiers)})"
+                else:
+                    # Debug: context exists but no ID found
+                    context_info = f" (Record: no ID found in context keys: {list(context.keys())})"
+            else:
+                # Debug: no context provided
+                context_info = " (Record: no context provided)"
                 
-                # Add HubSpot URL for easy access
-                if record_id:
+            # Add HubSpot URL for easy access
+            if record_id:
                     # Determine object type based on context or default to contacts
                     object_type_map = {
                         'appointment': '0-421',  # Custom object for appointments

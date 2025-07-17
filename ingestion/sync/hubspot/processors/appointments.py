@@ -95,7 +95,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'zip': properties.get('zip'),
             # Appointment details
             'date': self._parse_datetime(properties.get('date')),
-            'time': self.validate_field('time', properties.get('time'), 'time'),
+            'time': self.validate_field('time', properties.get('time'), 'time', record),
             'duration': self.parse_duration(properties.get('duration')),
             'appointment_status': properties.get('appointment_status'),
             'appointment_confirmed': properties.get('appointment_confirmed'),  # Added missing field
@@ -166,9 +166,9 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'salespro_financing': properties.get('salespro_financing'),
             'salespro_job_size': properties.get('salespro_job_size'),
             'salespro_job_type': properties.get('salespro_job_type'),
-            'salespro_last_price_offered': self._parse_decimal(properties.get('salespro_last_price_offered'), record_id, 'salespro_last_price_offered'),
+            'salespro_last_price_offered': properties.get('salespro_last_price_offered'),
             'salespro_notes': properties.get('salespro_notes'),
-            'salespro_one_year_price': self._parse_decimal(properties.get('salespro_one_year_price'), record_id, 'salespro_one_year_price'),
+            'salespro_one_year_price': properties.get('salespro_one_year_price'),
             'salespro_preferred_payment': properties.get('salespro_preferred_payment'),
             'salespro_requested_start': self._parse_date(properties.get('salespro_requested_start'), record_id, 'salespro_requested_start'),
             'salespro_result': properties.get('salespro_result'),
@@ -297,33 +297,27 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
         return parsed_value if parsed_value is not None else False
     
     def _parse_integer(self, value: Any, record_id: str = None, field_name: str = None) -> Optional[int]:
-        """Parse integer value safely with enhanced logging"""
+        """Parse integer value safely"""
         if value is None or value == '':
             return None
         try:
             return int(value)
         except (ValueError, TypeError):
-            record_context = f" for appointment {record_id}" if record_id else ""
-            field_context = f" in field '{field_name}'" if field_name else ""
-            hubspot_url = f" - HubSpot URL: https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-421/{record_id}" if record_id else ""
-            logger.warning(f"Failed to parse integer value: '{value}'{field_context}{record_context}{hubspot_url}")
+            logger.warning(f"Failed to parse integer value: '{value}' in field '{field_name}' for appointment {record_id}")
             return None
     
     def _parse_decimal(self, value: Any, record_id: str = None, field_name: str = None) -> Optional[float]:
-        """Parse decimal value safely with enhanced logging"""
+        """Parse decimal value safely"""
         if value is None or value == '':
             return None
         try:
             return float(value)
         except (ValueError, TypeError):
-            record_context = f" for appointment {record_id}" if record_id else ""
-            field_context = f" in field '{field_name}'" if field_name else ""
-            hubspot_url = f" - HubSpot URL: https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-421/{record_id}" if record_id else ""
-            logger.warning(f"Failed to parse decimal value: '{value}'{field_context}{record_context}{hubspot_url}")
+            logger.warning(f"Failed to parse decimal value: '{value}' in field '{field_name}' for appointment {record_id}")
             return None
     
     def _parse_date(self, value: Any, record_id: str = None, field_name: str = None) -> Optional[datetime]:
-        """Parse date value safely with enhanced logging"""
+        """Parse date value safely"""
         if value is None or value == '':
             return None
         try:
@@ -331,8 +325,5 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             parsed_datetime = self._parse_datetime(value)
             return parsed_datetime.date() if parsed_datetime else None
         except (ValueError, TypeError):
-            record_context = f" for appointment {record_id}" if record_id else ""
-            field_context = f" in field '{field_name}'" if field_name else ""
-            hubspot_url = f" - HubSpot URL: https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-421/{record_id}" if record_id else ""
-            logger.warning(f"Failed to parse date value: '{value}'{field_context}{record_context}{hubspot_url}")
+            logger.warning(f"Failed to parse date value: '{value}' in field '{field_name}' for appointment {record_id}")
             return None
