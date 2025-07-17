@@ -5,15 +5,33 @@ from ingestion.management.commands.base_hubspot_sync import BaseHubSpotSyncComma
 from ingestion.sync.hubspot.engines.contacts import HubSpotContactSyncEngine
 
 class Command(BaseHubSpotSyncCommand):
-    """Sync contacts from HubSpot using new architecture"""
+    """Sync contacts from HubSpot using new architecture
     
-    help = "Sync contacts from HubSpot API using the new unified architecture"
+    Examples:
+        # Standard incremental sync
+        python manage.py sync_hubspot_contacts
+        
+        # Full sync (fetch all records, but respect local timestamps)
+        python manage.py sync_hubspot_contacts --full
+        
+        # Force overwrite ALL records (fetch all + ignore local timestamps)
+        python manage.py sync_hubspot_contacts --full --force-overwrite
+        
+        # Force overwrite recent records only
+        python manage.py sync_hubspot_contacts --since=2025-01-01 --force-overwrite
+    """
+    
+    help = """Sync contacts from HubSpot API using the new unified architecture.
+    
+Use --force-overwrite to completely overwrite existing records, ignoring timestamps.
+This ensures all data is replaced with the latest from HubSpot."""
     
     def get_sync_engine(self, **options):
         """Get the contact sync engine"""
         return HubSpotContactSyncEngine(
             batch_size=options.get('batch_size', 100),
-            dry_run=options.get('dry_run', False)
+            dry_run=options.get('dry_run', False),
+            force_overwrite=options.get('force_overwrite', False)
         )
     
     def get_sync_name(self) -> str:

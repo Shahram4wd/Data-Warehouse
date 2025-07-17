@@ -6,9 +6,23 @@ from ingestion.management.commands.base_hubspot_sync import BaseHubSpotSyncComma
 from ingestion.sync.hubspot.engines.associations import HubSpotAssociationSyncEngine
 
 class Command(BaseHubSpotSyncCommand):
-    """Sync associations from HubSpot using new architecture"""
+    """Sync associations from HubSpot using new architecture
     
-    help = "Sync associations between HubSpot objects (contact-appointment or contact-division)"
+    Examples:
+        # Standard incremental sync for contact-appointment associations
+        python manage.py sync_hubspot_associations --association-type=contact_appointment
+        
+        # Full sync (fetch all records, but respect local timestamps)
+        python manage.py sync_hubspot_associations --association-type=contact_division --full
+        
+        # Force overwrite ALL association records (fetch all + ignore local timestamps)
+        python manage.py sync_hubspot_associations --association-type=contact_appointment --full --force-overwrite
+    """
+    
+    help = """Sync associations between HubSpot objects (contact-appointment or contact-division).
+    
+Use --force-overwrite to completely overwrite existing association records, ignoring timestamps.
+This ensures all association data is replaced with the latest from HubSpot."""
     
     def add_arguments(self, parser):
         """Add association-specific arguments"""
@@ -58,7 +72,8 @@ class Command(BaseHubSpotSyncCommand):
         return HubSpotAssociationSyncEngine(
             association_type=association_type,
             batch_size=options.get('batch_size', 100),
-            dry_run=options.get('dry_run', False)
+            dry_run=options.get('dry_run', False),
+            force_overwrite=options.get('force_overwrite', False)
         )
     
     def get_sync_name(self) -> str:

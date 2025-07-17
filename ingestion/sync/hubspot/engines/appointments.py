@@ -17,6 +17,7 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
     
     def __init__(self, **kwargs):
         super().__init__('appointments', **kwargs)
+        self.force_overwrite = kwargs.get('force_overwrite', False)
         
     async def initialize_client(self) -> None:
         """Initialize HubSpot appointments client and processor"""
@@ -107,12 +108,20 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
             return results
 
         try:
-            # Try bulk operations first for better performance
-            results = await self._bulk_save_appointments(validated_data)
+            # Check if force overwrite is enabled
+            if self.force_overwrite:
+                logger.info("Force overwrite mode - all records will be updated regardless of timestamps")
+                results = await self._force_overwrite_appointments(validated_data)
+            else:
+                # Try bulk operations first for better performance
+                results = await self._bulk_save_appointments(validated_data)
         except Exception as bulk_error:
             logger.warning(f"Bulk save failed, falling back to individual saves: {bulk_error}")
             # Fallback to individual saves
-            results = await self._individual_save_appointments(validated_data)
+            if self.force_overwrite:
+                results = await self._individual_force_save_appointments(validated_data)
+            else:
+                results = await self._individual_save_appointments(validated_data)
 
         # Calculate and report enterprise metrics
         total_processed = len(validated_data)
@@ -184,4 +193,95 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
             except Exception as e:
                 logger.error(f"Error saving appointment {record.get('id')}: {e}")
                 results['failed'] += 1
+        return results
+
+    async def _force_overwrite_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
+        """Force overwrite all appointments using bulk operations, ignoring timestamps"""
+        results = {'created': 0, 'updated': 0, 'failed': 0}
+        if not validated_data:
+            return results
+
+        # Get all existing appointment IDs that we're about to process
+        appointment_ids = [record['id'] for record in validated_data if record.get('id')]
+        
+        try:
+            # Get existing appointments to determine which are updates vs creates
+            existing_appointments = await sync_to_async(list)(
+                Hubspot_Appointment.objects.filter(id__in=appointment_ids).values_list('id', flat=True)
+            )
+            existing_appointment_set = set(existing_appointments)
+            
+            # Separate new vs existing records
+            new_records = [record for record in validated_data if record.get('id') not in existing_appointment_set]
+            update_records = [record for record in validated_data if record.get('id') in existing_appointment_set]
+            
+            # Force create new records
+            if new_records:
+                new_appointment_objects = [Hubspot_Appointment(**record) for record in new_records]
+                await sync_to_async(Hubspot_Appointment.objects.bulk_create)(
+                    new_appointment_objects,
+                    batch_size=self.batch_size
+                )
+                results['created'] = len(new_records)
+                logger.info(f"Force created {results['created']} new appointments")
+            
+            # Force update existing records - delete and recreate for true overwrite
+            if update_records:
+                # Delete existing records first
+                await sync_to_async(Hubspot_Appointment.objects.filter(id__in=[r['id'] for r in update_records]).delete)()
+                
+                # Recreate with new data
+                update_appointment_objects = [Hubspot_Appointment(**record) for record in update_records]
+                await sync_to_async(Hubspot_Appointment.objects.bulk_create)(
+                    update_appointment_objects,
+                    batch_size=self.batch_size
+                )
+                results['updated'] = len(update_records)
+                logger.info(f"Force overwritten {results['updated']} existing appointments")
+                
+        except Exception as e:
+            logger.error(f"Force bulk overwrite failed: {e}")
+            results['failed'] = len(validated_data)
+            
+        return results
+
+    async def _individual_force_save_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
+        """Force overwrite appointments individually, ignoring timestamps"""
+        results = {'created': 0, 'updated': 0, 'failed': 0}
+        
+        for record in validated_data:
+            try:
+                appointment_id = record.get('id')
+                if not appointment_id:
+                    logger.error(f"Appointment record missing ID: {record}")
+                    results['failed'] += 1
+                    continue
+                
+                # Check if appointment exists
+                try:
+                    existing_appointment = await sync_to_async(Hubspot_Appointment.objects.get)(id=appointment_id)
+                    # Delete existing and recreate for true overwrite
+                    await sync_to_async(existing_appointment.delete)()
+                    appointment = Hubspot_Appointment(**record)
+                    await sync_to_async(appointment.save)()
+                    results['updated'] += 1
+                    logger.debug(f"Force overwritten appointment {appointment_id}")
+                except Hubspot_Appointment.DoesNotExist:
+                    # Create new appointment
+                    appointment = Hubspot_Appointment(**record)
+                    await sync_to_async(appointment.save)()
+                    results['created'] += 1
+                    logger.debug(f"Force created appointment {appointment_id}")
+                    
+            except Exception as e:
+                logger.error(f"Error force saving appointment {record.get('id')}: {e}")
+                results['failed'] += 1
+                
+                # Report individual appointment errors to enterprise error handling
+                await self.handle_sync_error(e, {
+                    'operation': 'force_save_appointment',
+                    'appointment_id': record.get('id'),
+                    'record': record
+                })
+        
         return results

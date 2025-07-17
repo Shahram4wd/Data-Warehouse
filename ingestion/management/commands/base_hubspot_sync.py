@@ -71,6 +71,11 @@ class BaseHubSpotSyncCommand(BaseCommand):
             type=str,
             help="Sync records modified after this date (YYYY-MM-DD format)"
         )
+        parser.add_argument(
+            "--force-overwrite",
+            action="store_true",
+            help="Force overwrite all existing records, ignoring timestamps and sync history"
+        )
 
     def handle(self, *args, **options):
         """Main command handler"""
@@ -87,7 +92,15 @@ class BaseHubSpotSyncCommand(BaseCommand):
         
         # Run the sync
         try:
-            self.stdout.write(self.style.SUCCESS(f"Starting {self.get_sync_name()} sync..."))
+            if options.get('force_overwrite'):
+                self.stdout.write(self.style.WARNING(
+                    f"⚠️  FORCE OVERWRITE MODE: Starting {self.get_sync_name()} sync with complete record replacement..."
+                ))
+                self.stdout.write(self.style.WARNING(
+                    "This will overwrite ALL existing records, ignoring timestamps and sync history."
+                ))
+            else:
+                self.stdout.write(self.style.SUCCESS(f"Starting {self.get_sync_name()} sync..."))
             history = asyncio.run(self.run_sync(**options))
             
             # Report results
@@ -117,7 +130,8 @@ class BaseHubSpotSyncCommand(BaseCommand):
             'limit': options.get('batch_size', 100),
             'max_records': options.get('max_records', 0),
             'endpoint': self.get_sync_name(),
-            'show_progress': not options.get('no_progress', False)
+            'show_progress': not options.get('no_progress', False),
+            'force_overwrite': options.get('force_overwrite', False)
         }
         
         if options.get('debug'):
@@ -167,7 +181,11 @@ class BaseHubSpotSyncCommand(BaseCommand):
     
     async def get_last_sync_time_async(self, **options) -> Optional[datetime]:
         """Determine the last sync time (async version)"""
-        # Priority: 1) --since parameter, 2) database last sync, 3) full sync
+        # Priority: 1) --force-overwrite (always None), 2) --since parameter, 3) --full flag, 4) database last sync
+        if options.get('force_overwrite'):
+            self.stdout.write("Force overwrite mode - fetching ALL records and ignoring local timestamps")
+            return None
+            
         if options.get('since'):
             try:
                 last_sync = datetime.strptime(options['since'], "%Y-%m-%d")
@@ -209,9 +227,17 @@ class BaseHubSpotSyncCommand(BaseCommand):
     def report_results(self, history: SyncHistory):
         """Report sync results to user"""
         if history.status == 'success':
-            self.stdout.write(self.style.SUCCESS(
-                f"✓ {self.get_sync_name().title()} sync completed successfully"
-            ))
+            if hasattr(self.sync_engine, 'force_overwrite') and self.sync_engine.force_overwrite:
+                self.stdout.write(self.style.SUCCESS(
+                    f"✓ {self.get_sync_name().title()} FORCE OVERWRITE completed successfully"
+                ))
+                self.stdout.write(self.style.WARNING(
+                    "All records were completely replaced with HubSpot data"
+                ))
+            else:
+                self.stdout.write(self.style.SUCCESS(
+                    f"✓ {self.get_sync_name().title()} sync completed successfully"
+                ))
         else:
             self.stdout.write(self.style.ERROR(
                 f"✗ {self.get_sync_name().title()} sync failed"

@@ -17,6 +17,7 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
     
     def __init__(self, **kwargs):
         super().__init__('contacts', **kwargs)
+        self.force_overwrite = kwargs.get('force_overwrite', False)
         
     async def initialize_client(self) -> None:
         """Initialize HubSpot contacts client and processor"""
@@ -108,12 +109,20 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
             return results
         
         try:
-            # Try bulk operations first for better performance
-            results = await self._bulk_save_contacts(validated_data)
+            # Check if force overwrite is enabled
+            if self.force_overwrite:
+                logger.info("Force overwrite mode - all records will be updated regardless of timestamps")
+                results = await self._force_overwrite_contacts(validated_data)
+            else:
+                # Try bulk operations first for better performance
+                results = await self._bulk_save_contacts(validated_data)
         except Exception as bulk_error:
             logger.warning(f"Bulk save failed, falling back to individual saves: {bulk_error}")
             # Fallback to individual saves
-            results = await self._individual_save_contacts(validated_data)
+            if self.force_overwrite:
+                results = await self._individual_force_save_contacts(validated_data)
+            else:
+                results = await self._individual_save_contacts(validated_data)
         
         # Calculate and report enterprise metrics
         total_processed = len(validated_data)
@@ -210,6 +219,98 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
                 # Report individual contact errors to enterprise error handling
                 await self.handle_sync_error(e, {
                     'operation': 'save_contact',
+                    'contact_id': record.get('id'),
+                    'record': record
+                })
+        
+        return results
+    
+    async def _force_overwrite_contacts(self, validated_data: List[Dict]) -> Dict[str, int]:
+        """Force overwrite all contacts using bulk operations, ignoring timestamps"""
+        results = {'created': 0, 'updated': 0, 'failed': 0}
+        if not validated_data:
+            return results
+
+        # Get all existing contact IDs that we're about to process
+        contact_ids = [record['id'] for record in validated_data if record.get('id')]
+        
+        try:
+            # Get existing contacts to determine which are updates vs creates
+            existing_contacts = await sync_to_async(list)(
+                Hubspot_Contact.objects.filter(id__in=contact_ids).values_list('id', flat=True)
+            )
+            existing_contact_set = set(existing_contacts)
+            
+            # Separate new vs existing records
+            new_records = [record for record in validated_data if record.get('id') not in existing_contact_set]
+            update_records = [record for record in validated_data if record.get('id') in existing_contact_set]
+            
+            # Force create new records
+            if new_records:
+                new_contact_objects = [Hubspot_Contact(**record) for record in new_records]
+                await sync_to_async(Hubspot_Contact.objects.bulk_create)(
+                    new_contact_objects,
+                    batch_size=self.batch_size
+                )
+                results['created'] = len(new_records)
+                logger.info(f"Force created {results['created']} new contacts")
+            
+            # Force update existing records - delete and recreate for true overwrite
+            if update_records:
+                # Delete existing records first
+                await sync_to_async(Hubspot_Contact.objects.filter(id__in=[r['id'] for r in update_records]).delete)()
+                
+                # Recreate with new data
+                update_contact_objects = [Hubspot_Contact(**record) for record in update_records]
+                await sync_to_async(Hubspot_Contact.objects.bulk_create)(
+                    update_contact_objects,
+                    batch_size=self.batch_size
+                )
+                results['updated'] = len(update_records)
+                logger.info(f"Force overwritten {results['updated']} existing contacts")
+                
+        except Exception as e:
+            logger.error(f"Force bulk overwrite failed: {e}")
+            results['failed'] = len(validated_data)
+            
+        return results
+    
+    async def _individual_force_save_contacts(self, validated_data: List[Dict]) -> Dict[str, int]:
+        """Force overwrite contacts individually, ignoring timestamps"""
+        results = {'created': 0, 'updated': 0, 'failed': 0}
+        
+        for record in validated_data:
+            try:
+                contact_id = record.get('id')
+                if not contact_id:
+                    logger.error(f"Contact record missing ID: {record}")
+                    results['failed'] += 1
+                    continue
+                
+                # Check if contact exists
+                contact_exists = await sync_to_async(Hubspot_Contact.objects.filter(id=contact_id).exists)()
+                
+                if contact_exists:
+                    # Force delete and recreate for complete overwrite
+                    await sync_to_async(Hubspot_Contact.objects.filter(id=contact_id).delete)()
+                    contact = Hubspot_Contact(**record)
+                    await sync_to_async(contact.save)()
+                    results['updated'] += 1
+                    logger.debug(f"Force overwritten contact {contact_id}")
+                else:
+                    # Create new contact
+                    contact = Hubspot_Contact(**record)
+                    await sync_to_async(contact.save)()
+                    results['created'] += 1
+                    logger.debug(f"Force created contact {contact_id}")
+                    
+            except Exception as e:
+                logger.error(f"Error force saving contact {record.get('id')}: {e}")
+                results['failed'] += 1
+                
+                # Report individual contact errors to enterprise error handling
+                await self.handle_sync_error(e, {
+                    'operation': 'force_save_contact',
                     'contact_id': record.get('id'),
                     'record': record
                 })

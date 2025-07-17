@@ -37,6 +37,7 @@ class BaseSyncEngine(ABC):
         self.sync_type = sync_type
         self.batch_size = kwargs.get('batch_size', self.get_default_batch_size())
         self.dry_run = kwargs.get('dry_run', False)
+        self.force_overwrite = kwargs.get('force_overwrite', False)
         self.sync_history = None
         self.client = None
         self.processor = None

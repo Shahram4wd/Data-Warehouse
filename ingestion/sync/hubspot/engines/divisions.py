@@ -17,6 +17,7 @@ class HubSpotDivisionSyncEngine(HubSpotBaseSyncEngine):
     
     def __init__(self, **kwargs):
         super().__init__('divisions', **kwargs)
+        self.force_overwrite = kwargs.get('force_overwrite', False)
         
     async def initialize_client(self) -> None:
         """Initialize HubSpot divisions client and processor"""
@@ -104,6 +105,11 @@ class HubSpotDivisionSyncEngine(HubSpotBaseSyncEngine):
         """Save division data to database"""
         results = {'created': 0, 'updated': 0, 'failed': 0}
         
+        # Check if force overwrite is enabled
+        if self.force_overwrite:
+            logger.info("Force overwrite mode - all records will be updated regardless of timestamps")
+            return await self._force_save_divisions(validated_data)
+        
         for record in validated_data:
             try:
                 # Check if division exists
@@ -142,5 +148,46 @@ class HubSpotDivisionSyncEngine(HubSpotBaseSyncEngine):
             'success_rate': (results['created'] + results['updated']) / len(validated_data) if validated_data else 0,
             'results': results
         })
+        
+        return results
+    
+    async def _force_save_divisions(self, validated_data: List[Dict]) -> Dict[str, int]:
+        """Force overwrite divisions individually, ignoring timestamps"""
+        results = {'created': 0, 'updated': 0, 'failed': 0}
+        
+        for record in validated_data:
+            try:
+                division_id = record.get('id')
+                if not division_id:
+                    logger.error(f"Division record missing ID: {record}")
+                    results['failed'] += 1
+                    continue
+                
+                # Check if division exists
+                try:
+                    existing_division = await sync_to_async(Hubspot_Division.objects.get)(id=division_id)
+                    # Delete existing and recreate for true overwrite
+                    await sync_to_async(existing_division.delete)()
+                    division = Hubspot_Division(**record)
+                    await sync_to_async(division.save)()
+                    results['updated'] += 1
+                    logger.debug(f"Force overwritten division {division_id}")
+                except Hubspot_Division.DoesNotExist:
+                    # Create new division
+                    division = Hubspot_Division(**record)
+                    await sync_to_async(division.save)()
+                    results['created'] += 1
+                    logger.debug(f"Force created division {division_id}")
+                    
+            except Exception as e:
+                logger.error(f"Error force saving division {record.get('id')}: {e}")
+                results['failed'] += 1
+                
+                # Report individual division errors to enterprise error handling
+                await self.handle_sync_error(e, {
+                    'operation': 'force_save_division',
+                    'division_id': record.get('id'),
+                    'record': record
+                })
         
         return results

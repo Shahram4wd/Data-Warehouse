@@ -1,45 +1,45 @@
-
 """
-Management command for syncing HubSpot zip codes using modular architecture
-Follows import_refactoring.md enterprise architecture standards
+New HubSpot zipcodes sync command using the unified architecture
 """
-import os
-import csv
-import requests
-from django.conf import settings
-from django.core.management.base import BaseCommand
-from django.db import transaction
-from ingestion.models.hubspot import Hubspot_ZipCode
+from ingestion.management.commands.base_hubspot_sync import BaseHubSpotSyncCommand
+from ingestion.sync.hubspot.engines.zipcode_engine import HubSpotZipCodeSyncEngine
 from ingestion.sync.hubspot.clients.zipcode_client import HubSpotZipCodeClient
 from ingestion.sync.hubspot.processors.zipcode_processor import HubSpotZipCodeProcessor
-from ingestion.sync.hubspot.engines.zipcode_engine import HubSpotZipCodeSyncEngine
 
-try:
-    from tqdm import tqdm
-    TQDM_AVAILABLE = True
-except ImportError:
-    TQDM_AVAILABLE = False
-
-
-class Command(BaseCommand):
-    help = "Sync zip codes from GitHub zips.csv into HubSpot ZipCode model using modular architecture."
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Show what would be imported without saving to database'
+class Command(BaseHubSpotSyncCommand):
+    """Sync zipcodes from GitHub CSV using new architecture
+    
+    Examples:
+        # Standard sync (always full since zipcodes are static)
+        python manage.py sync_hubspot_zipcodes
+        
+        # Force overwrite ALL records
+        python manage.py sync_hubspot_zipcodes --force-overwrite
+        
+        # Test without saving
+        python manage.py sync_hubspot_zipcodes --dry-run
+    """
+    
+    help = """Sync zipcodes from GitHub CSV into HubSpot ZipCode model using unified architecture.
+    
+Use --force-overwrite to completely overwrite existing records, ignoring timestamps.
+This ensures all data is replaced with the latest from the CSV source."""
+    
+    def get_sync_engine(self, **options):
+        """Get the zipcode sync engine"""
+        return HubSpotZipCodeSyncEngine(
+            batch_size=options.get('batch_size', 500),
+            force_overwrite=options.get('force_overwrite', False)
         )
-        parser.add_argument(
-            '--batch-size',
-            type=int,
-            default=500,
-            help='Batch size for database updates (default: 500)'
-        )
+    
+    def get_sync_name(self) -> str:
+        """Get the sync operation name"""
+        return "zipcodes"
 
     def handle(self, *args, **options):
         dry_run = options.get('dry_run', False)
         batch_size = options.get('batch_size', 500)
+        force_overwrite = options.get('force_overwrite', False)
 
         # Step 1: Fetch CSV from GitHub
         client = HubSpotZipCodeClient()
@@ -59,8 +59,7 @@ class Command(BaseCommand):
             self.stdout.write(f"Dry run: would import {len(valid_records)} records.")
             return
 
-        # Step 3: Batch sync using engine
-        # Step 3: Batch sync using engine (progress handled in engine)
-        engine = HubSpotZipCodeSyncEngine(batch_size=batch_size)
+        # Step 3: Batch sync using engine from get_sync_engine (unified architecture)
+        engine = self.get_sync_engine(**options)
         created, updated = engine.sync_zipcodes(valid_records, dry_run=dry_run, show_progress=True, stdout=self.stdout)
         self.stdout.write(f"Imported {created} new zip codes, updated {updated}.")

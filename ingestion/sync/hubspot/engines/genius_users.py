@@ -10,7 +10,7 @@ from ..processors.genius_users_processor import HubSpotGeniusUsersProcessor
 from .base import HubSpotBaseSyncEngine
 
 class HubSpotGeniusUsersSyncEngine(HubSpotBaseSyncEngine):
-    def __init__(self, api_token=None, batch_size=100, dry_run=False, stdout=None, max_records=0, full=False):
+    def __init__(self, api_token=None, batch_size=100, dry_run=False, stdout=None, max_records=0, full=False, force_overwrite=False):
         super().__init__('genius_users', batch_size=batch_size, dry_run=dry_run)
         self.api_token = api_token
         self.client = HubSpotGeniusUsersClient(api_token=api_token)
@@ -18,6 +18,7 @@ class HubSpotGeniusUsersSyncEngine(HubSpotBaseSyncEngine):
         self.stdout = stdout
         self.max_records = max_records
         self.full = full
+        self.force_overwrite = force_overwrite
 
     async def initialize_client(self):
         pass
@@ -66,15 +67,26 @@ class HubSpotGeniusUsersSyncEngine(HubSpotBaseSyncEngine):
 
     @sync_to_async
     def bulk_upsert(self, records):
-        # Upsert by id (primary key)
-        objs = [Hubspot_GeniusUser(**rec) for rec in records]
-        Hubspot_GeniusUser.objects.bulk_create(
-            objs,
-            update_conflicts=True,
-            update_fields=[
-                "hs_object_id", "hs_createdate", "hs_lastmodifieddate", "archived",
-                "arrivy_user_id", "division", "division_id", "email", "job_title", "name", "title_id",
-                "user_account_type", "user_id", "user_status_inactive", "updated_at"
-            ],
-            unique_fields=["id"]
-        )
+        # Check if force_overwrite is enabled
+        if self.force_overwrite:
+            # Force overwrite - delete and recreate for true overwrite
+            record_ids = [rec['id'] for rec in records if rec.get('id')]
+            if record_ids:
+                Hubspot_GeniusUser.objects.filter(id__in=record_ids).delete()
+            
+            # Recreate all records
+            objs = [Hubspot_GeniusUser(**rec) for rec in records]
+            Hubspot_GeniusUser.objects.bulk_create(objs, batch_size=self.batch_size)
+        else:
+            # Normal upsert by id (primary key)
+            objs = [Hubspot_GeniusUser(**rec) for rec in records]
+            Hubspot_GeniusUser.objects.bulk_create(
+                objs,
+                update_conflicts=True,
+                update_fields=[
+                    "hs_object_id", "hs_createdate", "hs_lastmodifieddate", "archived",
+                    "arrivy_user_id", "division", "division_id", "email", "job_title", "name", "title_id",
+                    "user_account_type", "user_id", "user_status_inactive", "updated_at"
+                ],
+                unique_fields=["id"]
+            )

@@ -43,6 +43,11 @@ class Command(BaseCommand):
             action="store_true",
             help="Skip association syncs"
         )
+        parser.add_argument(
+            "--force-overwrite",
+            action="store_true",
+            help="Force overwrite all existing records for all sync operations, ignoring timestamps"
+        )
     
     def handle(self, *args, **options):
         """Main command handler"""
@@ -79,6 +84,8 @@ class Command(BaseCommand):
             common_args.append('--debug')
         if options.get('dry_run'):
             common_args.append('--dry-run')
+        if options.get('force_overwrite'):
+            common_args.append('--force-overwrite')
         if options.get('batch_size'):
             common_args.extend(['--batch-size', str(options['batch_size'])])
         

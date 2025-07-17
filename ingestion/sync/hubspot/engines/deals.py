@@ -17,6 +17,7 @@ class HubSpotDealSyncEngine(HubSpotBaseSyncEngine):
     
     def __init__(self, **kwargs):
         super().__init__('deals', **kwargs)
+        self.force_overwrite = kwargs.get('force_overwrite', False)
         
     async def initialize_client(self) -> None:
         """Initialize HubSpot deals client and processor"""
@@ -104,6 +105,11 @@ class HubSpotDealSyncEngine(HubSpotBaseSyncEngine):
         """Save deal data to database"""
         results = {'created': 0, 'updated': 0, 'failed': 0}
         
+        # Check if force overwrite is enabled
+        if self.force_overwrite:
+            logger.info("Force overwrite mode - all records will be updated regardless of timestamps")
+            return await self._force_save_deals(validated_data)
+        
         for record in validated_data:
             try:
                 # Check if deal exists
@@ -142,5 +148,46 @@ class HubSpotDealSyncEngine(HubSpotBaseSyncEngine):
             'success_rate': (results['created'] + results['updated']) / len(validated_data) if validated_data else 0,
             'results': results
         })
+        
+        return results
+    
+    async def _force_save_deals(self, validated_data: List[Dict]) -> Dict[str, int]:
+        """Force overwrite deals individually, ignoring timestamps"""
+        results = {'created': 0, 'updated': 0, 'failed': 0}
+        
+        for record in validated_data:
+            try:
+                deal_id = record.get('id')
+                if not deal_id:
+                    logger.error(f"Deal record missing ID: {record}")
+                    results['failed'] += 1
+                    continue
+                
+                # Check if deal exists
+                try:
+                    existing_deal = await sync_to_async(Hubspot_Deal.objects.get)(id=deal_id)
+                    # Delete existing and recreate for true overwrite
+                    await sync_to_async(existing_deal.delete)()
+                    deal = Hubspot_Deal(**record)
+                    await sync_to_async(deal.save)()
+                    results['updated'] += 1
+                    logger.debug(f"Force overwritten deal {deal_id}")
+                except Hubspot_Deal.DoesNotExist:
+                    # Create new deal
+                    deal = Hubspot_Deal(**record)
+                    await sync_to_async(deal.save)()
+                    results['created'] += 1
+                    logger.debug(f"Force created deal {deal_id}")
+                    
+            except Exception as e:
+                logger.error(f"Error force saving deal {record.get('id')}: {e}")
+                results['failed'] += 1
+                
+                # Report individual deal errors to enterprise error handling
+                await self.handle_sync_error(e, {
+                    'operation': 'force_save_deal',
+                    'deal_id': record.get('id'),
+                    'record': record
+                })
         
         return results
