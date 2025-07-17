@@ -196,7 +196,7 @@ class HubSpotBaseProcessor(BaseDataProcessor):
                         elif 'company' in model_name:
                             object_type = '0-2'
                     
-                    hubspot_url = f" - HubSpot URL: https://app.hubspot.com/contacts/[PORTAL_ID]/object/{object_type}/{record_id}"
+                    hubspot_url = f" - HubSpot URL: https://app.hubspot.com/contacts/47947320/object/{object_type}/{record_id}"
             
             if self.config.is_strict_validation():
                 logger.error(f"Strict validation failed for field '{field_name}' with value '{value}'{context_info}: {e}{hubspot_url}")
