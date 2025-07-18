@@ -160,7 +160,37 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
                 batch_size=self.batch_size,
                 update_conflicts=True,
                 update_fields=[
-                    "address", "adgroupid", "ap_leadid", "campaign_content", "campaign_name", "city", "clickcheck", "clicktype", "comments", "createdate", "division", "email", "firstname", "hs_google_click_id", "hs_object_id", "lastmodifieddate", "lastname", "lead_salesrabbit_lead_id", "marketsharp_id", "msm_source", "original_lead_source", "original_lead_source_created", "phone", "price", "reference_code", "search_terms", "state", "tier", "trustedform_cert_url", "vendorleadid", "vertical", "zip", "archived", "updated_at"
+                    # Core fields
+                    "address", "adgroupid", "ap_leadid", "campaign_content", "campaign_name", "city", 
+                    "clickcheck", "clicktype", "comments", "createdate", "division", "email", 
+                    "firstname", "hs_google_click_id", "hs_object_id", "lastmodifieddate", "lastname", 
+                    "lead_salesrabbit_lead_id", "marketsharp_id", "msm_source", "original_lead_source", 
+                    "original_lead_source_created", "phone", "price", "reference_code", "search_terms", 
+                    "state", "tier", "trustedform_cert_url", "vendorleadid", "vertical", "zip",
+                    
+                    # Lead-related fields
+                    "lead_added_by", "lead_added_by_latitude", "lead_added_by_longitude", "lead_added_by_supervisor",
+                    "lead_address1", "lead_agent_id", "lead_agent_name", "lead_call_screen_viewed_by",
+                    "lead_call_screen_viewed_on", "lead_cdyne_county", "lead_city", "lead_contact",
+                    "lead_copied_from_id", "lead_copied_from_on", "lead_cost", "lead_cwp_client",
+                    "lead_dead_by", "lead_dead_on", "lead_division", "lead_do_not_call_before",
+                    "lead_estimate_confirmed_by", "lead_estimate_confirmed_on", "lead_express_consent_set_by",
+                    "lead_express_consent_set_on", "lead_express_consent_source", "lead_express_consent_upload_file_id",
+                    "lead_id", "lead_import_source", "lead_invalid_address", "lead_is_carpentry_followup",
+                    "lead_is_dnc", "lead_is_dummy", "lead_is_estimate_confirmed", "lead_is_estimate_set",
+                    "lead_is_express_consent", "lead_is_express_consent_being_reviewed", "lead_is_high_potential",
+                    "lead_is_mobile_lead", "lead_is_valid_address", "lead_is_valid_email", "lead_is_year_built_verified",
+                    "lead_is_zillow", "lead_job_type", "lead_notes", "lead_phone1", "lead_phone2", "lead_phone3",
+                    "lead_prospect_id", "lead_rating", "lead_salesrabbit_lead_id_new", "lead_source",
+                    "lead_source_notes", "lead_sourced_on", "lead_state", "lead_status", "lead_substatus",
+                    "lead_type1", "lead_type2", "lead_type4", "lead_viewed_on", "lead_with_dm",
+                    "lead_year_built", "lead_zip",
+                    
+                    # Source fields
+                    "primary_source", "secondary_source",
+                    
+                    # Metadata fields
+                    "archived", "updated_at"
                 ],
                 unique_fields=["id"]
             )
