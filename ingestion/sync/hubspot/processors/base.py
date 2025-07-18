@@ -150,6 +150,8 @@ class HubSpotBaseProcessor(BaseDataProcessor):
                 return self.decimal_validator.validate(value)
             elif field_type == 'boolean':
                 return self.boolean_validator.validate(value)
+            elif field_type == 'integer':
+                return self._parse_integer(value)
             else:
                 # Default string validation
                 return StringValidator().validate(value)
@@ -265,6 +267,32 @@ class HubSpotBaseProcessor(BaseDataProcessor):
             logger.warning(f"Failed to parse datetime '{value}': {e}")
         
         return None
+    
+    def _parse_integer(self, value: Any) -> Optional[int]:
+        """Parse integer value, handling empty strings and null values"""
+        if value is None:
+            return None
+        
+        # Handle empty string case - return None for BigIntegerField compatibility
+        if isinstance(value, str) and value.strip() == '':
+            return None
+        
+        try:
+            # Convert to string first to handle various input types
+            str_value = str(value).strip()
+            
+            # Handle empty string after stripping
+            if str_value == '':
+                return None
+            
+            # Handle decimal strings by converting to float first, then int
+            if '.' in str_value:
+                return int(float(str_value))
+            
+            return int(str_value)
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to parse integer '{value}': {e}")
+            return None
     
     def _parse_decimal(self, value: Any) -> Optional[Decimal]:
         """Parse decimal value using validator"""

@@ -56,6 +56,9 @@ from .leadconduit import (
     LeadConduit_Event, LeadConduit_Lead, LeadConduit_SyncHistory
 )
 
+# Import alerts models
+from .alerts import AlertModel, AlertRule
+
 # Import all models to maintain backwards compatibility
 # This allows existing code to continue using: from ingestion.models import X
 __all__ = [
@@ -75,5 +78,6 @@ __all__ = [
     'MarketSharp_ProductType', 'MarketSharp_Prospect',
     'ActiveProspect_Event', 'ActiveProspect_Lead', 'ActiveProspect_SyncHistory',
     'LeadConduit_Event', 'LeadConduit_Lead', 'LeadConduit_SyncHistory',
-    'SalesRabbit_Lead', 'SalesRabbit_SyncHistory'
+    'SalesRabbit_Lead', 'SalesRabbit_SyncHistory',
+    'AlertModel', 'AlertRule'
 ]
