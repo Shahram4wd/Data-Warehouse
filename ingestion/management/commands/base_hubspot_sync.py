@@ -181,19 +181,22 @@ class BaseHubSpotSyncCommand(BaseCommand):
     
     async def get_last_sync_time_async(self, **options) -> Optional[datetime]:
         """Determine the last sync time (async version)"""
-        # Priority: 1) --force-overwrite (always None), 2) --since parameter, 3) --full flag, 4) database last sync
-        if options.get('force_overwrite'):
-            self.stdout.write("Force overwrite mode - fetching ALL records and ignoring local timestamps")
-            return None
-            
+        # Priority: 1) --since parameter (even with force-overwrite), 2) --force-overwrite (None), 3) --full flag, 4) database last sync
         if options.get('since'):
             try:
                 last_sync = datetime.strptime(options['since'], "%Y-%m-%d")
                 last_sync = timezone.make_aware(last_sync)
-                self.stdout.write(f"Using provided since date: {options['since']}")
+                if options.get('force_overwrite'):
+                    self.stdout.write(f"Force overwrite mode with date filter - fetching records modified since {options['since']}")
+                else:
+                    self.stdout.write(f"Using provided since date: {options['since']}")
                 return last_sync
             except ValueError:
                 raise CommandError(f"Invalid date format for --since. Use YYYY-MM-DD format.")
+                
+        if options.get('force_overwrite'):
+            self.stdout.write("Force overwrite mode - fetching ALL records and ignoring local timestamps")
+            return None
         
         if options.get('full'):
             self.stdout.write("Performing full sync")
