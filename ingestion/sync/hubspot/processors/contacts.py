@@ -117,8 +117,8 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
             'properties.lead_with_dm': 'lead_with_dm',
             'properties.lead_year_built': 'lead_year_built',
             'properties.lead_zip': 'lead_zip',
-            'properties.primary_source': 'primary_source',
-            'properties.secondary_source': 'secondary_source',
+            'properties.hge_primary_source': 'primary_source',
+            'properties.hge_secondary_source': 'secondary_source',
         }
     
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -228,9 +228,9 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
                 'lead_year_built': self.validate_field('lead_year_built', properties.get('lead_year_built'), 'string', record),
                 'lead_zip': self.validate_field('lead_zip', properties.get('lead_zip'), 'string', record),
                 
-                # Source fields
-                'primary_source': self.validate_field('primary_source', properties.get('primary_source'), 'string', record),
-                'secondary_source': self.validate_field('secondary_source', properties.get('secondary_source'), 'string', record),
+                # Source fields (prioritize HubSpot field names)
+                'primary_source': self.validate_field('primary_source', properties.get('hge_primary_source') or properties.get('primary_source'), 'string', record),
+                'secondary_source': self.validate_field('secondary_source', properties.get('hge_secondary_source') or properties.get('secondary_source'), 'string', record),
             }
             
             return transformed

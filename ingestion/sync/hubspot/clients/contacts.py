@@ -119,8 +119,8 @@ class HubSpotContactsClient(HubSpotBaseClient):
             "lead_zip",
             
             # Source fields
-            "primary_source",
-            "secondary_source"
+            "hge_primary_source",
+            "hge_secondary_source"
         ]
     
     async def fetch_contacts(self, last_sync: Optional[datetime] = None, 
