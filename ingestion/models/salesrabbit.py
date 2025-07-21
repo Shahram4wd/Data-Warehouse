@@ -1,26 +1,6 @@
 from django.db import models
-
-
-class SalesRabbit_SyncHistory(models.Model):
-    """History record for SalesRabbit sync operations"""
-    sync_type = models.CharField(max_length=100)
-    api_endpoint = models.CharField(max_length=255, null=True, blank=True)
-    query_params = models.JSONField(null=True, blank=True)
-    status = models.CharField(max_length=50)
-    records_processed = models.IntegerField(default=0)
-    records_created = models.IntegerField(default=0)
-    records_updated = models.IntegerField(default=0)
-    error_message = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        db_table = 'ingestion_salesrabbit_sync_history'
-        verbose_name = "SalesRabbit Sync History"
-        verbose_name_plural = "SalesRabbit Sync Histories"
-
-    def __str__(self):
-        return f"{self.sync_type} - {self.status}"
+from django.utils import timezone
+from .common import SyncHistory
 
 
 class SalesRabbit_Lead(models.Model):
@@ -72,11 +52,19 @@ class SalesRabbit_Lead(models.Model):
     
     # Sync tracking
     synced_at = models.DateTimeField(auto_now=True)
+    created_in_sync = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ingestion_salesrabbit_lead'
         verbose_name = "SalesRabbit Lead"
         verbose_name_plural = "SalesRabbit Leads"
+        indexes = [
+            models.Index(fields=['date_modified']),  # For delta sync
+            models.Index(fields=['email']),
+            models.Index(fields=['status']),
+            models.Index(fields=['campaign_id']),
+            models.Index(fields=['user_id']),
+        ]
 
     def __str__(self):
         name = f"{self.first_name or ''} {self.last_name or ''}".strip()

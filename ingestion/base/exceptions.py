@@ -30,6 +30,17 @@ class APIException(SyncException):
         self.status_code = status_code
         self.response_data = response_data
 
+class AuthenticationException(APIException):
+    """Exception raised for authentication failures"""
+    def __init__(self, message, **kwargs):
+        super().__init__(message, status_code=401, **kwargs)
+
+class DataSourceException(SyncException):
+    """Exception raised for data source issues"""
+    def __init__(self, message, source_name=None, **kwargs):
+        super().__init__(message, **kwargs)
+        self.source_name = source_name
+
 class RateLimitException(APIException):
     """Exception raised when rate limit is exceeded"""
     def __init__(self, message, retry_after=None, **kwargs):

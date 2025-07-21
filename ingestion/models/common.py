@@ -79,6 +79,18 @@ class SyncHistory(models.Model):
         if duration and duration > 0:
             return self.records_processed / duration
         return 0
+    
+    @classmethod
+    def get_last_sync_timestamp(cls, crm_source: str, sync_type: str):
+        """Get last successful sync timestamp for delta sync - FRAMEWORK STANDARD"""
+        last_sync = cls.objects.filter(
+            crm_source=crm_source,
+            sync_type=sync_type,
+            status='success',
+            end_time__isnull=False
+        ).order_by('-end_time').first()
+        
+        return last_sync.end_time if last_sync else None
 
 class SyncConfiguration(models.Model):
     """Dynamic sync configuration"""
