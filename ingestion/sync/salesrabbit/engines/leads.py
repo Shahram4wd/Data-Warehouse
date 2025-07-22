@@ -82,7 +82,14 @@ class SalesRabbitLeadSyncEngine(SalesRabbitBaseSyncEngine):
         if not validated_data:
             return {'created': 0, 'updated': 0, 'failed': 0}
         
-        return await self.processor.process_batch(validated_data, self.batch_size)
+        from asgiref.sync import sync_to_async
+        
+        # Wrap the synchronous process_batch method with sync_to_async
+        @sync_to_async
+        def process_batch_sync():
+            return self.processor.process_batch_sync(validated_data, self.batch_size)
+        
+        return await process_batch_sync()
     
     async def fetch_and_process_batches(self, strategy: Dict[str, Any]) -> AsyncGenerator[Dict[str, int], None]:
         """Fetch and process data in batches for efficient memory usage"""

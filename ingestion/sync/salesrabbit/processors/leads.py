@@ -15,8 +15,8 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
     def __init__(self, **kwargs):
         super().__init__(SalesRabbit_Lead, **kwargs)
     
-    async def process_batch(self, leads: List[Dict], batch_size: int = 500) -> Dict[str, int]:
-        """Process leads using bulk operations - FRAMEWORK STANDARD"""
+    def process_batch_sync(self, leads: List[Dict], batch_size: int = 500) -> Dict[str, int]:
+        """Process leads using bulk operations - SYNCHRONOUS VERSION"""
         results = {'created': 0, 'updated': 0, 'failed': 0}
         
         if not leads:
@@ -44,15 +44,22 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
         
         # Process in chunks for bulk operations
         for chunk in self.chunk_data(transformed_leads, batch_size):
-            chunk_results = await self.process_chunk(chunk)
+            chunk_results = self.process_chunk_sync(chunk)
+            
+            # If bulk processing failed completely, try individual processing (HubSpot pattern)
+            if chunk_results['failed'] == len(chunk) and chunk_results['created'] == 0 and chunk_results['updated'] == 0:
+                logger.info(f"Bulk processing failed, trying individual processing for {len(chunk)} records")
+                individual_results = self.process_chunk_individually_sync(chunk)
+                chunk_results = individual_results
+            
             for key in results:
                 results[key] += chunk_results.get(key, 0)
         
         return results
     
     @transaction.atomic
-    async def process_chunk(self, chunk: List[Dict]) -> Dict[str, int]:
-        """Process chunk using bulk operations"""
+    def process_chunk_sync(self, chunk: List[Dict]) -> Dict[str, int]:
+        """Process chunk using bulk operations - SYNCHRONOUS VERSION"""
         if not chunk:
             return {'created': 0, 'updated': 0, 'failed': 0}
         
@@ -68,7 +75,12 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
             leads_to_update = []
             
             for lead_data in chunk:
-                lead_obj = SalesRabbit_Lead(**lead_data)
+                # Create a copy and ensure all datetime fields are properly serialized
+                clean_data = self._prepare_data_for_model(lead_data)
+                
+                # Apply field length validation and truncation (HubSpot pattern)
+                validated_data = self._validate_field_lengths(clean_data, str(lead_data['id']))
+                lead_obj = SalesRabbit_Lead(**validated_data)
                 
                 if lead_data['id'] in existing_ids:
                     leads_to_update.append(lead_obj)
@@ -100,14 +112,16 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
             return {'created': created_count, 'updated': updated_count, 'failed': 0}
             
         except Exception as e:
-            # Enhanced error logging for batch processing
+            # Enhanced error logging for batch processing (HubSpot pattern)
             logger.error(f"Error processing chunk with {len(chunk)} records: {e}")
             
             # Log batch details with enhanced context
             self.log_batch_error(e, chunk)
             
             # Try individual record processing as fallback (following HubSpot pattern)
-            return await self.process_chunk_individually(chunk)
+            # This is outside the transaction scope, so it will work
+            logger.info(f"Attempting individual processing for {len(chunk)} records after bulk failure")
+            return self.process_chunk_individually_sync(chunk)
     
     def get_update_fields(self) -> List[str]:
         """Get fields that should be updated during sync"""
@@ -121,28 +135,37 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
             'deleted_at', 'data', 'custom_fields'
         ]
     
-    async def process_chunk_individually(self, chunk: List[Dict]) -> Dict[str, int]:
-        """Process records individually when bulk operations fail (HubSpot pattern)"""
+    def process_chunk_individually_sync(self, chunk: List[Dict]) -> Dict[str, int]:
+        """Process records individually when bulk operations fail - SYNC VERSION"""
         results = {'created': 0, 'updated': 0, 'failed': 0}
         
         for record_data in chunk:
             try:
                 record_id = record_data.get('id')
                 
+                # Prepare data for model operations
+                clean_data = self._prepare_data_for_model(record_data)
+                
+                # Apply field length validation and truncation (HubSpot pattern)
+                validated_data = self._validate_field_lengths(clean_data, record_id)
+                
                 # Try to get existing record
                 try:
                     existing_lead = SalesRabbit_Lead.objects.get(id=record_id)
+                except SalesRabbit_Lead.DoesNotExist:
+                    existing_lead = None
+                
+                if existing_lead:
                     # Update existing record
-                    for field, value in record_data.items():
+                    for field, value in validated_data.items():
                         if field != 'id':
                             setattr(existing_lead, field, value)
                     existing_lead.save()
                     results['updated'] += 1
                     logger.debug(f"Individually updated lead {record_id}")
-                    
-                except SalesRabbit_Lead.DoesNotExist:
+                else:
                     # Create new record
-                    new_lead = SalesRabbit_Lead(**record_data)
+                    new_lead = SalesRabbit_Lead(**validated_data)
                     new_lead.save()
                     results['created'] += 1
                     logger.debug(f"Individually created lead {record_id}")
@@ -159,6 +182,63 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
         
         logger.info(f"Individual processing results: {results}")
         return results
+    
+    def _prepare_data_for_model(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Prepare data for model creation, handling datetime serialization"""
+        clean_data = {}
+        for key, value in data.items():
+            if value is None:
+                clean_data[key] = value
+            elif hasattr(value, 'isoformat'):
+                # Handle datetime/date objects
+                clean_data[key] = value
+            elif isinstance(value, dict):
+                # Handle nested dicts - convert to JSON string if needed
+                import json
+                try:
+                    clean_data[key] = json.dumps(value)
+                except (TypeError, ValueError):
+                    clean_data[key] = str(value)
+            else:
+                clean_data[key] = value
+        return clean_data
+    
+    def _validate_field_lengths(self, data: Dict[str, Any], record_id: str) -> Dict[str, Any]:
+        """Validate and truncate field lengths to prevent database errors (HubSpot pattern)"""
+        # Field length limits based on SalesRabbit_Lead model
+        field_limits = {
+            'first_name': 100,
+            'last_name': 100,
+            'business_name': 200,
+            'email': 254,
+            'phone_primary': 20,
+            'phone_alternate': 20,
+            'street1': 200,
+            'street2': 200,
+            'city': 100,
+            'state': 10,  # This was causing the "value too long" error
+            'zip': 20,
+            'country': 100,
+            'status': 50,
+            'user_name': 100,
+            'notes': 1000,
+        }
+        
+        validated_data = data.copy()
+        
+        for field, max_length in field_limits.items():
+            if field in validated_data and validated_data[field]:
+                value = str(validated_data[field])
+                if len(value) > max_length:
+                    # Enhanced logging with SalesRabbit URL (HubSpot pattern)
+                    salesrabbit_url = self.get_salesrabbit_url(record_id)
+                    logger.warning(
+                        f"Field '{field}' too long ({len(value)} chars), truncating to {max_length} "
+                        f"for record {record_id}: '{value[:30]}...' - SalesRabbit URL: {salesrabbit_url}"
+                    )
+                    validated_data[field] = value[:max_length]
+        
+        return validated_data
     
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform SalesRabbit lead record with enhanced field handling"""
