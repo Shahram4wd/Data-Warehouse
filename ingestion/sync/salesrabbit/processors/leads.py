@@ -57,59 +57,14 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
         
         return results
     
-    @transaction.atomic
     def process_chunk_sync(self, chunk: List[Dict]) -> Dict[str, int]:
         """Process chunk using bulk operations - SYNCHRONOUS VERSION"""
         if not chunk:
             return {'created': 0, 'updated': 0, 'failed': 0}
         
         try:
-            # Get existing IDs to determine creates vs updates
-            existing_ids = set(
-                SalesRabbit_Lead.objects.filter(
-                    id__in=[lead['id'] for lead in chunk]
-                ).values_list('id', flat=True)
-            )
-            
-            leads_to_create = []
-            leads_to_update = []
-            
-            for lead_data in chunk:
-                # Create a copy and ensure all datetime fields are properly serialized
-                clean_data = self._prepare_data_for_model(lead_data)
-                
-                # Apply field length validation and truncation (HubSpot pattern)
-                validated_data = self._validate_field_lengths(clean_data, str(lead_data['id']))
-                lead_obj = SalesRabbit_Lead(**validated_data)
-                
-                if lead_data['id'] in existing_ids:
-                    leads_to_update.append(lead_obj)
-                else:
-                    leads_to_create.append(lead_obj)
-            
-            # Bulk create new leads
-            created_count = 0
-            if leads_to_create:
-                SalesRabbit_Lead.objects.bulk_create(
-                    leads_to_create, 
-                    batch_size=len(chunk),
-                    ignore_conflicts=True
-                )
-                created_count = len(leads_to_create)
-                logger.info(f"Bulk created {created_count} leads")
-            
-            # Bulk update existing leads
-            updated_count = 0
-            if leads_to_update:
-                SalesRabbit_Lead.objects.bulk_update(
-                    leads_to_update,
-                    fields=self.get_update_fields(),
-                    batch_size=len(chunk)
-                )
-                updated_count = len(leads_to_update)
-                logger.info(f"Bulk updated {updated_count} leads")
-            
-            return {'created': created_count, 'updated': updated_count, 'failed': 0}
+            # Try bulk processing within transaction
+            return self._process_chunk_bulk(chunk)
             
         except Exception as e:
             # Enhanced error logging for batch processing (HubSpot pattern)
@@ -122,6 +77,71 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
             # This is outside the transaction scope, so it will work
             logger.info(f"Attempting individual processing for {len(chunk)} records after bulk failure")
             return self.process_chunk_individually_sync(chunk)
+    
+    @transaction.atomic
+    def _process_chunk_bulk(self, chunk: List[Dict]) -> Dict[str, int]:
+        """Internal bulk processing method with transaction and delta update support"""
+        # Get existing records with their modification dates for delta comparison
+        existing_leads = {
+            lead.id: lead for lead in SalesRabbit_Lead.objects.filter(
+                id__in=[lead['id'] for lead in chunk]
+            ).select_related()
+        }
+        
+        leads_to_create = []
+        leads_to_update = []
+        skipped_count = 0
+        
+        for lead_data in chunk:
+            # Create a copy and ensure all datetime fields are properly serialized
+            clean_data = self._prepare_data_for_model(lead_data)
+            
+            # Apply field length validation and truncation (HubSpot pattern)
+            validated_data = self._validate_field_lengths(clean_data, str(lead_data['id']))
+            
+            lead_id = lead_data['id']
+            existing_lead = existing_leads.get(lead_id)
+            
+            if existing_lead:
+                # Delta update: Check if record has actually changed
+                if self._has_record_changed(existing_lead, validated_data):
+                    # Only update fields that have changed (delta update)
+                    updated_lead = self._prepare_updated_lead(existing_lead, validated_data)
+                    leads_to_update.append(updated_lead)
+                else:
+                    # Skip unchanged records (delta optimization)
+                    skipped_count += 1
+                    logger.debug(f"Skipping unchanged lead {lead_id}")
+            else:
+                # New record - create it
+                lead_obj = SalesRabbit_Lead(**validated_data)
+                leads_to_create.append(lead_obj)
+        
+        # Bulk create new leads
+        created_count = 0
+        if leads_to_create:
+            SalesRabbit_Lead.objects.bulk_create(
+                leads_to_create, 
+                batch_size=len(chunk),
+                ignore_conflicts=True
+            )
+            created_count = len(leads_to_create)
+            logger.info(f"Bulk created {created_count} leads")
+        
+        # Bulk update existing leads (only changed ones)
+        updated_count = 0
+        if leads_to_update:
+            SalesRabbit_Lead.objects.bulk_update(
+                leads_to_update,
+                fields=self.get_update_fields(),
+                batch_size=len(chunk)
+            )
+            updated_count = len(leads_to_update)
+            logger.info(f"Bulk updated {updated_count} leads (skipped {skipped_count} unchanged)")
+        elif skipped_count > 0:
+            logger.info(f"Skipped {skipped_count} unchanged leads (delta optimization)")
+        
+        return {'created': created_count, 'updated': updated_count, 'failed': 0}
     
     def get_update_fields(self) -> List[str]:
         """Get fields that should be updated during sync"""
@@ -156,13 +176,18 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
                     existing_lead = None
                 
                 if existing_lead:
-                    # Update existing record
-                    for field, value in validated_data.items():
-                        if field != 'id':
-                            setattr(existing_lead, field, value)
-                    existing_lead.save()
-                    results['updated'] += 1
-                    logger.debug(f"Individually updated lead {record_id}")
+                    # Delta update: Check if record has actually changed
+                    if self._has_record_changed(existing_lead, validated_data):
+                        # Update existing record with only changed fields
+                        for field, value in validated_data.items():
+                            if field != 'id':
+                                setattr(existing_lead, field, value)
+                        existing_lead.save()
+                        results['updated'] += 1
+                        logger.debug(f"Individually updated lead {record_id}")
+                    else:
+                        # Skip unchanged record (delta optimization)
+                        logger.debug(f"Skipping unchanged lead {record_id}")
                 else:
                     # Create new record
                     new_lead = SalesRabbit_Lead(**validated_data)
@@ -239,6 +264,49 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
                     validated_data[field] = value[:max_length]
         
         return validated_data
+    
+    def _has_record_changed(self, existing_lead: SalesRabbit_Lead, new_data: Dict[str, Any]) -> bool:
+        """Check if record has changed using delta comparison (HubSpot pattern)"""
+        # Primary change detection: compare modification dates
+        if 'date_modified' in new_data and new_data['date_modified']:
+            if existing_lead.date_modified:
+                # Convert to comparable format
+                new_modified = new_data['date_modified']
+                if hasattr(new_modified, 'replace'):
+                    new_modified = new_modified.replace(tzinfo=None) if new_modified.tzinfo else new_modified
+                existing_modified = existing_lead.date_modified
+                if hasattr(existing_modified, 'replace'):
+                    existing_modified = existing_modified.replace(tzinfo=None) if existing_modified.tzinfo else existing_modified
+                
+                # Skip if not modified since last sync
+                if new_modified <= existing_modified:
+                    return False
+        
+        # Secondary change detection: compare key field values
+        change_detection_fields = [
+            'first_name', 'last_name', 'email', 'phone_primary', 
+            'status', 'business_name', 'street1', 'city', 'state', 'zip'
+        ]
+        
+        for field in change_detection_fields:
+            if field in new_data:
+                new_value = str(new_data[field]) if new_data[field] is not None else ""
+                existing_value = str(getattr(existing_lead, field)) if getattr(existing_lead, field) is not None else ""
+                
+                if new_value != existing_value:
+                    logger.debug(f"Field '{field}' changed for lead {existing_lead.id}: '{existing_value}' -> '{new_value}'")
+                    return True
+        
+        return False
+    
+    def _prepare_updated_lead(self, existing_lead: SalesRabbit_Lead, new_data: Dict[str, Any]) -> SalesRabbit_Lead:
+        """Prepare existing lead with updated data (delta update pattern)"""
+        # Update only the fields that have changed
+        for field, value in new_data.items():
+            if field != 'id' and hasattr(existing_lead, field):
+                setattr(existing_lead, field, value)
+        
+        return existing_lead
     
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform SalesRabbit lead record with enhanced field handling"""
