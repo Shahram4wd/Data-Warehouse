@@ -15,6 +15,8 @@ class HubSpotAppointmentsClient(HubSpotBaseClient):
                                limit: int = 100, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
         """Fetch appointments from HubSpot custom object 0-421 with pagination"""
         page_token = None
+        retry_count = 0
+        max_retries = 3
         
         while True:
             try:
@@ -33,10 +35,20 @@ class HubSpotAppointmentsClient(HubSpotBaseClient):
                     break
                     
                 page_token = next_token
+                retry_count = 0  # Reset retry count on successful request
                 
             except Exception as e:
                 logger.error(f"Error fetching appointments: {e}")
-                break
+                
+                # Handle HTTP 400 errors with retry logic
+                if "400" in str(e) and retry_count < max_retries:
+                    retry_count += 1
+                    logger.warning(f"HTTP 400 error, retry {retry_count}/{max_retries} - resetting pagination")
+                    page_token = None  # Reset pagination
+                    continue
+                else:
+                    logger.error(f"Max retries exceeded or non-recoverable error: {e}")
+                    break
     
     async def _fetch_appointments_page(self, last_sync: Optional[datetime] = None,
                                      page_token: Optional[str] = None,
@@ -138,17 +150,18 @@ class HubSpotAppointmentsClient(HubSpotBaseClient):
                 
                 response_data = await self.make_request("POST", endpoint, json=payload)
             else:
-                # Use regular endpoint for full sync
-                endpoint = "crm/v3/objects/0-421"
-                params = {
-                    "limit": str(limit),
-                    "properties": ",".join(properties)
+                # Use search endpoint for full sync to avoid URL length issues
+                endpoint = "crm/v3/objects/0-421/search"
+                
+                payload = {
+                    "properties": properties,
+                    "limit": limit
                 }
                 
                 if page_token:
-                    params["after"] = page_token
+                    payload["after"] = page_token
                 
-                response_data = await self.make_request("GET", endpoint, params=params)
+                response_data = await self.make_request("POST", endpoint, json=payload)
             
             results = response_data.get("results", [])
             paging = response_data.get("paging", {})
@@ -159,4 +172,11 @@ class HubSpotAppointmentsClient(HubSpotBaseClient):
             
         except Exception as e:
             logger.error(f"Error fetching appointments page: {e}")
+            # Handle specific HubSpot errors
+            if "Invalid pagination token" in str(e) and page_token:
+                logger.warning("Invalid pagination token detected, resetting to first page")
+                return await self._fetch_appointments_page(last_sync=last_sync, page_token=None, limit=limit)
+            elif "HTTP 400" in str(e) and page_token:
+                logger.warning("HTTP 400 with pagination token, resetting to first page")
+                return await self._fetch_appointments_page(last_sync=last_sync, page_token=None, limit=limit)
             return [], None
