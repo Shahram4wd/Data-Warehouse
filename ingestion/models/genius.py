@@ -51,6 +51,7 @@ class Genius_UserData(models.Model):
     inactive_on = models.DateTimeField(null=True, blank=True)
     inactive_reason_id = models.SmallIntegerField(null=True, blank=True)
     inactive_reason_other = models.CharField(max_length=255, null=True, blank=True)
+    primary_user_id = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}".strip()
