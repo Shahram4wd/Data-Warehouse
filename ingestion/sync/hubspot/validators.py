@@ -2,177 +2,183 @@
 HubSpot-specific validators
 """
 import re
+import logging
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
-from ingestion.base.validators import BaseValidator, StringValidator, DecimalValidator
+from django.utils import timezone
+from django.core.validators import validate_email, URLValidator
+from django.core.exceptions import ValidationError
+from django.utils.dateparse import parse_datetime
 from ingestion.base.exceptions import ValidationException
+from ingestion.base.validators import BaseValidator, StringValidator, DecimalValidator
 
-class HubSpotObjectIdValidator(BaseValidator):
+logger = logging.getLogger(__name__)
+
+class HubSpotEmailValidator:
+    """Validator for HubSpot email fields"""
+    
+    def validate(self, value: Any) -> Optional[str]:
+        """Validate email address"""
+        if not value or str(value).lower() == 'null':
+            return None
+        
+        email = str(value).strip().lower()
+        
+        try:
+            validate_email(email)
+            return email
+        except ValidationError:
+            raise ValidationException(f"Invalid email format: {email}")
+
+class HubSpotPhoneValidator:
+    """Validator for HubSpot phone fields"""
+    
+    def validate(self, value: Any) -> Optional[str]:
+        """Validate and clean phone number"""
+        if not value:
+            return None
+        
+        # Basic phone cleaning - remove non-digits except +
+        phone = re.sub(r'[^\d+]', '', str(value))
+        
+        # Basic validation - must have at least 10 digits
+        digits = re.sub(r'[^\d]', '', phone)
+        if len(digits) < 10:
+            raise ValidationException(f"Phone number too short: {value}")
+        
+        # Truncate to reasonable length
+        return phone[:20]
+
+class HubSpotObjectIdValidator:
     """Validator for HubSpot object IDs"""
     
     def validate(self, value: Any) -> Optional[str]:
         """Validate HubSpot object ID"""
-        self._check_required(value)
-        
         if not value:
             return None
         
-        object_id = str(value).strip()
+        obj_id = str(value).strip()
         
-        # HubSpot IDs are typically numeric strings
-        if not object_id.isdigit():
-            raise ValidationException(f"HubSpot object ID must be numeric: '{value}'")
+        # HubSpot object IDs are typically numeric
+        if not obj_id.isdigit():
+            logger.warning(f"Non-numeric HubSpot object ID: {obj_id}")
         
-        # Check reasonable length (HubSpot IDs are usually 6-12 digits)
-        if len(object_id) < 1 or len(object_id) > 20:
-            raise ValidationException(f"HubSpot object ID length invalid: '{value}'")
-        
-        return object_id
-    
-    def get_error_message(self) -> str:
-        return "HubSpot object ID must be a numeric string"
+        return obj_id
 
-class HubSpotEmailValidator(BaseValidator):
-    """HubSpot-specific email validator with additional checks"""
+class HubSpotTimestampValidator:
+    """Validator for HubSpot timestamps"""
     
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.base_validator = StringValidator(max_length=254, **kwargs)
-        # HubSpot has some specific email validation rules
-        self.email_pattern = re.compile(
-            r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        )
-    
-    def validate(self, value: Any) -> Optional[str]:
-        """Validate email for HubSpot"""
-        self._check_required(value)
-        
-        if not value:
-            return None
-        
-        # First run basic string validation
-        email = self.base_validator.validate(value)
-        if not email:
-            return None
-        
-        email = email.lower().strip()
-        
-        # Check basic structure
-        if '@' not in email or '.' not in email:
-            raise ValidationException(f"Invalid email format: missing @ or . in '{value}'")
-        
-        # Check regex pattern
-        if not self.email_pattern.match(email):
-            raise ValidationException(f"Invalid email format: '{value}'")
-        
-        # HubSpot-specific checks
-        local, domain = email.split('@', 1)
-        
-        # Check for valid domain structure
-        domain_parts = domain.split('.')
-        if len(domain_parts) < 2:
-            raise ValidationException(f"Invalid email domain: '{value}'")
-        
-        # Check for valid TLD
-        tld = domain_parts[-1]
-        if len(tld) < 2:
-            raise ValidationException(f"Invalid email TLD: '{value}'")
-        
-        return email
-    
-    def get_error_message(self) -> str:
-        return "Invalid email format for HubSpot"
-
-class HubSpotPhoneValidator(BaseValidator):
-    """HubSpot-specific phone validator"""
-    
-    def validate(self, value: Any) -> Optional[str]:
-        """Validate phone for HubSpot"""
-        self._check_required(value)
-        
-        if not value:
-            return None
-        
-        # Remove all non-digit characters
-        phone = re.sub(r'[^\d]', '', str(value))
-        
-        # HubSpot accepts various phone formats, but we need at least 7 digits
-        if len(phone) < 7 or len(phone) > 15:
-            raise ValidationException(f"Phone number must be 7-15 digits: '{value}'")
-        
-        # Format for consistency (US format if 10 digits)
-        if len(phone) == 10:
-            return f"({phone[:3]}) {phone[3:6]}-{phone[6:]}"
-        elif len(phone) == 11 and phone[0] == '1':
-            return f"({phone[1:4]}) {phone[4:7]}-{phone[7:]}"
-        else:
-            return phone
-    
-    def get_error_message(self) -> str:
-        return "Phone number must be 7-15 digits"
-
-class HubSpotTimestampValidator(BaseValidator):
-    """Validator for HubSpot timestamps (milliseconds since epoch)"""
-    
-    def validate(self, value: Any) -> Optional[int]:
+    def validate(self, value: Any) -> Optional[datetime]:
         """Validate HubSpot timestamp"""
-        self._check_required(value)
+        if not value:
+            return None
         
+        # If already a datetime, ensure timezone awareness
+        if isinstance(value, datetime):
+            return value if value.tzinfo else timezone.make_aware(value)
+        
+        # Handle numeric timestamps (milliseconds)
+        if isinstance(value, (int, float)):
+            try:
+                # Handle millisecond timestamps
+                if value > 10**10:
+                    value = value / 1000
+                return timezone.make_aware(datetime.fromtimestamp(value))
+            except (ValueError, OSError):
+                raise ValidationException(f"Invalid timestamp: {value}")
+        
+        # Handle string timestamps
+        try:
+            # Normalize the datetime string to handle lowercase 'z'
+            value_str = str(value).strip()
+            if value_str.endswith('z'):
+                value_str = value_str[:-1] + 'Z'
+            
+            parsed = parse_datetime(value_str)
+            if parsed:
+                return parsed if parsed.tzinfo else timezone.make_aware(parsed)
+            else:
+                raise ValidationException(f"Could not parse datetime: {value}")
+        except Exception as e:
+            raise ValidationException(f"Invalid datetime format: {value} - {e}")
+
+class HubSpotCurrencyValidator:
+    """Validator for HubSpot currency fields"""
+    
+    def validate(self, value: Any) -> Optional[Decimal]:
+        """Validate currency amount"""
         if not value:
             return None
         
         try:
-            timestamp = int(value)
-        except (ValueError, TypeError):
-            raise ValidationException(f"HubSpot timestamp must be numeric: '{value}'")
-        
-        # HubSpot timestamps are in milliseconds since epoch
-        # Reasonable range: 2000-01-01 to 2100-01-01
-        min_timestamp = 946684800000  # 2000-01-01 in milliseconds
-        max_timestamp = 4102444800000  # 2100-01-01 in milliseconds
-        
-        if timestamp < min_timestamp or timestamp > max_timestamp:
-            raise ValidationException(f"HubSpot timestamp out of reasonable range: {timestamp}")
-        
-        return timestamp
-    
-    def get_error_message(self) -> str:
-        return "HubSpot timestamp must be milliseconds since epoch"
+            # Clean currency symbols and commas
+            cleaned = re.sub(r'[,$]', '', str(value))
+            return Decimal(cleaned)
+        except (InvalidOperation, ValueError):
+            raise ValidationException(f"Invalid currency amount: {value}")
 
-class HubSpotCurrencyValidator(DecimalValidator):
-    """Validator for HubSpot currency amounts"""
-    
-    def __init__(self, **kwargs):
-        # HubSpot typically uses 2 decimal places for currency
-        super().__init__(
-            min_value=0,  # Usually non-negative
-            max_digits=15,  # Reasonable max for currency
-            decimal_places=2,
-            **kwargs
-        )
-    
-    def get_error_message(self) -> str:
-        return "Currency amount must be a positive decimal with up to 2 decimal places"
-
-class HubSpotPipelineValidator(BaseValidator):
-    """Validator for HubSpot pipeline values"""
-    
-    def __init__(self, valid_pipelines: list = None, **kwargs):
-        super().__init__(**kwargs)
-        self.valid_pipelines = valid_pipelines or []
+class HubSpotZipCodeValidator:
+    """Validator for zip codes"""
     
     def validate(self, value: Any) -> Optional[str]:
-        """Validate pipeline value"""
-        self._check_required(value)
-        
+        """Validate zip code"""
         if not value:
             return None
         
-        pipeline = str(value).strip()
+        zip_code = str(value).strip()
         
-        # If we have a list of valid pipelines, check against it
-        if self.valid_pipelines and pipeline not in self.valid_pipelines:
-            raise ValidationException(f"Invalid pipeline: '{pipeline}'. Valid: {self.valid_pipelines}")
+        # Basic US zip code validation (5 or 9 digits)
+        if not re.match(r'^\d{5}(-\d{4})?$', zip_code):
+            # Also accept 9 digits without dash
+            if not re.match(r'^\d{9}$', zip_code):
+                logger.warning(f"Invalid zip code format: {zip_code}")
         
+        return zip_code
+
+class HubSpotStateValidator:
+    """Validator for US state codes"""
+    
+    US_STATES = {
+        'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+        'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+        'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+        'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+        'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
+        'DC'  # District of Columbia
+    }
+    
+    def validate(self, value: Any) -> Optional[str]:
+        """Validate US state code"""
+        if not value:
+            return None
+        
+        state = str(value).strip().upper()
+        
+        # Accept full state names or abbreviations
+        if len(state) == 2 and state not in self.US_STATES:
+            logger.warning(f"Unknown state code: {state}")
+        
+        return state
+
+class HubSpotUrlValidator:
+    """Validator for URL fields"""
+    
+    def __init__(self):
+        self.django_validator = URLValidator()
+    
+    def validate(self, value: Any) -> Optional[str]:
+        """Validate URL"""
+        if not value:
+            return None
+        
+        url = str(value).strip()
+        
+        try:
+            self.django_validator(url)
+            return url
+        except ValidationError:
+            raise ValidationException(f"Invalid URL format: {url}")
         return pipeline
     
     def get_error_message(self) -> str:
@@ -310,7 +316,6 @@ HUBSPOT_VALIDATORS = {
     'phone': HubSpotPhoneValidator,
     'timestamp': HubSpotTimestampValidator,
     'currency': HubSpotCurrencyValidator,
-    'pipeline': HubSpotPipelineValidator,
     'property': HubSpotPropertyValidator,
     'zip_code': HubSpotZipCodeValidator,
     'state': HubSpotStateValidator,

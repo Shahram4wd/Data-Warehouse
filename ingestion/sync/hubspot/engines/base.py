@@ -151,28 +151,35 @@ class HubSpotBaseSyncEngine(BaseSyncEngine):
             logger.warning(f"Error cleaning up alert system: {e}")
             
     async def handle_sync_error(self, error: Exception, context: Dict[str, Any]) -> None:
-        """Handle sync errors with enterprise alerting"""
-        logger.error(f"Sync error in {self.entity_type}: {error}")
+        """Handle sync errors with standardized logging and reporting"""
+        error_info = {
+            'error_type': type(error).__name__,
+            'error_message': str(error),
+            'operation': context.get('operation', 'unknown'),
+            'entity_id': context.get('contact_id') or context.get('appointment_id') or context.get('deal_id'),
+            'timestamp': timezone.now().isoformat()
+        }
         
-        # Send alert for critical errors
+        # Log error with enhanced context
+        logger.error(f"Sync error in {error_info['operation']}: {error_info['error_message']}")
+        
+        # Store error for reporting
+        if not hasattr(self, 'sync_errors'):
+            self.sync_errors = []
+        self.sync_errors.append(error_info)
+        
+        # Report to monitoring system if available
+        await self.report_to_monitoring(error_info)
+    
+    async def report_to_monitoring(self, error_info: Dict[str, Any]):
+        """Report error to monitoring system"""
         try:
-            if self.alert_system:
-                await self.alert_system.send_alert(
-                    'sync_error',
-                    f"Sync error in {self.entity_type}: {error}",
-                    context=context,
-                    severity='error'
-                )
-        except Exception as e:
-            logger.warning(f"Failed to send alert: {e}")
-            
-        # Check for automation triggers
-        try:
-            if self.automation_engine:
-                await self.automation_engine.handle_error(error, context)
-        except Exception as e:
-            logger.warning(f"Failed to handle automation: {e}")
-            
+            # Implementation for your monitoring system
+            # This could be Sentry, DataDog, custom logging, etc.
+            pass
+        except Exception as monitoring_error:
+            logger.warning(f"Failed to report to monitoring: {monitoring_error}")
+    
     async def report_sync_metrics(self, metrics: Dict[str, Any]) -> None:
         """Report sync metrics to monitoring system"""
         # Log batch completion metrics for operational monitoring

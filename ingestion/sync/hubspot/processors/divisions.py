@@ -39,37 +39,28 @@ class HubSpotDivisionProcessor(HubSpotBaseProcessor):
             'properties.hs_object_id': 'hs_object_id',
             'properties.hs_createdate': 'hs_createdate',
             'properties.hs_lastmodifieddate': 'hs_lastmodifieddate',
-            'properties.hs_pipeline': 'hs_pipeline',
-            'properties.hs_pipeline_stage': 'hs_pipeline_stage',
         }
     
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform HubSpot division record to model format"""
-        properties = record.get('properties', {})
+        # Use the architectural pattern: apply field mappings first
+        transformed = self.apply_field_mappings(record)
         
-        return {
-            'id': record.get('id'),
-            'division_name': properties.get('division_name'),
-            'division_label': properties.get('division_label'),
-            'label': properties.get('label'),
-            'division_code': properties.get('division_code'),
-            'code': properties.get('code'),
-            'status': properties.get('status'),
-            'region': properties.get('region'),
-            'manager_name': properties.get('manager_name'),
-            'manager_email': properties.get('manager_email'),
-            'phone': properties.get('phone'),
-            'address1': properties.get('address1'),
-            'address2': properties.get('address2'),
-            'city': properties.get('city'),
-            'state': properties.get('state'),
-            'zip': properties.get('zip'),
-            'hs_object_id': properties.get('hs_object_id'),
-            'hs_createdate': self._parse_datetime(properties.get('hs_createdate')),
-            'hs_lastmodifieddate': self._parse_datetime(properties.get('hs_lastmodifieddate')),
-            'hs_pipeline': properties.get('hs_pipeline'),
-            'hs_pipeline_stage': properties.get('hs_pipeline_stage'),
-        }
+        # Transform datetime fields
+        datetime_fields = ['hs_createdate', 'hs_lastmodifieddate']
+        for field in datetime_fields:
+            if field in transformed:
+                transformed[field] = self._parse_datetime(transformed[field])
+        
+        # Clean email if present
+        if transformed.get('manager_email'):
+            transformed['manager_email'] = self._clean_email(transformed['manager_email'])
+        
+        # Clean phone if present
+        if transformed.get('phone'):
+            transformed['phone'] = self._clean_phone(transformed['phone'])
+        
+        return transformed
     
     def validate_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Validate division record using new validation framework"""

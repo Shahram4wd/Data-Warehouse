@@ -124,26 +124,6 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
             else:
                 results = await self._individual_save_contacts(validated_data)
         
-        # Calculate and report enterprise metrics
-        total_processed = len(validated_data)
-        success_count = results['created'] + results['updated']
-        success_rate = success_count / total_processed if total_processed > 0 else 0
-        
-        # Report metrics to enterprise monitoring system
-        await self.report_sync_metrics({
-            'entity_type': 'contacts',
-            'processed': total_processed,
-            'success_rate': success_rate,
-            'data_quality_score': self._calculate_data_quality_score(validated_data, results),
-            'results': results,
-            'processing_efficiency': self._calculate_processing_efficiency(validated_data),
-            'validation_errors': results['failed']
-        })
-        
-        logger.info(f"Contact sync completed - Created: {results['created']}, "
-                   f"Updated: {results['updated']}, Failed: {results['failed']}, "
-                   f"Success Rate: {success_rate:.2%}")
-        
         return results
     
     async def _bulk_save_contacts(self, validated_data: List[Dict]) -> Dict[str, int]:
@@ -212,47 +192,48 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
             await sync_to_async(contact.save)()
     
     async def _individual_save_contacts(self, validated_data: List[Dict]) -> Dict[str, int]:
-        """Fallback individual save operation with detailed error handling"""
+        """Fallback to individual contact saves when bulk operations fail"""
         results = {'created': 0, 'updated': 0, 'failed': 0}
         
         for record in validated_data:
             try:
-                # Check if contact exists
                 contact_id = record.get('id')
                 if not contact_id:
                     logger.error(f"Contact record missing ID: {record}")
                     results['failed'] += 1
                     continue
                 
-                # Use get_or_create to handle duplicates
-                contact, created = await sync_to_async(Hubspot_Contact.objects.get_or_create)(
-                    id=contact_id,
-                    defaults=record
-                )
+                # Check if contact exists and needs update
+                existing_contact = await sync_to_async(
+                    Hubspot_Contact.objects.filter(id=contact_id).first
+                )()
                 
-                # Update existing contact with new data
-                if not created:
-                    for field, value in record.items():
-                        if hasattr(contact, field):
-                            setattr(contact, field, value)
-                    await sync_to_async(contact.save)()
-                
-                if created:
-                    results['created'] += 1
+                if existing_contact:
+                    # Check if update is needed (timestamp comparison)
+                    if self._should_update_contact(existing_contact, record):
+                        await self._update_individual_contact(existing_contact, record)
+                        results['updated'] += 1
+                        logger.debug(f"Updated contact {contact_id}")
+                    else:
+                        logger.debug(f"Skipping contact {contact_id} - no update needed")
                 else:
-                    results['updated'] += 1
+                    # Create new contact
+                    await self._create_individual_contact(record)
+                    results['created'] += 1
+                    logger.debug(f"Created contact {contact_id}")
                     
             except Exception as e:
-                logger.error(f"Error saving contact {record.get('id')}: {e}")
+                logger.error(f"Error saving contact {record.get('id', 'UNKNOWN')}: {e}")
                 results['failed'] += 1
                 
-                # Report individual contact errors to enterprise error handling
+                # Enhanced error logging following import_refactoring.md patterns
                 await self.handle_sync_error(e, {
-                    'operation': 'save_contact',
+                    'operation': 'individual_save_contact',
                     'contact_id': record.get('id'),
                     'record': record
                 })
         
+        logger.info(f"Individual contact save completed: {results['created']} created, {results['updated']} updated, {results['failed']} failed")
         return results
     
     async def _force_overwrite_contacts(self, validated_data: List[Dict]) -> Dict[str, int]:
@@ -318,11 +299,15 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
                     continue
                 
                 # Check if contact exists
-                contact_exists = await sync_to_async(Hubspot_Contact.objects.filter(id=contact_id).exists)()
+                contact_exists = await sync_to_async(
+                    Hubspot_Contact.objects.filter(id=contact_id).exists
+                )()
                 
                 if contact_exists:
                     # Force delete and recreate for complete overwrite
-                    await sync_to_async(Hubspot_Contact.objects.filter(id=contact_id).delete)()
+                    await sync_to_async(
+                        Hubspot_Contact.objects.filter(id=contact_id).delete
+                    )()
                     contact = Hubspot_Contact(**record)
                     await sync_to_async(contact.save)()
                     results['updated'] += 1
@@ -335,17 +320,61 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
                     logger.debug(f"Force created contact {contact_id}")
                     
             except Exception as e:
-                logger.error(f"Error force saving contact {record.get('id')}: {e}")
+                logger.error(f"Error force saving contact {record.get('id', 'UNKNOWN')}: {e}")
                 results['failed'] += 1
                 
-                # Report individual contact errors to enterprise error handling
                 await self.handle_sync_error(e, {
                     'operation': 'force_save_contact',
                     'contact_id': record.get('id'),
                     'record': record
                 })
         
+        logger.info(f"Individual force contact save completed: {results['created']} created, {results['updated']} updated, {results['failed']} failed")
         return results
+    
+    async def _create_individual_contact(self, record: Dict) -> None:
+        """Create individual contact with error handling"""
+        try:
+            contact = Hubspot_Contact(**record)
+            await sync_to_async(contact.save)()
+        except Exception as e:
+            logger.error(f"Failed to create contact {record.get('id', 'UNKNOWN')}: {e}")
+            raise
+    
+    async def _update_individual_contact(self, existing_contact: Hubspot_Contact, record: Dict) -> None:
+        """Update individual contact with error handling"""
+        try:
+            # Update all fields from record
+            for field, value in record.items():
+                if hasattr(existing_contact, field):
+                    setattr(existing_contact, field, value)
+            
+            await sync_to_async(existing_contact.save)()
+        except Exception as e:
+            logger.error(f"Failed to update contact {record.get('id', 'UNKNOWN')}: {e}")
+            raise
+    
+    def _should_update_contact(self, existing_contact: Hubspot_Contact, new_record: Dict) -> bool:
+        """Determine if contact should be updated based on timestamps"""
+        if self.force_overwrite:
+            return True
+        
+        # Compare timestamps if available
+        new_timestamp = new_record.get('lastmodifieddate')
+        if new_timestamp and existing_contact.lastmodifieddate:
+            try:
+                if isinstance(new_timestamp, str):
+                    from datetime import datetime
+                    new_dt = datetime.fromisoformat(new_timestamp.replace('Z', '+00:00'))
+                else:
+                    new_dt = new_timestamp
+                
+                return new_dt > existing_contact.lastmodifieddate
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Error comparing timestamps for contact {existing_contact.id}: {e}")
+                return True  # Update when in doubt
+        
+        return True  # Update if no timestamp comparison possible
     
     def _calculate_data_quality_score(self, validated_data: List[Dict], results: Dict[str, int]) -> float:
         """Calculate data quality score based on validation results"""

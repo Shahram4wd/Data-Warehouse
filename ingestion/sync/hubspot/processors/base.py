@@ -59,7 +59,6 @@ class HubSpotBaseProcessor(BaseDataProcessor):
         transformed = {}
         
         for source_field, target_field in field_mappings.items():
-            # Handle nested fields using dot notation
             value = self._get_nested_value(record, source_field)
             if value is not None:
                 transformed[target_field] = value
@@ -85,39 +84,27 @@ class HubSpotBaseProcessor(BaseDataProcessor):
             if not value:
                 return 0
             
-            # Handle string input    
-            if isinstance(value, str):
-                # Check if it's in HH:MM:SS format (contains colons)
-                if ':' in value:
-                    parts = value.split(":")
-                    if len(parts) == 3:
-                        h, m, s = map(int, parts)
-                        return h * 60 + m + s // 60
-                    elif len(parts) == 2:
-                        # MM:SS format
-                        m, s = map(int, parts)
-                        return m + s // 60
-                    else:
-                        # Invalid colon format, treat as numeric
-                        numeric_value = float(value.replace(':', ''))
-                else:
-                    # Numeric string - determine if it's seconds or milliseconds
-                    numeric_value = float(value)
-                
-                # Convert numeric value to minutes
-                if numeric_value > 86400:  # > 24 hours in seconds, likely milliseconds
-                    return int(numeric_value / 1000 / 60)  # milliseconds to minutes
-                else:  # likely seconds
-                    return int(numeric_value / 60)  # seconds to minutes
+            # Handle HH:MM:SS format
+            if ':' in str(value):
+                parts = str(value).split(':')
+                if len(parts) >= 2:
+                    hours = int(parts[0])
+                    minutes = int(parts[1])
+                    return hours * 60 + minutes
             
-            # Handle numeric input (assume it's already in minutes)
-            if isinstance(value, (int, float)):
-                return int(value)
-                
-            return 0
+            # Handle numeric values (seconds or milliseconds)
+            numeric_value = float(value)
+            
+            # If very large, assume milliseconds and convert to seconds
+            if numeric_value > 86400:  # More than 24 hours in seconds
+                numeric_value = numeric_value / 1000
+            
+            # Convert seconds to minutes
+            return int(numeric_value / 60)
+            
         except Exception as e:
             logger.warning(f"Failed to parse duration '{value}': {e}")
-            return 0  # Return 0 instead of raising exception for data integrity
+            return 0
     
     def validate_field(self, field_name: str, value: Any, field_type: str = 'string', context: Dict[str, Any] = None) -> Any:
         """Validate a field using appropriate validator with optional context"""
@@ -132,17 +119,17 @@ class HubSpotBaseProcessor(BaseDataProcessor):
                 return self.phone_validator.validate(value)
             elif field_type == 'object_id':
                 return self.object_id_validator.validate(value)
-            elif field_type == 'timestamp':
+            elif field_type == 'datetime':
                 return self.timestamp_validator.validate(value)
             elif field_type == 'currency':
                 return self.currency_validator.validate(value)
-            elif field_type == 'zip_code' or field_type == 'zip':
+            elif field_type == 'zip_code':
                 return self.zip_code_validator.validate(value)
             elif field_type == 'state':
                 return self.state_validator.validate(value)
             elif field_type == 'url':
                 return self.url_validator.validate(value)
-            elif field_type == 'date' or field_type == 'datetime':
+            elif field_type == 'date':
                 return self.date_validator.validate(value)
             elif field_type == 'time':
                 return self.time_validator.validate(value)
@@ -150,89 +137,24 @@ class HubSpotBaseProcessor(BaseDataProcessor):
                 return self.decimal_validator.validate(value)
             elif field_type == 'boolean':
                 return self.boolean_validator.validate(value)
-            elif field_type == 'integer':
-                return self._parse_integer(value)
             else:
-                # Default string validation
-                return StringValidator().validate(value)
+                return value
+            
         except ValidationException as e:
-            # Handle validation errors based on strict mode
-            context_info = ""
-            hubspot_url = ""
-            record_id = None
-            
-            if context:
-                # Build context string with available identifiers
-                identifiers = []
-                record_id = context.get('id')
-                for id_field in ['id']:
-                    if context.get(id_field):
-                        identifiers.append(f"{id_field}={context[id_field]}")
-                
-                if identifiers:
-                    context_info = f" (Record: {', '.join(identifiers)})"
-                else:
-                    # Debug: context exists but no ID found
-                    context_info = f" (Record: no ID found in context keys: {list(context.keys())})"
-            else:
-                # Debug: no context provided
-                context_info = " (Record: no context provided)"
-                
-            # Add HubSpot URL for easy access
-            if record_id:
-                    # Determine object type based on context or default to contacts
-                    object_type_map = {
-                        'appointment': '0-421',  # Custom object for appointments
-                        'contact': '0-1',       # Standard contact object
-                        'deal': '0-3',          # Standard deal object
-                        'company': '0-2'        # Standard company object
-                    }
-                    # Try to determine object type from context or use contact as default
-                    object_type = '0-1'  # Default to contacts
-                    if hasattr(self, 'model_class') and self.model_class:
-                        model_name = self.model_class.__name__.lower()
-                        if 'appointment' in model_name:
-                            object_type = '0-421'
-                        elif 'deal' in model_name:
-                            object_type = '0-3'
-                        elif 'company' in model_name:
-                            object_type = '0-2'
-                    
-                    hubspot_url = f" - HubSpot URL: https://app.hubspot.com/contacts/47947320/object/{object_type}/{record_id}"
-            
-            if self.config.is_strict_validation():
-                logger.error(f"Strict validation failed for field '{field_name}' with value '{value}'{context_info}: {e}{hubspot_url}")
-                raise ValidationException(f"Field '{field_name}': {e}")
-            else:
-                logger.warning(f"Validation warning for field '{field_name}' with value '{value}'{context_info}: {e}{hubspot_url}")
-                return value  # Return original value in non-strict mode
+            context_info = self.build_context_info(context)
+            logger.warning(
+                f"Validation warning for field '{field_name}' "
+                f"with value '{value}'{context_info}: {e}"
+            )
+            return value
         except Exception as e:
-            context_info = ""
-            hubspot_url = ""
-            if context and context.get('id'):
-                context_info = f" (Record ID: {context['id']})"
-                record_id = context['id']
-                # Add HubSpot URL based on model type
-                object_type = '0-1'  # Default to contacts
-                if hasattr(self, 'model_class') and self.model_class:
-                    model_name = self.model_class.__name__.lower()
-                    if 'appointment' in model_name:
-                        object_type = '0-421'
-                    elif 'deal' in model_name:
-                        object_type = '0-3'
-                    elif 'company' in model_name:
-                        object_type = '0-2'
-                hubspot_url = f" - HubSpot URL: https://app.hubspot.com/contacts/[PORTAL_ID]/object/{object_type}/{record_id}"
-            
-            logger.error(f"Unexpected error validating field '{field_name}' with value '{value}'{context_info}: {e}{hubspot_url}")
-            if self.config.is_strict_validation():
-                raise ValidationException(f"Field '{field_name}': Validation error")
+            logger.error(f"Unexpected validation error for field '{field_name}': {e}")
             return value
     
     def _parse_datetime(self, value: Any) -> Optional[datetime]:
         """Parse datetime from HubSpot format using validator"""
         try:
-            return self.date_validator.validate(value)
+            return self.timestamp_validator.validate(value)
         except ValidationException:
             return self._legacy_parse_datetime(value)
     
@@ -243,30 +165,30 @@ class HubSpotBaseProcessor(BaseDataProcessor):
         
         # If it's already a datetime object, return it
         if isinstance(value, datetime):
-            return value
+            return value if value.tzinfo else timezone.make_aware(value)
         
         # Convert to string if it's a number (timestamp)
         if isinstance(value, (int, float)):
-            value = str(int(value))
+            try:
+                # Handle millisecond timestamps
+                if value > 10**10:
+                    value = value / 1000
+                return timezone.make_aware(datetime.fromtimestamp(value))
+            except (ValueError, OSError):
+                return None
+        
+        # Normalize the datetime string to handle lowercase 'z'
+        value_str = str(value).strip()
+        if value_str.endswith('z'):
+            value_str = value_str[:-1] + 'Z'
         
         # Try to parse as datetime
         try:
-            # HubSpot timestamps are in milliseconds
-            if str(value).isdigit():
-                timestamp = int(value)
-                # Convert from milliseconds to seconds
-                if timestamp > 10000000000:  # If timestamp is in milliseconds
-                    timestamp = timestamp / 1000
-                return datetime.fromtimestamp(timestamp, tz=timezone.utc)
-            else:
-                # Try to parse as ISO format
-                parsed = parse_datetime(str(value))
-                if parsed:
-                    return parsed
+            parsed = parse_datetime(value_str)
+            return parsed if parsed and parsed.tzinfo else timezone.make_aware(parsed) if parsed else None
         except (ValueError, OSError) as e:
             logger.warning(f"Failed to parse datetime '{value}': {e}")
-        
-        return None
+            return None
     
     def _parse_integer(self, value: Any) -> Optional[int]:
         """Parse integer value, handling empty strings and null values"""
@@ -278,18 +200,7 @@ class HubSpotBaseProcessor(BaseDataProcessor):
             return None
         
         try:
-            # Convert to string first to handle various input types
-            str_value = str(value).strip()
-            
-            # Handle empty string after stripping
-            if str_value == '':
-                return None
-            
-            # Handle decimal strings by converting to float first, then int
-            if '.' in str_value:
-                return int(float(str_value))
-            
-            return int(str_value)
+            return int(float(value))  # Handle decimal strings
         except (ValueError, TypeError) as e:
             logger.warning(f"Failed to parse integer '{value}': {e}")
             return None
@@ -309,9 +220,7 @@ class HubSpotBaseProcessor(BaseDataProcessor):
         try:
             return Decimal(str(value))
         except (InvalidOperation, ValueError):
-            record_context = f" for record {record_id}" if record_id else ""
-            field_context = f" in field '{field_name}'" if field_name else ""
-            logger.warning(f"Failed to parse decimal '{value}'{field_context}{record_context} - HubSpot URL: https://app.hubspot.com/contacts/[PORTAL_ID]/object/0-421/{record_id}")
+            logger.warning(f"Failed to parse decimal '{value}' for record {record_id}, field {field_name}")
             return None
     
     def _parse_boolean(self, value: Any) -> Optional[bool]:
@@ -330,18 +239,14 @@ class HubSpotBaseProcessor(BaseDataProcessor):
             return value
         
         if isinstance(value, str):
-            value = value.lower()
-            if value in ('true', '1', 'yes', 'on'):
-                return True
-            elif value in ('false', '0', 'no', 'off'):
-                return False
+            return value.lower() in ('true', '1', 'yes', 'on')
         
         return None
     
     def _clean_phone(self, phone: str) -> str:
         """Clean phone number using validator"""
         try:
-            return self.phone_validator.validate(phone) or phone
+            return self.phone_validator.validate(phone)
         except ValidationException:
             return self._legacy_clean_phone(phone)
     
@@ -350,16 +255,119 @@ class HubSpotBaseProcessor(BaseDataProcessor):
         if not phone:
             return phone
         
-        # Remove all non-digit characters
-        cleaned = re.sub(r'\D', '', phone)
+        # Basic phone cleaning
+        import re
+        cleaned = re.sub(r'[^\d]', '', str(phone))
         
-        # Format as standard phone number if it's 10 digits
+        # Format phone number if it's a valid US number
         if len(cleaned) == 10:
             return f"({cleaned[:3]}) {cleaned[3:6]}-{cleaned[6:]}"
         elif len(cleaned) == 11 and cleaned[0] == '1':
             return f"({cleaned[1:4]}) {cleaned[4:7]}-{cleaned[7:]}"
         
-        return phone
+        return cleaned[:20]  # Truncate to max length
+    
+    def _clean_email(self, email: str) -> str:
+        """Clean email using validator"""
+        try:
+            return self.email_validator.validate(email)
+        except ValidationException:
+            return self._legacy_clean_email(email)
+    
+    def _legacy_clean_email(self, email: str) -> str:
+        """Legacy email cleaning for backward compatibility"""
+        if not email:
+            return email
+        
+        return str(email).strip().lower()
+    
+    def _get_nested_value(self, data: dict, key_path: str) -> Any:
+        """Extract nested value using dot notation"""
+        keys = key_path.split('.')
+        value = data
+        
+        for key in keys:
+            if isinstance(value, dict) and key in value:
+                value = value[key]
+            else:
+                return None
+        
+        return value
+    
+    def log_database_error(self, error: Exception, record_data: Dict[str, Any], operation: str = "save") -> None:
+        """Log database errors with context"""
+        record_id = record_data.get('id', 'UNKNOWN')
+        logger.error(f"Database error during {operation} for record {record_id}: {error}")
+    
+    def validate_field_length(self, field_name: str, value: Any, max_length: int, record_id: str = None) -> str:
+        """Validate and truncate field length"""
+        if value is None:
+            return None
+        
+        str_value = str(value)
+        if len(str_value) > max_length:
+            logger.warning(f"Truncating field '{field_name}' from {len(str_value)} to {max_length} chars for record {record_id}")
+            return str_value[:max_length]
+        
+        return str_value
+
+    def build_context_info(self, context: Dict) -> str:
+        """Build context string for logging"""
+        if not context:
+            return " (Record: no context provided)"
+        
+        record_id = context.get('id')
+        if record_id:
+            return f" (Record: id={record_id})"
+        else:
+            return f" (Record: no ID found in context keys: {list(context.keys())})"
+
+    def _truncate_field(self, value: Any, max_length: int, field_name: str, record_id: str) -> str:
+        """Truncate field to maximum length"""
+        return self.validate_field_length(field_name, value, max_length, record_id)
+
+    def _parse_time(self, value: Any, record_id: str, field_name: str) -> Optional[datetime.time]:
+        """Parse time value"""
+        if not value:
+            return None
+        
+        try:
+            if isinstance(value, str):
+                # Handle various time formats
+                if ':' in value:
+                    parts = value.split(':')
+                    hour = int(parts[0])
+                    minute = int(parts[1]) if len(parts) > 1 else 0
+                    second = int(parts[2]) if len(parts) > 2 else 0
+                    return datetime.time(hour, minute, second)
+            
+            return None
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to parse time '{value}' for record {record_id}, field {field_name}: {e}")
+            return None
+
+    def _parse_date(self, value: Any, record_id: str, field_name: str) -> Optional[datetime.date]:
+        """Parse date value"""
+        if not value:
+            return None
+        
+        try:
+            if isinstance(value, str):
+                parsed_dt = parse_datetime(value)
+                if parsed_dt:
+                    return parsed_dt.date()
+            elif isinstance(value, datetime):
+                return value.date()
+            
+            return None
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Failed to parse date '{value}' for record {record_id}, field {field_name}: {e}")
+            return None
+
+    def _parse_boolean_not_null(self, value: Any) -> bool:
+        """Parse boolean value, defaulting to False if None"""
+        result = self._parse_boolean(value)
+        return result if result is not None else False
     
     def _clean_email(self, email: str) -> str:
         """Clean and validate email using validator"""

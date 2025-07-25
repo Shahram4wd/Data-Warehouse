@@ -20,40 +20,41 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
     def get_field_mappings(self) -> Dict[str, str]:
         """Return field mappings from HubSpot to model"""
         return {
-            # Core fields
             'id': 'id',
-            'properties.firstname': 'firstname',
-            'properties.lastname': 'lastname',
-            'properties.email': 'email',
-            'properties.phone': 'phone',
             'properties.address': 'address',
-            'properties.city': 'city',
-            'properties.state': 'state',
-            'properties.zip': 'zip',
-            'properties.createdate': 'createdate',
-            'properties.lastmodifieddate': 'lastmodifieddate',
-            'properties.campaign_name': 'campaign_name',
-            'properties.hs_google_click_id': 'hs_google_click_id',
-            'properties.original_lead_source': 'original_lead_source',
-            'properties.division': 'division',
-            'properties.marketsharp_id': 'marketsharp_id',
-            'properties.hs_object_id': 'hs_object_id',
             'properties.adgroupid': 'adgroupid',
             'properties.ap_leadid': 'ap_leadid',
             'properties.campaign_content': 'campaign_content',
+            'properties.campaign_name': 'campaign_name',
+            'properties.city': 'city',
             'properties.clickcheck': 'clickcheck',
             'properties.clicktype': 'clicktype',
             'properties.comments': 'comments',
+            'properties.createdate': 'createdate',
+            'properties.division': 'division',
+            'properties.email': 'email',
+            'properties.firstname': 'firstname',
+            'properties.hs_google_click_id': 'hs_google_click_id',
+            'properties.hs_object_id': 'hs_object_id',
+            'properties.lastmodifieddate': 'lastmodifieddate',
+            'properties.lastname': 'lastname',
             'properties.lead_salesrabbit_lead_id': 'lead_salesrabbit_lead_id',
+            'properties.marketsharp_id': 'marketsharp_id',
             'properties.msm_source': 'msm_source',
+            'properties.original_lead_source': 'original_lead_source',
             'properties.original_lead_source_created': 'original_lead_source_created',
+            'properties.phone': 'phone',
             'properties.price': 'price',
             'properties.reference_code': 'reference_code',
             'properties.search_terms': 'search_terms',
+            'properties.state': 'state',
             'properties.tier': 'tier',
             'properties.trustedform_cert_url': 'trustedform_cert_url',
             'properties.vendorleadid': 'vendorleadid',
             'properties.vertical': 'vertical',
+            'properties.zip': 'zip',
+            
+            # Lead-related fields
             'properties.lead_added_by': 'lead_added_by',
             'properties.lead_added_by_latitude': 'lead_added_by_latitude',
             'properties.lead_added_by_longitude': 'lead_added_by_longitude',
@@ -117,127 +118,108 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
             'properties.lead_with_dm': 'lead_with_dm',
             'properties.lead_year_built': 'lead_year_built',
             'properties.lead_zip': 'lead_zip',
+            
+            # Source fields
             'properties.hge_primary_source': 'primary_source',
             'properties.hge_secondary_source': 'secondary_source',
         }
     
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform HubSpot contact record to model format using enterprise validation framework"""
-        properties = record.get('properties', {})
+        """Transform HubSpot contact record to model format"""
+        # Use the architectural pattern: apply field mappings first
+        transformed = self.apply_field_mappings(record)
+        
+        # Apply validation and transformation for specific field types
         record_id = record.get('id', 'UNKNOWN')
         
-        # Enterprise transformation with comprehensive validation
-        try:
-            transformed = {
-                # Core fields
-                'id': self.validate_field('id', record.get('id'), 'object_id', record),
-                'address': self.validate_field('address', properties.get('address'), 'string', record),
-                'adgroupid': self.validate_field('adgroupid', properties.get('adgroupid'), 'string', record),
-                'ap_leadid': self.validate_field('ap_leadid', properties.get('ap_leadid'), 'string', record),
-                'campaign_content': self.validate_field('campaign_content', properties.get('campaign_content'), 'string', record),
-                'campaign_name': self.validate_field('campaign_name', properties.get('campaign_name'), 'string', record),
-                'city': self.validate_field('city', properties.get('city'), 'string', record),
-                'clickcheck': self.validate_field('clickcheck', properties.get('clickcheck'), 'string', record),
-                'clicktype': self.validate_field('clicktype', properties.get('clicktype'), 'string', record),
-                'comments': self.validate_field('comments', properties.get('comments'), 'string', record),
-                'createdate': self.validate_field('createdate', properties.get('createdate'), 'datetime', record),
-                'division': self.validate_field('division', properties.get('division'), 'string', record),
-                'email': self.validate_field('email', properties.get('email'), 'email', record),
-                'firstname': self.validate_field('firstname', properties.get('firstname'), 'string', record),
-                'hs_google_click_id': self.validate_field('hs_google_click_id', properties.get('hs_google_click_id'), 'string', record),
-                'hs_object_id': self.validate_field('hs_object_id', properties.get('hs_object_id'), 'object_id', record),
-                'lastmodifieddate': self.validate_field('lastmodifieddate', properties.get('lastmodifieddate'), 'datetime', record),
-                'lastname': self.validate_field('lastname', properties.get('lastname'), 'string', record),
-                'lead_salesrabbit_lead_id': self.validate_field('lead_salesrabbit_lead_id', properties.get('lead_salesrabbit_lead_id'), 'string', record),
-                'marketsharp_id': self.validate_field('marketsharp_id', properties.get('marketsharp_id'), 'string', record),
-                'msm_source': self.validate_field('msm_source', properties.get('msm_source'), 'string', record),
-                'original_lead_source': self.validate_field('original_lead_source', properties.get('original_lead_source'), 'string', record),
-                'original_lead_source_created': self.validate_field('original_lead_source_created', properties.get('original_lead_source_created'), 'datetime', record),
-                'phone': self.validate_field('phone', properties.get('phone'), 'phone', record),
-                'price': self.validate_field('price', properties.get('price'), 'decimal', record),
-                'reference_code': self.validate_field('reference_code', properties.get('reference_code'), 'string', record),
-                'search_terms': self.validate_field('search_terms', properties.get('search_terms'), 'string', record),
-                'state': self.validate_field('state', properties.get('state'), 'string', record),
-                'tier': self.validate_field('tier', properties.get('tier'), 'string', record),
-                'trustedform_cert_url': self.validate_field('trustedform_cert_url', properties.get('trustedform_cert_url'), 'url', record),
-                'vendorleadid': self.validate_field('vendorleadid', properties.get('vendorleadid'), 'string', record),
-                'vertical': self.validate_field('vertical', properties.get('vertical'), 'string', record),
-                'zip': self.validate_field('zip', properties.get('zip'), 'zip_code', record),
-                # Lead-related fields
-                'lead_added_by': self.validate_field('lead_added_by', properties.get('lead_added_by'), 'integer', record),
-                'lead_added_by_latitude': self.validate_field('lead_added_by_latitude', properties.get('lead_added_by_latitude'), 'string', record),
-                'lead_added_by_longitude': self.validate_field('lead_added_by_longitude', properties.get('lead_added_by_longitude'), 'string', record),
-                'lead_added_by_supervisor': self.validate_field('lead_added_by_supervisor', properties.get('lead_added_by_supervisor'), 'string', record),
-                'lead_address1': self.validate_field('lead_address1', properties.get('lead_address1'), 'string', record),
-                'lead_agent_id': self.validate_field('lead_agent_id', properties.get('lead_agent_id'), 'integer', record),
-                'lead_agent_name': self.validate_field('lead_agent_name', properties.get('lead_agent_name'), 'string', record),
-                'lead_call_screen_viewed_by': self.validate_field('lead_call_screen_viewed_by', properties.get('lead_call_screen_viewed_by'), 'integer', record),
-                'lead_call_screen_viewed_on': self.validate_field('lead_call_screen_viewed_on', properties.get('lead_call_screen_viewed_on'), 'datetime', record),
-                'lead_cdyne_county': self.validate_field('lead_cdyne_county', properties.get('lead_cdyne_county'), 'string', record),
-                'lead_city': self.validate_field('lead_city', properties.get('lead_city'), 'string', record),
-                'lead_contact': self.validate_field('lead_contact', properties.get('lead_contact'), 'integer', record),
-                'lead_copied_from_id': self.validate_field('lead_copied_from_id', properties.get('lead_copied_from_id'), 'integer', record),
-                'lead_copied_from_on': self.validate_field('lead_copied_from_on', properties.get('lead_copied_from_on'), 'string', record),
-                'lead_cost': self.validate_field('lead_cost', properties.get('lead_cost'), 'decimal', record),
-                'lead_cwp_client': self.validate_field('lead_cwp_client', properties.get('lead_cwp_client'), 'integer', record),
-                'lead_dead_by': self.validate_field('lead_dead_by', properties.get('lead_dead_by'), 'integer', record),
-                'lead_dead_on': self.validate_field('lead_dead_on', properties.get('lead_dead_on'), 'datetime', record),
-                'lead_division': self.validate_field('lead_division', properties.get('lead_division'), 'integer', record),
-                'lead_do_not_call_before': self.validate_field('lead_do_not_call_before', properties.get('lead_do_not_call_before'), 'datetime', record),
-                'lead_estimate_confirmed_by': self.validate_field('lead_estimate_confirmed_by', properties.get('lead_estimate_confirmed_by'), 'integer', record),
-                'lead_estimate_confirmed_on': self.validate_field('lead_estimate_confirmed_on', properties.get('lead_estimate_confirmed_on'), 'datetime', record),
-                'lead_express_consent_set_by': self.validate_field('lead_express_consent_set_by', properties.get('lead_express_consent_set_by'), 'integer', record),
-                'lead_express_consent_set_on': self.validate_field('lead_express_consent_set_on', properties.get('lead_express_consent_set_on'), 'datetime', record),
-                'lead_express_consent_source': self.validate_field('lead_express_consent_source', properties.get('lead_express_consent_source'), 'integer', record),
-                'lead_express_consent_upload_file_id': self.validate_field('lead_express_consent_upload_file_id', properties.get('lead_express_consent_upload_file_id'), 'integer', record),
-                'lead_id': self.validate_field('lead_id', properties.get('lead_id'), 'integer', record),
-                'lead_import_source': self.validate_field('lead_import_source', properties.get('lead_import_source'), 'string', record),
-                'lead_invalid_address': self.validate_field('lead_invalid_address', properties.get('lead_invalid_address'), 'integer', record),
-                'lead_is_carpentry_followup': self.validate_field('lead_is_carpentry_followup', properties.get('lead_is_carpentry_followup'), 'integer', record),
-                'lead_is_dnc': self.validate_field('lead_is_dnc', properties.get('lead_is_dnc'), 'integer', record),
-                'lead_is_dummy': self.validate_field('lead_is_dummy', properties.get('lead_is_dummy'), 'integer', record),
-                'lead_is_estimate_confirmed': self.validate_field('lead_is_estimate_confirmed', properties.get('lead_is_estimate_confirmed'), 'integer', record),
-                'lead_is_estimate_set': self.validate_field('lead_is_estimate_set', properties.get('lead_is_estimate_set'), 'integer', record),
-                'lead_is_express_consent': self.validate_field('lead_is_express_consent', properties.get('lead_is_express_consent'), 'integer', record),
-                'lead_is_express_consent_being_reviewed': self.validate_field('lead_is_express_consent_being_reviewed', properties.get('lead_is_express_consent_being_reviewed'), 'integer', record),
-                'lead_is_high_potential': self.validate_field('lead_is_high_potential', properties.get('lead_is_high_potential'), 'integer', record),
-                'lead_is_mobile_lead': self.validate_field('lead_is_mobile_lead', properties.get('lead_is_mobile_lead'), 'integer', record),
-                'lead_is_valid_address': self.validate_field('lead_is_valid_address', properties.get('lead_is_valid_address'), 'integer', record),
-                'lead_is_valid_email': self.validate_field('lead_is_valid_email', properties.get('lead_is_valid_email'), 'integer', record),
-                'lead_is_year_built_verified': self.validate_field('lead_is_year_built_verified', properties.get('lead_is_year_built_verified'), 'integer', record),
-                'lead_is_zillow': self.validate_field('lead_is_zillow', properties.get('lead_is_zillow'), 'integer', record),
-                'lead_job_type': self.validate_field('lead_job_type', properties.get('lead_job_type'), 'integer', record),
-                'lead_notes': self.validate_field('lead_notes', properties.get('lead_notes'), 'string', record),
-                'lead_phone1': self.validate_field('lead_phone1', properties.get('lead_phone1'), 'phone', record),
-                'lead_phone2': self.validate_field('lead_phone2', properties.get('lead_phone2'), 'phone', record),
-                'lead_phone3': self.validate_field('lead_phone3', properties.get('lead_phone3'), 'phone', record),
-                'lead_prospect_id': self.validate_field('lead_prospect_id', properties.get('lead_prospect_id'), 'integer', record),
-                'lead_rating': self.validate_field('lead_rating', properties.get('lead_rating'), 'integer', record),
-                'lead_salesrabbit_lead_id_new': self.validate_field('lead_salesrabbit_lead_id_new', properties.get('lead_salesrabbit_lead_id_new'), 'integer', record),
-                'lead_source': self.validate_field('lead_source', properties.get('lead_source'), 'integer', record),
-                'lead_source_notes': self.validate_field('lead_source_notes', properties.get('lead_source_notes'), 'string', record),
-                'lead_sourced_on': self.validate_field('lead_sourced_on', properties.get('lead_sourced_on'), 'datetime', record),
-                'lead_state': self.validate_field('lead_state', properties.get('lead_state'), 'string', record),
-                'lead_status': self.validate_field('lead_status', properties.get('lead_status'), 'integer', record),
-                'lead_substatus': self.validate_field('lead_substatus', properties.get('lead_substatus'), 'integer', record),
-                'lead_type1': self.validate_field('lead_type1', properties.get('lead_type1'), 'integer', record),
-                'lead_type2': self.validate_field('lead_type2', properties.get('lead_type2'), 'integer', record),
-                'lead_type4': self.validate_field('lead_type4', properties.get('lead_type4'), 'integer', record),
-                'lead_viewed_on': self.validate_field('lead_viewed_on', properties.get('lead_viewed_on'), 'datetime', record),
-                'lead_with_dm': self.validate_field('lead_with_dm', properties.get('lead_with_dm'), 'integer', record),
-                'lead_year_built': self.validate_field('lead_year_built', properties.get('lead_year_built'), 'string', record),
-                'lead_zip': self.validate_field('lead_zip', properties.get('lead_zip'), 'string', record),
+        # Transform datetime fields
+        datetime_fields = ['createdate', 'lastmodifieddate', 'original_lead_source_created', 
+                          'lead_call_screen_viewed_on', 'lead_copied_from_on', 'lead_dead_on',
+                          'lead_estimate_confirmed_on', 'lead_express_consent_set_on', 'lead_sourced_on', 'lead_viewed_on']
+        for field in datetime_fields:
+            if field in transformed:
+                transformed[field] = self._parse_datetime(transformed[field])
+        
+        # Transform decimal fields
+        decimal_fields = ['lead_added_by_latitude', 'lead_added_by_longitude', 'lead_cost', 'price']
+        for field in decimal_fields:
+            if field in transformed:
+                transformed[field] = self._parse_decimal(transformed[field])
+        
+        # Transform integer fields
+        integer_fields = ['lead_year_built']
+        for field in integer_fields:
+            if field in transformed:
+                transformed[field] = self._parse_integer(transformed[field])
+        
+        # Transform boolean fields
+        boolean_fields = ['lead_invalid_address', 'lead_is_carpentry_followup', 'lead_is_dnc', 'lead_is_dummy',
+                         'lead_is_estimate_confirmed', 'lead_is_estimate_set', 'lead_is_express_consent',
+                         'lead_is_express_consent_being_reviewed', 'lead_is_high_potential', 'lead_is_mobile_lead',
+                         'lead_is_valid_address', 'lead_is_valid_email', 'lead_is_year_built_verified', 'lead_is_zillow',
+                         'lead_with_dm']
+        for field in boolean_fields:
+            if field in transformed:
+                transformed[field] = self._parse_boolean(transformed[field])
+        
+        # Clean and validate specific fields
+        if transformed.get('email'):
+            transformed['email'] = self._clean_email(transformed['email'])
+        
+        if transformed.get('phone'):
+            transformed['phone'] = self._clean_phone(transformed['phone'])
+        
+        return transformed
+    
+    def validate_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate contact record"""
+        record_id = record.get('id', 'UNKNOWN')
+        
+        if not record.get('id'):
+            raise ValidationException("Contact ID is required")
+        
+        # Additional business rule validation can be added here
+        return record
+    
+    def process_chunk_individually_sync(self, chunk: List[Dict]) -> Dict[str, int]:
+        """Process chunk of contacts individually for synchronous operations"""
+        results = {'created': 0, 'updated': 0, 'failed': 0}
+        
+        for record in chunk:
+            try:
+                transformed = self.transform_record(record)
+                validated = self.validate_record(transformed)
                 
-                # Source fields (prioritize HubSpot field names)
-                'primary_source': self.validate_field('primary_source', properties.get('hge_primary_source') or properties.get('primary_source'), 'string', record),
-                'secondary_source': self.validate_field('secondary_source', properties.get('hge_secondary_source') or properties.get('secondary_source'), 'string', record),
-            }
-            
-            return transformed
-            
-        except Exception as e:
-            logger.error(f"Error transforming contact record {record_id}: {e} | Record data: {record}")
-            raise
+                contact, created = Hubspot_Contact.objects.get_or_create(
+                    id=validated['id'],
+                    defaults=validated
+                )
+                
+                if not created:
+                    for field, value in validated.items():
+                        if hasattr(contact, field):
+                            setattr(contact, field, value)
+                    contact.save()
+                
+                if created:
+                    results['created'] += 1
+                else:
+                    results['updated'] += 1
+                    
+            except Exception as e:
+                logger.error(f"Error processing contact {record.get('id', 'UNKNOWN')}: {e}")
+                results['failed'] += 1
+        
+        return results
+    
+    def log_database_error(self, error: Exception, record_data: Dict, operation: str):
+        """Log database error with contact context"""
+        contact_id = record_data.get('id', 'UNKNOWN')
+        logger.error(f"Database error during {operation} for contact {contact_id}: {error}")
+    
+    def get_portal_id(self) -> str:
+        """Get portal ID for this contact processor"""
+        return "default"  # Implementation depends on your portal configuration
     
     def validate_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Validate contact record with enhanced validation"""
@@ -304,3 +286,65 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
                 validated_record['price'] = None
         
         return validated_record
+    
+    def process_chunk_individually_sync(self, chunk: List[Dict]) -> Dict[str, int]:
+        """Process chunk individually with enhanced error handling"""
+        results = {'created': 0, 'updated': 0, 'failed': 0}
+        
+        for record_data in chunk:
+            try:
+                # Process individual record
+                processed_record = self.process(record_data)
+                if processed_record:
+                    # Save individual record
+                    contact, created = Hubspot_Contact.objects.update_or_create(
+                        id=processed_record['id'],
+                        defaults=processed_record
+                    )
+                    
+                    if created:
+                        results['created'] += 1
+                    else:
+                        results['updated'] += 1
+                        
+                    logger.debug(f"{'Created' if created else 'Updated'} contact {processed_record['id']}")
+                
+            except Exception as e:
+                results['failed'] += 1
+                # Enhanced error logging following import_refactoring.md patterns
+                contact_id = record_data.get('id', 'UNKNOWN')
+                hubspot_url = f"https://app.hubspot.com/contacts/{self.get_portal_id()}/contact/{contact_id}" if contact_id != 'UNKNOWN' else "URL unavailable"
+                
+                logger.error(
+                    f"Error processing contact {contact_id}: {e} - "
+                    f"HubSpot URL: {hubspot_url}"
+                )
+                
+                self.log_database_error(e, record_data, "individual_save")
+        
+        return results
+    
+    def log_database_error(self, error: Exception, record_data: Dict, operation: str):
+        """Enhanced database error logging with context"""
+        contact_id = record_data.get('id', 'UNKNOWN')
+        error_context = {
+            'operation': operation,
+            'contact_id': contact_id,
+            'error_type': type(error).__name__,
+            'error_message': str(error)
+        }
+        
+        # Log with HubSpot URL for easy debugging
+        hubspot_url = f"https://app.hubspot.com/contacts/{self.get_portal_id()}/contact/{contact_id}" if contact_id != 'UNKNOWN' else "URL unavailable"
+        
+        logger.error(
+            f"Database error during {operation} for contact {contact_id}: {error} - "
+            f"HubSpot URL: {hubspot_url} - "
+            f"Context: {error_context}"
+        )
+    
+    def get_portal_id(self) -> str:
+        """Get HubSpot portal ID from settings"""
+        from django.conf import settings
+        return getattr(settings, 'HUBSPOT_PORTAL_ID', '[PORTAL_ID]')
+    

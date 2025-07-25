@@ -16,3 +16,11 @@ class HubSpotZipCodeProcessor:
 
     def filter_valid(self, records):
         return [r for r in records if self.validate_record(r)]
+
+"""
+Alias for HubSpot zipcode processor for backward compatibility
+"""
+from .zipcodes import HubSpotZipCodeProcessor
+
+# Re-export for backward compatibility
+__all__ = ['HubSpotZipCodeProcessor']

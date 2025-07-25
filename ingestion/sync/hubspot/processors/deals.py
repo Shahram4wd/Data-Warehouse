@@ -33,38 +33,45 @@ class HubSpotDealProcessor(HubSpotBaseProcessor):
             'properties.pipeline': 'pipeline',
             'properties.division': 'division',
             'properties.priority': 'priority',
+            'properties.hs_lastmodifieddate': 'hs_lastmodifieddate',
         }
     
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform HubSpot deal record to model format"""
-        properties = record.get('properties', {})
-        record_id = record.get('id', 'UNKNOWN')
+        # Use the architectural pattern: apply field mappings first
+        transformed = self.apply_field_mappings(record)
         
-        return {
-            'id': record.get('id'),
-            'dealname': properties.get('dealname'),
-            'amount': self._parse_decimal(properties.get('amount'), record_id, 'amount'),
-            'closedate': self._parse_datetime(properties.get('closedate')),
-            'createdate': self._parse_datetime(properties.get('createdate')),
-            'dealstage': properties.get('dealstage'),
-            'dealtype': properties.get('dealtype'),
-            'description': properties.get('description'),
-            'hs_object_id': properties.get('hs_object_id'),
-            'hubspot_owner_id': properties.get('hubspot_owner_id'),
-            'pipeline': properties.get('pipeline'),
-            'division': properties.get('division'),
-            'priority': properties.get('priority'),
-        }
+        # Transform datetime fields
+        datetime_fields = ['closedate', 'createdate', 'hs_lastmodifieddate']
+        for field in datetime_fields:
+            if field in transformed:
+                transformed[field] = self._parse_datetime(transformed[field])
+        
+        # Transform decimal fields
+        if 'amount' in transformed:
+            transformed['amount'] = self._parse_decimal(transformed['amount'])
+        
+        return transformed
     
     def validate_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate deal record using new validation framework"""
+        """Validate deal record"""
         if not record.get('id'):
             raise ValidationException("Deal ID is required")
         
-        # Validate deal name is present
-        if not record.get('dealname'):
-            raise ValidationException("Deal name is required")
-        
+        return record
+    
+    def _parse_decimal(self, value: Any, record_id: str = None, field_name: str = None) -> Optional[float]:
+        """Parse decimal value safely"""
+        if value is None or value == '':
+            return None
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            logger.warning(f"Failed to parse decimal value: '{value}' in field '{field_name}' for deal {record_id}")
+            return None
+    
+    def validate_record_extended(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Extended validation for deal record"""
         # Validate HubSpot object ID
         if record.get('hs_object_id'):
             try:
@@ -108,13 +115,3 @@ class HubSpotDealProcessor(HubSpotBaseProcessor):
                     record[field] = self._parse_datetime(record[field])
         
         return record
-    
-    def _parse_decimal(self, value: Any, record_id: str = None, field_name: str = None) -> Optional[float]:
-        """Parse decimal value safely"""
-        if value is None or value == '':
-            return None
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            logger.warning(f"Failed to parse decimal value: '{value}' in field '{field_name}' for deal {record_id}")
-            return None

@@ -2,32 +2,50 @@
 Management command to sync HubSpot Genius Users
 Follows import_refactoring.md enterprise architecture standards
 """
-import asyncio
-from django.core.management.base import BaseCommand
+from ingestion.management.commands.base_hubspot_sync import BaseHubSpotSyncCommand
 from ingestion.sync.hubspot.engines.genius_users import HubSpotGeniusUsersSyncEngine
 
-class Command(BaseCommand):
-    help = """Sync HubSpot Genius Users (custom object 2-42119425)
+class Command(BaseHubSpotSyncCommand):
+    """Sync genius users from HubSpot using new architecture with delta sync support
     
+    Examples:
+        # Standard incremental sync (delta sync)
+        python manage.py sync_hubspot_genius_users
+        
+        # Full sync (fetch all records, but respect local timestamps)
+        python manage.py sync_hubspot_genius_users --full
+        
+        # Force overwrite ALL records (fetch all + ignore local timestamps)
+        python manage.py sync_hubspot_genius_users --full --force-overwrite
+        
+        # Force overwrite recent records only
+        python manage.py sync_hubspot_genius_users --since=2025-01-01 --force-overwrite
+        
+        # Limit the number of records for testing
+        python manage.py sync_hubspot_genius_users --max-records=50
+    """
+
+    help = """Sync HubSpot Genius Users (custom object 2-42119425) using the new unified architecture.
+    
+By default, performs incremental sync (delta sync) to fetch only records modified since the last sync.
 Use --force-overwrite to completely overwrite existing records, ignoring timestamps."""
 
-    def add_arguments(self, parser):
-        parser.add_argument('--batch-size', type=int, default=100, help='Batch size for API fetches')
-        parser.add_argument('--dry-run', action='store_true', help='Run without writing to DB')
-        parser.add_argument('--api-token', type=str, default=None, help='Override HubSpot API token')
-        parser.add_argument('--max-records', type=int, default=0, help='Maximum number of records to sync (0 = all)')
-        parser.add_argument('--full', action='store_true', help='Force full sync (ignore last sync state)')
-        parser.add_argument('--force-overwrite', action='store_true', help='Force overwrite existing records, ignoring timestamps')
-        parser.add_argument('--debug', action='store_true', help='Show debug output (for compatibility with other sync commands)')
-
-    def handle(self, *args, **options):
-        engine = HubSpotGeniusUsersSyncEngine(
+    def get_sync_engine(self, **options):
+        """Get the genius users sync engine"""
+        return HubSpotGeniusUsersSyncEngine(
             api_token=options.get('api_token'),
-            batch_size=options['batch_size'],
-            dry_run=options['dry_run'],
-            stdout=self.stdout,
+            batch_size=options.get('batch_size', 100),
+            dry_run=options.get('dry_run', False),
+            force_overwrite=options.get('force_overwrite', False),
             max_records=options.get('max_records', 0),
-            full=options.get('full', False),
-            force_overwrite=options.get('force_overwrite', False)
+            full=options.get('full', False)
         )
-        asyncio.run(engine.run_sync())
+    
+    def get_sync_name(self) -> str:
+        """Get the sync operation name"""
+        return "genius_users"
+
+    def add_arguments(self, parser):
+        """Add genius users specific arguments"""
+        super().add_arguments(parser)
+        parser.add_argument('--api-token', type=str, default=None, help='Override HubSpot API token')
