@@ -32,7 +32,6 @@ class SalesProLeadResultSyncEngine(BaseSalesProSyncEngine):
         """Transform Athena record to LeadResult model format with JSON normalization"""
         try:
             # Debug: log the raw record structure first
-            logger.info(f"Raw record from Athena: {record}")
             logger.info(f"Record keys: {list(record.keys()) if record else 'None'}")
             
             # Convert tuple/list records to dict format for processor
@@ -63,8 +62,9 @@ class SalesProLeadResultSyncEngine(BaseSalesProSyncEngine):
             if transformed.get('updated_at'):
                 transformed['updated_at'] = self._parse_datetime(transformed['updated_at'])
             
+            # Log transformation results
             estimate_id = transformed.get('estimate_id')
-            logger.info(f"Transformed lead result: estimate_id={estimate_id}, normalized fields count={len([k for k in transformed.keys() if k not in ['estimate_id', 'company_id', 'lead_results_raw', 'created_at', 'updated_at']])}")
+            updated_at = transformed.get('updated_at')
             return transformed
             
         except Exception as e:

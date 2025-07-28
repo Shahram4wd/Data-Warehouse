@@ -171,11 +171,8 @@ class SalesPro_Estimate(models.Model):
 
 
 class SalesPro_LeadResult(models.Model):
-    # Add primary key for framework compliance
-    id = models.AutoField(primary_key=True)
-    
-    # Existing fields
-    estimate_id = models.CharField(max_length=255, blank=True, null=True)
+    # Use estimate_id as primary key to keep only latest version
+    estimate_id = models.CharField(max_length=255, primary_key=True)
     company_id = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
@@ -194,12 +191,11 @@ class SalesPro_LeadResult(models.Model):
     lead_results_raw = models.TextField(blank=True, null=True, help_text="Original JSON data for reference")
 
     class Meta:
-        db_table = 'ingestion_salespro_lead_result'
+        db_table = 'ingestion_salespro_leadresult'
         verbose_name = 'Lead Result'
         verbose_name_plural = 'Lead Results'
-        # Add unique constraint to prevent duplicates
-        unique_together = [['estimate_id', 'created_at']]
-        ordering = ['-created_at']
+        # No unique_together needed since estimate_id is primary key
+        ordering = ['-updated_at']
 
     def __str__(self):
         return f"{self.estimate_id} - {self.appointment_result}"

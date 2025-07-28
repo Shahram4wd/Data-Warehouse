@@ -277,6 +277,10 @@ class SalesProBaseProcessor(BaseDataProcessor):
             # Activity records need user_id and activity_identifier or created_at
             if not record.get('user_id') and not record.get('activity_identifier'):
                 raise ValidationException("Activity record missing required 'user_id' or 'activity_identifier' field")
+        elif self.model_class.__name__ == 'SalesPro_LeadResult':
+            # LeadResult records use estimate_id as primary key
+            if not record.get('estimate_id'):
+                raise ValidationException("LeadResult record missing required 'estimate_id' field")
         else:
             # Customer/entity records need customer_id or id
             if not record.get('customer_id') and not record.get('id'):
@@ -302,6 +306,10 @@ class SalesProBaseProcessor(BaseDataProcessor):
         
         # Skip detailed completeness checks for activity records (they're logs, not customer data)
         if self.is_activity_record(record):
+            return warnings
+            
+        # Skip detailed completeness checks for LeadResult records (they have different validation requirements)
+        if self.model_class.__name__ == 'SalesPro_LeadResult':
             return warnings
         
         # Check for minimum required information for customer/entity records

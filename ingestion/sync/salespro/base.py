@@ -141,15 +141,103 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 })
             raise SyncException(f"Athena client initialization failed: {e}")
             
-    async def fetch_data(self, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
-        """Fetch data from AWS Athena using boto3 client with enterprise features"""
+    async def get_total_record_count(self, **kwargs) -> int:
+        """Get total record count from the source table for progress tracking"""
         if not self.connection:
             raise SyncException("Athena client not initialized")
             
         try:
-            # Build query
+            # Build count query based on the same conditions as main query
+            count_query = self._build_count_query(**kwargs)
+            logger.info(f"Getting total record count: {count_query}")
+            
+            # Execute count query
+            column_names, rows = await sync_to_async(
+                self.connection.get_query_with_columns
+            )(count_query, database='home_genius_db')
+            
+            if rows and len(rows) > 0:
+                total_count = int(rows[0][0])
+                logger.info(f"Total records available in {self.table_name}: {total_count:,}")
+                return total_count
+            else:
+                logger.warning(f"Could not get count for {self.table_name}")
+                return 0
+                
+        except Exception as e:
+            logger.warning(f"Failed to get total count for {self.table_name}: {e}")
+            return 0
+    
+    def _build_count_query(self, **kwargs) -> str:
+        """Build COUNT query with same conditions as main query"""
+        base_table = self.table_name
+        
+        if self.table_name == 'lead_results':
+            # Count query for lead_results with same conditions
+            query = f"""
+            SELECT COUNT(*) as total_count
+            FROM {base_table}
+            WHERE estimate_id IS NOT NULL AND estimate_id != ''
+            """
+        else:
+            # For other tables, build count query with same conditions
+            conditions = []
+            
+            # Filter out records with null customer_id
+            if self.table_name == 'customer':
+                conditions.append("customer_id IS NOT NULL AND customer_id != ''")
+            
+            # Add WHERE clause for incremental sync
+            since_date = kwargs.get('since_date')
+            if since_date:
+                if self.table_name == 'user_activity':
+                    since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+                    conditions.append(f"created_at > timestamp '{since_date_str}'")
+                else:
+                    since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+                    conditions.append(f"created_at > timestamp '{since_date_str}'")
+            
+            query = f"SELECT COUNT(*) as total_count FROM {base_table}"
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
+        
+        return query
+
+    async def fetch_data(self, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
+        """Fetch data from AWS Athena using boto3 client with enterprise features and proper progress tracking"""
+        if not self.connection:
+            raise SyncException("Athena client not initialized")
+            
+        try:
+            batch_size = kwargs.get('limit', self.batch_size)
+            max_records = kwargs.get('max_records', 0)
+            records_fetched = 0
+            
+            # Get total record count for progress tracking
+            total_available = await self.get_total_record_count(**kwargs)
+            
+            # Determine actual records to process (limited by max_records if specified)
+            if max_records > 0:
+                total_to_process = min(total_available, max_records)
+            else:
+                # For full sync, determine reasonable limit based on query
+                query_preview = self._build_query(**kwargs)
+                if " LIMIT " in query_preview:
+                    # Extract limit from query
+                    limit_str = query_preview.split(" LIMIT ")[-1].strip()
+                    try:
+                        query_limit = int(limit_str)
+                        total_to_process = min(total_available, query_limit)
+                    except ValueError:
+                        total_to_process = total_available
+                else:
+                    total_to_process = total_available
+            
+            logger.info(f"Will process {total_to_process:,} records out of {total_available:,} total available")
+            
+            # Build and execute the main query
             query = self._build_query(**kwargs)
-            logger.info(f"Executing Athena query: {query}")
+            logger.info(f"Executing Athena query:\n{query}")
             
             # Execute query using the new boto3-based client
             column_names, rows = await sync_to_async(
@@ -160,12 +248,9 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 logger.info(f"No data found in {self.table_name}")
                 return
                 
-            # Convert rows to list of dictionaries
-            batch_size = kwargs.get('limit', self.batch_size)
-            max_records = kwargs.get('max_records', 0)
-            records_fetched = 0
+            logger.info(f"Retrieved {len(rows)} rows from query (estimated {total_to_process:,} to process)")
             
-            # Process in batches
+            # Process in batches with proper progress tracking
             for i in range(0, len(rows), batch_size):
                 if max_records > 0 and records_fetched >= max_records:
                     break
@@ -182,10 +267,16 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 batch = [dict(zip(column_names, row)) for row in batch_rows]
                 
                 records_fetched += len(batch)
-                logger.info(f"Fetched {len(batch)} records from {self.table_name}")
+                
+                # Enhanced progress logging with percentage
+                progress_pct = (records_fetched / total_to_process * 100) if total_to_process > 0 else 0
+                logger.info(f"Processing batch {(i // batch_size) + 1}: {len(batch)} records "
+                          f"(total processed: {records_fetched:,}/{total_to_process:,} - {progress_pct:.1f}%)")
+                
                 yield batch
                 
-            logger.info(f"Total records fetched from {self.table_name}: {records_fetched}")
+            logger.info(f"Completed fetching {records_fetched:,} records from {self.table_name} "
+                       f"({records_fetched}/{total_available:,} total available)")
             
             # Report metrics to enterprise monitoring
             if self.automation_engine:
@@ -193,7 +284,9 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                     'operation': 'fetch_data',
                     'table': self.table_name,
                     'records_fetched': records_fetched,
-                    'batches_processed': i // batch_size + 1
+                    'total_available': total_available,
+                    'total_to_process': total_to_process,
+                    'batches_processed': (records_fetched // batch_size) + 1
                 })
             
         except Exception as e:
@@ -208,9 +301,32 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
             raise SyncException(f"Failed to fetch data: {e}")
             
     def _build_query(self, **kwargs) -> str:
-        """Build SQL query for Athena"""
-        query = f"SELECT * FROM {self.table_name}"
+        """Build SQL query for Athena with proper batching for large datasets"""
+        base_table = self.table_name
         
+        # For lead_results, use simple query - Athena doesn't support OFFSET so we get all and handle batching in Python
+        if self.table_name == 'lead_results':
+            # Simple query - just get all records with estimate_id, let Python handle batching and upsert logic handle duplicates
+            query = f"""
+            SELECT estimate_id, company_id, lead_results, created_at, updated_at
+            FROM {base_table}
+            WHERE estimate_id IS NOT NULL AND estimate_id != ''
+            ORDER BY created_at
+            """
+            
+            # Add LIMIT based on max_records or use a reasonable batch size for full sync
+            max_records = kwargs.get('max_records', 0)
+            if max_records > 0:
+                query += f" LIMIT {max_records}"
+            else:
+                # For full sync, use a reasonable batch size to avoid memory issues
+                # Default to 10K records per query (can be overridden by batch_size param)
+                batch_limit = kwargs.get('batch_size', 10000)
+                query += f" LIMIT {batch_limit}"
+        else:
+            query = f"SELECT * FROM {base_table}"
+        
+        # Add additional WHERE conditions for other tables
         conditions = []
         
         # Filter out records with null customer_id to get real data
@@ -219,7 +335,7 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         
         # Add WHERE clause for incremental sync
         since_date = kwargs.get('since_date')
-        if since_date:
+        if since_date and self.table_name != 'lead_results':  # Don't add this for lead_results as we use CTE
             # Use created_at for user_activity table (it doesn't have updated_at)
             if self.table_name == 'user_activity':
                 since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
@@ -231,26 +347,36 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
                 conditions.append(f"created_at > timestamp '{since_date_str}'")
         
-        # Add WHERE conditions if any
-        if conditions:
+        # Add WHERE conditions if any (but not for lead_results with simplified query)
+        if conditions and self.table_name != 'lead_results':
             query += " WHERE " + " AND ".join(conditions)
                 
-        # Add ORDER BY for consistent pagination (especially for large tables)
-        if self.table_name == 'user_activity':
-            query += " ORDER BY created_at"
-        else:
-            # Default ordering for other tables
-            query += " ORDER BY created_at"
+        # Add ORDER BY for consistent pagination (for non-lead_results queries)
+        if self.table_name != 'lead_results':
+            if self.table_name == 'user_activity':
+                query += " ORDER BY created_at"
+            else:
+                # Default ordering for other tables
+                query += " ORDER BY created_at"
                 
-        # Add LIMIT - always limit large tables to prevent timeouts
-        max_records = kwargs.get('max_records', 0)
-        if max_records > 0:
-            query += f" LIMIT {max_records}"
-        elif self.table_name in ['user_activity', 'measure_sheet'] and not since_date:
-            # For full sync of large tables, use a reasonable default limit
-            default_limit = 10000 if self.table_name == 'measure_sheet' else 50000
-            query += f" LIMIT {default_limit}"
-            logger.warning(f"Large table '{self.table_name}' detected. Limiting to {default_limit} records per sync. Use --max-records or incremental sync for better control.")
+            # Add LIMIT - always limit large tables to prevent timeouts
+            max_records = kwargs.get('max_records', 0)
+            if max_records > 0:
+                query += f" LIMIT {max_records}"
+            elif self.table_name in ['user_activity', 'measure_sheet'] and not since_date:
+                # For full sync of large tables, use a reasonable default limit
+                default_limit = 10000 if self.table_name == 'measure_sheet' else 50000
+                query += f" LIMIT {default_limit}"
+                logger.warning(f"Large table '{self.table_name}' detected. Limiting to {default_limit} records per sync. Use --max-records or incremental sync for better control.")
+        else:
+            # For lead_results, LIMIT and ORDER BY are already included in the simplified query
+            # Only add max_records limit if specified and not using batching
+            max_records = kwargs.get('max_records', 0)
+            if max_records > 0 and 'offset' not in kwargs:
+                # Replace the existing LIMIT with max_records
+                if " LIMIT " in query:
+                    query = query.rsplit(" LIMIT ", 1)[0]  # Remove existing LIMIT
+                    query += f" LIMIT {max_records}"
             
         return query
         
@@ -323,20 +449,30 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 
                 return cleaned_record
             except Exception as e:
-                logger.warning(f"Framework validation failed, using basic validation: {e}")
+                # Provide more detailed debugging information
+                model_name = self.model_class.__name__ if self.model_class else 'Unknown'
+                record_keys = list(record.keys()) if record else []
+                logger.warning(f"Framework validation failed for {model_name} record with keys {record_keys}: {e}")
         
         # Fallback to basic validation
         # For activity records, we don't need customer_id - they're log entries
+        # For LeadResult records, we use estimate_id as primary key
         # For customer records, we need either customer_id or id
         if self._is_activity_record(record):
             # Activity records are valid if they have activity-specific fields
             if not record.get('user_id') and not record.get('activity_identifier'):
                 logger.debug(f"Activity record missing user_id and activity_identifier: {record}")
                 return None
+        elif self.model_class.__name__ == 'SalesPro_LeadResult':
+            # LeadResult records need estimate_id as primary key
+            if not record.get('estimate_id'):
+                logger.warning(f"LeadResult record missing estimate_id (keys: {list(record.keys())}): {record}")
+                return None
         else:
             # Customer/entity records need customer_id or id
             if not record.get('customer_id') and not record.get('id'):
-                logger.debug(f"Customer record missing customer_id and id: {record}")
+                model_name = self.model_class.__name__ if self.model_class else 'Unknown'
+                logger.warning(f"{model_name} record missing required 'customer_id' or 'id' field (keys: {list(record.keys())})")
                 return None
             
         # Remove None values but preserve empty strings
@@ -388,22 +524,177 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
             return await self._save_individual_records(validated_data)
             
     async def _bulk_save_records(self, records: List[Dict]) -> Dict[str, int]:
-        """Bulk save records using Django's bulk operations"""
-        from django.db import transaction
+        """Bulk save records using PostgreSQL UPSERT with ON CONFLICT"""
+        from django.db import connection
+        import json
         
         results = {'created': 0, 'updated': 0, 'failed': 0}
         
-        # Get existing record IDs (assuming 'id' field exists)
+        if not records:
+            return results
+            
+        try:
+            # For LeadResult model, use PostgreSQL UPSERT with timestamp condition
+            if self.model_class.__name__ == 'SalesPro_LeadResult':
+                await self._bulk_upsert_leadresults(records, results)
+            else:
+                # For other models, use traditional bulk operations
+                await self._bulk_save_other_models(records, results)
+                
+        except Exception as e:
+            logger.error(f"Bulk save failed, falling back to individual saves: {e}")
+            return await self._save_individual_records(records)
+        
+        return results
+    
+    async def _bulk_upsert_leadresults(self, records: List[Dict], results: Dict[str, int]) -> None:
+        """Efficient PostgreSQL UPSERT for LeadResult records"""
+        from django.db import connection
+        import json
+        
+        # Get the table name from the model
+        table_name = self.model_class._meta.db_table
+        
+        # Prepare the SQL for UPSERT with timestamp condition
+        placeholders = ', '.join(['%s'] * len(records))
+        
+        # Build field lists (excluding auto-generated fields)
+        fields = ['estimate_id', 'company_id', 'lead_results_raw', 'created_at', 'updated_at']
+        
+        # Add normalized fields that might be present
+        optional_fields = ['appointment_result', 'both_homeowners_present', 'one_year_price', 
+                          'last_price_offered', 'preferred_payment', 'notes', 
+                          'result_reason_demo_not_sold', 'result_reason_no_demo']
+        
+        # Check which optional fields are present in the records
+        present_fields = []
+        for field in optional_fields:
+            if any(field in record for record in records):
+                present_fields.append(field)
+        
+        all_fields = fields + present_fields
+        field_list = ', '.join(all_fields)
+        
+        # Build the conflict update clause (excluding primary key)
+        update_fields = [f for f in all_fields if f != 'estimate_id']
+        conflict_updates = ', '.join([f"{field} = EXCLUDED.{field}" for field in update_fields])
+        
+        # Build UPSERT SQL with timestamp condition
+        upsert_sql = f"""
+        INSERT INTO {table_name} ({field_list})
+        VALUES %s
+        ON CONFLICT (estimate_id) 
+        DO UPDATE SET {conflict_updates}
+        WHERE EXCLUDED.updated_at >= {table_name}.updated_at
+        """
+        
+        # Remove duplicates within the batch to prevent PostgreSQL conflict error
+        # Keep only the most recent record (highest updated_at) for each estimate_id
+        unique_records = {}
+        duplicate_count = 0
+        
+        for record in records:
+            estimate_id = record.get('estimate_id')
+            if not estimate_id:
+                continue
+                
+            # If we haven't seen this estimate_id or this record is more recent
+            if (estimate_id not in unique_records or 
+                (record.get('updated_at') and unique_records[estimate_id].get('updated_at') and
+                 record['updated_at'] > unique_records[estimate_id]['updated_at'])):
+                
+                if estimate_id in unique_records:
+                    duplicate_count += 1
+                    logger.debug(f"Replacing duplicate estimate_id {estimate_id} with more recent record")
+                
+                unique_records[estimate_id] = record
+            else:
+                duplicate_count += 1
+                logger.debug(f"Skipping older duplicate for estimate_id {estimate_id}")
+        
+        if duplicate_count > 0:
+            logger.info(f"Removed {duplicate_count} duplicate records from batch (kept most recent by updated_at)")
+        
+        # Prepare data tuples from deduplicated records
+        deduplicated_records = list(unique_records.values())
+        data_tuples = []
+        
+        for record in deduplicated_records:
+            # Build tuple in the same order as all_fields
+            tuple_data = []
+            for field in all_fields:
+                value = record.get(field)
+                
+                # Special handling for JSON fields
+                if field == 'lead_results_raw' and isinstance(value, (dict, list)):
+                    value = json.dumps(value)
+                
+                tuple_data.append(value)
+            
+            data_tuples.append(tuple(tuple_data))
+        
+        # Execute the UPSERT using raw SQL
+        @sync_to_async
+        def execute_upsert():
+            with connection.cursor() as cursor:
+                # Use execute_values for efficient batch insert
+                from psycopg2.extras import execute_values
+                
+                # Count existing records before upsert (using deduplicated records)
+                estimate_ids = [r.get('estimate_id') for r in deduplicated_records if r.get('estimate_id')]
+                if estimate_ids:
+                    cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE estimate_id = ANY(%s)", 
+                                  (estimate_ids,))
+                    existing_count = cursor.fetchone()[0]
+                else:
+                    existing_count = 0
+                
+                # Execute the UPSERT
+                if data_tuples:
+                    execute_values(
+                        cursor, 
+                        upsert_sql, 
+                        data_tuples,
+                        template=None,
+                        page_size=self.batch_size
+                    )
+                
+                    # Count total records after upsert
+                    cursor.execute(f"SELECT COUNT(*) FROM {table_name} WHERE estimate_id = ANY(%s)", 
+                                  (estimate_ids,))
+                    final_count = cursor.fetchone()[0]
+                    
+                    # Calculate created vs updated
+                    created = final_count - existing_count
+                    updated = len(deduplicated_records) - created
+                    
+                    return max(0, created), max(0, updated)
+                else:
+                    return 0, 0
+        
+        try:
+            created, updated = await execute_upsert()
+            results['created'] = max(0, created)  # Ensure non-negative
+            results['updated'] = max(0, updated)  # Ensure non-negative
+            
+            logger.info(f"PostgreSQL UPSERT completed: {results['created']} created, {results['updated']} updated")
+            
+        except Exception as e:
+            logger.error(f"PostgreSQL UPSERT failed: {e}")
+            # Fall back to individual saves
+            raise e
+    
+    async def _bulk_save_other_models(self, records: List[Dict], results: Dict[str, int]) -> None:
+        """Traditional bulk operations for non-LeadResult models"""
+        # Get existing records
         record_ids = [r.get('id') for r in records if r.get('id')]
         existing_records = {}
         
         if record_ids:
-            existing_records = {
-                obj.id: obj for obj in 
-                await sync_to_async(list)(
-                    self.model_class.objects.filter(id__in=record_ids)
-                )
-            }
+            existing_objs = await sync_to_async(list)(
+                self.model_class.objects.filter(id__in=record_ids)
+            )
+            existing_records = {obj.id: obj for obj in existing_objs}
         
         to_create = []
         to_update = []
@@ -421,25 +712,21 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 # Create new
                 to_create.append(self.model_class(**record))
         
-        # Bulk operations with proper async handling
-        try:
-            if to_create:
-                created_objects = await sync_to_async(
-                    self.model_class.objects.bulk_create
-                )(to_create, batch_size=self.batch_size, ignore_conflicts=True)
-                results['created'] = len(created_objects)
-            
-            if to_update:
-                update_fields = list(records[0].keys()) if records else []
-                await sync_to_async(
-                    self.model_class.objects.bulk_update
-                )(to_update, fields=update_fields, batch_size=self.batch_size)
-                results['updated'] = len(to_update)
-        except Exception as e:
-            logger.error(f"Bulk save failed, falling back to individual saves: {e}")
-            return await self._save_individual_records(records)
+        # Execute bulk operations
+        if to_create:
+            created_objects = await sync_to_async(
+                self.model_class.objects.bulk_create
+            )(to_create, batch_size=self.batch_size, ignore_conflicts=True)
+            results['created'] = len(created_objects)
         
-        return results
+        if to_update:
+            update_fields = list(records[0].keys()) if records else []
+            excluded_fields = {'id'}
+            update_fields = [f for f in update_fields if f not in excluded_fields]
+            await sync_to_async(
+                self.model_class.objects.bulk_update
+            )(to_update, fields=update_fields, batch_size=self.batch_size)
+            results['updated'] = len(to_update)
         
     async def _save_individual_records(self, records: List[Dict]) -> Dict[str, int]:
         """Fallback to individual record saves"""
@@ -447,25 +734,57 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         
         for record in records:
             try:
-                record_id = record.get('id')
-                if record_id:
-                    obj, created = await sync_to_async(
-                        self.model_class.objects.get_or_create
-                    )(id=record_id, defaults=record)
+                # Handle different models with different unique constraints
+                if self.model_class.__name__ == 'SalesPro_LeadResult':
+                    # For LeadResult, use estimate_id as primary key
+                    estimate_id = record.get('estimate_id')
                     
-                    if not created:
-                        # Update existing record
-                        for field, value in record.items():
-                            if hasattr(obj, field):
-                                setattr(obj, field, value)
-                        await sync_to_async(obj.save)()
-                        results['updated'] += 1
+                    if estimate_id:
+                        try:
+                            # Try to get existing record
+                            existing_obj = await sync_to_async(
+                                self.model_class.objects.get
+                            )(estimate_id=estimate_id)
+                            
+                            # Check if new record should be applied (updated_at >= existing.updated_at)
+                            new_updated_at = record.get('updated_at')
+                            if new_updated_at and new_updated_at >= existing_obj.updated_at:
+                                # Update with newer/equal data
+                                for field, value in record.items():
+                                    if hasattr(existing_obj, field):
+                                        setattr(existing_obj, field, value)
+                                await sync_to_async(existing_obj.save)()
+                                results['updated'] += 1
+                            # If existing is more recent, skip (no action needed)
+                        except self.model_class.DoesNotExist:
+                            # Create new record
+                            await sync_to_async(self.model_class.objects.create)(**record)
+                            results['created'] += 1
                     else:
-                        results['created'] += 1
+                        # Missing required estimate_id, skip record
+                        logger.warning(f"LeadResult record missing estimate_id: {record}")
+                        results['failed'] += 1
                 else:
-                    # Create without ID
-                    await sync_to_async(self.model_class.objects.create)(**record)
-                    results['created'] += 1
+                    # Default behavior for other models
+                    record_id = record.get('id')
+                    if record_id:
+                        obj, created = await sync_to_async(
+                            self.model_class.objects.get_or_create
+                        )(id=record_id, defaults=record)
+                        
+                        if not created:
+                            # Update existing record
+                            for field, value in record.items():
+                                if hasattr(obj, field):
+                                    setattr(obj, field, value)
+                            await sync_to_async(obj.save)()
+                            results['updated'] += 1
+                        else:
+                            results['created'] += 1
+                    else:
+                        # Create without ID
+                        await sync_to_async(self.model_class.objects.create)(**record)
+                        results['created'] += 1
                     
             except Exception as e:
                 logger.error(f"Error saving record: {e}")
