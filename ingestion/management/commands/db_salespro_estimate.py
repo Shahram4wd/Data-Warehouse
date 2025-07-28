@@ -14,7 +14,7 @@ from ingestion.models.salespro import SalesPro_Estimate
 logger = logging.getLogger(__name__)
 
 class SalesProEstimateSyncEngine(BaseSalesProSyncEngine):
-    """Sync engine for SalesPro Estimates from AWS Athena"""
+    """Sync engine for SalesPro Estimates from AWS Athena with enterprise features"""
     
     def __init__(self, **kwargs):
         super().__init__(
@@ -22,6 +22,20 @@ class SalesProEstimateSyncEngine(BaseSalesProSyncEngine):
             model_class=SalesPro_Estimate,
             **kwargs
         )
+    
+    async def run_sync(self, **kwargs) -> Dict[str, Any]:
+        """Run sync with enterprise strategy determination"""
+        # Determine sync strategy using enterprise patterns
+        strategy = await self.determine_sync_strategy(
+            force_full=kwargs.get('full_sync', False)
+        )
+        
+        # Add strategy information to kwargs
+        if strategy['type'] == 'incremental' and strategy['last_sync']:
+            kwargs['since_date'] = strategy['last_sync']
+        
+        # Run the base sync with strategy
+        return await super().run_sync(**kwargs)
         
     async def _transform_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Transform Athena record to Estimate model format"""

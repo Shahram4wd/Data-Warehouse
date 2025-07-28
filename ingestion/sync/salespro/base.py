@@ -24,22 +24,125 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         self.table_name = table_name
         self.model_class = model_class
         self.connection = None
+        self.connection_pool = None
+        self.credential_manager = None
+        self.automation_engine = None
+        self.alert_system = None
         
     def get_default_batch_size(self) -> int:
         """Return default batch size for SalesPro sync operations"""
         return 500  # AWS Athena can handle larger batches efficiently
+    
+    async def initialize_enterprise_features(self):
+        """Initialize enterprise features following framework standards"""
+        # Ensure connection pools are initialized
+        try:
+            from ingestion.base.sync_engine import ensure_connection_pools_initialized
+            await ensure_connection_pools_initialized()
+        except Exception as e:
+            logger.warning(f"Failed to initialize connection pools: {e}")
+        
+        # Get connection pool from manager (for database operations)
+        try:
+            from ingestion.base.connection_pool import connection_manager
+            self.connection_pool = connection_manager.get_pool('main_database')
+        except Exception as e:
+            logger.warning(f"Failed to get connection pool: {e}")
+            self.connection_pool = None
+        
+        # Initialize enterprise features with fallback to mock implementations
+        try:
+            from ingestion.base.enterprise_compat import (
+                get_credential_manager, 
+                get_automation_engine, 
+                get_alert_system
+            )
+            
+            self.credential_manager = get_credential_manager()
+            self.automation_engine = get_automation_engine('salespro')
+            self.alert_system = get_alert_system()
+            
+            # Initialize if they support it
+            if hasattr(self.credential_manager, 'initialize'):
+                await self.credential_manager.initialize()
+            if hasattr(self.automation_engine, 'initialize'):
+                await self.automation_engine.initialize()
+            if hasattr(self.alert_system, 'initialize'):
+                await self.alert_system.initialize()
+                
+        except Exception as e:
+            logger.warning(f"Failed to initialize enterprise features: {e}")
+            self.credential_manager = None
+            self.automation_engine = None
+            self.alert_system = None
+    
+    async def get_last_sync_timestamp(self) -> Optional[datetime]:
+        """Get last successful sync timestamp - FRAMEWORK STANDARD"""
+        try:
+            # Create an async-safe wrapper for the entire database operation
+            @sync_to_async
+            def get_last_sync():
+                last_sync = SyncHistory.objects.filter(
+                    crm_source='salespro',
+                    sync_type=f'{self.sync_type}_sync',
+                    status='success',
+                    end_time__isnull=False
+                ).order_by('-end_time').first()
+                
+                return last_sync.end_time if last_sync else None
+            
+            return await get_last_sync()
+        except Exception as e:
+            logger.error(f"Error getting last sync timestamp: {e}")
+            return None
+    
+    async def determine_sync_strategy(self, force_full: bool = False) -> Dict[str, Any]:
+        """Determine sync strategy based on framework patterns"""
+        last_sync = await self.get_last_sync_timestamp()
+        
+        strategy = {
+            'type': 'full' if not last_sync or force_full else 'incremental',
+            'last_sync': last_sync,
+            'batch_size': self.batch_size,
+            'force_full': force_full
+        }
+        
+        logger.info(f"SalesPro {self.sync_type} sync strategy: {strategy['type']}")
+        if strategy['type'] == 'incremental':
+            logger.info(f"Last sync was at: {last_sync}")
+        
+        return strategy
         
     async def initialize_client(self) -> None:
-        """Initialize AWS Athena client using boto3"""
+        """Initialize AWS Athena client with enterprise features"""
+        # Initialize enterprise features first
+        await self.initialize_enterprise_features()
+        
         try:
+            # Get secure credentials if available
+            credentials = {}
+            if self.credential_manager:
+                try:
+                    credentials = await self.credential_manager.get_credentials('salespro')
+                except Exception:
+                    # Fallback if credential manager is not available
+                    pass
+            
             self.connection = await sync_to_async(get_athena_client)()
             logger.info(f"AWS Athena client initialized for table: {self.table_name}")
         except Exception as e:
             logger.error(f"Failed to initialize Athena client: {e}")
+            # Use enterprise error handling
+            if self.automation_engine:
+                await self.automation_engine.handle_error(e, {
+                    'operation': 'initialize_client',
+                    'table': self.table_name,
+                    'sync_type': self.sync_type
+                })
             raise SyncException(f"Athena client initialization failed: {e}")
             
     async def fetch_data(self, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
-        """Fetch data from AWS Athena using boto3 client"""
+        """Fetch data from AWS Athena using boto3 client with enterprise features"""
         if not self.connection:
             raise SyncException("Athena client not initialized")
             
@@ -84,8 +187,24 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 
             logger.info(f"Total records fetched from {self.table_name}: {records_fetched}")
             
+            # Report metrics to enterprise monitoring
+            if self.automation_engine:
+                await self.automation_engine.report_metrics({
+                    'operation': 'fetch_data',
+                    'table': self.table_name,
+                    'records_fetched': records_fetched,
+                    'batches_processed': i // batch_size + 1
+                })
+            
         except Exception as e:
             logger.error(f"Error fetching data from {self.table_name}: {e}")
+            # Use enterprise error handling
+            if self.automation_engine:
+                await self.automation_engine.handle_error(e, {
+                    'operation': 'fetch_data',
+                    'table': self.table_name,
+                    'query': query if 'query' in locals() else 'unknown'
+                })
             raise SyncException(f"Failed to fetch data: {e}")
             
     def _build_query(self, **kwargs) -> str:
@@ -156,43 +275,116 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         pass
         
     async def validate_data(self, data: List[Dict]) -> List[Dict]:
-        """Validate transformed data"""
+        """Validate transformed data using CRM sync framework patterns"""
         validated_data = []
         
         for record in data:
             try:
-                validated = await self._validate_record(record)
+                # Initialize processor for validation if not already done
+                if not hasattr(self, '_processor'):
+                    from ingestion.sync.salespro.processors.base import SalesProBaseProcessor
+                    self._processor = SalesProBaseProcessor(self.model_class, crm_source='salespro')
+                
+                # Use framework validation
+                validated = await self._validate_record_framework(record)
                 if validated:
                     validated_data.append(validated)
             except ValidationException as e:
-                logger.warning(f"Validation warning: {e}")
-                # Continue processing other records
+                record_id = record.get('customer_id', record.get('id', 'unknown'))
+                logger.warning(f"Validation warning for record {record_id}: {e}")
+                # Continue processing other records in non-strict mode
+                validated_data.append(record)  # Include with warning
             except Exception as e:
-                logger.error(f"Validation error: {e}")
+                record_id = record.get('customer_id', record.get('id', 'unknown'))
+                logger.error(f"Validation error for record {record_id}: {e}")
                 # Continue processing other records
                 
         return validated_data
         
-    async def _validate_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Validate a single record"""
-        # Basic validation - can be overridden by subclasses
+    async def _validate_record_framework(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Validate a single record using framework patterns"""
         if not record:
             return None
+        
+        # Use the processor's validation if available
+        if hasattr(self, '_processor'):
+            try:
+                # Apply business rule validation
+                validated = self._processor.validate_record(record)
+                
+                # Remove None values but preserve empty strings (following CRM sync guide)
+                cleaned_record = {}
+                for k, v in validated.items():
+                    if v is not None:
+                        cleaned_record[k] = v
+                    elif k in ['created_at', 'updated_at']:
+                        # Keep datetime fields as None if not parseable
+                        cleaned_record[k] = None
+                
+                return cleaned_record
+            except Exception as e:
+                logger.warning(f"Framework validation failed, using basic validation: {e}")
+        
+        # Fallback to basic validation
+        # For activity records, we don't need customer_id - they're log entries
+        # For customer records, we need either customer_id or id
+        if self._is_activity_record(record):
+            # Activity records are valid if they have activity-specific fields
+            if not record.get('user_id') and not record.get('activity_identifier'):
+                logger.debug(f"Activity record missing user_id and activity_identifier: {record}")
+                return None
+        else:
+            # Customer/entity records need customer_id or id
+            if not record.get('customer_id') and not record.get('id'):
+                logger.debug(f"Customer record missing customer_id and id: {record}")
+                return None
             
-        # Remove None values
+        # Remove None values but preserve empty strings
         cleaned_record = {k: v for k, v in record.items() if v is not None}
         
         return cleaned_record
         
+    def _is_activity_record(self, record: Dict[str, Any]) -> bool:
+        """Determine if this is an activity/log record vs customer/entity record"""
+        # Activity records typically have activity_note, user_id, or activity_identifier
+        activity_fields = ['activity_note', 'activity_identifier', 'key_metric']
+        return any(record.get(field) for field in activity_fields)
+        
     async def save_data(self, validated_data: List[Dict]) -> Dict[str, int]:
-        """Save data to database using bulk operations"""
+        """Save data to database using bulk operations with enterprise monitoring following CRM sync guide"""
         if not validated_data:
             return {'created': 0, 'updated': 0, 'failed': 0}
             
         try:
-            return await self._bulk_save_records(validated_data)
+            results = await self._bulk_save_records(validated_data)
+            
+            # Report metrics to enterprise monitoring following CRM sync guide pattern
+            if self.automation_engine:
+                await self.automation_engine.report_metrics({
+                    'operation': 'save_data',
+                    'table': self.table_name,
+                    'records_processed': len(validated_data),
+                    'records_created': results.get('created', 0),
+                    'records_updated': results.get('updated', 0),
+                    'records_failed': results.get('failed', 0)
+                })
+            
+            # Log operation summary following CRM sync guide format
+            logger.info(f"Completed SalesPro {self.table_name} sync: "
+                       f"{results.get('created', 0)} created, "
+                       f"{results.get('updated', 0)} updated, "
+                       f"{results.get('failed', 0)} failed")
+            
+            return results
         except Exception as e:
             logger.error(f"Bulk save failed, falling back to individual saves: {e}")
+            # Use enterprise error handling following CRM sync guide
+            if self.automation_engine:
+                await self.automation_engine.handle_error(e, {
+                    'operation': 'save_data_bulk',
+                    'table': self.table_name,
+                    'record_count': len(validated_data)
+                })
             return await self._save_individual_records(validated_data)
             
     async def _bulk_save_records(self, records: List[Dict]) -> Dict[str, int]:
@@ -282,7 +474,23 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         return results
         
     async def cleanup(self) -> None:
-        """Cleanup resources after sync"""
+        """Cleanup resources after sync with enterprise features"""
+        # Cleanup enterprise features
+        if hasattr(self, 'automation_engine') and self.automation_engine:
+            try:
+                await self.automation_engine.cleanup()
+            except Exception as e:
+                logger.warning(f"Error cleaning up automation engine: {e}")
+        
+        # Close connection pool if available
+        if hasattr(self, 'connection_pool') and self.connection_pool:
+            try:
+                # Connection pools are managed by the connection manager
+                # Just log the cleanup
+                logger.debug(f"Connection pool cleanup handled by connection manager")
+            except Exception as e:
+                logger.warning(f"Error with connection pool cleanup: {e}")
+        
         # Note: boto3 Athena client doesn't need explicit connection closing
         # Just log completion
-        logger.info(f"Cleanup completed for {self.table_name} sync")
+        logger.info(f"Cleanup completed for {self.table_name} sync with enterprise features")

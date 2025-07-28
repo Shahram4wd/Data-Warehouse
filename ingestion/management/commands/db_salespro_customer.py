@@ -14,7 +14,7 @@ from ingestion.models.salespro import SalesPro_Customer
 logger = logging.getLogger(__name__)
 
 class SalesProCustomerSyncEngine(BaseSalesProSyncEngine):
-    """Sync engine for SalesPro Customers from AWS Athena"""
+    """Sync engine for SalesPro Customers from AWS Athena with enterprise features"""
     
     def __init__(self, **kwargs):
         super().__init__(
@@ -22,17 +22,63 @@ class SalesProCustomerSyncEngine(BaseSalesProSyncEngine):
             model_class=SalesPro_Customer,
             **kwargs
         )
+    
+    async def run_sync(self, **kwargs) -> Dict[str, Any]:
+        """Run sync with enterprise strategy determination"""
+        # Determine sync strategy using enterprise patterns
+        strategy = await self.determine_sync_strategy(
+            force_full=kwargs.get('full_sync', False)
+        )
+        
+        # Add strategy information to kwargs
+        if strategy['type'] == 'incremental' and strategy['last_sync']:
+            kwargs['since_date'] = strategy['last_sync']
+        
+        # Run the base sync with strategy
+        return await super().run_sync(**kwargs)
         
     async def _transform_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Transform Athena record to Customer model format"""
+        """Transform Athena record to Customer model format using framework patterns"""
         try:
+            # Initialize processor for validation and transformation
+            if not hasattr(self, '_processor'):
+                from ingestion.sync.salespro.processors.base import SalesProBaseProcessor
+                self._processor = SalesProBaseProcessor(self.model_class, crm_source='salespro')
+            
             # Debug: log the raw record structure first
             logger.info(f"Raw record from Athena: {record}")
             logger.info(f"Record keys: {list(record.keys()) if record else 'None'}")
             
+            # Handle both dict and tuple formats from Athena
+            transformed = {}
+            
             # If record is a dict with proper keys, use them
             if isinstance(record, dict) and 'customer_id' in record:
                 customer_id = record.get('customer_id')
+                
+                # Apply field mappings with validation
+                field_mappings = {
+                    'customer_id': 'customer_id',
+                    'estimate_id': 'estimate_id',
+                    'company_id': 'company_id',
+                    'company_name': 'company_name',
+                    'customer_first_name': 'customer_first_name',
+                    'customer_last_name': 'customer_last_name',
+                    'crm_source': 'crm_source',
+                    'crm_source_id': 'crm_source_id',
+                    'created_at': 'created_at',
+                    'updated_at': 'updated_at',
+                }
+                
+                context = {'id': customer_id}
+                for source_field, target_field in field_mappings.items():
+                    value = record.get(source_field)
+                    if value is not None:
+                        if target_field in ['created_at', 'updated_at']:
+                            transformed[target_field] = self._processor._parse_datetime(value)
+                        else:
+                            transformed[target_field] = str(value) if value else ''
+                
             else:
                 # If record is a tuple/list (raw from Athena), map by position
                 # Based on your query result structure:
@@ -40,6 +86,7 @@ class SalesProCustomerSyncEngine(BaseSalesProSyncEngine):
                 if isinstance(record, (tuple, list)) and len(record) >= 10:
                     logger.info(f"Processing tuple record with {len(record)} fields")
                     customer_id = record[0]
+                    
                     transformed = {
                         'customer_id': record[0],  # 'TFduILj66d'
                         'estimate_id': record[1] or '',  # '3GgGCcY96x' 
@@ -49,12 +96,11 @@ class SalesProCustomerSyncEngine(BaseSalesProSyncEngine):
                         'customer_last_name': record[5] or '',  # 'Klick'
                         'crm_source': record[6] or '',   # ''
                         'crm_source_id': record[7] or '', # ''
-                        'created_at': record[8] if len(record) > 8 else None,  # datetime.datetime(2020, 2, 7, 14, 15, 20, 384000)
-                        'updated_at': record[9] if len(record) > 9 else None,  # datetime.datetime(2025, 6, 23, 20, 41, 8, 583000)
+                        'created_at': self._processor._parse_datetime(record[8]) if len(record) > 8 else None,
+                        'updated_at': self._processor._parse_datetime(record[9]) if len(record) > 9 else None,
                     }
                     
                     logger.info(f"Transformed from tuple: {transformed}")
-                    return transformed
                 else:
                     logger.warning(f"Unexpected record format: {type(record)}, length: {len(record) if hasattr(record, '__len__') else 'N/A'}")
                     return None
@@ -63,25 +109,18 @@ class SalesProCustomerSyncEngine(BaseSalesProSyncEngine):
                 logger.warning(f"Skipping record without customer_id: {record}")
                 return None
             
-            # Map Athena columns directly to Django model fields
-            transformed = {
-                'customer_id': customer_id,
-                'estimate_id': record.get('estimate_id') or '',
-                'company_id': record.get('company_id') or '',
-                'company_name': record.get('company_name') or '',
-                'customer_first_name': record.get('customer_first_name') or '',
-                'customer_last_name': record.get('customer_last_name') or '',
-                'crm_source': record.get('crm_source') or '',
-                'crm_source_id': record.get('crm_source_id') or '',
-                'created_at': self._parse_datetime(record.get('created_at')),
-                'updated_at': self._parse_datetime(record.get('updated_at')),
-            }
+            # Validate record completeness using framework patterns
+            if hasattr(self, '_processor'):
+                warnings = self._processor.validate_record_completeness(transformed)
+                if warnings:
+                    logger.info(f"Customer {customer_id} completeness notes: {'; '.join(warnings)}")
             
-            logger.info(f"Transformed customer record: ID={customer_id}, name={transformed['customer_first_name']} {transformed['customer_last_name']}")
+            logger.info(f"Transformed customer record: ID={customer_id}, name={transformed.get('customer_first_name', '')} {transformed.get('customer_last_name', '')}")
             return transformed
             
         except Exception as e:
-            logger.error(f"Error transforming customer record: {e}")
+            customer_id = record.get('customer_id', 'unknown') if isinstance(record, dict) else record[0] if isinstance(record, (list, tuple)) and len(record) > 0 else 'unknown'
+            logger.error(f"Error transforming customer record {customer_id}: {e}")
             return None
             
     def _parse_datetime(self, value) -> Optional[datetime]:

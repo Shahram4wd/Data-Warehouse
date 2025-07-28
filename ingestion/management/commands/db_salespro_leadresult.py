@@ -1,6 +1,6 @@
 """
-SalesPro Lead Result sync from AWS Athena
-Following import_refactoring.md guidelines
+SalesPro Lead Result sync from AWS Athena with JSON normalization
+Following import_refactoring.md guidelines and CRM sync framework standards
 """
 import logging
 import uuid
@@ -9,12 +9,13 @@ from datetime import datetime
 from django.utils import timezone
 from ingestion.management.commands.base_salespro_sync import BaseSalesProSyncCommand
 from ingestion.sync.salespro.base import BaseSalesProSyncEngine
+from ingestion.sync.salespro.processors.lead_result import SalesProLeadResultProcessor
 from ingestion.models.salespro import SalesPro_LeadResult
 
 logger = logging.getLogger(__name__)
 
 class SalesProLeadResultSyncEngine(BaseSalesProSyncEngine):
-    """Sync engine for SalesPro Lead Results from AWS Athena"""
+    """Sync engine for SalesPro Lead Results from AWS Athena with JSON normalization"""
     
     def __init__(self, **kwargs):
         super().__init__(
@@ -22,47 +23,48 @@ class SalesProLeadResultSyncEngine(BaseSalesProSyncEngine):
             model_class=SalesPro_LeadResult,
             **kwargs
         )
+        # Initialize the lead result processor
+        self.processor = SalesProLeadResultProcessor(
+            dry_run=kwargs.get('dry_run', False)
+        )
         
     async def _transform_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Transform Athena record to LeadResult model format"""
+        """Transform Athena record to LeadResult model format with JSON normalization"""
         try:
             # Debug: log the raw record structure first
             logger.info(f"Raw record from Athena: {record}")
             logger.info(f"Record keys: {list(record.keys()) if record else 'None'}")
             
-            # If record is a dict with proper keys, use them
-            if isinstance(record, dict) and ('estimate_id' in record or 'company_id' in record):
-                estimate_id = record.get('estimate_id')
-            else:
-                # If record is a tuple/list (raw from Athena), map by position
-                # Based on the model structure: estimate_id, company_id, lead_results, created_at, updated_at
-                if isinstance(record, (tuple, list)) and len(record) >= 5:
-                    logger.info(f"Processing tuple record with {len(record)} fields")
-                    estimate_id = record[0]
-                    transformed = {
-                        'estimate_id': record[0] or '',
-                        'company_id': record[1] or '',
-                        'lead_results': record[2] or '',
-                        'created_at': self._parse_datetime(record[3]) if len(record) > 3 else None,
-                        'updated_at': self._parse_datetime(record[4]) if len(record) > 4 else None,
-                    }
-                    
-                    logger.info(f"Transformed from tuple: {transformed}")
-                    return transformed
-                else:
-                    logger.warning(f"Unexpected record format: {type(record)}, length: {len(record) if hasattr(record, '__len__') else 'N/A'}")
-                    return None
-                    
-            # Map Athena columns directly to Django model fields
-            transformed = {
-                'estimate_id': record.get('estimate_id') or '',
-                'company_id': record.get('company_id') or '',
-                'lead_results': record.get('lead_results') or '',
-                'created_at': self._parse_datetime(record.get('created_at')),
-                'updated_at': self._parse_datetime(record.get('updated_at')),
-            }
+            # Convert tuple/list records to dict format for processor
+            if isinstance(record, (tuple, list)) and len(record) >= 3:
+                logger.info(f"Processing tuple record with {len(record)} fields")
+                # Map tuple to expected field names
+                record_dict = {
+                    'estimate_id': record[0] or '',
+                    'company_id': record[1] or '' if len(record) > 1 else '',
+                    'lead_results': record[2] or '' if len(record) > 2 else '',
+                    'created_at': record[3] if len(record) > 3 else None,
+                    'updated_at': record[4] if len(record) > 4 else None,
+                }
+                record = record_dict
             
-            logger.info(f"Transformed lead result record: estimate_id={estimate_id}, company_id={transformed['company_id']}")
+            # Use the processor to transform and normalize the record
+            transformed = self.processor.transform_record(record)
+            
+            # Validate the transformed record
+            validation_warnings = self.processor.validate_record_completeness(transformed)
+            if validation_warnings:
+                for warning in validation_warnings:
+                    logger.warning(f"Lead result validation: {warning}")
+            
+            # Parse datetime fields
+            if transformed.get('created_at'):
+                transformed['created_at'] = self._parse_datetime(transformed['created_at'])
+            if transformed.get('updated_at'):
+                transformed['updated_at'] = self._parse_datetime(transformed['updated_at'])
+            
+            estimate_id = transformed.get('estimate_id')
+            logger.info(f"Transformed lead result: estimate_id={estimate_id}, normalized fields count={len([k for k in transformed.keys() if k not in ['estimate_id', 'company_id', 'lead_results_raw', 'created_at', 'updated_at']])}")
             return transformed
             
         except Exception as e:

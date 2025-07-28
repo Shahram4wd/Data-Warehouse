@@ -171,19 +171,38 @@ class SalesPro_Estimate(models.Model):
 
 
 class SalesPro_LeadResult(models.Model):
+    # Add primary key for framework compliance
+    id = models.AutoField(primary_key=True)
+    
+    # Existing fields
     estimate_id = models.CharField(max_length=255, blank=True, null=True)
     company_id = models.CharField(max_length=255, blank=True, null=True)
-    lead_results = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
+    
+    # Normalized lead result fields based on the sample data
+    appointment_result = models.CharField(max_length=255, blank=True, null=True)  # "Appointment Result"
+    result_reason_demo_not_sold = models.CharField(max_length=255, blank=True, null=True)  # "Result Reason - Demo Not Sold (objection)"
+    result_reason_no_demo = models.CharField(max_length=255, blank=True, null=True)  # "Result Reason - No Demo (REQUIRES SALES MANGER APPROVAL)"
+    both_homeowners_present = models.CharField(max_length=10, blank=True, null=True)  # "Both Homeowners Present?" (Yes/No)
+    one_year_price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)  # "One Year Price"
+    last_price_offered = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)  # "Last Price Offered"
+    preferred_payment = models.CharField(max_length=255, blank=True, null=True)  # "Preferred Payment"
+    notes = models.TextField(blank=True, null=True)  # "Notes"
+    
+    # Keep the original JSON field as backup/reference during transition
+    lead_results_raw = models.TextField(blank=True, null=True, help_text="Original JSON data for reference")
 
     class Meta:
-        db_table = 'ingestion_salespro_lead_results'
+        db_table = 'ingestion_salespro_lead_result'
         verbose_name = 'Lead Result'
         verbose_name_plural = 'Lead Results'
+        # Add unique constraint to prevent duplicates
+        unique_together = [['estimate_id', 'created_at']]
+        ordering = ['-created_at']
 
     def __str__(self):
-        return self.estimate_id
+        return f"{self.estimate_id} - {self.appointment_result}"
 
 
 class SalesPro_MeasureSheet(models.Model):
@@ -238,6 +257,8 @@ class SalesPro_Payment(models.Model):
 
 
 class SalesPro_UserActivity(models.Model):
+    # Add a proper primary key for framework compliance
+    id = models.AutoField(primary_key=True)
     created_at = models.DateTimeField()
     user_id = models.CharField(max_length=255, blank=True, null=True)
     company_id = models.CharField(max_length=255, blank=True, null=True)

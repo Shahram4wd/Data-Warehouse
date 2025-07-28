@@ -136,7 +136,12 @@ ALERT_THRESHOLDS = {
     'cpu_usage_percent': 80,
     'disk_usage_percent': 85,
     'connection_pool_utilization': 0.90,
-    'circuit_breaker_failures': 5
+    'circuit_breaker_failures': 5,
+    # SalesPro specific thresholds
+    'salespro_sync_success_rate': 0.95,
+    'salespro_sync_response_time': 60.0,  # AWS Athena queries can take longer
+    'salespro_sync_error_rate': 0.05,
+    'salespro_batch_processing_time': 120.0
 }
 
 # Automation Configuration

@@ -14,7 +14,7 @@ from ingestion.models.salespro import SalesPro_CreditApplication
 logger = logging.getLogger(__name__)
 
 class SalesProCreditApplicationSyncEngine(BaseSalesProSyncEngine):
-    """Sync engine for SalesPro Credit Applications from AWS Athena"""
+    """Sync engine for SalesPro Credit Applications from AWS Athena with enterprise features"""
     
     def __init__(self, **kwargs):
         super().__init__(
@@ -23,16 +23,66 @@ class SalesProCreditApplicationSyncEngine(BaseSalesProSyncEngine):
             **kwargs
         )
         
+    async def run_sync(self, **kwargs) -> Dict[str, Any]:
+        """Run sync with enterprise strategy determination"""
+        # Determine sync strategy using enterprise patterns
+        strategy = await self.determine_sync_strategy(
+            force_full=kwargs.get('full_sync', False)
+        )
+        
+        # Add strategy information to kwargs
+        if strategy['type'] == 'incremental' and strategy['last_sync']:
+            kwargs['since_date'] = strategy['last_sync']
+        
+        # Run the base sync with strategy
+        return await super().run_sync(**kwargs)
+        
     async def _transform_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Transform Athena record to CreditApplication model format"""
+        """Transform Athena record to CreditApplication model format using framework patterns"""
         try:
+            # Initialize processor for validation and transformation
+            if not hasattr(self, '_processor'):
+                from ingestion.sync.salespro.processors.base import SalesProBaseProcessor
+                self._processor = SalesProBaseProcessor(self.model_class, crm_source='salespro')
+            
             # Debug: log the raw record structure first
             logger.info(f"Raw record from Athena: {record}")
             logger.info(f"Record keys: {list(record.keys()) if record else 'None'}")
             
+            # Handle both dict and tuple formats from Athena
+            transformed = {}
+            
             # If record is a dict with proper keys, use them
             if isinstance(record, dict) and 'leap_credit_app_id' in record:
                 leap_credit_app_id = record.get('leap_credit_app_id')
+                
+                # Apply field mappings with validation
+                field_mappings = {
+                    'leap_credit_app_id': 'leap_credit_app_id',
+                    'company_id': 'company_id',
+                    'company_name': 'company_name',
+                    'sales_rep_id': 'sales_rep_id',
+                    'customer_id': 'customer_id',
+                    'credit_app_vendor': 'credit_app_vendor',
+                    'credit_app_vendor_id': 'credit_app_vendor_id',
+                    'credit_app_amount': 'credit_app_amount',
+                    'credit_app_status': 'credit_app_status',
+                    'credit_app_note': 'credit_app_note',
+                    'created_at': 'created_at',
+                    'updated_at': 'updated_at',
+                }
+                
+                context = {'id': leap_credit_app_id}
+                for source_field, target_field in field_mappings.items():
+                    value = record.get(source_field)
+                    if value is not None:
+                        if target_field in ['created_at', 'updated_at']:
+                            transformed[target_field] = self._processor._parse_datetime(value)
+                        elif target_field == 'credit_app_amount':
+                            transformed[target_field] = self._processor._parse_decimal(value)
+                        else:
+                            transformed[target_field] = str(value) if value else ''
+                
             else:
                 # If record is a tuple/list (raw from Athena), map by position
                 # Based on the model structure: leap_credit_app_id, company_id, company_name, sales_rep_id, customer_id,
@@ -40,6 +90,7 @@ class SalesProCreditApplicationSyncEngine(BaseSalesProSyncEngine):
                 if isinstance(record, (tuple, list)) and len(record) >= 12:
                     logger.info(f"Processing tuple record with {len(record)} fields")
                     leap_credit_app_id = record[0]
+                    
                     transformed = {
                         'leap_credit_app_id': record[0],
                         'company_id': record[1] or '',
@@ -48,15 +99,14 @@ class SalesProCreditApplicationSyncEngine(BaseSalesProSyncEngine):
                         'customer_id': record[4] or '',
                         'credit_app_vendor': record[5] or '',
                         'credit_app_vendor_id': record[6] or '',
-                        'credit_app_amount': self._parse_decimal(record[7]) if len(record) > 7 else None,
+                        'credit_app_amount': self._processor._parse_decimal(record[7]) if len(record) > 7 else None,
                         'credit_app_status': record[8] or '' if len(record) > 8 else '',
                         'credit_app_note': record[9] or '' if len(record) > 9 else '',
-                        'created_at': self._parse_datetime(record[10]) if len(record) > 10 else None,
-                        'updated_at': self._parse_datetime(record[11]) if len(record) > 11 else None,
+                        'created_at': self._processor._parse_datetime(record[10]) if len(record) > 10 else None,
+                        'updated_at': self._processor._parse_datetime(record[11]) if len(record) > 11 else None,
                     }
                     
                     logger.info(f"Transformed from tuple: {transformed}")
-                    return transformed
                 else:
                     logger.warning(f"Unexpected record format: {type(record)}, length: {len(record) if hasattr(record, '__len__') else 'N/A'}")
                     return None
@@ -65,27 +115,18 @@ class SalesProCreditApplicationSyncEngine(BaseSalesProSyncEngine):
                 logger.warning(f"Skipping record without leap_credit_app_id: {record}")
                 return None
             
-            # Map Athena columns directly to Django model fields
-            transformed = {
-                'leap_credit_app_id': leap_credit_app_id,
-                'company_id': record.get('company_id') or '',
-                'company_name': record.get('company_name') or '',
-                'sales_rep_id': record.get('sales_rep_id') or '',
-                'customer_id': record.get('customer_id') or '',
-                'credit_app_vendor': record.get('credit_app_vendor') or '',
-                'credit_app_vendor_id': record.get('credit_app_vendor_id') or '',
-                'credit_app_amount': self._parse_decimal(record.get('credit_app_amount')),
-                'credit_app_status': record.get('credit_app_status') or '',
-                'credit_app_note': record.get('credit_app_note') or '',
-                'created_at': self._parse_datetime(record.get('created_at')),
-                'updated_at': self._parse_datetime(record.get('updated_at')),
-            }
+            # Validate record completeness using framework patterns
+            if hasattr(self, '_processor'):
+                warnings = self._processor.validate_record_completeness(transformed)
+                if warnings:
+                    logger.info(f"Credit application {leap_credit_app_id} completeness notes: {'; '.join(warnings)}")
             
-            logger.info(f"Transformed credit application record: ID={leap_credit_app_id}, customer={transformed['customer_id']}, vendor={transformed['credit_app_vendor']}")
+            logger.info(f"Transformed credit application record: ID={leap_credit_app_id}, customer={transformed.get('customer_id', '')}, vendor={transformed.get('credit_app_vendor', '')}")
             return transformed
             
         except Exception as e:
-            logger.error(f"Error transforming credit application record: {e}")
+            leap_credit_app_id = record.get('leap_credit_app_id', 'unknown') if isinstance(record, dict) else record[0] if isinstance(record, (list, tuple)) and len(record) > 0 else 'unknown'
+            logger.error(f"Error transforming credit application record {leap_credit_app_id}: {e}")
             return None
             
     def _parse_datetime(self, value) -> Optional[datetime]:
