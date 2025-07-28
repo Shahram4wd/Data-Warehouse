@@ -18,6 +18,20 @@ logger = logging.getLogger(__name__)
 class SalesProBaseProcessor(BaseDataProcessor):
     """Base processor for SalesPro data with CRM sync framework compliance"""
     
+    # CRM sync guide standard field type validators
+    FIELD_TYPE_VALIDATORS = {
+        'email': 'email_validator',
+        'phone': 'phone_validator', 
+        'date': 'date_validator',
+        'datetime': 'date_validator',
+        'decimal': 'decimal_validator',
+        'integer': '_parse_integer',
+        'boolean': 'boolean_validator',
+        'zip_code': 'zip_validator',
+        'state': '_validate_state',
+        'string': 'string_validator'
+    }
+    
     def __init__(self, model_class, crm_source: str = 'salespro', **kwargs):
         super().__init__(model_class, **kwargs)
         self.crm_source = crm_source
@@ -179,13 +193,16 @@ class SalesProBaseProcessor(BaseDataProcessor):
         if context is None:
             context = {}
         
-        record_id = context.get('id', 'unknown')
-        salespro_url = ""
-        context_info = ""
-        
         try:
-            # Basic validation using existing methods
-            validated_value = self.validate_field(field_name, value, field_type, context)
+            # Use standardized field type validators
+            validator_method = self.FIELD_TYPE_VALIDATORS.get(field_type, 'string_validator')
+            
+            if hasattr(self, validator_method):
+                validator = getattr(self, validator_method)
+                validated_value = validator.validate(value) if hasattr(validator, 'validate') else validator(value)
+            else:
+                # Fallback to original validation method
+                validated_value = self.validate_field(field_name, value, field_type, context)
             
             # Additional field length validation with enhanced logging
             if isinstance(validated_value, str):
@@ -206,15 +223,14 @@ class SalesProBaseProcessor(BaseDataProcessor):
                 
                 max_length = max_lengths.get(field_name)
                 if max_length and len(validated_value) > max_length:
-                    # Enhanced error logging with SalesPro URL
-                    if record_id != 'unknown':
-                        salespro_url = f" - SalesPro URL: {self.get_salespro_url(record_id)}"
-                        context_info = f" (Record: id={record_id})"
+                    # Enhanced error logging with standardized context
+                    context_info = self.build_context_string(context)
                     
                     logger.warning(
-                        f"Field '{field_name}' too long ({len(validated_value)} chars), truncating to {max_length} "
-                        f"for record {record_id}: '{validated_value[:50]}{'...' if len(validated_value) > 50 else ''}'"
-                        f"{salespro_url}"
+                        f"SalesPro field '{field_name}' too long ({len(validated_value)} chars), "
+                        f"truncating to {max_length} for value: "
+                        f"'{validated_value[:50]}{'...' if len(validated_value) > 50 else ''}'"
+                        f"{context_info}"
                     )
                     
                     # Truncate the value
@@ -223,28 +239,24 @@ class SalesProBaseProcessor(BaseDataProcessor):
             return validated_value
             
         except ValidationException as e:
-            # Enhanced validation error logging
-            if record_id != 'unknown':
-                salespro_url = f" - SalesPro URL: {self.get_salespro_url(record_id)}"
-                context_info = f" (Record: id={record_id})"
+            # Enhanced validation error logging with standardized format
+            context_info = self.build_context_string(context)
             
             logger.warning(
-                f"Validation warning for field '{field_name}' with value '{value}'"
-                f"{context_info}: {e}{salespro_url}"
+                f"SalesPro validation warning for field '{field_name}' with value '{value}'"
+                f"{context_info}: {e}"
             )
             
             # Return original value in non-strict mode (following CRM sync guide pattern)
             return value
             
         except Exception as e:
-            # Enhanced general error logging
-            if record_id != 'unknown':
-                salespro_url = f" - SalesPro URL: {self.get_salespro_url(record_id)}"
-                context_info = f" (Record: id={record_id})"
+            # Enhanced general error logging with standardized format
+            context_info = self.build_context_string(context)
             
             logger.error(
-                f"Unexpected error validating field '{field_name}' with value '{value}'"
-                f"{context_info}: {e}{salespro_url}"
+                f"SalesPro unexpected error validating field '{field_name}' with value '{value}'"
+                f"{context_info}: {e}"
             )
             
             return value
@@ -336,6 +348,22 @@ class SalesProBaseProcessor(BaseDataProcessor):
         if not record_id or record_id == 'unknown':
             return ""
         return f"{self.salespro_base_url}/customer/{record_id}"
+    
+    def build_context_string(self, context: Dict = None) -> str:
+        """Build standardized context string following CRM sync guide"""
+        if not context:
+            return ""
+        
+        record_id = context.get('id', 'unknown')
+        context_parts = [f"Record: id={record_id}"]
+        
+        # Add SalesPro URL if available
+        if record_id != 'unknown':
+            salespro_url = self.get_salespro_url(record_id)
+            if salespro_url:
+                context_parts.append(f"SalesPro URL: {salespro_url}")
+        
+        return f" ({'; '.join(context_parts)})"
     
     def _parse_integer(self, value: Any) -> Optional[int]:
         """Parse integer value safely following CRM sync guide"""

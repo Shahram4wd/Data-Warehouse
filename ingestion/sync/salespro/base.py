@@ -760,9 +760,131 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
             logger.info(f"PostgreSQL UPSERT completed: {results['created']} created, {results['updated']} updated")
             
         except Exception as e:
-            logger.error(f"PostgreSQL UPSERT failed: {e}")
+            # Enhanced error logging with specific record and field context
+            error_msg = str(e)
+            
+            # Extract PostgreSQL constraint violation details
+            if "value too long for type" in error_msg:
+                # Try to identify which record and field caused the issue
+                await self._log_constraint_violation_details(deduplicated_records, error_msg, "character_length")
+            elif "violates check constraint" in error_msg:
+                await self._log_constraint_violation_details(deduplicated_records, error_msg, "check_constraint")
+            elif "violates not-null constraint" in error_msg:
+                await self._log_constraint_violation_details(deduplicated_records, error_msg, "not_null")
+            elif "duplicate key value" in error_msg:
+                await self._log_constraint_violation_details(deduplicated_records, error_msg, "duplicate_key")
+            else:
+                logger.error(f"PostgreSQL UPSERT failed with unexpected error: {error_msg}")
+            
             # Fall back to individual saves
             raise e
+    
+    async def _log_constraint_violation_details(self, records: List[Dict], error_msg: str, violation_type: str) -> None:
+        """Log detailed information about PostgreSQL constraint violations"""
+        import re
+        
+        logger.error(f"PostgreSQL UPSERT failed with {violation_type} violation: {error_msg}")
+        
+        # Extract field name from error message if possible
+        field_pattern = r'column "([^"]+)"'
+        field_match = re.search(field_pattern, error_msg)
+        violating_field = field_match.group(1) if field_match else "unknown"
+        
+        # Extract character limit from "value too long" errors
+        char_limit = None
+        if violation_type == "character_length":
+            limit_pattern = r'character varying\((\d+)\)'
+            limit_match = re.search(limit_pattern, error_msg)
+            char_limit = int(limit_match.group(1)) if limit_match else None
+        
+        # Log details for each record that might be causing the issue
+        logger.error(f"Analyzing {len(records)} records for {violation_type} in field '{violating_field}':")
+        
+        problem_records = []
+        for record in records:
+            estimate_id = record.get('estimate_id', 'unknown')
+            
+            if violation_type == "character_length" and violating_field != "unknown" and char_limit:
+                # Check field length violations
+                field_value = record.get(violating_field)
+                if field_value and len(str(field_value)) > char_limit:
+                    problem_records.append({
+                        'estimate_id': estimate_id,
+                        'field': violating_field,
+                        'value_length': len(str(field_value)),
+                        'max_length': char_limit,
+                        'sample_value': str(field_value)[:100] + '...' if len(str(field_value)) > 100 else str(field_value)
+                    })
+            
+            elif violation_type == "not_null":
+                # Check for null values in required fields
+                if violating_field != "unknown":
+                    field_value = record.get(violating_field)
+                    if field_value is None or field_value == '':
+                        problem_records.append({
+                            'estimate_id': estimate_id,
+                            'field': violating_field,
+                            'issue': 'null_value'
+                        })
+            
+            elif violation_type == "duplicate_key":
+                # Log duplicate estimate_ids
+                problem_records.append({
+                    'estimate_id': estimate_id,
+                    'field': 'estimate_id',
+                    'issue': 'duplicate_key'
+                })
+        
+        # Log specific problem records
+        if problem_records:
+            logger.error(f"Found {len(problem_records)} problematic records:")
+            for i, problem in enumerate(problem_records[:10]):  # Limit to first 10 for readability
+                if violation_type == "character_length":
+                    logger.error(f"  #{i+1} estimate_id: {problem['estimate_id']}, "
+                               f"field: {problem['field']}, "
+                               f"value_length: {problem['value_length']}, "
+                               f"max_length: {problem['max_length']}, "
+                               f"sample: {problem['sample_value']}")
+                else:
+                    logger.error(f"  #{i+1} estimate_id: {problem['estimate_id']}, "
+                               f"field: {problem['field']}, "
+                               f"issue: {problem['issue']}")
+            
+            if len(problem_records) > 10:
+                logger.error(f"  ... and {len(problem_records) - 10} more records with similar issues")
+        else:
+            logger.error(f"No obvious {violation_type} violations found in record data. "
+                        f"Issue might be with data type conversion or database schema mismatch.")
+            
+            # Log a sample of estimate_ids for debugging
+            sample_ids = [r.get('estimate_id', 'unknown') for r in records[:5]]
+            logger.error(f"Sample estimate_ids in this batch: {sample_ids}")
+    
+    def _log_record_field_lengths(self, record: Dict, record_id: str) -> None:
+        """Log field lengths for a record to help diagnose character length violations"""
+        logger.error(f"Field lengths for record {record_id}:")
+        for field, value in record.items():
+            if value is not None:
+                value_str = str(value)
+                length = len(value_str)
+                sample = value_str[:50] + '...' if length > 50 else value_str
+                logger.error(f"  {field}: length={length}, sample='{sample}'")
+    
+    def _log_record_null_fields(self, record: Dict, record_id: str) -> None:
+        """Log null/empty fields for a record to help diagnose not-null violations"""
+        null_fields = []
+        empty_fields = []
+        
+        for field, value in record.items():
+            if value is None:
+                null_fields.append(field)
+            elif value == '':
+                empty_fields.append(field)
+        
+        if null_fields:
+            logger.error(f"Record {record_id} has null fields: {null_fields}")
+        if empty_fields:
+            logger.error(f"Record {record_id} has empty string fields: {empty_fields}")
     
     async def _bulk_save_other_models(self, records: List[Dict], results: Dict[str, int]) -> None:
         """Traditional bulk operations for non-LeadResult models"""
@@ -867,7 +989,22 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                         results['created'] += 1
                     
             except Exception as e:
-                logger.error(f"Error saving record: {e}")
+                # Enhanced error logging for individual record failures
+                record_id = record.get('estimate_id') or record.get('id', 'unknown')
+                error_msg = str(e)
+                
+                # Provide detailed context for common constraint violations
+                if "value too long for type" in error_msg:
+                    logger.error(f"Character length violation for record {record_id}: {error_msg}")
+                    self._log_record_field_lengths(record, record_id)
+                elif "violates not-null constraint" in error_msg:
+                    logger.error(f"Not-null constraint violation for record {record_id}: {error_msg}")
+                    self._log_record_null_fields(record, record_id)
+                elif "duplicate key value" in error_msg:
+                    logger.error(f"Duplicate key violation for record {record_id}: {error_msg}")
+                else:
+                    logger.error(f"Error saving record {record_id}: {error_msg}")
+                    
                 results['failed'] += 1
                 
         return results

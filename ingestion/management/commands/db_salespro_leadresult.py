@@ -31,9 +31,6 @@ class SalesProLeadResultSyncEngine(BaseSalesProSyncEngine):
     async def _transform_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Transform Athena record to LeadResult model format with JSON normalization"""
         try:
-            # Debug: log the raw record structure first
-            logger.info(f"Record keys: {list(record.keys()) if record else 'None'}")
-            
             # Convert tuple/list records to dict format for processor
             if isinstance(record, (tuple, list)) and len(record) >= 3:
                 logger.info(f"Processing tuple record with {len(record)} fields")
