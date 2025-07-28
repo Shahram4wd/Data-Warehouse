@@ -204,79 +204,52 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         return query
 
     async def fetch_data(self, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
-        """Fetch data from AWS Athena using boto3 client with enterprise features and proper progress tracking"""
+        """Fetch data from AWS Athena in manageable chunks to handle large datasets (1M+ records)"""
         if not self.connection:
             raise SyncException("Athena client not initialized")
             
         try:
-            batch_size = kwargs.get('limit', self.batch_size)
+            batch_size = kwargs.pop('limit', self.batch_size)  # Remove from kwargs to avoid conflicts
+            # Also remove batch_size from kwargs if it exists
+            kwargs.pop('batch_size', None)
             max_records = kwargs.get('max_records', 0)
             records_fetched = 0
             
             # Get total record count for progress tracking
             total_available = await self.get_total_record_count(**kwargs)
             
-            # Determine actual records to process (limited by max_records if specified)
+            # Determine actual records to process
             if max_records > 0:
                 total_to_process = min(total_available, max_records)
             else:
-                # For full sync, determine reasonable limit based on query
-                query_preview = self._build_query(**kwargs)
-                if " LIMIT " in query_preview:
-                    # Extract limit from query
-                    limit_str = query_preview.split(" LIMIT ")[-1].strip()
-                    try:
-                        query_limit = int(limit_str)
-                        total_to_process = min(total_available, query_limit)
-                    except ValueError:
-                        total_to_process = total_available
-                else:
-                    total_to_process = total_available
+                total_to_process = total_available
             
             logger.info(f"Will process {total_to_process:,} records out of {total_available:,} total available")
             
-            # Build and execute the main query
-            query = self._build_query(**kwargs)
-            logger.info(f"Executing Athena query:\n{query}")
-            
-            # Execute query using the new boto3-based client
-            column_names, rows = await sync_to_async(
-                self.connection.get_query_with_columns
-            )(query, database='home_genius_db')
-            
-            if not rows:
-                logger.info(f"No data found in {self.table_name}")
-                return
-                
-            logger.info(f"Retrieved {len(rows)} rows from query (estimated {total_to_process:,} to process)")
-            
-            # Process in batches with proper progress tracking
-            for i in range(0, len(rows), batch_size):
-                if max_records > 0 and records_fetched >= max_records:
-                    break
+            # Use chunked processing for ANY dataset over 10K records to avoid memory issues
+            if total_to_process > 10000:
+                logger.info(f"Dataset detected ({total_to_process:,} records). Using memory-efficient chunked processing.")
+                async for batch in self._fetch_data_chunked(total_to_process, batch_size, **kwargs):
+                    records_fetched += len(batch)
+                    progress_pct = (records_fetched / total_to_process * 100) if total_to_process > 0 else 0
+                    logger.info(f"Processing chunk: {len(batch)} records "
+                              f"(total processed: {records_fetched:,}/{total_to_process:,} - {progress_pct:.1f}%)")
+                    yield batch
                     
-                batch_rows = rows[i:i + batch_size]
-                
-                # Apply max_records limit
-                if max_records > 0:
-                    remaining = max_records - records_fetched
-                    if len(batch_rows) > remaining:
-                        batch_rows = batch_rows[:remaining]
-                
-                # Convert to dictionaries
-                batch = [dict(zip(column_names, row)) for row in batch_rows]
-                
-                records_fetched += len(batch)
-                
-                # Enhanced progress logging with percentage
-                progress_pct = (records_fetched / total_to_process * 100) if total_to_process > 0 else 0
-                logger.info(f"Processing batch {(i // batch_size) + 1}: {len(batch)} records "
-                          f"(total processed: {records_fetched:,}/{total_to_process:,} - {progress_pct:.1f}%)")
-                
-                yield batch
-                
-            logger.info(f"Completed fetching {records_fetched:,} records from {self.table_name} "
-                       f"({records_fetched}/{total_available:,} total available)")
+                    # Check if we've reached the max_records limit
+                    if max_records > 0 and records_fetched >= max_records:
+                        break
+            else:
+                # Only for very small datasets (<10K), use streaming approach 
+                async for batch in self._fetch_data_single_query(batch_size, **kwargs):
+                    records_fetched += len(batch)
+                    yield batch
+                    
+                    # Check if we've reached the max_records limit
+                    if max_records > 0 and records_fetched >= max_records:
+                        break
+            
+            logger.info(f"Completed fetching {records_fetched:,} records from {self.table_name}")
             
             # Report metrics to enterprise monitoring
             if self.automation_engine:
@@ -286,7 +259,7 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                     'records_fetched': records_fetched,
                     'total_available': total_available,
                     'total_to_process': total_to_process,
-                    'batches_processed': (records_fetched // batch_size) + 1
+                    'chunked_processing': total_to_process > 100000
                 })
             
         except Exception as e:
@@ -296,9 +269,63 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 await self.automation_engine.handle_error(e, {
                     'operation': 'fetch_data',
                     'table': self.table_name,
-                    'query': query if 'query' in locals() else 'unknown'
+                    'query': 'chunked_processing' if total_to_process > 100000 else 'single_query'
                 })
             raise SyncException(f"Failed to fetch data: {e}")
+    
+    async def _fetch_data_chunked(self, total_records: int, batch_size: int, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
+        """Fetch data in chunks for large datasets to prevent memory issues"""
+        chunk_size = 50000  # Process 50K records per Athena query
+        offset = 0
+        
+        while offset < total_records:
+            # Calculate current chunk size (don't exceed remaining records)
+            current_chunk_size = min(chunk_size, total_records - offset)
+            
+            # Build query with LIMIT and calculated offset using ORDER BY + created_at comparison
+            query = self._build_chunked_query(current_chunk_size, offset, **kwargs)
+            logger.debug(f"Executing chunked query (offset {offset:,}): {query[:200]}...")
+            
+            try:
+                # Execute chunked query
+                column_names, rows = await sync_to_async(
+                    self.connection.get_query_with_columns
+                )(query, database='home_genius_db')
+                
+                if not rows:
+                    logger.info(f"No more data found at offset {offset:,}")
+                    break
+                
+                logger.debug(f"Retrieved {len(rows)} rows from chunk (offset {offset:,})")
+                
+                # Process this chunk in smaller batches
+                for i in range(0, len(rows), batch_size):
+                    batch_rows = rows[i:i + batch_size]
+                    batch = [dict(zip(column_names, row)) for row in batch_rows]
+                    yield batch
+                
+                # Move to next chunk
+                offset += len(rows)
+                
+                # If we got fewer rows than expected, we've reached the end
+                if len(rows) < current_chunk_size:
+                    break
+                    
+            except Exception as e:
+                logger.error(f"Error in chunked query at offset {offset:,}: {e}")
+                raise
+    
+    async def _fetch_data_single_query(self, batch_size: int, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
+        """Memory-efficient approach that streams data in batches without loading all records into memory"""
+        # For datasets that appear "small" but still too large for memory, use chunked processing
+        max_records = kwargs.get('max_records', 0)
+        total_to_process = max_records if max_records > 0 else 100000  # Default safe limit
+        
+        logger.info(f"Using memory-efficient streaming for {total_to_process:,} records")
+        
+        # Use chunked processing even for "smaller" datasets to avoid memory issues
+        async for batch in self._fetch_data_chunked(total_to_process, batch_size, **kwargs):
+            yield batch
             
     def _build_query(self, **kwargs) -> str:
         """Build SQL query for Athena with proper batching for large datasets"""
@@ -314,15 +341,18 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
             ORDER BY created_at
             """
             
-            # Add LIMIT based on max_records or use a reasonable batch size for full sync
+            # Add LIMIT based on max_records parameter
             max_records = kwargs.get('max_records', 0)
+            full_sync = kwargs.get('full_sync', False)
+            
             if max_records > 0:
+                # User specified specific limit
                 query += f" LIMIT {max_records}"
-            else:
-                # For full sync, use a reasonable batch size to avoid memory issues
-                # Default to 10K records per query (can be overridden by batch_size param)
-                batch_limit = kwargs.get('batch_size', 10000)
-                query += f" LIMIT {batch_limit}"
+            elif not full_sync:
+                # For incremental sync, use a reasonable default to avoid memory issues
+                default_limit = 50000  # Process 50K records at a time for incremental sync
+                query += f" LIMIT {default_limit}"
+            # For full sync (--full flag), don't add any LIMIT to get all records
         else:
             query = f"SELECT * FROM {base_table}"
         
@@ -378,6 +408,41 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                     query = query.rsplit(" LIMIT ", 1)[0]  # Remove existing LIMIT
                     query += f" LIMIT {max_records}"
             
+        return query
+    
+    def _build_chunked_query(self, chunk_size: int, offset: int, **kwargs) -> str:
+        """Build SQL query for chunked processing of large datasets"""
+        base_table = self.table_name
+        
+        if self.table_name == 'lead_results':
+            # For lead_results chunking, we need to simulate OFFSET since Athena doesn't support it
+            # Use created_at based ordering with row number simulation
+            query = f"""
+            WITH ranked_data AS (
+                SELECT 
+                    estimate_id, company_id, lead_results, created_at, updated_at,
+                    ROW_NUMBER() OVER (ORDER BY created_at, estimate_id) as row_num
+                FROM {base_table}
+                WHERE estimate_id IS NOT NULL AND estimate_id != ''
+            )
+            SELECT estimate_id, company_id, lead_results, created_at, updated_at
+            FROM ranked_data
+            WHERE row_num > {offset} AND row_num <= {offset + chunk_size}
+            ORDER BY created_at, estimate_id
+            """
+        else:
+            # For other tables, use simpler chunking approach
+            query = f"""
+            WITH ranked_data AS (
+                SELECT *, ROW_NUMBER() OVER (ORDER BY created_at) as row_num
+                FROM {base_table}
+                WHERE created_at IS NOT NULL
+            )
+            SELECT * FROM ranked_data
+            WHERE row_num > {offset} AND row_num <= {offset + chunk_size}
+            ORDER BY created_at
+            """
+        
         return query
         
     async def transform_data(self, raw_data: List[Dict]) -> List[Dict]:
@@ -548,16 +613,31 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         return results
     
     async def _bulk_upsert_leadresults(self, records: List[Dict], results: Dict[str, int]) -> None:
-        """Efficient PostgreSQL UPSERT for LeadResult records"""
+        """Efficient PostgreSQL UPSERT for LeadResult records with large dataset handling"""
         from django.db import connection
         import json
         
+        # For very large batches, process in smaller chunks to avoid memory issues
+        if len(records) > 10000:
+            logger.info(f"Large batch detected ({len(records)} records). Processing in chunks of 5000.")
+            chunk_size = 5000
+            for i in range(0, len(records), chunk_size):
+                chunk = records[i:i + chunk_size]
+                logger.info(f"Processing chunk {i//chunk_size + 1}: {len(chunk)} records")
+                await self._upsert_leadresults_chunk(chunk, results)
+        else:
+            await self._upsert_leadresults_chunk(records, results)
+    
+    async def _upsert_leadresults_chunk(self, records: List[Dict], results: Dict[str, int]) -> None:
+        """Process a single chunk of LeadResult records"""
+        from django.db import connection
+        import json
+        
+        if not records:
+            return
+        
         # Get the table name from the model
         table_name = self.model_class._meta.db_table
-        
-        # Prepare the SQL for UPSERT with timestamp condition
-        placeholders = ', '.join(['%s'] * len(records))
-        
         # Build field lists (excluding auto-generated fields)
         fields = ['estimate_id', 'company_id', 'lead_results_raw', 'created_at', 'updated_at']
         
