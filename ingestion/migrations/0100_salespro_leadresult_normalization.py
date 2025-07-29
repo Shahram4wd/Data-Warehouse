@@ -95,5 +95,5 @@ class Migration(migrations.Migration):
         ),
         
         # Note: Unique constraint removed due to existing duplicates
-        # Run: python manage.py db_salespro_leadresult_cleanup_duplicates before applying constraint
+        # Run: python manage.py db_salespro_leadresults_cleanup_duplicates before applying constraint
     ]

@@ -174,10 +174,19 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         
         if self.table_name == 'lead_results':
             # Count query for lead_results with same conditions
+            conditions = ["estimate_id IS NOT NULL AND estimate_id != ''"]
+            
+            # Add incremental sync condition if since_date is provided
+            since_date = kwargs.get('since_date')
+            if since_date:
+                since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+                conditions.append(f"updated_at > timestamp '{since_date_str}'")
+            
+            where_clause = " AND ".join(conditions)
             query = f"""
             SELECT COUNT(*) as total_count
             FROM {base_table}
-            WHERE estimate_id IS NOT NULL AND estimate_id != ''
+            WHERE {where_clause}
             """
         else:
             # For other tables, build count query with same conditions
@@ -225,6 +234,11 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 total_to_process = total_available
             
             logger.info(f"Will process {total_to_process:,} records out of {total_available:,} total available")
+            
+            # Early return if no records to process
+            if total_to_process == 0:
+                logger.info(f"No records to process for {self.table_name}, skipping data fetch")
+                return
             
             # Use chunked processing for ANY dataset over 10K records to avoid memory issues
             if total_to_process > 10000:
@@ -331,13 +345,21 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         """Build SQL query for Athena with proper batching for large datasets"""
         base_table = self.table_name
         
-        # For lead_results, use simple query - Athena doesn't support OFFSET so we get all and handle batching in Python
+        # For lead_results, build query with proper incremental sync support
         if self.table_name == 'lead_results':
-            # Simple query - just get all records with estimate_id, let Python handle batching and upsert logic handle duplicates
+            conditions = ["estimate_id IS NOT NULL AND estimate_id != ''"]
+            
+            # Add incremental sync condition if since_date is provided
+            since_date = kwargs.get('since_date')
+            if since_date:
+                since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+                conditions.append(f"updated_at > timestamp '{since_date_str}'")
+            
+            where_clause = " AND ".join(conditions)
             query = f"""
             SELECT estimate_id, company_id, lead_results, created_at, updated_at
             FROM {base_table}
-            WHERE estimate_id IS NOT NULL AND estimate_id != ''
+            WHERE {where_clause}
             ORDER BY created_at
             """
             
@@ -417,13 +439,22 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         if self.table_name == 'lead_results':
             # For lead_results chunking, we need to simulate OFFSET since Athena doesn't support it
             # Use created_at based ordering with row number simulation
+            conditions = ["estimate_id IS NOT NULL AND estimate_id != ''"]
+            
+            # Add incremental sync condition if since_date is provided
+            since_date = kwargs.get('since_date')
+            if since_date:
+                since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+                conditions.append(f"updated_at > timestamp '{since_date_str}'")
+            
+            where_clause = " AND ".join(conditions)
             query = f"""
             WITH ranked_data AS (
                 SELECT 
                     estimate_id, company_id, lead_results, created_at, updated_at,
                     ROW_NUMBER() OVER (ORDER BY created_at, estimate_id) as row_num
                 FROM {base_table}
-                WHERE estimate_id IS NOT NULL AND estimate_id != ''
+                WHERE {where_clause}
             )
             SELECT estimate_id, company_id, lead_results, created_at, updated_at
             FROM ranked_data
