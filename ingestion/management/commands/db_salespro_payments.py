@@ -1,5 +1,5 @@
 """
-SalesPro Estimate Price Breakdown sync from AWS Athena
+SalesPro Payment sync from AWS Athena
 Following import_refactoring.md guidelines
 """
 import logging
@@ -9,42 +9,65 @@ from datetime import datetime
 from django.utils import timezone
 from ingestion.management.commands.base_salespro_sync import BaseSalesProSyncCommand
 from ingestion.sync.salespro.base import BaseSalesProSyncEngine
-from ingestion.models.salespro import SalesPro_EstimatePriceBreakdown
+from ingestion.models.salespro import SalesPro_Payment
 
 logger = logging.getLogger(__name__)
 
-class SalesProEstimatePriceBreakdownSyncEngine(BaseSalesProSyncEngine):
-    """Sync engine for SalesPro Estimate Price Breakdowns from AWS Athena"""
+class SalesProPaymentSyncEngine(BaseSalesProSyncEngine):
+    """Sync engine for SalesPro Payments from AWS Athena"""
     
     def __init__(self, **kwargs):
         super().__init__(
-            table_name='estimate_price_breakdown',  # Use simple table name from your working example
-            model_class=SalesPro_EstimatePriceBreakdown,
+            table_name='payments',  # Try plural form like many other tables
+            model_class=SalesPro_Payment,
             **kwargs
         )
         
+    async def run_sync(self, **kwargs) -> Dict[str, Any]:
+        """Run sync with enterprise strategy determination"""
+        # Check if manual since_date was provided (from --since parameter)
+        manual_since_date = kwargs.get('since_date')
+        
+        # Determine sync strategy using enterprise patterns
+        strategy = await self.determine_sync_strategy(
+            force_full=kwargs.get('full_sync', False)
+        )
+        
+        # Add strategy information to kwargs - but don't override manual since_date
+        if strategy['type'] == 'incremental' and strategy['last_sync'] and not manual_since_date:
+            # Only use automatic incremental sync if no manual since_date was provided
+            kwargs['since_date'] = strategy['last_sync']
+        
+        # Run the base sync with strategy
+        return await super().run_sync(**kwargs)
+        
     async def _transform_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Transform Athena record to EstimatePriceBreakdown model format"""
+        """Transform Athena record to Payment model format"""
         try:
             # Debug: log the raw record structure first
             logger.info(f"Raw record from Athena: {record}")
             logger.info(f"Record keys: {list(record.keys()) if record else 'None'}")
             
             # If record is a dict with proper keys, use them
-            if isinstance(record, dict) and ('estimate_id' in record or 'estimate_date' in record):
-                estimate_id = record.get('estimate_id')
+            if isinstance(record, dict) and 'payment_id' in record:
+                payment_id = record.get('payment_id')
             else:
                 # If record is a tuple/list (raw from Athena), map by position
-                # Based on the model structure: estimate_date, company_name, estimate_id, trade_type, price_guide_amount
-                if isinstance(record, (tuple, list)) and len(record) >= 5:
+                # Based on payment table structure, adjust the field mapping as needed
+                if isinstance(record, (tuple, list)) and len(record) >= 1:
                     logger.info(f"Processing tuple record with {len(record)} fields")
-                    estimate_id = record[2]
+                    payment_id = record[0]
                     transformed = {
-                        'estimate_date': self._parse_datetime(record[0]) if len(record) > 0 else None,
-                        'company_name': record[1] or '' if len(record) > 1 else '',
-                        'estimate_id': record[2] or '' if len(record) > 2 else '',
-                        'trade_type': record[3] or '' if len(record) > 3 else '',
-                        'price_guide_amount': record[4] or '' if len(record) > 4 else '',
+                        'payment_id': record[0],
+                        'company_id': record[1] if len(record) > 1 else '',
+                        'company_name': record[2] if len(record) > 2 else '',
+                        'customer_id': record[3] if len(record) > 3 else '',
+                        'payment_amount': self._parse_decimal(record[4]) if len(record) > 4 else None,
+                        'payment_type': record[5] if len(record) > 5 else '',
+                        'payment_description': record[6] if len(record) > 6 else '',
+                        'payment_success': bool(record[7]) if len(record) > 7 else False,
+                        'created_at': record[8] if len(record) > 8 else None,
+                        'updated_at': record[9] if len(record) > 9 else None,
                     }
                     
                     logger.info(f"Transformed from tuple: {transformed}")
@@ -53,20 +76,29 @@ class SalesProEstimatePriceBreakdownSyncEngine(BaseSalesProSyncEngine):
                     logger.warning(f"Unexpected record format: {type(record)}, length: {len(record) if hasattr(record, '__len__') else 'N/A'}")
                     return None
                     
+            if not payment_id:
+                logger.warning(f"Skipping record without payment_id: {record}")
+                return None
+            
             # Map Athena columns directly to Django model fields
             transformed = {
-                'estimate_date': self._parse_datetime(record.get('estimate_date')),
+                'payment_id': payment_id,
+                'company_id': record.get('company_id') or '',
                 'company_name': record.get('company_name') or '',
-                'estimate_id': record.get('estimate_id') or '',
-                'trade_type': record.get('trade_type') or '',
-                'price_guide_amount': record.get('price_guide_amount') or '',
+                'customer_id': record.get('customer_id') or '',
+                'payment_amount': self._parse_decimal(record.get('payment_amount')),
+                'payment_type': record.get('payment_type') or '',
+                'payment_description': record.get('payment_description') or '',
+                'payment_success': bool(record.get('payment_success', False)),
+                'created_at': self._parse_datetime(record.get('created_at')),
+                'updated_at': self._parse_datetime(record.get('updated_at')),
             }
             
-            logger.info(f"Transformed estimate price breakdown record: estimate_id={estimate_id}, trade_type={transformed['trade_type']}")
+            logger.info(f"Transformed payment record: ID={payment_id}")
             return transformed
             
         except Exception as e:
-            logger.error(f"Error transforming estimate price breakdown record: {e}")
+            logger.error(f"Error transforming payment record: {e}")
             return None
             
     def _parse_datetime(self, value) -> Optional[datetime]:
@@ -116,42 +148,19 @@ class SalesProEstimatePriceBreakdownSyncEngine(BaseSalesProSyncEngine):
             return Decimal(str(value))
         except (ValueError, TypeError):
             return None
-        if not value:
-            return None
-        try:
-            if isinstance(value, datetime):
-                return value
-            for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%Y-%m-%dT%H:%M:%S']:
-                try:
-                    return datetime.strptime(str(value), fmt)
-                except ValueError:
-                    continue
-            return None
-        except Exception:
-            return None
-            
-    def _parse_decimal(self, value):
-        """Parse decimal value"""
-        if value is None:
-            return None
-        try:
-            from decimal import Decimal
-            return Decimal(str(value))
-        except (ValueError, TypeError):
-            return None
 
 class Command(BaseSalesProSyncCommand):
-    """Sync estimate price breakdowns from SalesPro AWS Athena database"""
+    """Sync payments from SalesPro AWS Athena database"""
     
-    help = "Sync estimate price breakdowns from SalesPro AWS Athena database"
+    help = "Sync payments from SalesPro AWS Athena database"
     
     def get_sync_engine(self, **options):
-        """Get the estimate price breakdown sync engine"""
-        return SalesProEstimatePriceBreakdownSyncEngine(
+        """Get the payment sync engine"""
+        return SalesProPaymentSyncEngine(
             batch_size=options.get('batch_size', 500),
             dry_run=options.get('dry_run', False)
         )
     
     def get_sync_name(self) -> str:
         """Get the sync operation name"""
-        return "estimatepricebreakdown"
+        return "payment"

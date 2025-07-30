@@ -10,12 +10,12 @@ from datetime import datetime
 
 # Import all sync engines
 from ingestion.management.commands.db_salespro_creditapplications import SalesProCreditApplicationSyncEngine
-from ingestion.management.commands.db_salespro_customer import SalesProCustomerSyncEngine
-from ingestion.management.commands.db_salespro_estimate import SalesProEstimateSyncEngine
+from ingestion.management.commands.db_salespro_customers import SalesProCustomerSyncEngine
+from ingestion.management.commands.db_salespro_estimates import SalesProEstimateSyncEngine
 from ingestion.management.commands.db_salespro_leadresults import SalesProLeadResultSyncEngine
-from ingestion.management.commands.db_salespro_measuresheet import SalesProMeasureSheetSyncEngine
-from ingestion.management.commands.db_salespro_payment import SalesProPaymentSyncEngine
-from ingestion.management.commands.db_salespro_useractivity import SalesProUserActivitySyncEngine
+from ingestion.management.commands.db_salespro_measuresheets import SalesProMeasureSheetSyncEngine
+from ingestion.management.commands.db_salespro_payments import SalesProPaymentSyncEngine
+from ingestion.management.commands.db_salespro_useractivities import SalesProUserActivitySyncEngine
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):

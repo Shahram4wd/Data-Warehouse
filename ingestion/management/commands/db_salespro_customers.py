@@ -25,13 +25,17 @@ class SalesProCustomerSyncEngine(BaseSalesProSyncEngine):
     
     async def run_sync(self, **kwargs) -> Dict[str, Any]:
         """Run sync with enterprise strategy determination"""
+        # Check if manual since_date was provided (from --since parameter)
+        manual_since_date = kwargs.get('since_date')
+        
         # Determine sync strategy using enterprise patterns
         strategy = await self.determine_sync_strategy(
             force_full=kwargs.get('full_sync', False)
         )
         
-        # Add strategy information to kwargs
-        if strategy['type'] == 'incremental' and strategy['last_sync']:
+        # Add strategy information to kwargs - but don't override manual since_date
+        if strategy['type'] == 'incremental' and strategy['last_sync'] and not manual_since_date:
+            # Only use automatic incremental sync if no manual since_date was provided
             kwargs['since_date'] = strategy['last_sync']
         
         # Run the base sync with strategy

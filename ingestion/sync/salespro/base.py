@@ -203,8 +203,14 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                     since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
                     conditions.append(f"created_at > timestamp '{since_date_str}'")
                 else:
+                    # For other tables, prefer updated_at when available
                     since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
-                    conditions.append(f"created_at > timestamp '{since_date_str}'")
+                    if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+                        # These tables have updated_at column
+                        conditions.append(f"updated_at > timestamp '{since_date_str}'")
+                    else:
+                        # Fallback to created_at for tables without updated_at
+                        conditions.append(f"created_at > timestamp '{since_date_str}'")
             
             query = f"SELECT COUNT(*) as total_count FROM {base_table}"
             if conditions:
@@ -393,11 +399,14 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
                 conditions.append(f"created_at > timestamp '{since_date_str}'")
             else:
-                # For other tables, prefer updated_at but fall back to created_at
-                timestamp_columns = ['updated_at', 'modified_date', 'last_modified', 'created_at']
-                # For now, use created_at as fallback - this can be customized per table
+                # For other tables, prefer updated_at when available
                 since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
-                conditions.append(f"created_at > timestamp '{since_date_str}'")
+                if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+                    # These tables have updated_at column
+                    conditions.append(f"updated_at > timestamp '{since_date_str}'")
+                else:
+                    # Fallback to created_at for tables without updated_at
+                    conditions.append(f"created_at > timestamp '{since_date_str}'")
         
         # Add WHERE conditions if any (but not for lead_results with simplified query)
         if conditions and self.table_name != 'lead_results':
@@ -407,6 +416,9 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         if self.table_name != 'lead_results':
             if self.table_name == 'user_activity':
                 query += " ORDER BY created_at"
+            elif self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+                # Use updated_at for tables that have it (same as filtering)
+                query += " ORDER BY updated_at"
             else:
                 # Default ordering for other tables
                 query += " ORDER BY created_at"
@@ -462,16 +474,40 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
             ORDER BY created_at, estimate_id
             """
         else:
-            # For other tables, use simpler chunking approach
+            # For other tables, use chunking approach with proper since_date filtering
+            conditions = []
+            
+            # Add since_date condition if provided
+            since_date = kwargs.get('since_date')
+            if since_date:
+                since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+                if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+                    # These tables have updated_at column
+                    conditions.append(f"updated_at > timestamp '{since_date_str}'")
+                    order_column = "updated_at"
+                else:
+                    # Fallback to created_at for tables without updated_at
+                    conditions.append(f"created_at > timestamp '{since_date_str}'")
+                    order_column = "created_at"
+            else:
+                # Default condition when no since_date
+                if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+                    conditions.append("updated_at IS NOT NULL")
+                    order_column = "updated_at"
+                else:
+                    conditions.append("created_at IS NOT NULL")
+                    order_column = "created_at"
+            
+            where_clause = " AND ".join(conditions)
             query = f"""
             WITH ranked_data AS (
-                SELECT *, ROW_NUMBER() OVER (ORDER BY created_at) as row_num
+                SELECT *, ROW_NUMBER() OVER (ORDER BY {order_column}) as row_num
                 FROM {base_table}
-                WHERE created_at IS NOT NULL
+                WHERE {where_clause}
             )
             SELECT * FROM ranked_data
             WHERE row_num > {offset} AND row_num <= {offset + chunk_size}
-            ORDER BY created_at
+            ORDER BY {order_column}
             """
         
         return query

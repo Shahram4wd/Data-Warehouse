@@ -1,6 +1,6 @@
 """
 SalesPro User Activity sync from AWS Athena
-Following import_refactoring.md guidelines
+Following import_refactoring.md guidelines and CRM sync guide compliance
 """
 import logging
 import uuid
@@ -10,6 +10,7 @@ from django.utils import timezone
 from asgiref.sync import sync_to_async
 from ingestion.management.commands.base_salespro_sync import BaseSalesProSyncCommand
 from ingestion.sync.salespro.base import BaseSalesProSyncEngine
+from ingestion.sync.salespro.processors.base import SalesProBaseProcessor
 from ingestion.models.salespro import SalesPro_UserActivity
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,29 @@ class SalesProUserActivitySyncEngine(BaseSalesProSyncEngine):
             model_class=SalesPro_UserActivity,
             **kwargs
         )
+        # Initialize the framework-compliant processor
+        self.processor = SalesProBaseProcessor(
+            model_class=SalesPro_UserActivity,
+            crm_source='salespro'
+        )
+        
+    async def run_sync(self, **kwargs) -> Dict[str, Any]:
+        """Run sync with enterprise strategy determination"""
+        # Check if manual since_date was provided (from --since parameter)
+        manual_since_date = kwargs.get('since_date')
+        
+        # Determine sync strategy using enterprise patterns
+        strategy = await self.determine_sync_strategy(
+            force_full=kwargs.get('full_sync', False)
+        )
+        
+        # Add strategy information to kwargs - but don't override manual since_date
+        if strategy['type'] == 'incremental' and strategy['last_sync'] and not manual_since_date:
+            # Only use automatic incremental sync if no manual since_date was provided
+            kwargs['since_date'] = strategy['last_sync']
+        
+        # Run the base sync with strategy
+        return await super().run_sync(**kwargs)
         
     async def _bulk_save_records(self, records: List[Dict]) -> Dict[str, int]:
         """Custom bulk save for user activity log - uses created_at, user_id, activity_note as unique key"""
@@ -146,32 +170,69 @@ class SalesProUserActivitySyncEngine(BaseSalesProSyncEngine):
         return results
     
     async def _transform_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Transform Athena record to UserActivity model format"""
+        """Transform Athena record to UserActivity model format using framework processor"""
         try:
             # Handle both dict and tuple record formats from Athena
             if isinstance(record, dict):
-                # Process dict records - map fields directly (excluding any ID fields since this is a log table)
-                transformed = {
-                    'created_at': self._parse_datetime(record.get('created_at')),
-                    'user_id': record.get('user_id') or '',
-                    'company_id': record.get('company_id') or '',
-                    'company_name': record.get('company_name') or '',
-                    'local_customer_uuid': record.get('local_customer_uuid') or '',
-                    'customer_id': record.get('customer_id') or '',
-                    'activity_note': record.get('activity_note') or '',
-                    'key_metric': record.get('key_metric') or '',
-                    'activity_identifier': record.get('activity_identifier') or '',
-                    'price_type': record.get('price_type') or '',
-                    'price': self._parse_decimal(record.get('price')),
-                    'original_row_num': int(record.get('original_row_num')) if record.get('original_row_num') is not None else None,
-                }
-                
-                # Validate that we have the minimum required fields for uniqueness
-                if not all([transformed.get('created_at'), transformed.get('user_id'), transformed.get('activity_note')]):
-                    logger.warning(f"Skipping record missing required unique fields: {record}")
-                    return None
-                
-                return transformed
+                # Use the framework processor for validation and transformation
+                try:
+                    # First validate the record using the framework
+                    validated_record = self.processor.validate_record(record)
+                    # Then transform using the framework patterns
+                    transformed = self.processor.transform_record(validated_record)
+                    
+                    # Ensure required fields are present for activity records
+                    if not transformed.get('created_at'):
+                        transformed['created_at'] = self._parse_datetime(record.get('created_at'))
+                    
+                    # Activity-specific fields that might not be in base mappings
+                    transformed.update({
+                        'user_id': record.get('user_id') or '',
+                        'company_id': record.get('company_id') or '',
+                        'company_name': record.get('company_name') or '',
+                        'local_customer_uuid': record.get('local_customer_uuid') or '',
+                        'customer_id': record.get('customer_id') or '',
+                        'activity_note': record.get('activity_note') or '',
+                        'key_metric': record.get('key_metric') or '',
+                        'activity_identifier': record.get('activity_identifier') or '',
+                        'price_type': record.get('price_type') or '',
+                        'price': self._parse_decimal(record.get('price')),
+                        'original_row_num': int(record.get('original_row_num')) if record.get('original_row_num') is not None else None,
+                    })
+                    
+                    # Validate that we have the minimum required fields for uniqueness
+                    if not all([transformed.get('created_at'), transformed.get('user_id'), transformed.get('activity_note')]):
+                        logger.warning(f"Skipping record missing required unique fields: {record}")
+                        return None
+                    
+                    return transformed
+                    
+                except Exception as framework_error:
+                    # Fall back to basic transformation if framework validation fails
+                    logger.warning(f"Framework validation failed, using basic validation: {framework_error}")
+                    
+                    # Basic transformation without framework validation
+                    transformed = {
+                        'created_at': self._parse_datetime(record.get('created_at')),
+                        'user_id': record.get('user_id') or '',
+                        'company_id': record.get('company_id') or '',
+                        'company_name': record.get('company_name') or '',
+                        'local_customer_uuid': record.get('local_customer_uuid') or '',
+                        'customer_id': record.get('customer_id') or '',
+                        'activity_note': record.get('activity_note') or '',
+                        'key_metric': record.get('key_metric') or '',
+                        'activity_identifier': record.get('activity_identifier') or '',
+                        'price_type': record.get('price_type') or '',
+                        'price': self._parse_decimal(record.get('price')),
+                        'original_row_num': int(record.get('original_row_num')) if record.get('original_row_num') is not None else None,
+                    }
+                    
+                    # Validate minimum required fields
+                    if not all([transformed.get('created_at'), transformed.get('user_id'), transformed.get('activity_note')]):
+                        logger.warning(f"Skipping record missing required unique fields: {record}")
+                        return None
+                    
+                    return transformed
             else:
                 logger.warning(f"Unexpected record format: {type(record)}")
                 return None

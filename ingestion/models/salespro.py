@@ -279,7 +279,3 @@ class SalesPro_UserActivity(models.Model):
 
     def __str__(self):
         return f"{self.user_id} - {self.activity_identifier}"
-
-
-class SalesPro_EstimatePriceBreakdown(models.Model):
-    estimate_date = models.DateTimeField(blank=True, null=True)
