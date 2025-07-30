@@ -205,7 +205,7 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 else:
                     # For other tables, prefer updated_at when available
                     since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
-                    if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate','lead_results', 'payments']:
+                    if self.table_name in ['credit_applications', 'customer', 'estimate','lead_results', 'payments']:
                         # These tables have updated_at column
                         conditions.append(f"updated_at > timestamp '{since_date_str}'")
                     else:
@@ -401,7 +401,7 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
             else:
                 # For other tables, prefer updated_at when available
                 since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
-                if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+                if self.table_name in ['credit_applications', 'customer', 'estimate']:
                     # These tables have updated_at column
                     conditions.append(f"updated_at > timestamp '{since_date_str}'")
                 else:
@@ -416,7 +416,7 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
         if self.table_name != 'lead_results':
             if self.table_name == 'user_activity':
                 query += " ORDER BY created_at"
-            elif self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+            elif self.table_name in ['credit_applications', 'customer', 'estimate']:
                 # Use updated_at for tables that have it (same as filtering)
                 query += " ORDER BY updated_at"
             else:
@@ -427,9 +427,9 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
             max_records = kwargs.get('max_records', 0)
             if max_records > 0:
                 query += f" LIMIT {max_records}"
-            elif self.table_name in ['user_activity', 'measure_sheet'] and not since_date:
+            elif self.table_name in ['user_activity'] and not since_date:
                 # For full sync of large tables, use a reasonable default limit
-                default_limit = 10000 if self.table_name == 'measure_sheet' else 50000
+                default_limit = 50000
                 query += f" LIMIT {default_limit}"
                 logger.warning(f"Large table '{self.table_name}' detected. Limiting to {default_limit} records per sync. Use --max-records or incremental sync for better control.")
         else:
@@ -481,7 +481,7 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
             since_date = kwargs.get('since_date')
             if since_date:
                 since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
-                if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+                if self.table_name in ['credit_applications', 'customer', 'estimate']:
                     # These tables have updated_at column
                     conditions.append(f"updated_at > timestamp '{since_date_str}'")
                     order_column = "updated_at"
@@ -491,7 +491,7 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                     order_column = "created_at"
             else:
                 # Default condition when no since_date
-                if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+                if self.table_name in ['credit_applications', 'customer', 'estimate']:
                     conditions.append("updated_at IS NOT NULL")
                     order_column = "updated_at"
                 else:

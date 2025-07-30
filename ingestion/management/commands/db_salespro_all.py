@@ -13,7 +13,6 @@ from ingestion.management.commands.db_salespro_creditapplications import SalesPr
 from ingestion.management.commands.db_salespro_customers import SalesProCustomerSyncEngine
 from ingestion.management.commands.db_salespro_estimates import SalesProEstimateSyncEngine
 from ingestion.management.commands.db_salespro_leadresults import SalesProLeadResultSyncEngine
-from ingestion.management.commands.db_salespro_measuresheets import SalesProMeasureSheetSyncEngine
 from ingestion.management.commands.db_salespro_payments import SalesProPaymentSyncEngine
 from ingestion.management.commands.db_salespro_useractivities import SalesProUserActivitySyncEngine
 logger = logging.getLogger(__name__)
@@ -28,7 +27,6 @@ class Command(BaseCommand):
         ('customers', SalesProCustomerSyncEngine),
         ('creditapplications', SalesProCreditApplicationSyncEngine),
         ('estimates', SalesProEstimateSyncEngine),
-        ('measuresheets', SalesProMeasureSheetSyncEngine),
         ('payments', SalesProPaymentSyncEngine),
         ('leadresults', SalesProLeadResultSyncEngine),
         ('useractivities', SalesProUserActivitySyncEngine),
@@ -172,12 +170,18 @@ class Command(BaseCommand):
                 dry_run=kwargs['dry_run']
             )
             
-            # Run sync
-            history = await engine.run_sync(
-                since_date=kwargs.get('since_date'),
-                max_records=kwargs.get('max_records', 0),
-                full_sync=kwargs.get('full_sync', False)
-            )
+            # Run sync - ensure manual since_date is preserved
+            sync_kwargs = {
+                'max_records': kwargs.get('max_records', 0),
+                'full_sync': kwargs.get('full_sync', False)
+            }
+            
+            # Only add since_date if it was manually provided (from --since parameter)
+            # This allows each engine's run_sync method to handle automatic incremental logic
+            if kwargs.get('since_date') is not None:
+                sync_kwargs['since_date'] = kwargs.get('since_date')
+            
+            history = await engine.run_sync(**sync_kwargs)
             
             self.stdout.write(
                 self.style.SUCCESS(f"✅ {entity_name} sync completed: "

@@ -201,36 +201,6 @@ class SalesPro_LeadResult(models.Model):
         return f"{self.estimate_id} - {self.appointment_result}"
 
 
-class SalesPro_MeasureSheet(models.Model):
-    # Remove auto-incrementing ID since this is a measure sheet items table
-    id = None
-    
-    estimate_id = models.CharField(max_length=255, blank=True, null=True)
-    office_id = models.CharField(max_length=255, blank=True, null=True)
-    office_name = models.CharField(max_length=255, blank=True, null=True)
-    company_id = models.CharField(max_length=255, blank=True, null=True)
-    company_name = models.CharField(max_length=255, blank=True, null=True)
-    measure_sheet_item_id = models.CharField(max_length=255, blank=True, null=True)
-    quantity = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    category = models.CharField(max_length=255, blank=True, null=True)
-    measurement_type = models.CharField(max_length=255, blank=True, null=True)
-    measure_sheet_item_name = models.CharField(max_length=255, blank=True, null=True)
-    measure_sheet_item_price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
-
-    class Meta:
-        db_table = 'ingestion_salespro_measure_sheet'
-        verbose_name = 'Measure Sheet'
-        verbose_name_plural = 'Measure Sheets'
-        unique_together = [['created_at', 'updated_at', 'estimate_id', 'measure_sheet_item_name']]
-        # Order by created_at by default
-        ordering = ['created_at']
-
-    def __str__(self):
-        return f"{self.estimate_id} - {self.measure_sheet_item_name}"
-
-
 class SalesPro_Payment(models.Model):
     payment_id = models.CharField(max_length=255, primary_key=True)
     company_id = models.CharField(max_length=255, blank=True, null=True)
