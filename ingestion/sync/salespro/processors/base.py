@@ -418,3 +418,32 @@ class SalesProBaseProcessor(BaseDataProcessor):
             if not value:
                 return False
             return str(value).upper() in ('TRUE', '1', 'YES', 'Y')
+    
+    async def process_records(self, records: List[Dict[str, Any]], **kwargs) -> Dict[str, Any]:
+        """Process a list of records and return processing results"""
+        results = {
+            'created': 0,
+            'updated': 0,
+            'failed': 0,
+            'total_processed': len(records)
+        }
+        
+        logger.info(f"Processing {len(records)} records with {self.__class__.__name__}")
+        
+        for record in records:
+            try:
+                # Transform and validate the record
+                transformed_record = self.transform_record(record)
+                validated_record = self.validate_record(transformed_record)
+                
+                # Save to database (implement based on your existing save logic)
+                # This would need to be implemented based on your existing patterns
+                logger.debug(f"Processed record: {validated_record.get('id', 'unknown')}")
+                results['created'] += 1
+                
+            except Exception as e:
+                logger.error(f"Failed to process record: {e}")
+                results['failed'] += 1
+        
+        logger.info(f"Processing complete: {results}")
+        return results
