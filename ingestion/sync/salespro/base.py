@@ -205,7 +205,7 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
                 else:
                     # For other tables, prefer updated_at when available
                     since_date_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
-                    if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate']:
+                    if self.table_name in ['credit_applications', 'customer', 'measure_sheet', 'estimate','lead_results', 'payments']:
                         # These tables have updated_at column
                         conditions.append(f"updated_at > timestamp '{since_date_str}'")
                     else:
