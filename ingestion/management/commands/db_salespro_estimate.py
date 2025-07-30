@@ -41,8 +41,8 @@ class SalesProEstimateSyncEngine(BaseSalesProSyncEngine):
         """Transform Athena record to Estimate model format"""
         try:
             # Debug: log the raw record structure first
-            logger.info(f"Raw record from Athena: {record}")
-            logger.info(f"Record keys: {list(record.keys()) if record else 'None'}")
+            logger.debug(f"Raw record from Athena: {record}")
+            logger.debug(f"Record keys: {list(record.keys()) if record else 'None'}")
             
             # If record is a dict with proper keys, use them
             if isinstance(record, dict) and 'estimate_id' in record:
@@ -125,7 +125,7 @@ class SalesProEstimateSyncEngine(BaseSalesProSyncEngine):
                 'updated_at': self._parse_datetime(record.get('updated_at')),
             }
             
-            logger.info(f"Transformed estimate record: ID={estimate_id}, customer={transformed['customer_first_name']} {transformed['customer_last_name']}, amount=${transformed['sale_amount']}")
+            logger.debug(f"Transformed estimate record: ID={estimate_id}, customer={transformed['customer_first_name']} {transformed['customer_last_name']}, amount=${transformed['sale_amount']}")
             return transformed
             
         except Exception as e:

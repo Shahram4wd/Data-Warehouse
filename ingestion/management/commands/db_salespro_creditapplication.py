@@ -46,8 +46,8 @@ class SalesProCreditApplicationSyncEngine(BaseSalesProSyncEngine):
                 self._processor = SalesProBaseProcessor(self.model_class, crm_source='salespro')
             
             # Debug: log the raw record structure first
-            logger.info(f"Raw record from Athena: {record}")
-            logger.info(f"Record keys: {list(record.keys()) if record else 'None'}")
+            logger.debug(f"Raw record from Athena: {record}")
+            logger.debug(f"Record keys: {list(record.keys()) if record else 'None'}")
             
             # Handle both dict and tuple formats from Athena
             transformed = {}
@@ -119,9 +119,9 @@ class SalesProCreditApplicationSyncEngine(BaseSalesProSyncEngine):
             if hasattr(self, '_processor'):
                 warnings = self._processor.validate_record_completeness(transformed)
                 if warnings:
-                    logger.info(f"Credit application {leap_credit_app_id} completeness notes: {'; '.join(warnings)}")
+                    logger.debug(f"Credit application {leap_credit_app_id} completeness notes: {'; '.join(warnings)}")
             
-            logger.info(f"Transformed credit application record: ID={leap_credit_app_id}, customer={transformed.get('customer_id', '')}, vendor={transformed.get('credit_app_vendor', '')}")
+            logger.debug(f"Transformed credit application record: ID={leap_credit_app_id}, customer={transformed.get('customer_id', '')}, vendor={transformed.get('credit_app_vendor', '')}")
             return transformed
             
         except Exception as e:

@@ -84,7 +84,7 @@ class BaseSalesProSyncEngine(BaseSyncEngine):
             def get_last_sync():
                 last_sync = SyncHistory.objects.filter(
                     crm_source='salespro',
-                    sync_type=f'{self.sync_type}_sync',
+                    sync_type=self.sync_type,  # Use sync_type directly, not with _sync suffix
                     status='success',
                     end_time__isnull=False
                 ).order_by('-end_time').first()

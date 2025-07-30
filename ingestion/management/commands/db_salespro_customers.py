@@ -50,8 +50,8 @@ class SalesProCustomerSyncEngine(BaseSalesProSyncEngine):
                 self._processor = SalesProBaseProcessor(self.model_class, crm_source='salespro')
             
             # Debug: log the raw record structure first
-            logger.info(f"Raw record from Athena: {record}")
-            logger.info(f"Record keys: {list(record.keys()) if record else 'None'}")
+            logger.debug(f"Raw record from Athena: {record}")
+            logger.debug(f"Record keys: {list(record.keys()) if record else 'None'}")
             
             # Handle both dict and tuple formats from Athena
             transformed = {}
@@ -117,9 +117,9 @@ class SalesProCustomerSyncEngine(BaseSalesProSyncEngine):
             if hasattr(self, '_processor'):
                 warnings = self._processor.validate_record_completeness(transformed)
                 if warnings:
-                    logger.info(f"Customer {customer_id} completeness notes: {'; '.join(warnings)}")
+                    logger.debug(f"Customer {customer_id} completeness notes: {'; '.join(warnings)}")
             
-            logger.info(f"Transformed customer record: ID={customer_id}, name={transformed.get('customer_first_name', '')} {transformed.get('customer_last_name', '')}")
+            logger.debug(f"Transformed customer record: ID={customer_id}, name={transformed.get('customer_first_name', '')} {transformed.get('customer_last_name', '')}")
             return transformed
             
         except Exception as e:
