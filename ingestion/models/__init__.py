@@ -23,7 +23,7 @@ from .genius import (
 )
 
 # Import SalesPro models
-from .salespro import SalesPro_Users, SalesPro_Appointment, SalesPro_SyncHistory
+from .salespro import SalesPro_CreditApplication, SalesPro_Customer, SalesPro_Estimate, SalesPro_LeadResult, SalesPro_Payment, SalesPro_UserActivity
 
 # Import SalesRabbit models
 from .salesrabbit import SalesRabbit_Lead
@@ -67,7 +67,8 @@ __all__ = [
     'Genius_Prospect', 'Genius_ProspectSource', 'Genius_Lead', 'Genius_MarketSharpSource',
     'Genius_AppointmentType', 'Genius_AppointmentOutcome', 'Genius_Appointment', 'Genius_AppointmentService',
     'Genius_Service', 'Genius_Quote', 'Genius_MarketingSourceType', 'Genius_MarketingSource', 'Genius_AppointmentOutcomeType',
-    'SalesPro_Users', 'SalesPro_Appointment', 'SalesPro_SyncHistory',    'Hubspot_Contact', 'Hubspot_Deal', 'Hubspot_Appointment', 'Hubspot_SyncHistory',
+    'SalesPro_CreditApplication', 'SalesPro_Customer', 'SalesPro_Estimate', 'SalesPro_LeadResult', 'SalesPro_Payment', 'SalesPro_UserActivity', 
+    'Hubspot_Contact', 'Hubspot_Deal', 'Hubspot_Appointment', 'Hubspot_SyncHistory',
     'Arrivy_Entity', 'Arrivy_Group', 'Arrivy_Task', 'Arrivy_TaskStatus', 'Arrivy_LocationReport', 'Arrivy_SyncHistory',
     'MarketSharp_Activity', 'MarketSharp_ActivityReference', 'MarketSharp_ActivityResult',
     'MarketSharp_Address', 'MarketSharp_Appointment', 'MarketSharp_AppointmentResult',

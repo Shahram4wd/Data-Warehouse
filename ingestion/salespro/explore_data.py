@@ -137,5 +137,4 @@ if __name__ == "__main__":
         
     except Exception as e:
         print(f"Error: {e}")
-        print("Make sure you have imported SalesPro data first using:")
-        print("python manage.py csv_salespro_appointments /path/to/csv/file.csv")
+        print("Make sure you have imported SalesPro data first using the database sync commands.")

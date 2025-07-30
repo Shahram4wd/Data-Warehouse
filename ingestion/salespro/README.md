@@ -23,59 +23,50 @@ SalesPro is a sales management system that tracks appointments, customer interac
 
 ## Management Commands
 
-### csv_salespro_appointments
-Import appointment/sales data from a SalesPro CSV export file.
+SalesPro data synchronization is now handled through AWS Athena database sync commands:
 
 ```bash
-# Import appointments from CSV
-python manage.py csv_salespro_appointments /path/to/SalesPro2025-06-18.csv
+# Sync all SalesPro entities from AWS Athena
+python manage.py db_salespro_all
 
-# Dry run to see what would be imported
-python manage.py csv_salespro_appointments /path/to/SalesPro2025-06-18.csv --dry-run
+# Sync specific entities
+python manage.py db_salespro_customers
+python manage.py db_salespro_leadresults
+python manage.py db_salespro_estimates
+python manage.py db_salespro_payments
+python manage.py db_salespro_creditapplications
+python manage.py db_salespro_useractivities
 ```
 
 **Features:**
-- Bulk create/update operations for performance
-- Duplicate detection and handling
-- Progress tracking with tqdm
-- Comprehensive error handling
+- Incremental sync support
+- Bulk operations for performance
+- Enterprise monitoring and error handling
+- Progress tracking
 - Dry run mode for testing
 - Automatic sync history tracking
 
-## CSV Data Format
-
-The expected CSV format includes these columns:
-- `_id`: Unique appointment identifier
-- `_created_at`: Creation timestamp (ISO format)
-- `_updated_at`: Last update timestamp (ISO format)
-- `isSale`: Boolean indicating if appointment resulted in sale
-- `resultFullString`: Detailed appointment result information
-- `customer.nameLast`: Customer last name
-- `customer.nameFirst`: Customer first name
-- `customer.estimateName`: Customer estimate name/identifier
-- `salesrep.email`: Sales representative email
-- `salesrep.nameFirst`: Sales rep first name
-- `salesrep.nameLast`: Sales rep last name
-- `saleAmount`: Sale amount (if applicable)
-
 ## Configuration
 
-No special environment variables needed for CSV imports. The system uses standard Django database settings.
+The system uses AWS Athena for data synchronization. Ensure proper AWS credentials and database configuration are set up.
 
 ## Usage Examples
 
-### Basic Import
+### Sync All Entities
 ```bash
-python manage.py csv_salespro_appointments /path/to/export.csv
+python manage.py db_salespro_all
 ```
 
-### Dry Run First
+### Incremental Sync
 ```bash
-# Test the import first
-python manage.py csv_salespro_appointments /path/to/export.csv --dry-run
+# The system automatically performs incremental syncs based on last sync timestamp
+python manage.py db_salespro_customers
+```
 
-# If successful, run the actual import
-python manage.py csv_salespro_appointments /path/to/export.csv
+### Full Sync
+```bash
+# Force a full sync ignoring last sync timestamp
+python manage.py db_salespro_customers --full
 ```
 
 ### Check Import History
