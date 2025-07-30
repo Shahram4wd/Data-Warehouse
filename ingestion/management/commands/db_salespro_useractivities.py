@@ -9,7 +9,7 @@ from datetime import datetime
 from django.utils import timezone
 from asgiref.sync import sync_to_async
 from ingestion.management.commands.base_salespro_sync import BaseSalesProSyncCommand
-from ingestion.sync.salespro.base import BaseSalesProSyncEngine
+from ingestion.sync.salespro.engines.base import BaseSalesProSyncEngine
 from ingestion.sync.salespro.processors.base import SalesProBaseProcessor
 from ingestion.models.salespro import SalesPro_UserActivity
 

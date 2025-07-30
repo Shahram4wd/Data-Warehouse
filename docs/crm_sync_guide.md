@@ -30,6 +30,40 @@ This document outlines the enterprise-grade sync architecture for CRM systems (H
 - **BaseProcessor**: Data transformation & validation framework
 - **BaseCommand**: Management command with common flags & options
 
+### 3. **Standardized Module Structure**
+
+All CRM sync modules follow a consistent file and folder organization pattern to ensure maintainability and architectural coherence:
+
+```
+ingestion/sync/{crm_name}/
+├── clients/              # API and data source clients
+│   ├── __init__.py
+│   ├── base.py          # Base client implementations
+│   └── {entity}.py      # Specific entity clients (contacts, deals, etc.)
+├── engines/             # Sync orchestration engines
+│   ├── __init__.py
+│   ├── base.py          # Base sync engine with common functionality
+│   └── {entity}.py      # Entity-specific sync engines
+├── processors/          # Data transformation and validation
+│   ├── __init__.py
+│   ├── base.py          # Base processor with common transforms
+│   └── {entity}.py      # Entity-specific processors
+├── validators.py        # CRM-specific validation rules
+└── __init__.py         # Module initialization
+```
+
+**Examples:**
+- `ingestion/sync/hubspot/` - HubSpot sync module
+- `ingestion/sync/salesrabbit/` - SalesRabbit sync module  
+- `ingestion/sync/salespro/` - SalesPro sync module
+
+This structure ensures:
+- **Separation of Concerns**: Each layer has a clear responsibility
+- **Consistency**: All CRM modules follow the same pattern
+- **Scalability**: Easy to add new entities or CRM sources
+- **Maintainability**: Clear location for each type of functionality
+
+
 ## Delta Sync Implementation
 
 ### Key Concepts
@@ -51,6 +85,92 @@ def get_last_sync_time():
     """
 ```
 
+### Critical: Data Type Consistency for --since Parameter
+
+The `--since` parameter requires careful handling to ensure consistent data types throughout the sync pipeline:
+
+**Key Architecture Requirements:**
+
+1. **Input Standardization**: Accept `--since` as string (YYYY-MM-DD format) but immediately convert to `datetime` object
+2. **Internal Consistency**: All internal methods should work with `datetime` objects, not strings
+3. **Database Query Safety**: Format datetime to string only when building SQL queries
+4. **Field Name Mapping**: Handle different timestamp field names across tables
+
+```python
+class BaseSyncEngine:
+    """Standardized --since parameter handling"""
+    
+    async def get_last_sync_timestamp(self) -> Optional[datetime]:
+        """Always return datetime object, never string"""
+        # Query database for last successful sync
+        # Return datetime object or None
+        pass
+    
+    def determine_sync_strategy(self, force_full: bool = False, since_param: str = None) -> Dict[str, Any]:
+        """Process --since parameter with proper data type conversion"""
+        
+        # 1. Handle --since parameter (string input)
+        since_date = None
+        if since_param:
+            # Convert string to datetime object immediately
+            since_date = datetime.strptime(since_param, '%Y-%m-%d')
+        
+        # 2. Fall back to database timestamp (already datetime)
+        if not since_date and not force_full:
+            since_date = await self.get_last_sync_timestamp()
+        
+        # 3. Return strategy with datetime object
+        return {
+            'type': 'full' if not since_date or force_full else 'incremental',
+            'since_date': since_date,  # Always datetime or None
+            'force_full': force_full
+        }
+    
+    def build_incremental_query(self, since_date: datetime, table_name: str) -> str:
+        """Build query with proper field name mapping"""
+        
+        # Convert datetime to SQL-safe string format
+        since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Map table names to their timestamp fields
+        timestamp_field_map = {
+            'contacts': 'updated_at',
+            'deals': 'updated_at', 
+            'activities': 'created_at',  # Activities don't get updated
+            'user_logs': 'created_at',   # Log entries don't get updated
+        }
+        
+        # Get appropriate timestamp field for this table
+        timestamp_field = timestamp_field_map.get(table_name, 'updated_at')
+        
+        # Build query with proper field
+        query = f"""
+        SELECT * FROM {table_name} 
+        WHERE {timestamp_field} > timestamp '{since_str}'
+        ORDER BY {timestamp_field}
+        """
+        
+        return query
+```
+
+**Common Pitfalls and Solutions:**
+
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| `TypeError: strftime()` | Passing string to datetime method | Convert string to datetime early in pipeline |
+| Inconsistent date filtering | Using wrong timestamp field | Maintain table → field mapping |
+| SQL injection risk | String concatenation | Use parameterized queries or safe formatting |
+| Timezone issues | Missing timezone awareness | Use UTC consistently or timezone-aware objects |
+
+**Implementation Checklist:**
+
+- [ ] Convert `--since` string input to `datetime` object immediately
+- [ ] Ensure `get_last_sync_timestamp()` returns `datetime` or `None`
+- [ ] Map table names to correct timestamp fields (`created_at` vs `updated_at`)
+- [ ] Use consistent datetime formatting for SQL queries (`%Y-%m-%d %H:%M:%S`)
+- [ ] Handle timezone considerations (recommend UTC)
+- [ ] Validate date input format and provide clear error messages
+
 ### API Implementation
 
 ```python
@@ -62,6 +182,67 @@ async def fetch_data(self, last_sync: Optional[datetime] = None):
     else:
         # Use regular endpoint for full fetch
     """
+```
+
+### Table-Specific Timestamp Field Strategy
+
+Different entity types require different timestamp fields for accurate incremental sync:
+
+**Field Selection Logic:**
+
+```python
+def get_timestamp_field(entity_type: str) -> str:
+    """Map entity types to appropriate timestamp fields"""
+    
+    # Entities that get updated (use updated_at)
+    updatable_entities = {
+        'contacts', 'companies', 'deals', 'tickets', 
+        'customers', 'estimates', 'credit_applications',
+        'payments', 'lead_results'
+    }
+    
+    # Log/activity entities (use created_at - they don't get updated)
+    activity_entities = {
+        'activities', 'user_activities', 'call_logs',
+        'email_events', 'meeting_events', 'task_logs'
+    }
+    
+    if entity_type in updatable_entities:
+        return 'updated_at'  # Track modifications
+    elif entity_type in activity_entities:
+        return 'created_at'  # Track when logged
+    else:
+        # Default fallback (prefer updated_at if available)
+        return 'updated_at'
+```
+
+**Implementation Pattern:**
+
+```python
+async def build_incremental_filter(self, entity_type: str, since_date: datetime) -> str:
+    """Build incremental sync filter based on entity type"""
+    
+    timestamp_field = self.get_timestamp_field(entity_type)
+    since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+    
+    # API-based sources (REST/GraphQL)
+    if self.source_type == 'api':
+        # Different CRMs use different field names
+        api_field_map = {
+            'updated_at': 'hs_lastmodifieddate',  # Example for one CRM
+            'created_at': 'hs_createdate'
+        }
+        api_field = api_field_map.get(timestamp_field, timestamp_field)
+        return f"{api_field} >= {since_str}"
+    
+    # Database sources (SQL)
+    elif self.source_type == 'database':
+        return f"{timestamp_field} > timestamp '{since_str}'"
+    
+    # CSV sources (filter after loading)
+    elif self.source_type == 'csv':
+        # Handle in post-processing since CSV doesn't support filtering
+        return None
 ```
 
 ## Command-Line Flags & Options

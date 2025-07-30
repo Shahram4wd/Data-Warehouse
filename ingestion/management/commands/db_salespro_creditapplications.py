@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from django.utils import timezone
 from ingestion.management.commands.base_salespro_sync import BaseSalesProSyncCommand
-from ingestion.sync.salespro.base import BaseSalesProSyncEngine
+from ingestion.sync.salespro.engines.base import BaseSalesProSyncEngine
 from ingestion.models.salespro import SalesPro_CreditApplication
 
 logger = logging.getLogger(__name__)
