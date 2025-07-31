@@ -56,6 +56,12 @@ from .leadconduit import (
     LeadConduit_Event, LeadConduit_Lead, LeadConduit_SyncHistory
 )
 
+# Import CallRail models
+from .callrail import (
+    CallRail_Account, CallRail_Company, CallRail_Call, CallRail_Tracker,
+    CallRail_FormSubmission, CallRail_TextMessage, CallRail_Tag, CallRail_User
+)
+
 # Import alerts models
 from .alerts import AlertModel, AlertRule
 
@@ -80,5 +86,7 @@ __all__ = [
     'ActiveProspect_Event', 'ActiveProspect_Lead', 'ActiveProspect_SyncHistory',
     'LeadConduit_Event', 'LeadConduit_Lead', 'LeadConduit_SyncHistory',
     'SalesRabbit_Lead',
+    'CallRail_Account', 'CallRail_Company', 'CallRail_Call', 'CallRail_Tracker',
+    'CallRail_FormSubmission', 'CallRail_TextMessage', 'CallRail_Tag', 'CallRail_User',
     'AlertModel', 'AlertRule'
 ]
