@@ -62,7 +62,8 @@ class CallRailBaseSyncEngine(BaseSyncEngine):
     @sync_to_async
     def bulk_save_records(self, records: List[Dict], model_class, primary_key: str) -> Dict[str, int]:
         """
-        Bulk save records to database with create/update logic
+        Efficient bulk save records to database following CRM sync guide standards
+        Uses Django bulk_create and bulk_update for maximum performance
         
         Args:
             records: List of record dictionaries to save
@@ -72,10 +73,123 @@ class CallRailBaseSyncEngine(BaseSyncEngine):
         Returns:
             Dict with 'created', 'updated', 'errors' counts and 'error_details' list
         """
+        if not records:
+            return {'created': 0, 'updated': 0, 'errors': 0, 'error_details': []}
+        
+        logger.info(f"Bulk saving {len(records)} records using efficient bulk operations")
+        
+        # First, try efficient bulk operations following CRM sync guide
+        try:
+            return self._efficient_bulk_save(records, model_class, primary_key)
+        except Exception as e:
+            logger.warning(f"Bulk operations failed, falling back to individual saves: {e}")
+            return self._individual_save_fallback(records, model_class, primary_key)
+    
+    def _efficient_bulk_save(self, records: List[Dict], model_class, primary_key: str) -> Dict[str, int]:
+        """Efficient bulk save using Django bulk_create and bulk_update"""
         created_count = 0
         updated_count = 0
         error_count = 0
         error_details = []
+        
+        # Get all primary key values to check for existing records
+        record_keys = [r.get(primary_key) for r in records if r.get(primary_key)]
+        if not record_keys:
+            error_details.append(f"No valid records with {primary_key} found")
+            return {'created': 0, 'updated': 0, 'errors': len(records), 'error_details': error_details}
+        
+        # Get existing records in a single query
+        existing_records = {
+            getattr(obj, primary_key): obj 
+            for obj in model_class.objects.filter(**{f"{primary_key}__in": record_keys})
+        }
+        
+        to_create = []
+        to_update = []
+        
+        # Categorize records for bulk operations
+        for record in records:
+            key_value = record.get(primary_key)
+            if not key_value:
+                error_count += 1
+                error_details.append(f"Missing primary key {primary_key}")
+                continue
+                
+            try:
+                if key_value in existing_records:
+                    # Update existing record
+                    existing_obj = existing_records[key_value]
+                    for field, value in record.items():
+                        if hasattr(existing_obj, field):
+                            setattr(existing_obj, field, value)
+                    to_update.append(existing_obj)
+                else:
+                    # Create new record
+                    to_create.append(model_class(**record))
+                    
+            except Exception as e:
+                error_count += 1
+                error_details.append(f"Record {key_value}: {str(e)}")
+                continue
+        
+        # Execute bulk operations following CRM sync guide patterns
+        with transaction.atomic():
+            # Bulk create new records
+            if to_create:
+                try:
+                    created_objects = model_class.objects.bulk_create(
+                        to_create, 
+                        batch_size=100,  # Standard batch size from CRM sync guide
+                        ignore_conflicts=True
+                    )
+                    created_count = len(created_objects)
+                    logger.info(f"Bulk created {created_count} new records")
+                except Exception as e:
+                    logger.error(f"Bulk create failed: {e}")
+                    error_count += len(to_create)
+                    error_details.append(f"Bulk create failed: {str(e)}")
+            
+            # Bulk update existing records
+            if to_update:
+                try:
+                    # Get all field names except the primary key for updating
+                    update_fields = []
+                    if records:
+                        update_fields = [f for f in records[0].keys() if f != primary_key]
+                    
+                    if update_fields:
+                        model_class.objects.bulk_update(
+                            to_update, 
+                            fields=update_fields,
+                            batch_size=100  # Standard batch size from CRM sync guide
+                        )
+                        updated_count = len(to_update)
+                        logger.info(f"Bulk updated {updated_count} existing records")
+                    else:
+                        logger.warning("No fields to update")
+                        
+                except Exception as e:
+                    logger.error(f"Bulk update failed: {e}")
+                    error_count += len(to_update)
+                    error_details.append(f"Bulk update failed: {str(e)}")
+        
+        logger.info(f"Efficient bulk save completed: {created_count} created, {updated_count} updated, {error_count} errors")
+        
+        return {
+            'created': created_count,
+            'updated': updated_count, 
+            'errors': error_count,
+            'error_details': error_details
+        }
+    
+    def _individual_save_fallback(self, records: List[Dict], model_class, primary_key: str) -> Dict[str, int]:
+        """Fallback to individual saves if bulk operations fail"""
+        created_count = 0
+        updated_count = 0
+        error_count = 0
+        error_details = []
+        
+        logger.warning(f"Using individual save fallback for {len(records)} records")
         
         with transaction.atomic():
             for record in records:

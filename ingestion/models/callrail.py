@@ -15,7 +15,6 @@ class CallRail_Account(models.Model):
     # Sync tracking
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_callrail_account'
@@ -50,10 +49,9 @@ class CallRail_Company(models.Model):
     api_created_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_CallRail_company'
+        db_table = 'ingestion_callrail_company'
         verbose_name = 'CallRail Company'
         verbose_name_plural = 'CallRail Companies'
         indexes = [
@@ -98,10 +96,9 @@ class CallRail_Call(models.Model):
     # Sync tracking
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_CallRail_call'
+        db_table = 'ingestion_callrail_call'
         verbose_name = 'CallRail Call'
         verbose_name_plural = 'CallRail Calls'
         indexes = [
@@ -147,10 +144,9 @@ class CallRail_Tracker(models.Model):
     api_created_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_CallRail_tracker'
+        db_table = 'ingestion_callrail_tracker'
         verbose_name = 'CallRail Tracker'
         verbose_name_plural = 'CallRail Trackers'
         indexes = [
@@ -181,10 +177,9 @@ class CallRail_FormSubmission(models.Model):
     # Sync tracking
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_CallRail_form_submission'
+        db_table = 'ingestion_callrail_form_submission'
         verbose_name = 'CallRail Form Submission'
         verbose_name_plural = 'CallRail Form Submissions'
         indexes = [
@@ -213,10 +208,9 @@ class CallRail_TextMessage(models.Model):
     # Sync tracking
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_CallRail_text_message'
+        db_table = 'ingestion_callrail_text_message'
         verbose_name = 'CallRail Text Message'
         verbose_name_plural = 'CallRail Text Messages'
         indexes = [
@@ -244,10 +238,9 @@ class CallRail_Tag(models.Model):
     # Sync tracking
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_CallRail_tag'
+        db_table = 'ingestion_callrail_tag'
         verbose_name = 'CallRail Tag'
         verbose_name_plural = 'CallRail Tags'
         indexes = [
@@ -276,10 +269,9 @@ class CallRail_User(models.Model):
     # Sync tracking
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    synced_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_CallRail_user'
+        db_table = 'ingestion_callrail_user'
         verbose_name = 'CallRail User'
         verbose_name_plural = 'CallRail Users'
         indexes = [
