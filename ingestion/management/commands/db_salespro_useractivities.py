@@ -9,13 +9,13 @@ from datetime import datetime
 from django.utils import timezone
 from asgiref.sync import sync_to_async
 from ingestion.management.commands.base_salespro_sync import BaseSalesProSyncCommand
-from ingestion.sync.salespro.engines.base import BaseSalesProSyncEngine
+from ingestion.sync.salespro.engines.base import SalesProBaseSyncEngine
 from ingestion.sync.salespro.processors.base import SalesProBaseProcessor
 from ingestion.models.salespro import SalesPro_UserActivity
 
 logger = logging.getLogger(__name__)
 
-class SalesProUserActivitySyncEngine(BaseSalesProSyncEngine):
+class SalesProUserActivitySyncEngine(SalesProBaseSyncEngine):
     """Sync engine for SalesPro User Activities from AWS Athena"""
     
     def __init__(self, **kwargs):

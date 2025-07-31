@@ -25,7 +25,7 @@ from .processors.base import SalesProBaseProcessor
 from .processors.lead_result import SalesProLeadResultProcessor
 
 # For backward compatibility with existing code
-from .base import BaseSalesProSyncEngine
+from .engines.base import SalesProBaseSyncEngine
 
 __all__ = [
     # Clients

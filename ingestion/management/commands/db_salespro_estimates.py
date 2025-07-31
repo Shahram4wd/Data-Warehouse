@@ -8,12 +8,12 @@ from typing import Dict, Any, Optional
 from datetime import datetime
 from django.utils import timezone
 from ingestion.management.commands.base_salespro_sync import BaseSalesProSyncCommand
-from ingestion.sync.salespro.engines.base import BaseSalesProSyncEngine
+from ingestion.sync.salespro.engines.base import SalesProBaseSyncEngine
 from ingestion.models.salespro import SalesPro_Estimate
 
 logger = logging.getLogger(__name__)
 
-class SalesProEstimateSyncEngine(BaseSalesProSyncEngine):
+class SalesProEstimateSyncEngine(SalesProBaseSyncEngine):
     """Sync engine for SalesPro Estimates from AWS Athena with enterprise features"""
     
     def __init__(self, **kwargs):

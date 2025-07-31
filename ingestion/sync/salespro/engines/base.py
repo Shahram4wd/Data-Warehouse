@@ -16,7 +16,7 @@ from ingestion.models.common import SyncHistory
 
 logger = logging.getLogger(__name__)
 
-class BaseSalesProSyncEngine(BaseSyncEngine):
+class SalesProBaseSyncEngine(BaseSyncEngine):
     """Base sync engine for SalesPro AWS Athena operations"""
     
     def __init__(self, table_name: str, model_class, **kwargs):
