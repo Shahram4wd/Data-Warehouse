@@ -46,13 +46,14 @@ class BaseAPIClient(ABC):
         if self.session:
             await self.session.close()
     
-    async def make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
+    async def make_request(self, method: str, endpoint: str, params: Dict[str, Any] = None, **kwargs) -> Dict[str, Any]:
         """Make HTTP request with retry logic"""
         url = f"{self.base_url.rstrip('/')}/{endpoint.lstrip('/')}"
         
         for attempt in range(3):
             try:
-                async with self.session.request(method, url, **kwargs) as response:
+                # Pass params explicitly to aiohttp
+                async with self.session.request(method, url, params=params, **kwargs) as response:
                     if response.status == 429:
                         await self.handle_rate_limit(response)
                         continue
@@ -64,6 +65,11 @@ class BaseAPIClient(ABC):
                     return await response.json()
                     
             except aiohttp.ClientError as e:
+                if attempt == 2:
+                    raise APIException(f"Request failed after 3 attempts: {e}")
+                await asyncio.sleep(2 ** attempt)
+            except Exception as e:
+                logger.error(f"Unexpected error on attempt {attempt + 1}: {e}")
                 if attempt == 2:
                     raise APIException(f"Request failed after 3 attempts: {e}")
                 await asyncio.sleep(2 ** attempt)

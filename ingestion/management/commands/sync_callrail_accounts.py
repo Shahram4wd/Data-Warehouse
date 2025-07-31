@@ -15,32 +15,43 @@ class Command(BaseCommand):
     help = 'Sync CallRail accounts data'
 
     def add_arguments(self, parser):
+        # Standard CRM sync flags according to sync_crm_guide.md
         parser.add_argument(
-            '--dry-run',
+            '--full',
             action='store_true',
-            help='Run in dry-run mode (no database writes)'
+            help='Perform full sync (ignore last sync timestamp)'
         )
         parser.add_argument(
-            '--force',
+            '--force-overwrite',
             action='store_true',
-            help='Force full sync (ignore last sync timestamp)'
+            help='Completely replace existing records'
         )
         parser.add_argument(
             '--since',
             type=str,
-            help='Sync data since date (YYYY-MM-DD format)'
+            help='Manual sync start date (YYYY-MM-DD format)'
+        )
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Test run without database writes'
         )
         parser.add_argument(
             '--batch-size',
             type=int,
             default=100,
-            help='Batch size for API requests'
+            help='Records per API batch (default: 100)'
         )
         parser.add_argument(
             '--max-records',
             type=int,
             default=0,
-            help='Maximum records to sync (0 = unlimited)'
+            help='Limit total records (0 = unlimited)'
+        )
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Enable verbose logging'
         )
 
     def handle(self, *args, **options):
@@ -51,12 +62,18 @@ class Command(BaseCommand):
             if not api_key:
                 raise CommandError("CALLRAIL_API_KEY not configured in settings or environment")
             
-            # Parse command line options
+            # Parse standard CRM sync arguments
             dry_run = options['dry_run']
-            force = options['force']
+            full_sync = options['full']
+            force_overwrite = options['force_overwrite']
             since = options.get('since')
             batch_size = options['batch_size']
             max_records = options['max_records']
+            debug = options.get('debug', False)
+            
+            # Set up debug logging if requested
+            if debug:
+                logging.getLogger('ingestion.sync.callrail').setLevel(logging.DEBUG)
             
             self.stdout.write(
                 self.style.SUCCESS('Starting CallRail accounts sync')
@@ -64,6 +81,14 @@ class Command(BaseCommand):
             
             if dry_run:
                 self.stdout.write(self.style.WARNING('Running in DRY-RUN mode'))
+            
+            # Display sync mode
+            if force_overwrite:
+                self.stdout.write(self.style.WARNING('FORCE OVERWRITE MODE - Existing records will be replaced'))
+            elif full_sync:
+                self.stdout.write('Full sync mode (ignoring last sync timestamp)')
+            else:
+                self.stdout.write('Delta sync mode (incremental update)')
             
             # Parse since date if provided
             since_date = None
@@ -77,7 +102,8 @@ class Command(BaseCommand):
             # Run the sync
             result = asyncio.run(self._run_sync(
                 dry_run=dry_run,
-                force=force,
+                full_sync=full_sync,
+                force_overwrite=force_overwrite,
                 since_date=since_date,
                 batch_size=batch_size,
                 max_records=max_records
@@ -117,7 +143,8 @@ class Command(BaseCommand):
             
             # Prepare sync parameters
             sync_params = {
-                'force': kwargs['force'],
+                'full_sync': kwargs['full_sync'],
+                'force_overwrite': kwargs['force_overwrite'],
                 'since_date': kwargs['since_date'],
                 'max_records': kwargs['max_records']
             }

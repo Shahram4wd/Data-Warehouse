@@ -22,7 +22,6 @@ class CallsClient(CallRailBaseClient):
     
     async def fetch_calls(
         self, 
-        account_id: str,
         since_date: Optional[datetime] = None,
         **params
     ) -> AsyncGenerator[List[Dict[str, Any]], None]:
@@ -30,11 +29,12 @@ class CallsClient(CallRailBaseClient):
         Fetch calls from CallRail API with delta sync support
         
         Args:
-            account_id: CallRail account ID
             since_date: Only fetch calls since this date (for delta sync)
             **params: Additional query parameters
         """
-        endpoint = f'a/{account_id}/calls.json'
+        # First fetch all accounts
+        accounts_response = await self.make_request('GET', 'a.json')
+        accounts = accounts_response.get('accounts', [])
         
         # Default parameters for calls
         default_params = {
@@ -49,12 +49,20 @@ class CallsClient(CallRailBaseClient):
         # Merge with provided parameters
         call_params = {**default_params, **params}
         
-        logger.info(f"Fetching CallRail calls for account {account_id}")
-        if since_date:
-            logger.info(f"Delta sync since: {since_date}")
-        
-        async for batch in self.fetch_paginated_data(endpoint, since_date, **call_params):
-            yield batch
+        # Iterate through each account
+        for account in accounts:
+            account_id = account.get('id')
+            if not account_id:
+                continue
+                
+            endpoint = f'a/{account_id}/calls.json'
+            
+            logger.info(f"Fetching CallRail calls for account {account_id}")
+            if since_date:
+                logger.info(f"Delta sync since: {since_date}")
+            
+            async for batch in self.fetch_paginated_data(endpoint, since_date, **call_params):
+                yield batch
     
     async def get_call_by_id(self, account_id: str, call_id: str) -> Optional[Dict[str, Any]]:
         """Get a specific call by ID"""

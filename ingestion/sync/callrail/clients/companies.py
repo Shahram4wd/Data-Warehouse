@@ -22,34 +22,61 @@ class CompaniesClient(CallRailBaseClient):
     
     async def fetch_companies(
         self, 
-        account_id: str,
         since_date: Optional[datetime] = None,
         **params
     ) -> AsyncGenerator[List[Dict[str, Any]], None]:
         """
-        Fetch companies from CallRail API
+        Fetch companies from CallRail API for all accessible accounts
         
         Args:
-            account_id: CallRail account ID
             since_date: Only fetch companies since this date (for delta sync)
             **params: Additional query parameters
         """
-        endpoint = f'a/{account_id}/companies.json'
+        logger.info("Fetching CallRail companies for all accessible accounts")
         
-        # Default parameters for companies
-        default_params = {
-            'per_page': 100,
-        }
+        # First, get all accounts
+        accounts_response = await self.make_request('GET', 'a.json', params={})
+        accounts = accounts_response.get('accounts', [])
         
-        # Merge with provided parameters
-        company_params = {**default_params, **params}
+        if not accounts:
+            logger.warning("No accounts found")
+            return
         
-        logger.info(f"Fetching CallRail companies for account {account_id}")
+        # Build query parameters - only include valid API parameters
+        query_params = {}
+        
+        # Add pagination parameters
+        if 'per_page' in params:
+            query_params['per_page'] = params['per_page']
+        
+        # Add date filter if provided
         if since_date:
-            logger.info(f"Delta sync since: {since_date}")
-        
-        async for batch in self.fetch_paginated_data(endpoint, since_date, **company_params):
-            yield batch
+            date_field = self.get_date_filter_field()
+            if date_field:
+                query_params[f'filters[{date_field}]'] = since_date.isoformat()
+
+        # Fetch companies for each account
+        for account in accounts:
+            account_id = account.get('id')
+            if not account_id:
+                continue
+                
+            try:
+                endpoint = f'a/{account_id}/companies.json'
+                logger.debug(f"Fetching companies for account {account_id}")
+                
+                response = await self.make_request('GET', endpoint, params=query_params)
+                companies = self.extract_data_from_response(response)
+                
+                if companies:
+                    logger.debug(f"Fetched {len(companies)} companies for account {account_id}")
+                    yield companies
+                else:
+                    logger.debug(f"No companies found for account {account_id}")
+                    
+            except Exception as e:
+                logger.error(f"Error fetching companies for account {account_id}: {e}")
+                continue
     
     async def get_company_by_id(self, account_id: str, company_id: str) -> Optional[Dict[str, Any]]:
         """Get a specific company by ID"""

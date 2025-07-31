@@ -22,7 +22,6 @@ class TrackersClient(CallRailBaseClient):
     
     async def fetch_trackers(
         self, 
-        account_id: str,
         company_id: Optional[str] = None,
         since_date: Optional[datetime] = None,
         **params
@@ -31,15 +30,13 @@ class TrackersClient(CallRailBaseClient):
         Fetch trackers from CallRail API
         
         Args:
-            account_id: CallRail account ID
             company_id: Optional company ID to filter trackers
             since_date: Only fetch trackers since this date (for delta sync)
             **params: Additional query parameters
         """
-        if company_id:
-            endpoint = f'a/{account_id}/companies/{company_id}/trackers.json'
-        else:
-            endpoint = f'a/{account_id}/trackers.json'
+        # First fetch all accounts
+        accounts_response = await self.make_request('GET', 'a.json')
+        accounts = accounts_response.get('accounts', [])
         
         # Default parameters for trackers
         default_params = {
@@ -49,14 +46,25 @@ class TrackersClient(CallRailBaseClient):
         # Merge with provided parameters
         tracker_params = {**default_params, **params}
         
-        logger.info(f"Fetching CallRail trackers for account {account_id}")
-        if company_id:
-            logger.info(f"Filtering by company: {company_id}")
-        if since_date:
-            logger.info(f"Delta sync since: {since_date}")
-        
-        async for batch in self.fetch_paginated_data(endpoint, since_date, **tracker_params):
-            yield batch
+        # Iterate through each account
+        for account in accounts:
+            account_id = account.get('id')
+            if not account_id:
+                continue
+                
+            if company_id:
+                endpoint = f'a/{account_id}/companies/{company_id}/trackers.json'
+            else:
+                endpoint = f'a/{account_id}/trackers.json'
+            
+            logger.info(f"Fetching CallRail trackers for account {account_id}")
+            if company_id:
+                logger.info(f"Filtering by company: {company_id}")
+            if since_date:
+                logger.info(f"Delta sync since: {since_date}")
+            
+            async for batch in self.fetch_paginated_data(endpoint, since_date, **tracker_params):
+                yield batch
     
     async def get_tracker_by_id(
         self, 

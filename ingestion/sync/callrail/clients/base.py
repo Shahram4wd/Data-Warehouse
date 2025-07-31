@@ -112,6 +112,9 @@ class CallRailBaseClient(BaseAPIClient):
             try:
                 response = await self.make_request('GET', endpoint, params=current_params)
                 
+                # Log the actual parameters being sent for debugging
+                logger.debug(f"API request params: {current_params}")
+                
                 # Extract data from response
                 data = self.extract_data_from_response(response)
                 

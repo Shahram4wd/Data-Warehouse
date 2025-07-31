@@ -22,7 +22,6 @@ class TextMessagesClient(CallRailBaseClient):
     
     async def fetch_text_messages(
         self, 
-        account_id: str,
         since_date: Optional[datetime] = None,
         **params
     ) -> AsyncGenerator[List[Dict[str, Any]], None]:
@@ -30,43 +29,35 @@ class TextMessagesClient(CallRailBaseClient):
         Fetch text messages from CallRail API
         
         Args:
-            account_id: CallRail account ID
             since_date: Optional datetime for delta sync
             **params: Additional query parameters
             
         Yields:
             List[Dict]: Batches of text message records
         """
-        logger.info(f"Fetching text messages for account {account_id}")
+        # First fetch all accounts
+        accounts_response = await self.make_request('GET', 'a.json')
+        accounts = accounts_response.get('accounts', [])
         
-        # Build query parameters
-        query_params = {
-            'page': 1,
-            'per_page': params.get('batch_size', 100),
+        # Default parameters for text messages
+        default_params = {
+            'per_page': 100,
         }
         
-        # Add date filter if provided
-        if since_date:
-            date_field = self.get_date_filter_field()
-            if date_field:
-                query_params[f'filters[{date_field}]'] = since_date.isoformat()
+        # Merge with provided parameters
+        message_params = {**default_params, **params}
         
-        # Add any additional filters
-        query_params.update(params.get('filters', {}))
-        
-        try:
-            async for batch in self.fetch_paginated_data(
-                endpoint=f"/accounts/{account_id}/text_messages.json",
-                params=query_params,
-                **params
-            ):
-                if batch:
-                    logger.debug(f"Fetched {len(batch)} text messages")
-                    yield batch
-                else:
-                    logger.info("No more text messages to fetch")
-                    break
-                    
-        except Exception as e:
-            logger.error(f"Error fetching text messages: {e}")
-            raise
+        # Iterate through each account
+        for account in accounts:
+            account_id = account.get('id')
+            if not account_id:
+                continue
+                
+            endpoint = f'a/{account_id}/text_messages.json'
+            
+            logger.info(f"Fetching CallRail text messages for account {account_id}")
+            if since_date:
+                logger.info(f"Delta sync since: {since_date}")
+            
+            async for batch in self.fetch_paginated_data(endpoint, since_date, **message_params):
+                yield batch
