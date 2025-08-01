@@ -18,8 +18,7 @@ class SalesRabbitLeadsClient(SalesRabbitBaseClient):
         super().__init__(**kwargs)
         self.endpoints = {
             'leads': '/leads',  # Updated to match working original client
-            'leads_search': '/leads/search',
-            'leads_count': '/leads/count'
+            'leads_search': '/leads/search'
         }
     
     async def fetch_all_leads(self, limit: int = 1000, max_records: int = 0) -> List[Dict[str, Any]]:
@@ -93,24 +92,33 @@ class SalesRabbitLeadsClient(SalesRabbitBaseClient):
     async def get_lead_count_since(self, since_date: Optional[datetime] = None) -> int:
         """Get count of leads for sync planning"""
         try:
-            params = {}
+            # SalesRabbit API doesn't have a dedicated count endpoint
+            # Instead, we'll fetch the first page and use the response metadata if available
+            # or return 0 to skip count-based planning
+            params = {'limit': 1, 'page': 1}
             if since_date:
-                params['modified_since'] = since_date.isoformat()
+                # Use If-Modified-Since header for consistency with fetch_leads_since
+                date_param = since_date.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+                extra_headers = {'If-Modified-Since': date_param}
+            else:
+                extra_headers = {}
             
             # Use context manager for proper session handling
             async with self as client:
-                response = await client.make_request('GET', self.endpoints['leads_count'], params=params)
+                response = await client.make_request('GET', self.endpoints['leads'], params=params, headers=extra_headers)
             
-            # Handle different response formats
+            # Try to extract count from response metadata
             if isinstance(response, dict):
-                count = response.get('count', response.get('total', 0))
-            else:
-                count = 0
+                count = response.get('count', response.get('total', response.get('totalCount', 0)))
+                if count > 0:
+                    logger.info(f"Lead count from metadata: {count}")
+                    return count
             
-            logger.info(f"Lead count: {count}")
-            return count
+            # If no count metadata, return 0 to skip count-based planning
+            logger.info("No count metadata available, skipping count-based sync planning")
+            return 0
         except Exception as e:
-            logger.warning(f"Could not get lead count: {e}")
+            logger.warning(f"Could not get lead count (this is normal for SalesRabbit API): {e}")
             return 0
     
     async def get_lead_by_id(self, lead_id: int) -> Optional[Dict[str, Any]]:
