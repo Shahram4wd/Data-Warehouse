@@ -27,9 +27,6 @@ urlpatterns = [
     # SQL Explorer URLs
     path('explorer/', include('explorer.urls')),
     
-    # API documentation redirect
-    path('api/docs/', include('ingestion.urls')),
-    
     # Authentication URLs (if needed)
     path('accounts/', include('django.contrib.auth.urls')),
     
