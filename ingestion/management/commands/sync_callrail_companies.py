@@ -1,8 +1,9 @@
 """
-Management command to sync CallRail companies data
+Management command to sync CallRail companies
 """
 import logging
 import asyncio
+import os
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from ingestion.sync.callrail.engines.companies import CompaniesSyncEngine
@@ -29,8 +30,9 @@ class Command(BaseCommand):
         """Handle the management command"""
         try:
             # Check if CallRail API key is configured
-            if not hasattr(settings, 'CALLRAIL_API_KEY') or not settings.CALLRAIL_API_KEY:
-                raise CommandError("CALLRAIL_API_KEY not configured in settings")
+            api_key = getattr(settings, 'CALLRAIL_API_KEY', None) or os.getenv('CALLRAIL_API_KEY')
+            if not api_key:
+                raise CommandError("CALLRAIL_API_KEY not configured in settings or environment")
             
             full_sync = options['full_sync']
             dry_run = options.get('dry_run', False)
@@ -58,12 +60,12 @@ class Command(BaseCommand):
     
     async def _run_sync(self, full_sync, dry_run):
         """Run the actual sync process"""
-        sync_engine = CompaniesSyncEngine()
+        companies_engine = CompaniesSyncEngine()
         
         if dry_run:
             self.stdout.write("Dry run mode not fully implemented yet")
         
-        return await sync_engine.sync_companies(
+        return await companies_engine.sync_companies(
             full_sync=full_sync
         )
     
@@ -73,10 +75,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("SYNC RESULTS"))
         self.stdout.write("="*50)
         
-        self.stdout.write(f"Account ID: {sync_result.get('account_id')}")
-        self.stdout.write(f"Entity: {sync_result.get('entity')}")
-        self.stdout.write(f"Full Sync: {sync_result.get('full_sync')}")
-        self.stdout.write(f"Duration: {sync_result.get('duration', 0):.2f} seconds")
+        self.stdout.write(f"Entity: companies")
+        self.stdout.write(f"Full Sync: {sync_result.get('full_sync', False)}")
         
         self.stdout.write("\nCounts:")
         self.stdout.write(f"  Fetched: {sync_result.get('total_fetched', 0)}")
@@ -84,7 +84,7 @@ class Command(BaseCommand):
         self.stdout.write(f"  Created: {sync_result.get('total_created', 0)}")
         self.stdout.write(f"  Updated: {sync_result.get('total_updated', 0)}")
         
-        error_count = sync_result.get('total_errors', 0)
+        error_count = len(sync_result.get('errors', []))
         if error_count > 0:
             self.stdout.write(
                 self.style.ERROR(f"  Errors: {error_count}")

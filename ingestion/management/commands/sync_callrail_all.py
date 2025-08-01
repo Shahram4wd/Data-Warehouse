@@ -120,16 +120,36 @@ class Command(BaseCommand):
         """Run entity syncs sequentially"""
         sync_results = {}
         
-        # Sync companies first (dependencies for other entities)
+        # Sync accounts first (foundation data)
+        if 'accounts' in entities:
+            self.stdout.write(
+                self.style.HTTP_INFO('\n🏢 Starting accounts sync...')
+            )
+            try:
+                accounts_engine = AccountsSyncEngine()
+                accounts_params = {}
+                if full_sync:
+                    accounts_params['force'] = True
+                accounts_result = await accounts_engine.sync_accounts(**accounts_params)
+                sync_results['accounts'] = accounts_result
+                self._display_entity_summary('accounts', accounts_result)
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f'❌ Accounts sync failed: {e}')
+                )
+                sync_results['accounts'] = {'error': str(e)}
+        
+        # Sync companies second (dependencies for other entities)
         if 'companies' in entities:
             self.stdout.write(
                 self.style.HTTP_INFO('\n📋 Starting companies sync...')
             )
             try:
                 companies_engine = CompaniesSyncEngine()
-                companies_result = await companies_engine.sync_companies(
-                    full_sync=full_sync
-                )
+                companies_params = {}
+                if full_sync:
+                    companies_params['force'] = True
+                companies_result = await companies_engine.sync_companies(**companies_params)
                 sync_results['companies'] = companies_result
                 self._display_entity_summary('companies', companies_result)
             except Exception as e:
@@ -138,17 +158,20 @@ class Command(BaseCommand):
                 )
                 sync_results['companies'] = {'error': str(e)}
         
-        # Sync trackers second
+        # Sync trackers
         if 'trackers' in entities:
             self.stdout.write(
                 self.style.HTTP_INFO('\n📞 Starting trackers sync...')
             )
             try:
                 trackers_engine = TrackersSyncEngine()
-                trackers_result = await trackers_engine.sync_trackers(
-                    company_id=company_id,
-                    full_sync=full_sync
-                )
+                trackers_params = {}
+                if company_id:
+                    trackers_params['company_id'] = company_id
+                if full_sync:
+                    trackers_params['force'] = True
+                
+                trackers_result = await trackers_engine.sync_trackers(**trackers_params)
                 sync_results['trackers'] = trackers_result
                 self._display_entity_summary('trackers', trackers_result)
             except Exception as e:
@@ -173,11 +196,10 @@ class Command(BaseCommand):
                     calls_params['start_date'] = start_date
                 if end_date:
                     calls_params['end_date'] = end_date
+                if full_sync:
+                    calls_params['force'] = True
                 
-                calls_result = await calls_engine.sync_calls(
-                    full_sync=full_sync,
-                    **calls_params
-                )
+                calls_result = await calls_engine.sync_calls(**calls_params)
                 sync_results['calls'] = calls_result
                 self._display_entity_summary('calls', calls_result)
             except Exception as e:
@@ -185,6 +207,82 @@ class Command(BaseCommand):
                     self.style.ERROR(f'❌ Calls sync failed: {e}')
                 )
                 sync_results['calls'] = {'error': str(e)}
+        
+        # Sync form submissions
+        if 'form_submissions' in entities:
+            self.stdout.write(
+                self.style.HTTP_INFO('\n📝 Starting form submissions sync...')
+            )
+            try:
+                form_submissions_engine = FormSubmissionsSyncEngine()
+                form_submissions_params = {}
+                if full_sync:
+                    form_submissions_params['force'] = True
+                form_submissions_result = await form_submissions_engine.sync_form_submissions(**form_submissions_params)
+                sync_results['form_submissions'] = form_submissions_result
+                self._display_entity_summary('form_submissions', form_submissions_result)
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f'❌ Form submissions sync failed: {e}')
+                )
+                sync_results['form_submissions'] = {'error': str(e)}
+        
+        # Sync text messages
+        if 'text_messages' in entities:
+            self.stdout.write(
+                self.style.HTTP_INFO('\n💬 Starting text messages sync...')
+            )
+            try:
+                text_messages_engine = TextMessagesSyncEngine()
+                text_messages_params = {}
+                if full_sync:
+                    text_messages_params['force'] = True
+                text_messages_result = await text_messages_engine.sync_text_messages(**text_messages_params)
+                sync_results['text_messages'] = text_messages_result
+                self._display_entity_summary('text_messages', text_messages_result)
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f'❌ Text messages sync failed: {e}')
+                )
+                sync_results['text_messages'] = {'error': str(e)}
+        
+        # Sync tags
+        if 'tags' in entities:
+            self.stdout.write(
+                self.style.HTTP_INFO('\n🏷️ Starting tags sync...')
+            )
+            try:
+                tags_engine = TagsSyncEngine()
+                tags_params = {}
+                if full_sync:
+                    tags_params['force'] = True
+                tags_result = await tags_engine.sync_tags(**tags_params)
+                sync_results['tags'] = tags_result
+                self._display_entity_summary('tags', tags_result)
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f'❌ Tags sync failed: {e}')
+                )
+                sync_results['tags'] = {'error': str(e)}
+        
+        # Sync users
+        if 'users' in entities:
+            self.stdout.write(
+                self.style.HTTP_INFO('\n👥 Starting users sync...')
+            )
+            try:
+                users_engine = UsersSyncEngine()
+                users_params = {}
+                if full_sync:
+                    users_params['force'] = True
+                users_result = await users_engine.sync_users(**users_params)
+                sync_results['users'] = users_result
+                self._display_entity_summary('users', users_result)
+            except Exception as e:
+                self.stdout.write(
+                    self.style.ERROR(f'❌ Users sync failed: {e}')
+                )
+                sync_results['users'] = {'error': str(e)}
         
         return sync_results
     
@@ -199,18 +297,29 @@ class Command(BaseCommand):
         
         tasks = []
         
+        if 'accounts' in entities:
+            accounts_engine = AccountsSyncEngine()
+            accounts_params = {}
+            if full_sync:
+                accounts_params['force'] = True
+            tasks.append(('accounts', accounts_engine.sync_accounts(**accounts_params)))
+        
         if 'companies' in entities:
             companies_engine = CompaniesSyncEngine()
-            tasks.append(('companies', companies_engine.sync_companies(
-                full_sync=full_sync
-            )))
+            companies_params = {}
+            if full_sync:
+                companies_params['force'] = True
+            tasks.append(('companies', companies_engine.sync_companies(**companies_params)))
         
         if 'trackers' in entities:
             trackers_engine = TrackersSyncEngine()
-            tasks.append(('trackers', trackers_engine.sync_trackers(
-                company_id=company_id,
-                full_sync=full_sync
-            )))
+            trackers_params = {}
+            if company_id:
+                trackers_params['company_id'] = company_id
+            if full_sync:
+                trackers_params['force'] = True
+                
+            tasks.append(('trackers', trackers_engine.sync_trackers(**trackers_params)))
         
         if 'calls' in entities:
             calls_engine = CallsSyncEngine()
@@ -221,11 +330,38 @@ class Command(BaseCommand):
                 calls_params['start_date'] = start_date
             if end_date:
                 calls_params['end_date'] = end_date
+            if full_sync:
+                calls_params['force'] = True
             
-            tasks.append(('calls', calls_engine.sync_calls(
-                full_sync=full_sync,
-                **calls_params
-            )))
+            tasks.append(('calls', calls_engine.sync_calls(**calls_params)))
+        
+        if 'form_submissions' in entities:
+            form_submissions_engine = FormSubmissionsSyncEngine()
+            form_submissions_params = {}
+            if full_sync:
+                form_submissions_params['force'] = True
+            tasks.append(('form_submissions', form_submissions_engine.sync_form_submissions(**form_submissions_params)))
+        
+        if 'text_messages' in entities:
+            text_messages_engine = TextMessagesSyncEngine()
+            text_messages_params = {}
+            if full_sync:
+                text_messages_params['force'] = True
+            tasks.append(('text_messages', text_messages_engine.sync_text_messages(**text_messages_params)))
+        
+        if 'tags' in entities:
+            tags_engine = TagsSyncEngine()
+            tags_params = {}
+            if full_sync:
+                tags_params['force'] = True
+            tasks.append(('tags', tags_engine.sync_tags(**tags_params)))
+        
+        if 'users' in entities:
+            users_engine = UsersSyncEngine()
+            users_params = {}
+            if full_sync:
+                users_params['force'] = True
+            tasks.append(('users', users_engine.sync_users(**users_params)))
         
         # Run all tasks in parallel
         results = await asyncio.gather(*[task[1] for task in tasks], return_exceptions=True)

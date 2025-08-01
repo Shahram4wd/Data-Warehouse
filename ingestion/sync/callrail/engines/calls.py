@@ -130,8 +130,10 @@ class CallsSyncEngine(CallRailBaseSyncEngine):
                         logger.info("No previous sync found, performing initial full sync")
                 
                 # Fetch and process calls in batches (client now handles all accounts)
-                # Remove since_date from kwargs to avoid duplicate parameter error
-                client_kwargs = {k: v for k, v in kwargs.items() if k != 'since_date'}
+                # Filter out parameters that shouldn't go to API client
+                # Remove since_date (passed separately) and boolean flags that API doesn't accept
+                client_kwargs = {k: v for k, v in kwargs.items() 
+                               if k not in ['since_date', 'full_sync', 'force_overwrite', 'force']}
                 
                 async for call_batch in client.fetch_calls(
                     since_date=since_date,

@@ -3,6 +3,7 @@ Management command to sync CallRail tags
 """
 import logging
 import asyncio
+import os
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
 from ingestion.sync.callrail.engines.tags import TagsSyncEngine
@@ -15,25 +16,19 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--account-id',
-            type=str,
-            required=True,
-            help='CallRail account ID'
-        )
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Run in dry-run mode (no database writes)'
-        )
-        parser.add_argument(
-            '--force',
-            action='store_true',
-            help='Force full sync (ignore last sync timestamp)'
+            '--full',
+            action='store_true', 
+            help='Perform full sync (ignore last sync timestamp)'
         )
         parser.add_argument(
             '--since',
             type=str,
             help='Sync data since date (YYYY-MM-DD format)'
+        )
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Run in dry-run mode (no database writes)'
         )
         parser.add_argument(
             '--batch-size',
@@ -51,16 +46,20 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """Handle the command execution"""
         try:
+            # Check for API key
+            api_key = getattr(settings, 'CALLRAIL_API_KEY', None) or os.getenv('CALLRAIL_API_KEY')
+            if not api_key:
+                raise CommandError('CALLRAIL_API_KEY not configured in settings or environment')
+            
             # Parse command line options
-            account_id = options['account_id']
             dry_run = options['dry_run']
-            force = options['force']
+            full_sync = options['full']
             since = options.get('since')
             batch_size = options['batch_size']
             max_records = options['max_records']
             
             self.stdout.write(
-                self.style.SUCCESS(f'Starting CallRail tags sync for account: {account_id}')
+                self.style.SUCCESS('Starting CallRail tags sync')
             )
             
             if dry_run:
@@ -77,9 +76,8 @@ class Command(BaseCommand):
             
             # Run the sync
             result = asyncio.run(self._run_sync(
-                account_id=account_id,
                 dry_run=dry_run,
-                force=force,
+                full_sync=full_sync,
                 since_date=since_date,
                 batch_size=batch_size,
                 max_records=max_records
@@ -113,17 +111,18 @@ class Command(BaseCommand):
         try:
             # Initialize the sync engine
             engine = TagsSyncEngine(
-                account_id=kwargs['account_id'],
                 dry_run=kwargs['dry_run'],
                 batch_size=kwargs['batch_size']
             )
             
-            # Prepare sync parameters
-            sync_params = {
-                'force': kwargs['force'],
-                'since_date': kwargs['since_date'],
-                'max_records': kwargs['max_records']
-            }
+            # Prepare sync parameters - filter out boolean values for API
+            sync_params = {}
+            if kwargs.get('since_date'):
+                sync_params['since_date'] = kwargs['since_date']
+            if kwargs.get('max_records'):
+                sync_params['max_records'] = kwargs['max_records']
+            if kwargs.get('full_sync'):
+                sync_params['force'] = True
             
             # Run the sync
             result = await engine.sync_tags(**sync_params)

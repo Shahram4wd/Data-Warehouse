@@ -23,10 +23,16 @@ class TrackersProcessor(CallRailBaseProcessor):
             'name': 'name',
             'status': 'status',
             'type': 'type',
-            'tracking_number': 'tracking_number',
-            'forwarding_number': 'forwarding_number',
-            'company_id': 'company_id',
-            'created_at': 'created_at',
+            'tracking_numbers': 'tracking_numbers',  # This is an array field
+            'destination_number': 'destination_number',
+            'whisper_message': 'whisper_message',
+            'sms_enabled': 'sms_enabled',
+            'sms_supported': 'sms_supported',
+            'disabled_at': 'disabled_at',
+            'company': 'company',  # JSON object
+            'call_flow': 'call_flow',  # JSON object
+            'source': 'source',  # JSON object
+            'created_at': 'api_created_at',  # Map to api_created_at
             'updated_at': 'updated_at',
         }
         
@@ -64,7 +70,7 @@ class TrackersProcessor(CallRailBaseProcessor):
         """Validate transformed tracker record"""
         try:
             # Check required fields
-            required_fields = ['id', 'name', 'tracking_number']
+            required_fields = ['id', 'name']
             for field in required_fields:
                 if field not in record or record[field] is None:
                     logger.warning(f"Missing required field '{field}' in tracker record")
@@ -80,10 +86,11 @@ class TrackersProcessor(CallRailBaseProcessor):
                 logger.warning("Invalid tracker name (empty)")
                 return False
             
-            # Validate tracking number is not empty
-            if not str(record['tracking_number']).strip():
-                logger.warning("Invalid tracking number (empty)")
-                return False
+            # Validate tracking_numbers array (optional but should be a list if present)
+            if 'tracking_numbers' in record and record['tracking_numbers'] is not None:
+                if not isinstance(record['tracking_numbers'], list):
+                    logger.warning("Invalid tracking_numbers format (should be list)")
+                    return False
                 
             return True
             
