@@ -1,9 +1,11 @@
 """
 SalesRabbit leads API client with incremental sync capabilities
 """
+import asyncio
 import logging
 from datetime import datetime
 from typing import Optional, List, Dict, Any, AsyncGenerator
+from django.utils.dateparse import parse_datetime
 from .base import SalesRabbitBaseClient
 from ingestion.base.exceptions import DataSourceException
 
@@ -40,29 +42,53 @@ class SalesRabbitLeadsClient(SalesRabbitBaseClient):
             return []
     
     async def fetch_leads_since(self, since_date: datetime, limit: int = 1000, max_records: int = 0) -> List[Dict[str, Any]]:
-        """Fetch leads modified since specific date - FRAMEWORK STANDARD"""
+        """Fetch leads modified since specific date - SERVER-SIDE FILTERING using If-Modified-Since header"""
         try:
-            params = {
-                'modified_since': since_date.isoformat(),
-                'sort': 'date_modified',
-                'order': 'asc',
-                'limit': limit
-            }
+            # SalesRabbit API supports If-Modified-Since header for server-side filtering
+            logger.info(f"Fetching SalesRabbit leads modified since {since_date} using If-Modified-Since header")
             
-            logger.info(f"Fetching SalesRabbit leads modified since {since_date}")
+            # Format the date for SalesRabbit API (requires +00:00 timezone offset as per docs)
+            date_param = since_date.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+            
+            # Use If-Modified-Since header instead of query parameter
+            extra_headers = {'If-Modified-Since': date_param}
+            params = {'limit': limit}
+            
+            logger.info(f"Using If-Modified-Since header: {date_param}")
             
             # If max_records is specified, use modified pagination
             if max_records > 0:
-                return await self._make_limited_paginated_request(
-                    self.endpoints['leads'], params, max_records
+                return await self._make_limited_paginated_request_with_headers(
+                    self.endpoints['leads'], params, max_records, extra_headers
                 )
             else:
-                return await self._make_paginated_request(self.endpoints['leads'], params)
+                return await self._make_paginated_request_with_headers(self.endpoints['leads'], params, extra_headers)
+            
         except Exception as e:
             logger.error(f"Error fetching leads since {since_date}: {e}")
             # Return empty list instead of raising exception for graceful handling
             logger.warning("Returning empty list due to API error - sync will continue with 0 records")
             return []
+    
+    async def _make_single_page_request(self, endpoint: str, params: Dict = None) -> List[Dict[str, Any]]:
+        """Make a single page request to the API"""
+        if params is None:
+            params = {}
+        
+        async with self as client:
+            try:
+                response = await client.make_request('GET', endpoint, params=params)
+                
+                # Handle different response formats
+                if isinstance(response, list):
+                    return response
+                elif isinstance(response, dict):
+                    return response.get('data', response.get('leads', []))
+                else:
+                    return []
+            except Exception as e:
+                logger.error(f"Error in single page request: {e}")
+                return []
     
     async def get_lead_count_since(self, since_date: Optional[datetime] = None) -> int:
         """Get count of leads for sync planning"""

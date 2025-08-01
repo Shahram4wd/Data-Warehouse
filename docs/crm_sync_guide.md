@@ -690,21 +690,203 @@ with tqdm(total=estimated_total, desc="Syncing records") as pbar:
 
 ## Monitoring & Observability
 
-### 1. **Sync History Tracking**
+### 1. **Mandatory Sync History Tracking with SyncHistory Table**
+
+**CRITICAL REQUIREMENT**: All CRM integrations must use the standardized `SyncHistory` model for sync tracking. This is the single source of truth for all sync operations.
 
 ```python
+from ingestion.models.common import SyncHistory
+
 class SyncHistory(models.Model):
-    crm_source = models.CharField(max_length=50)  # 'hubspot', 'salesforce'
-    sync_type = models.CharField(max_length=50)   # 'contacts', 'deals'
-    status = models.CharField(max_length=20)      # 'success', 'failed', 'partial'
-    records_processed = models.IntegerField()
-    records_created = models.IntegerField()
-    records_updated = models.IntegerField()
-    records_failed = models.IntegerField()
+    """Centralized sync tracking for all CRM sources"""
+    crm_source = models.CharField(max_length=50)      # 'hubspot', 'salesforce', 'callrail', 'salesrabbit'
+    sync_type = models.CharField(max_length=50)       # 'contacts', 'deals', 'calls', 'leads'
+    status = models.CharField(max_length=20)          # 'running', 'success', 'failed', 'partial'
+    records_processed = models.IntegerField(default=0)
+    records_created = models.IntegerField(default=0)
+    records_updated = models.IntegerField(default=0)
+    records_failed = models.IntegerField(default=0)
     start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
-    error_message = models.TextField(null=True)
-    performance_metrics = models.JSONField()
+    end_time = models.DateTimeField(null=True, blank=True)
+    error_message = models.TextField(null=True, blank=True)
+    performance_metrics = models.JSONField(default=dict)
+    configuration = models.JSONField(default=dict)    # Store sync parameters
+    
+    class Meta:
+        db_table = 'ingestion_sync_history'
+        indexes = [
+            models.Index(fields=['crm_source', 'sync_type', '-start_time']),
+            models.Index(fields=['status', '-start_time']),
+            models.Index(fields=['-end_time']),
+        ]
+```
+
+### **MANDATORY: Standard SyncHistory Implementation Pattern**
+
+**Every CRM sync engine MUST implement this exact pattern:**
+
+```python
+from asgiref.sync import sync_to_async
+from ingestion.models.common import SyncHistory
+from django.utils import timezone
+
+class StandardSyncEngine:
+    """MANDATORY pattern for all CRM sync engines"""
+    
+    def __init__(self, crm_source: str, entity_type: str):
+        self.crm_source = crm_source    # e.g., 'callrail', 'salesrabbit', 'hubspot'
+        self.entity_type = entity_type  # e.g., 'calls', 'leads', 'contacts'
+    
+    async def get_last_sync_timestamp(self) -> Optional[datetime]:
+        """STANDARD PATTERN: Get last successful sync timestamp from SyncHistory"""
+        try:
+            @sync_to_async
+            def get_last_sync():
+                last_sync = SyncHistory.objects.filter(
+                    crm_source=self.crm_source,        # EXACT: CRM source name
+                    sync_type=self.entity_type,        # EXACT: Entity type (NO '_sync' suffix)
+                    status__in=['success', 'completed'], # Include successful syncs
+                    end_time__isnull=False             # Only completed syncs
+                ).order_by('-end_time').first()
+                
+                return last_sync.end_time if last_sync else None
+            
+            return await get_last_sync()
+        except Exception as e:
+            logger.error(f"Error getting last sync timestamp: {e}")
+            return None
+    
+    async def execute_sync(self, **kwargs) -> Dict[str, Any]:
+        """STANDARD PATTERN: Execute sync with mandatory SyncHistory tracking"""
+        
+        # Step 1: Create SyncHistory record at start
+        sync_record = SyncHistory.objects.create(
+            crm_source=self.crm_source,
+            sync_type=self.entity_type,    # IMPORTANT: Use entity_type directly
+            status='running',
+            start_time=timezone.now(),
+            configuration=kwargs
+        )
+        
+        stats = {
+            'sync_history_id': sync_record.id,
+            'total_processed': 0,
+            'created': 0,
+            'updated': 0,
+            'errors': 0
+        }
+        
+        try:
+            # Step 2: Execute sync logic
+            async for batch in self.fetch_data(**kwargs):
+                batch_results = await self.process_batch(batch)
+                stats['total_processed'] += batch_results['processed']
+                stats['created'] += batch_results['created']
+                stats['updated'] += batch_results['updated']
+                stats['errors'] += batch_results['errors']
+            
+            # Step 3: Update SyncHistory with success
+            sync_record.status = 'success' if stats['errors'] == 0 else 'partial'
+            sync_record.end_time = timezone.now()
+            sync_record.records_processed = stats['total_processed']
+            sync_record.records_created = stats['created']
+            sync_record.records_updated = stats['updated']
+            sync_record.records_failed = stats['errors']
+            sync_record.performance_metrics = {
+                'duration_seconds': (sync_record.end_time - sync_record.start_time).total_seconds(),
+                'records_per_second': stats['total_processed'] / (sync_record.end_time - sync_record.start_time).total_seconds() if stats['total_processed'] > 0 else 0,
+                'success_rate': (stats['total_processed'] - stats['errors']) / stats['total_processed'] if stats['total_processed'] > 0 else 0
+            }
+            sync_record.save()
+            
+            return stats
+            
+        except Exception as e:
+            # Step 4: Update SyncHistory with failure
+            sync_record.status = 'failed'
+            sync_record.end_time = timezone.now()
+            sync_record.error_message = str(e)
+            sync_record.records_failed = stats.get('errors', 0)
+            sync_record.save()
+            
+            logger.error(f"{self.crm_source} {self.entity_type} sync failed: {e}")
+            raise
+```
+
+### **Critical Field Standards**
+
+| Field | Format | Examples | Notes |
+|-------|--------|----------|-------|
+| `crm_source` | Lowercase CRM name | `'callrail'`, `'salesrabbit'`, `'hubspot'` | **NO underscores or spaces** |
+| `sync_type` | Entity name only | `'calls'`, `'leads'`, `'contacts'` | **NO '_sync' suffix** |
+| `status` | Standard values | `'running'`, `'success'`, `'failed'`, `'partial'` | **Use exact values** |
+
+### **🚫 FORBIDDEN Patterns**
+
+**DO NOT use these incorrect patterns:**
+
+```python
+# ❌ WRONG: Adding '_sync' suffix to entity type
+sync_type='leads_sync'     # Should be 'leads'
+sync_type='calls_sync'     # Should be 'calls'
+
+# ❌ WRONG: Using different status values
+status='completed'         # Should be 'success'
+status='error'            # Should be 'failed'
+
+# ❌ WRONG: Different field names
+crm_type='salesrabbit'    # Should be 'crm_source'
+entity_name='calls'       # Should be 'sync_type'
+```
+
+### **SyncHistory Compliance Validation**
+
+**Use this checklist to verify SyncHistory compliance for any CRM integration:**
+
+```python
+class SyncHistoryValidator:
+    """Validate that CRM sync engines properly use SyncHistory"""
+    
+    @staticmethod
+    def validate_sync_compliance(crm_source: str, entity_type: str) -> Dict[str, bool]:
+        """Check if sync engine follows SyncHistory standards"""
+        checks = {}
+        
+        # Check 1: Recent sync records exist with correct field values
+        recent_syncs = SyncHistory.objects.filter(
+            crm_source=crm_source,
+            sync_type=entity_type  # MUST match exactly - no suffixes
+        ).order_by('-start_time')[:5]
+        checks['has_sync_records'] = recent_syncs.exists()
+        
+        # Check 2: Status values are standard
+        if recent_syncs.exists():
+            latest_sync = recent_syncs.first()
+            checks['proper_status'] = latest_sync.status in ['running', 'success', 'failed', 'partial']
+            checks['has_end_time'] = latest_sync.end_time is not None if latest_sync.status != 'running' else True
+            checks['has_performance_metrics'] = bool(latest_sync.performance_metrics) if latest_sync.status == 'success' else True
+        
+        # Check 3: Field naming compliance
+        valid_pattern = f"{crm_source}_{entity_type}"
+        checks['correct_field_pattern'] = True  # This should be verified during code review
+        
+        return checks
+    
+    @staticmethod
+    def validate_sync_engine_implementation(engine_class) -> List[str]:
+        """Validate that sync engine follows mandatory patterns"""
+        issues = []
+        
+        # Check method existence
+        if not hasattr(engine_class, 'get_last_sync_timestamp'):
+            issues.append("Missing required method: get_last_sync_timestamp()")
+        
+        # Check SyncHistory import
+        source_code = inspect.getsource(engine_class)
+        if 'from ingestion.models.common import SyncHistory' not in source_code:
+            issues.append("Missing required import: SyncHistory")
+        
+        return issues
 ```
 
 ### 2. **Key Metrics**

@@ -268,10 +268,13 @@ class SalesRabbitLeadProcessor(SalesRabbitBaseProcessor):
     def _has_record_changed(self, existing_lead: SalesRabbit_Lead, new_data: Dict[str, Any]) -> bool:
         """Check if record has changed using delta comparison (HubSpot pattern)"""
         # Primary change detection: compare modification dates
-        if 'date_modified' in new_data and new_data['date_modified']:
+        # NOTE: SalesRabbit API uses 'dateModified' (camelCase), not 'date_modified'
+        date_modified_field = 'dateModified' if 'dateModified' in new_data else 'date_modified'
+        
+        if date_modified_field in new_data and new_data[date_modified_field]:
             if existing_lead.date_modified:
                 # Convert to comparable format
-                new_modified = new_data['date_modified']
+                new_modified = new_data[date_modified_field]
                 if hasattr(new_modified, 'replace'):
                     new_modified = new_modified.replace(tzinfo=None) if new_modified.tzinfo else new_modified
                 existing_modified = existing_lead.date_modified

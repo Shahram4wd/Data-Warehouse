@@ -81,7 +81,7 @@ class SalesRabbitClient:
                                 'status_modified': parse_datetime(lead_data.get('statusModified')) if lead_data.get('statusModified') else None,
                                 'owner_modified': parse_datetime(lead_data.get('ownerModified')) if lead_data.get('ownerModified') else None,
                                 'date_of_birth': parse_datetime(lead_data.get('dateOfBirth')) if lead_data.get('dateOfBirth') else None,
-                                'synced_at': datetime.now(),
+                                # Note: created_at and updated_at are auto-managed by Django, don't set manually
                                 'data': lead_data,
                             }
                             lead_objects.append(SalesRabbit_Lead(id=lead_data['id'], **defaults))

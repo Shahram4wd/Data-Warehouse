@@ -31,7 +31,7 @@ class SalesRabbitBaseSyncEngine(BaseSyncEngine):
             def get_last_sync():
                 last_sync = SyncHistory.objects.filter(
                     crm_source='salesrabbit',
-                    sync_type=f'{self.entity_type}_sync',
+                    sync_type=self.entity_type,  # Fix: use entity_type directly, not with '_sync' suffix
                     status='success',
                     end_time__isnull=False
                 ).order_by('-end_time').first()
@@ -43,19 +43,33 @@ class SalesRabbitBaseSyncEngine(BaseSyncEngine):
             logger.error(f"Error getting last sync timestamp: {e}")
             return None
     
-    async def determine_sync_strategy(self, force_full: bool = False) -> Dict[str, Any]:
+    async def determine_sync_strategy(self, force_full: bool = False, last_sync_override: Optional[datetime] = None, use_override: bool = False) -> Dict[str, Any]:
         """Determine sync strategy based on framework patterns"""
-        last_sync = await self.get_last_sync_timestamp()
+        # Determine last_sync timestamp based on parameters
+        if force_full:
+            # Force full sync - ignore any timestamps
+            last_sync = None
+            logger.info("Forcing full sync - ignoring all timestamps")
+        elif use_override:
+            # Explicit override provided (could be None for full sync or datetime for --since)
+            last_sync = last_sync_override
+            if last_sync is None:
+                logger.info("Full sync requested via command parameter")
+            else:
+                logger.info(f"Using provided last_sync timestamp: {last_sync}")
+        else:
+            # No override, query database for last sync
+            last_sync = await self.get_last_sync_timestamp()
         
         strategy = {
-            'type': 'full' if not last_sync or force_full else 'incremental',
+            'type': 'full' if last_sync is None else 'incremental',
             'last_sync': last_sync,
             'batch_size': self.batch_size,
             'force_full': force_full
         }
         
         logger.info(f"SalesRabbit {self.entity_type} sync strategy: {strategy['type']}")
-        if strategy['type'] == 'incremental':
+        if strategy['type'] == 'incremental' and last_sync:
             logger.info(f"Last sync was at: {last_sync}")
         
         return strategy

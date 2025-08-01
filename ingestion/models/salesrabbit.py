@@ -33,6 +33,10 @@ class SalesRabbit_Lead(models.Model):
     status = models.CharField(max_length=100, null=True, blank=True)
     status_modified = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
+    appointment = models.TextField(null=True, blank=True)  # Appointment details from API
+    
+    # Files and attachments
+    files = models.JSONField(null=True, blank=True)  # Array of file objects from API
     
     # Campaign and ownership
     campaign_id = models.BigIntegerField(null=True, blank=True)
@@ -50,9 +54,9 @@ class SalesRabbit_Lead(models.Model):
     data = models.JSONField()  # Raw lead data from API
     custom_fields = models.JSONField(null=True, blank=True)  # Custom fields from API
     
-    # Sync tracking
-    synced_at = models.DateTimeField(auto_now=True)
-    created_in_sync = models.DateTimeField(auto_now_add=True)
+    # Sync tracking - STANDARDIZED to match other CRM models
+    created_at = models.DateTimeField(auto_now_add=True)  # When record was first created in our DB
+    updated_at = models.DateTimeField(auto_now=True)      # When record was last updated in our DB
 
     class Meta:
         db_table = 'ingestion_salesrabbit_lead'

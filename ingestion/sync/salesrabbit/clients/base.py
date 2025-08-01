@@ -155,3 +155,109 @@ class SalesRabbitBaseClient(BaseAPIClient):
         
         logger.info(f"Total records fetched from {endpoint}: {len(all_data)} (limited to {max_records})")
         return all_data
+
+    async def _make_paginated_request_with_headers(self, endpoint: str, params: Dict = None, extra_headers: Dict = None) -> list:
+        """Make paginated requests to SalesRabbit API with custom headers"""
+        if params is None:
+            params = {}
+        if extra_headers is None:
+            extra_headers = {}
+        
+        all_data = []
+        page = 1
+        page_size = params.get('limit', 1000)
+        
+        # Use context manager for proper session handling
+        async with self as client:
+            while True:
+                current_params = {**params, 'page': page, 'limit': page_size}
+                
+                try:
+                    response = await client.make_request('GET', endpoint, params=current_params, headers=extra_headers)
+                    
+                    # Handle different response formats
+                    if isinstance(response, list):
+                        data = response
+                    elif isinstance(response, dict):
+                        data = response.get('data', response.get('leads', []))
+                    else:
+                        data = []
+                    
+                    if not data:
+                        break
+                    
+                    all_data.extend(data)
+                    logger.info(f"Fetched page {page} with {len(data)} records from {endpoint} (with headers)")
+                    
+                    # If we got less than page_size, we're done
+                    if len(data) < page_size:
+                        break
+                    
+                    page += 1
+                    
+                    # Add rate limiting delay
+                    await asyncio.sleep(self.rate_limit_delay)
+                    
+                except Exception as e:
+                    logger.error(f"Error fetching page {page} from {endpoint}: {e}")
+                    raise
+        
+        logger.info(f"Total records fetched from {endpoint}: {len(all_data)} (with headers)")
+        return all_data
+
+    async def _make_limited_paginated_request_with_headers(self, endpoint: str, params: Dict = None, max_records: int = 0, extra_headers: Dict = None) -> list:
+        """Make paginated requests with a maximum record limit and custom headers"""
+        if params is None:
+            params = {}
+        if extra_headers is None:
+            extra_headers = {}
+        
+        all_data = []
+        page = 1
+        page_size = params.get('limit', 1000)
+        
+        # Use context manager for proper session handling
+        async with self as client:
+            while len(all_data) < max_records:
+                current_params = {**params, 'page': page, 'limit': page_size}
+                
+                try:
+                    response = await client.make_request('GET', endpoint, params=current_params, headers=extra_headers)
+                    
+                    # Handle different response formats
+                    if isinstance(response, list):
+                        data = response
+                    elif isinstance(response, dict):
+                        data = response.get('data', response.get('leads', []))
+                    else:
+                        data = []
+                    
+                    if not data:
+                        break
+                    
+                    # Add only the records we need to stay within max_records limit
+                    remaining_slots = max_records - len(all_data)
+                    data_to_add = data[:remaining_slots]
+                    all_data.extend(data_to_add)
+                    
+                    logger.info(f"Fetched page {page} with {len(data_to_add)} records from {endpoint} (total: {len(all_data)}/{max_records}, with headers)")
+                    
+                    # If we've reached the limit, break
+                    if len(all_data) >= max_records:
+                        break
+                    
+                    # If we got less than page_size, we're done
+                    if len(data) < page_size:
+                        break
+                    
+                    page += 1
+                    
+                    # Add rate limiting delay
+                    await asyncio.sleep(self.rate_limit_delay)
+                    
+                except Exception as e:
+                    logger.error(f"Error fetching page {page} from {endpoint}: {e}")
+                    raise
+        
+        logger.info(f"Total records fetched from {endpoint}: {len(all_data)} (limited to {max_records}, with headers)")
+        return all_data
