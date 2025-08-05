@@ -11,15 +11,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.DeleteModel(
-            name='ActiveProspect_Event',
-        ),
-        migrations.DeleteModel(
-            name='ActiveProspect_Lead',
-        ),
-        migrations.DeleteModel(
-            name='ActiveProspect_SyncHistory',
-        ),
-        migrations.DeleteModel(
             name='LeadConduit_Event',
         ),
         migrations.DeleteModel(
@@ -27,25 +18,5 @@ class Migration(migrations.Migration):
         ),
         migrations.DeleteModel(
             name='LeadConduit_SyncHistory',
-        ),
-        migrations.RenameField(
-            model_name='salesrabbit_lead',
-            old_name='created_in_sync',
-            new_name='created_at',
-        ),
-        migrations.RenameField(
-            model_name='salesrabbit_lead',
-            old_name='synced_at',
-            new_name='updated_at',
-        ),
-        migrations.AddField(
-            model_name='salesrabbit_lead',
-            name='appointment',
-            field=models.TextField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name='salesrabbit_lead',
-            name='files',
-            field=models.JSONField(blank=True, null=True),
         ),
     ]
