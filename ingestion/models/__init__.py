@@ -46,16 +46,6 @@ from .marketsharp import (
     MarketSharp_ProductType, MarketSharp_Prospect
 )
 
-# Import ActiveProspect models
-from .activeprospect import (
-    ActiveProspect_Event, ActiveProspect_Lead, ActiveProspect_SyncHistory
-)
-
-# Import LeadConduit models
-from .leadconduit import (
-    LeadConduit_Event, LeadConduit_Lead, LeadConduit_SyncHistory
-)
-
 # Import CallRail models
 from .callrail import (
     CallRail_Account, CallRail_Company, CallRail_Call, CallRail_Tracker,
@@ -83,8 +73,6 @@ __all__ = [
     'MarketSharp_InquirySourceSecondary', 'MarketSharp_InquiryStatus', 'MarketSharp_Job',
     'MarketSharp_Lead', 'MarketSharp_ProductDetail', 'MarketSharp_ProductInterest',
     'MarketSharp_ProductType', 'MarketSharp_Prospect',
-    'ActiveProspect_Event', 'ActiveProspect_Lead', 'ActiveProspect_SyncHistory',
-    'LeadConduit_Event', 'LeadConduit_Lead', 'LeadConduit_SyncHistory',
     'SalesRabbit_Lead',
     'CallRail_Account', 'CallRail_Company', 'CallRail_Call', 'CallRail_Tracker',
     'CallRail_FormSubmission', 'CallRail_TextMessage', 'CallRail_Tag', 'CallRail_User',

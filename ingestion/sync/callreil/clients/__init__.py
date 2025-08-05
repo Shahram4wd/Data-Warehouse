@@ -1,3 +1,0 @@
-"""
-CallReil clients module
-"""

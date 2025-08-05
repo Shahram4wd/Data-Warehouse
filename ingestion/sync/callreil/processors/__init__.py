@@ -1,3 +1,0 @@
-"""
-CallReil processors module
-"""
