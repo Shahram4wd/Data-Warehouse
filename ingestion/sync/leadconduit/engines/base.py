@@ -182,22 +182,41 @@ class LeadConduitSyncEngine:
             while current_date <= end_date_only:
                 logger.info(f"Processing leads for date: {current_date}")
                 
-                # Get leads data for this specific date
-                leads_data = await self.leads_client.get_all_leads_utc(current_date)
+                # Get batch size from config or use default
+                batch_size = self.config.get('batch_size', 100)
+                logger.info(f"Using batch size: {batch_size}")
                 
-                if leads_data:
-                    # Process leads through processor
-                    batch_result = await self.leads_processor.process_batch(leads_data)
+                # Process leads in batches to avoid memory issues with large datasets
+                batch_count = 0
+                async for leads_batch in self.leads_client.get_leads_in_batches_utc(current_date, batch_size):
+                    if not leads_batch:
+                        continue
                     
-                    total_processed += batch_result.get('processed', 0)
-                    total_created += batch_result.get('created', 0)
-                    total_updated += batch_result.get('updated', 0)
-                    total_failed += batch_result.get('failed', 0)
+                    batch_count += 1
+                    logger.info(f"Processing batch {batch_count} with {len(leads_batch)} leads")
                     
-                    logger.info(f"Date {current_date}: {batch_result.get('processed', 0)} processed, "
-                              f"{batch_result.get('created', 0)} created, {batch_result.get('updated', 0)} updated")
-                else:
+                    # Process this batch through processor
+                    batch_result = await self.leads_processor.process_batch(leads_batch)
+                    
+                    batch_processed = batch_result.get('processed', 0)
+                    batch_created = batch_result.get('created', 0)
+                    batch_updated = batch_result.get('updated', 0)
+                    batch_failed = batch_result.get('failed', 0)
+                    
+                    total_processed += batch_processed
+                    total_created += batch_created
+                    total_updated += batch_updated
+                    total_failed += batch_failed
+                    
+                    logger.info(f"Batch {batch_count} results: {batch_processed} processed, "
+                              f"{batch_created} created, {batch_updated} updated, {batch_failed} failed")
+                    logger.info(f"Running totals: {total_processed} processed, {total_created} created, "
+                              f"{total_updated} updated, {total_failed} failed")
+                
+                if batch_count == 0:
                     logger.info(f"No leads data found for {current_date}")
+                else:
+                    logger.info(f"Date {current_date} completed: {batch_count} batches processed")
                 
                 # Move to next day
                 current_date += timedelta(days=1)

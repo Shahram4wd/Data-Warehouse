@@ -333,3 +333,186 @@ class LeadConduitEventsClient(LeadConduitBaseClient):
         logger.info(f"Processed {final_count} unique leads for UTC date {target_date_utc}")
         
         return leads_data
+
+    async def get_leads_in_batches_utc(self, target_date_utc=None, batch_size=100) -> AsyncGenerator[List[Dict[str, Any]], None]:
+        """
+        Get leads for a specific UTC date in batches for memory-efficient processing
+        
+        This method processes events in pages and yields batches of leads as soon as
+        enough are accumulated, rather than loading all events into memory first.
+        
+        Args:
+            target_date_utc: The target date in UTC
+            batch_size: Number of leads to accumulate before yielding a batch
+            
+        Yields:
+            List of lead dictionaries in batches
+        """
+        # If no date specified, use today in UTC
+        if target_date_utc is None:
+            target_date_utc = datetime.now(timezone.utc).date()
+        
+        logger.info(f"Getting leads in batches for UTC date: {target_date_utc} (batch_size={batch_size})")
+        
+        # Create UTC date range
+        utc_start = datetime.combine(target_date_utc, datetime.min.time()).replace(tzinfo=timezone.utc)
+        utc_end = datetime.combine(target_date_utc, datetime.max.time()).replace(tzinfo=timezone.utc)
+        
+        # Format for API
+        start_date = utc_start.strftime('%Y-%m-%dT%H:%M:%SZ')
+        end_date = utc_end.strftime('%Y-%m-%dT%H:%M:%SZ')
+        
+        logger.info(f"API query: {start_date} to {end_date}")
+        
+        # Process events in pages and accumulate leads
+        leads_batch = []
+        seen_lead_ids = set()
+        total_events_processed = 0
+        total_leads_yielded = 0
+        
+        async with self as client:
+            # Get paginated events
+            all_events = []
+            after_id = None
+            page = 0
+            url = f"{client.base_url}/events"
+            
+            # Headers exactly like reference
+            headers = {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+            
+            while True:
+                page += 1
+                params = {
+                    'start': start_date,
+                    'end': end_date,
+                    'limit': 1000,
+                    'sort': 'asc'
+                }
+                
+                if after_id:
+                    params['after_id'] = after_id
+                
+                try:
+                    # Apply rate limiting
+                    await client._apply_rate_limit()
+                    
+                    # Make async request
+                    async with client.session.get(url, params=params) as response:
+                        if response.status != 200:
+                            logger.error(f"API request failed with status {response.status}")
+                            return
+                        
+                        events_page = await response.json()
+                    
+                    if not events_page:
+                        logger.info(f"Page {page}: No more events - pagination complete")
+                        break
+                    
+                    page_count = len(events_page)
+                    total_events_processed += page_count
+                    logger.info(f"Page {page}: Retrieved {page_count} events (total so far: {total_events_processed})")
+                    
+                    # Process events from this page immediately
+                    for event in events_page:
+                        # Only process source events (actual leads)
+                        if event.get('type') != 'source':
+                            continue
+                            
+                        # Extract timestamp and check date
+                        event_timestamp = event.get('start_timestamp')
+                        if not event_timestamp:
+                            continue
+                            
+                        event_utc = datetime.fromtimestamp(event_timestamp / 1000, tz=timezone.utc)
+                        if event_utc.date() != target_date_utc:
+                            continue
+                        
+                        # Extract lead data
+                        vars_data = event.get('vars', {})
+                        lead_data = vars_data.get('lead', {})
+                        
+                        if not lead_data:
+                            continue
+                            
+                        lead_id = event.get('id', '')
+                        if not lead_id or lead_id in seen_lead_ids:
+                            continue
+                            
+                        seen_lead_ids.add(lead_id)
+                        
+                        # Build lead record (same logic as original method)
+                        try:
+                            formatted_time = event_utc.strftime('%Y-%m-%d %H:%M:%S UTC')
+                            outcome_state = event.get('outcome', '')
+                            outcome_reason = event.get('reason', '')
+                            outcome_combined = f"{outcome_state} {outcome_reason}".strip() if outcome_reason else outcome_state
+                            flow_name = self.extract_flow_source_name(event, 'flow')
+                            source_name = self.extract_flow_source_name(event, 'source')
+                            
+                            lead_record = {}
+                            lead_record['Lead ID'] = lead_id
+                            lead_record['Submitted UTC'] = formatted_time
+                            lead_record['Event Timestamp'] = event_timestamp
+                            lead_record['Outcome'] = outcome_combined
+                            lead_record['Reason'] = event.get('reason', '—')
+                            lead_record['Flow'] = flow_name
+                            lead_record['Source'] = source_name
+                            
+                            # Add all lead data fields
+                            if lead_data:
+                                for field_name, field_value in lead_data.items():
+                                    clean_field_name = field_name.replace('_', ' ').title()
+                                    lead_record[clean_field_name] = self.extract_value(field_value, [field_name, 'value'])
+                            
+                            # Add all other vars data
+                            for var_name, var_value in vars_data.items():
+                                if var_name != 'lead':
+                                    clean_var_name = f"Vars {var_name.replace('_', ' ').title()}"
+                                    if isinstance(var_value, dict):
+                                        if 'name' in var_value:
+                                            lead_record[clean_var_name] = var_value.get('name', '')
+                                        elif 'value' in var_value:
+                                            lead_record[clean_var_name] = var_value.get('value', '')
+                                        else:
+                                            lead_record[clean_var_name] = str(var_value)
+                                    else:
+                                        lead_record[clean_var_name] = str(var_value) if var_value is not None else ''
+                            
+                            leads_batch.append(lead_record)
+                            
+                            # Yield batch when we have enough leads
+                            if len(leads_batch) >= batch_size:
+                                total_leads_yielded += len(leads_batch)
+                                logger.info(f"Yielding batch of {len(leads_batch)} leads (total yielded: {total_leads_yielded})")
+                                yield leads_batch
+                                leads_batch = []
+                        
+                        except Exception as e:
+                            logger.warning(f"Error processing lead {lead_id}: {e}")
+                            continue
+                    
+                    # Set up for next page
+                    if page_count < 1000:  # Last page
+                        break
+                    
+                    # Get last event ID for next page
+                    if events_page:
+                        after_id = events_page[-1].get('id')
+                        if not after_id:
+                            logger.warning("No ID found in last event - stopping pagination")
+                            break
+                
+                except Exception as e:
+                    logger.error(f"Error fetching events page {page}: {e}")
+                    break
+        
+        # Yield any remaining leads in the final batch
+        if leads_batch:
+            total_leads_yielded += len(leads_batch)
+            logger.info(f"Yielding final batch of {len(leads_batch)} leads (total yielded: {total_leads_yielded})")
+            yield leads_batch
+        
+        logger.info(f"Completed batch processing: {total_events_processed} events processed, {total_leads_yielded} leads yielded")
