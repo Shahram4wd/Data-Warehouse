@@ -9,8 +9,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone, timedelta
 
 from ingestion.models.common import SyncHistory
-from ..clients.events import LeadConduitEventsClient
-from ..processors.events import LeadConduitEventsProcessor
+from ..clients.events import LeadConduitEventsClient  # Used for leads data retrieval
 from ..processors.leads import LeadConduitLeadsProcessor
 
 logger = logging.getLogger(__name__)
@@ -32,8 +31,7 @@ class LeadConduitSyncEngine:
         self.source_system = self.SOURCE_SYSTEM
         
         # Initialize clients and processors
-        self.events_client = LeadConduitEventsClient(**config)
-        self.events_processor = LeadConduitEventsProcessor()
+        self.leads_client = LeadConduitEventsClient(**config)  # Events client used for leads data
         self.leads_processor = LeadConduitLeadsProcessor()
         
         logger.info(f"Initialized LeadConduit sync engine with config: {list(config.keys())}")
@@ -87,6 +85,9 @@ class LeadConduitSyncEngine:
                 start_date=start_date,
                 end_date=end_date,
                 records_processed=sum(r.get('records_processed', 0) for r in results['entity_results'].values()),
+                records_created=sum(r.get('records_created', 0) for r in results['entity_results'].values()),
+                records_updated=sum(r.get('records_updated', 0) for r in results['entity_results'].values()),
+                records_failed=sum(r.get('records_failed', 0) for r in results['entity_results'].values()),
                 success=results['success']
             )
             
@@ -105,91 +106,26 @@ class LeadConduitSyncEngine:
                          end_date: Optional[datetime] = None,
                          force: bool = False) -> Dict[str, Any]:
         """
-        Sync LeadConduit events
+        Sync LeadConduit events - CURRENTLY DISABLED
         
-        Primary sync method for event data following sync_crm_guide patterns
+        Events sync is temporarily disabled due to model removal.
+        Returns disabled status without processing.
         """
         entity_type = "events"
-        logger.info(f"Starting {self.SOURCE_SYSTEM} {entity_type} sync")
+        logger.info(f"LeadConduit events sync is disabled - model removed")
         
-        result = {
+        return {
             'entity_type': entity_type,
             'started_at': datetime.now(timezone.utc),
+            'completed_at': datetime.now(timezone.utc),
             'records_processed': 0,
             'records_created': 0,
             'records_updated': 0,
-            'records_failed': 0
+            'records_failed': 0,
+            'skipped': True,
+            'reason': 'Events sync disabled - model removed',
+            'success': True
         }
-        
-        try:
-            # Check if sync needed (unless forced)
-            if not force:
-                last_sync = await self.get_last_successful_sync(entity_type)
-                if last_sync and self.is_recent_sync(last_sync):
-                    logger.info(f"Recent {entity_type} sync found, skipping")
-                    result['skipped'] = True
-                    result['reason'] = 'Recent sync exists'
-                    result['success'] = True
-                    return result
-            
-            # Set default date range if not provided
-            if not start_date:
-                start_date = datetime.now(timezone.utc) - timedelta(days=1)
-            if not end_date:
-                end_date = datetime.now(timezone.utc)
-            
-            logger.info(f"Syncing {entity_type} from {start_date} to {end_date}")
-            
-            # Fetch and process events in batches
-            total_processed = 0
-            total_created = 0
-            total_updated = 0
-            total_failed = 0
-            
-            async for events_batch in self.events_client.get_events_for_date_range(
-                start_date, end_date
-            ):
-                if not events_batch:
-                    continue
-                
-                # Process batch through processor
-                batch_result = await self.events_processor.process_batch(events_batch)
-                
-                total_processed += batch_result.get('processed', 0)
-                total_created += batch_result.get('created', 0)
-                total_updated += batch_result.get('updated', 0)
-                total_failed += batch_result.get('failed', 0)
-                
-                logger.debug(f"Processed batch: {batch_result}")
-            
-            # Update results
-            result.update({
-                'records_processed': total_processed,
-                'records_created': total_created,
-                'records_updated': total_updated,
-                'records_failed': total_failed,
-                'success': total_failed == 0,
-                'completed_at': datetime.now(timezone.utc)
-            })
-            
-            # Record sync completion
-            await self.record_sync_completion(
-                entity_type=entity_type,
-                start_date=start_date,
-                end_date=end_date,
-                records_processed=total_processed,
-                success=result['success']
-            )
-            
-            logger.info(f"Events sync completed: {total_processed} processed, {total_created} created, {total_updated} updated")
-            return result
-            
-        except Exception as e:
-            logger.error(f"{entity_type} sync failed: {e}")
-            result['error'] = str(e)
-            result['success'] = False
-            result['completed_at'] = datetime.now(timezone.utc)
-            return result
     
     async def sync_leads(self, 
                         start_date: Optional[datetime] = None,
@@ -213,15 +149,18 @@ class LeadConduitSyncEngine:
         }
         
         try:
-            # Check if sync needed (unless forced)
+            # Check if sync needed based on CRM sync guide patterns
             if not force:
-                last_sync = await self.get_last_successful_sync(entity_type)
-                if last_sync and self.is_recent_sync(last_sync):
-                    logger.info(f"Recent {entity_type} sync found, skipping")
-                    result['skipped'] = True
-                    result['reason'] = 'Recent sync exists'
-                    result['success'] = True
-                    return result
+                # If date parameters are provided, always sync (manual override)
+                if start_date is None and end_date is None:
+                    # Only check recent sync if no specific dates requested
+                    last_sync = await self.get_last_successful_sync(entity_type)
+                    if last_sync and self.is_recent_sync(last_sync):
+                        logger.info(f"Recent {entity_type} sync found, skipping")
+                        result['skipped'] = True
+                        result['reason'] = 'Recent sync exists'
+                        result['success'] = True
+                        return result
             
             # Set default date range if not provided
             if not start_date:
@@ -244,7 +183,7 @@ class LeadConduitSyncEngine:
                 logger.info(f"Processing leads for date: {current_date}")
                 
                 # Get leads data for this specific date
-                leads_data = await self.events_client.get_all_leads_utc(current_date)
+                leads_data = await self.leads_client.get_all_leads_utc(current_date)
                 
                 if leads_data:
                     # Process leads through processor
@@ -280,6 +219,9 @@ class LeadConduitSyncEngine:
                 start_date=start_date,
                 end_date=end_date,
                 records_processed=result['records_processed'],
+                records_created=result.get('records_created', 0),
+                records_updated=result.get('records_updated', 0),
+                records_failed=result.get('records_failed', 0),
                 success=result['success']
             )
             
@@ -311,21 +253,25 @@ class LeadConduitSyncEngine:
             logger.warning(f"Error getting last sync: {e}")
             return None
     
-    def is_recent_sync(self, sync_record: SyncHistory, hours: int = 1) -> bool:
+    def is_recent_sync(self, sync_record: SyncHistory, hours: int = 0.25) -> bool:
         """Check if sync record is recent enough to skip"""
         if not sync_record.end_time:
             return False
         
         time_diff = datetime.now(timezone.utc) - sync_record.end_time
-        return time_diff.total_seconds() < (hours * 3600)
+        return time_diff.total_seconds() < (hours * 3600)  # 15 minutes default for testing
     
     async def record_sync_completion(self,
                                    entity_type: str,
                                    start_date: Optional[datetime],
                                    end_date: Optional[datetime],
                                    records_processed: int,
-                                   success: bool) -> None:
-        """Record sync completion in SyncHistory"""
+                                   records_created: int = 0,
+                                   records_updated: int = 0,
+                                   records_failed: int = 0,
+                                   success: bool = True,
+                                   error_message: str = None) -> None:
+        """Record sync completion in SyncHistory following CRM sync guide pattern"""
         try:
             from asgiref.sync import sync_to_async
             
@@ -336,12 +282,21 @@ class LeadConduitSyncEngine:
                     start_time=start_date or datetime.now(timezone.utc),
                     end_time=end_date or datetime.now(timezone.utc),
                     records_processed=records_processed,
-                    status='success' if success else 'failed'
+                    records_created=records_created,
+                    records_updated=records_updated,
+                    records_failed=records_failed,
+                    status='success' if success else 'failed',
+                    error_message=error_message,
+                    performance_metrics={
+                        'duration_seconds': ((end_date or datetime.now(timezone.utc)) - (start_date or datetime.now(timezone.utc))).total_seconds(),
+                        'records_per_second': records_processed / max(1, ((end_date or datetime.now(timezone.utc)) - (start_date or datetime.now(timezone.utc))).total_seconds()),
+                        'success_rate': (records_processed - records_failed) / max(1, records_processed) if records_processed > 0 else 0
+                    }
                 )
             
             save_sync = sync_to_async(create_sync_record)
             await save_sync()
-            logger.debug(f"Recorded sync completion for {entity_type}")
+            logger.debug(f"Recorded sync completion for {entity_type}: {records_processed} processed, {records_created} created, {records_updated} updated")
         except Exception as e:
             logger.error(f"Failed to record sync completion: {e}")
 

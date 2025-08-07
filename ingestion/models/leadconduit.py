@@ -8,72 +8,6 @@ from django.db import models
 from django.utils import timezone
 import json
 
-
-class LeadConduit_Event(models.Model):
-    """
-    LeadConduit event records from the Events API
-    
-    Stores complete event data including outcomes, timing, and metadata
-    """
-    # Core identifiers
-    event_id = models.CharField(max_length=100, unique=True, db_index=True)
-    event_type = models.CharField(max_length=50, db_index=True)
-    
-    # Outcome and status
-    outcome = models.CharField(max_length=100, blank=True, null=True, db_index=True)
-    reason = models.CharField(max_length=255, blank=True, null=True)
-    outcome_combined = models.CharField(max_length=355, blank=True, null=True)
-    
-    # Flow and source names (extracted from vars)
-    flow_name = models.CharField(max_length=100, blank=True, null=True, db_index=True)
-    source_name = models.CharField(max_length=100, blank=True, null=True, db_index=True)
-    
-    # Timing data (UTC timestamps)
-    start_timestamp = models.BigIntegerField(null=True, blank=True)
-    end_timestamp = models.BigIntegerField(null=True, blank=True)
-    submitted_utc = models.DateTimeField(null=True, blank=True, db_index=True)
-    
-    # Performance metrics
-    wait_ms = models.IntegerField(null=True, blank=True)
-    overhead_ms = models.IntegerField(null=True, blank=True)
-    lag_ms = models.IntegerField(null=True, blank=True)
-    ms = models.IntegerField(null=True, blank=True)
-    
-    # Event metadata
-    host = models.CharField(max_length=100, blank=True, null=True)
-    handler_version = models.CharField(max_length=50, blank=True, null=True)
-    cap_reached = models.BooleanField(default=False)
-    ping_limit_reached = models.BooleanField(default=False)
-    expires_at = models.BigIntegerField(null=True, blank=True)
-    step_count = models.IntegerField(null=True, blank=True)
-    module_id = models.CharField(max_length=100, blank=True, null=True)
-    package_version = models.CharField(max_length=50, blank=True, null=True)
-    
-    # JSON data fields (store complete data for reference)
-    raw_data = models.JSONField(default=dict, blank=True)
-    vars_data = models.JSONField(default=dict, blank=True)
-    appended_data = models.JSONField(default=dict, blank=True)
-    
-    # Timestamps for tracking
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
-    class Meta:
-        db_table = 'ingestion_leadconduit_event'
-        indexes = [
-            models.Index(fields=['event_type', 'submitted_utc']),
-            models.Index(fields=['outcome', 'submitted_utc']),
-            models.Index(fields=['flow_name', 'source_name']),
-            models.Index(fields=['submitted_utc']),
-        ]
-        verbose_name = 'LeadConduit Event'
-        verbose_name_plural = 'LeadConduit Events'
-        ordering = ['-submitted_utc']
-    
-    def __str__(self):
-        return f"{self.event_type} - {self.event_id}"
-
-
 class LeadConduit_Lead(models.Model):
     """
     Lead data extracted from LeadConduit source events
@@ -100,11 +34,23 @@ class LeadConduit_Lead(models.Model):
     # Lead metadata
     flow_name = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     source_name = models.CharField(max_length=100, blank=True, null=True, db_index=True)
-    outcome = models.CharField(max_length=100, blank=True, null=True, db_index=True)
-    reason = models.CharField(max_length=255, blank=True, null=True)
+    outcome = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    reason = models.TextField(blank=True, null=True)
     
     # Timing
     submitted_utc = models.DateTimeField(null=True, blank=True, db_index=True)
+    
+    # HGE-specific fields (discovered from API analysis)
+    note_hge = models.TextField(blank=True, null=True, help_text="HGE lead notes")
+    owner_hge = models.CharField(max_length=100, blank=True, null=True, help_text="HGE lead owner name")
+    owneremail_hge = models.EmailField(blank=True, null=True, help_text="HGE lead owner email")
+    ownerid_hge = models.CharField(max_length=50, blank=True, null=True, db_index=True, help_text="HGE lead owner ID")
+    salesrabbit_lead_id_hge = models.CharField(max_length=50, blank=True, null=True, db_index=True, help_text="SalesRabbit lead ID")
+    
+    # Metadata storage for complex API structures
+    phone_metadata = models.JSONField(default=dict, blank=True, help_text="Phone validation metadata from API")
+    email_metadata = models.JSONField(default=dict, blank=True, help_text="Email validation metadata from API")
+    address_metadata = models.JSONField(default=dict, blank=True, help_text="Address validation metadata from API")
     
     # JSON storage for complete data
     lead_data = models.JSONField(default=dict, blank=True)
@@ -122,6 +68,10 @@ class LeadConduit_Lead(models.Model):
             models.Index(fields=['flow_name', 'source_name']),
             models.Index(fields=['outcome', 'submitted_utc']),
             models.Index(fields=['submitted_utc']),
+            # New indexes for HGE-specific fields
+            models.Index(fields=['ownerid_hge']),
+            models.Index(fields=['salesrabbit_lead_id_hge']),
+            models.Index(fields=['owner_hge', 'submitted_utc']),
         ]
         verbose_name = 'LeadConduit Lead'
         verbose_name_plural = 'LeadConduit Leads'

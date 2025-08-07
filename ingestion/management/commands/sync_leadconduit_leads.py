@@ -7,7 +7,7 @@ sync_crm_guide.md naming conventions.
 Usage:
     python manage.py sync_leadconduit_leads
     python manage.py sync_leadconduit_leads --start-date 2024-01-01
-    python manage.py sync_leadconduit_leads --force
+    python manage.py sync_leadconduit_leads --force-overwrite
 """
 import logging
 from datetime import datetime, timezone, timedelta
@@ -41,7 +41,7 @@ class Command(BaseCommand):
             help='Sync data since this date (YYYY-MM-DD format, UTC) - alias for --start-date'
         )
         parser.add_argument(
-            '--force',
+            '--force-overwrite',
             action='store_true',
             help='Force sync even if recent sync exists'
         )
@@ -81,7 +81,7 @@ class Command(BaseCommand):
                 sync_engine,
                 start_date=start_date,
                 end_date=end_date,
-                force=options.get('force', False),
+                force=options.get('force_overwrite', False),
                 quiet=options.get('quiet', False)
             )
             
