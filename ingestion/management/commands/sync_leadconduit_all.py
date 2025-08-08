@@ -26,15 +26,50 @@ class Command(BaseCommand):
     help = 'Sync all LeadConduit data (events and leads)'
     
     def add_arguments(self, parser):
+        # Standard CRM sync flags according to sync_crm_guide.md
         parser.add_argument(
-            '--start-date',
-            type=str,
-            help='Start date for sync (YYYY-MM-DD format, UTC)'
+            '--full',
+            action='store_true',
+            help='Perform full sync (ignore last sync timestamp)'
+        )
+        parser.add_argument(
+            '--force-overwrite',
+            action='store_true',
+            help='Completely replace existing records'
         )
         parser.add_argument(
             '--since',
             type=str,
-            help='Sync data since this date (YYYY-MM-DD format, UTC) - alias for --start-date'
+            help='Manual sync start date (YYYY-MM-DD format)'
+        )
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Test run without database writes'
+        )
+        parser.add_argument(
+            '--batch-size',
+            type=int,
+            default=100,
+            help='Records per API batch (default: 100)'
+        )
+        parser.add_argument(
+            '--max-records',
+            type=int,
+            default=0,
+            help='Limit total records (0 = unlimited)'
+        )
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Enable verbose logging'
+        )
+        
+        # LeadConduit-specific arguments (for backward compatibility)
+        parser.add_argument(
+            '--start-date',
+            type=str,
+            help='(DEPRECATED) Use --since instead. Start date for sync (YYYY-MM-DD format, UTC)'
         )
         parser.add_argument(
             '--end-date',
@@ -42,20 +77,10 @@ class Command(BaseCommand):
             help='End date for sync (YYYY-MM-DD format, UTC). If not provided, defaults to today'
         )
         parser.add_argument(
-            '--force',
-            action='store_true',
-            help='Force sync even if recent sync exists'
-        )
-        parser.add_argument(
             '--config',
             type=str,
             default='default',
             help='Configuration profile to use'
-        )
-        parser.add_argument(
-            '--quiet',
-            action='store_true',
-            help='Minimal output'
         )
     
     def handle(self, *args, **options):
