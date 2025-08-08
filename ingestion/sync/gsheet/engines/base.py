@@ -8,8 +8,7 @@ from datetime import datetime
 from django.utils import timezone
 
 from ingestion.base.sync_engine import BaseSyncEngine
-from ingestion.models.common import SyncHistory
-from ingestion.sync.gsheet.clients.base import GoogleSheetsAPIClient
+from ingestion.sync.gsheet.clients.base import GoogleSheetsAPIClient as GoogleSheetsClient
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +39,8 @@ class BaseGoogleSheetsSyncEngine(BaseSyncEngine):
         Returns:
             datetime: Last sync timestamp in UTC, or None if never synced
         """
+        from ingestion.models.common import SyncHistory
+        
         try:
             # Get most recent successful sync from SyncHistory
             sync_record = SyncHistory.objects.filter(
@@ -138,13 +139,15 @@ class BaseGoogleSheetsSyncEngine(BaseSyncEngine):
                 'sync_type': 'full'
             }
     
-    def start_sync_session(self, **kwargs) -> SyncHistory:
+    def start_sync_session(self, **kwargs):
         """
         Start a new sync session and create SyncHistory record
         
         Returns:
             SyncHistory: Created sync history record
         """
+        from ingestion.models.common import SyncHistory
+        
         try:
             sync_decision = self.should_perform_sync()
             

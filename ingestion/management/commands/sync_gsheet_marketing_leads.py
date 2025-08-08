@@ -102,8 +102,8 @@ class Command(BaseCommand):
             self.stdout.write(f"  - Force sync: {options['force']}")
             self.stdout.write(f"  - Batch size: {options['batch_size']}")
             
-            # Run async sync
-            result = asyncio.run(engine.sync_with_retry(max_retries=2))
+            # Run sync (synchronous)
+            result = engine.sync_with_retry_sync(max_retries=2)
             
             # Display results
             self._display_results(result, options)

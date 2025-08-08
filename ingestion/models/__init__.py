@@ -84,5 +84,5 @@ __all__ = [
     'CallRail_Account', 'CallRail_Company', 'CallRail_Call', 'CallRail_Tracker',
     'CallRail_FormSubmission', 'CallRail_TextMessage', 'CallRail_Tag', 'CallRail_User',
     'AlertModel', 'AlertRule',
-    'GoogleSheetMarketingLead', 'GoogleSheetConfig'
+    'GoogleSheetMarketingLead'
 ]

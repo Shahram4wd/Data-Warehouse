@@ -5,12 +5,12 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-from .base import GoogleSheetsAPIClient
+from .base import GoogleSheetsAPIClient as GoogleSheetsClient
 
 logger = logging.getLogger(__name__)
 
 
-class MarketingLeadsClient(GoogleSheetsAPIClient):
+class MarketingLeadsClient(GoogleSheetsClient):
     """
     Client for Marketing Source Leads Google Sheet
     
@@ -28,6 +28,36 @@ class MarketingLeadsClient(GoogleSheetsAPIClient):
         self.data_start_row = 2
         
         logger.info(f"Initialized MarketingLeadsClient for sheet {self.sheet_id}")
+    
+    def is_sheet_modified_since_sync(self, last_sync_time) -> bool:
+        """
+        Check if sheet has been modified since last sync
+        
+        Args:
+            last_sync_time: Last sync timestamp (can be None)
+            
+        Returns:
+            bool: True if sheet was modified or last_sync_time is None
+        """
+        try:
+            # If no previous sync, always consider it modified
+            if last_sync_time is None:
+                return True
+            
+            # Get sheet modification time
+            modification_time = self.get_sheet_modification_time(self.sheet_id)
+            
+            # If we can't get modification time, assume it's modified
+            if modification_time is None:
+                return True
+            
+            # Compare timestamps
+            return modification_time > last_sync_time
+            
+        except Exception as e:
+            logger.warning(f"Could not determine sheet modification time: {e}")
+            # If we can't determine, assume it's modified to be safe
+            return True
     
     def get_marketing_leads_data(self) -> List[Dict[str, Any]]:
         """
@@ -63,18 +93,28 @@ class MarketingLeadsClient(GoogleSheetsAPIClient):
             logger.error(f"Failed to get marketing leads data: {e}")
             raise
     
-    def get_headers(self) -> List[str]:
+    def get_headers(self, sheet_id: str = None, tab_name: str = None, header_row: int = None) -> List[str]:
         """
         Get header columns from the marketing leads sheet
+        
+        Args:
+            sheet_id: Sheet ID (optional, uses default if not provided)
+            tab_name: Tab name (optional, uses default if not provided)
+            header_row: Header row number (optional, uses default if not provided)
         
         Returns:
             List of header names
         """
         try:
+            # Use provided parameters or fall back to instance defaults
+            actual_sheet_id = sheet_id or self.sheet_id
+            actual_tab_name = tab_name or self.tab_name
+            actual_header_row = header_row or self.header_row
+            
             headers = super().get_headers(
-                sheet_id=self.sheet_id,
-                tab_name=self.tab_name,
-                header_row=self.header_row
+                sheet_id=actual_sheet_id,
+                tab_name=actual_tab_name,
+                header_row=actual_header_row
             )
             
             logger.info(f"Found {len(headers)} headers: {headers}")
@@ -83,6 +123,29 @@ class MarketingLeadsClient(GoogleSheetsAPIClient):
         except Exception as e:
             logger.error(f"Failed to get headers: {e}")
             raise
+    
+    def is_sheet_modified_since_sync(self, last_sync_time) -> bool:
+        """
+        Simple synchronous check if sheet was modified since last sync
+        
+        Args:
+            last_sync_time: Datetime of last sync (can be None)
+            
+        Returns:
+            bool: True if sync should proceed, False if can skip
+        """
+        if last_sync_time is None:
+            return True  # First sync, always proceed
+        
+        try:
+            modification_time = self.get_sheet_modification_time(self.sheet_id)
+            if modification_time is None:
+                return True  # Can't determine, proceed with sync
+            
+            return modification_time > last_sync_time
+        except Exception as e:
+            logger.warning(f"Failed to check modification time: {e}")
+            return True  # Can't determine, proceed with sync
     
     def get_sheet_info(self) -> Dict[str, Any]:
         """
@@ -151,6 +214,31 @@ class MarketingLeadsClient(GoogleSheetsAPIClient):
         except Exception as e:
             logger.error(f"Failed to check sheet modification: {e}")
             return True  # Assume modified on error
+    
+    def fetch_sheet_data_sync(self) -> List[Dict[str, Any]]:
+        """
+        Synchronous method to fetch data from Google Sheets
+        
+        Returns:
+            List of dictionaries containing row data
+        """
+        try:
+            logger.info(f"Fetching data from sheet {self.sheet_id}, tab '{self.tab_name}'")
+            
+            # Use the existing method to get data with headers
+            data = self.get_all_data_with_headers(
+                sheet_id=self.sheet_id,
+                tab_name=self.tab_name,
+                header_row=self.header_row,
+                data_start_row=self.data_start_row
+            )
+            
+            logger.info(f"Successfully fetched {len(data)} rows from Google Sheets")
+            return data
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch sheet data: {e}")
+            raise
     
     # Abstract method implementations
     

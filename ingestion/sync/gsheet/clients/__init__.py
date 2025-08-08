@@ -1,10 +1,9 @@
-"""
-Google Sheets clients package
-"""
-from .base import GoogleSheetsAPIClient
+"""Google Sheets API clients"""
+
+from .base import GoogleSheetsAPIClient as GoogleSheetsClient
 from .marketing_leads import MarketingLeadsClient
 
 __all__ = [
-    'GoogleSheetsAPIClient',
+    'GoogleSheetsClient',
     'MarketingLeadsClient'
 ]

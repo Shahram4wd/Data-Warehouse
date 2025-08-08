@@ -34,7 +34,7 @@ def test_imports():
         print("✓ Google Sheets sync package imports successful")
         
         # Test model imports
-        from ingestion.models.gsheet import GoogleSheetMarketingLead, GoogleSheetConfig
+        from ingestion.models.gsheet import GoogleSheetMarketingLead
         print("✓ Google Sheets model imports successful")
         
         # Test validators
