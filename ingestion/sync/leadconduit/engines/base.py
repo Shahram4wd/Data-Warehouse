@@ -1,15 +1,15 @@
 """
 LeadConduit Sync Engine
 
-Main sync orchestration engine for LeadConduit data following
-sync_crm_guide.md architecture.
+Main sync orchestration engine for LeadConduit leads data following
+sync_crm_guide.md architecture with batched processing for optimal performance.
 """
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone, timedelta
 
 from ingestion.models.common import SyncHistory
-from ..clients.events import LeadConduitEventsClient  # Used for leads data retrieval
+from ..clients.leads import LeadConduitLeadsClient  # Used for leads data retrieval
 from ..processors.leads import LeadConduitLeadsProcessor
 
 logger = logging.getLogger(__name__)
@@ -17,21 +17,21 @@ logger = logging.getLogger(__name__)
 
 class LeadConduitSyncEngine:
     """
-    Main sync engine for LeadConduit data
+    Main sync engine for LeadConduit leads data
     
-    Orchestrates data synchronization between LeadConduit API and local storage
-    following sync_crm_guide architecture patterns.
+    Orchestrates leads data synchronization between LeadConduit API and local storage
+    following sync_crm_guide architecture patterns with batched processing.
     """
     
     SOURCE_SYSTEM = "leadconduit"
-    ENTITY_TYPES = ["events", "leads"]
+    ENTITY_TYPES = ["leads"]
     
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.source_system = self.SOURCE_SYSTEM
         
         # Initialize clients and processors
-        self.leads_client = LeadConduitEventsClient(**config)  # Events client used for leads data
+        self.leads_client = LeadConduitLeadsClient(**config)  # Client provides leads data
         self.leads_processor = LeadConduitLeadsProcessor()
         
         logger.info(f"Initialized LeadConduit sync engine with config: {list(config.keys())}")
@@ -41,7 +41,7 @@ class LeadConduitSyncEngine:
                       end_date: Optional[datetime] = None,
                       force: bool = False) -> Dict[str, Any]:
         """
-        Sync all LeadConduit data types
+        Sync all LeadConduit leads data
         
         Args:
             start_date: Start date for sync (UTC)
@@ -51,7 +51,7 @@ class LeadConduitSyncEngine:
         Returns:
             Dict containing sync results
         """
-        logger.info("Starting full LeadConduit sync")
+        logger.info("Starting full LeadConduit leads sync")
         
         results = {
             'started_at': datetime.now(timezone.utc),
@@ -61,15 +61,7 @@ class LeadConduitSyncEngine:
         }
         
         try:
-            # Skip events sync temporarily (schema mismatch issue)
-            logger.info("Skipping LeadConduit events sync (schema mismatch)")
-            results['entity_results']['events'] = {
-                'skipped': True,
-                'reason': 'Schema mismatch - events table needs migration update',
-                'success': True
-            }
-            
-            # Sync leads (working perfectly)
+            # Sync leads
             logger.info("Syncing LeadConduit leads...")
             leads_result = await self.sync_leads(start_date, end_date, force)
             results['entity_results']['leads'] = leads_result
@@ -91,50 +83,25 @@ class LeadConduitSyncEngine:
                 success=results['success']
             )
             
-            logger.info(f"Full LeadConduit sync completed: {results['success']}")
+            logger.info(f"Full LeadConduit leads sync completed: {results['success']}")
             return results
             
         except Exception as e:
-            logger.error(f"Full LeadConduit sync failed: {e}")
+            logger.error(f"Full LeadConduit leads sync failed: {e}")
             results['error'] = str(e)
             results['success'] = False
             results['completed_at'] = datetime.now(timezone.utc)
             return results
-    
-    async def sync_events(self, 
-                         start_date: Optional[datetime] = None,
-                         end_date: Optional[datetime] = None,
-                         force: bool = False) -> Dict[str, Any]:
-        """
-        Sync LeadConduit events - CURRENTLY DISABLED
-        
-        Events sync is temporarily disabled due to model removal.
-        Returns disabled status without processing.
-        """
-        entity_type = "events"
-        logger.info(f"LeadConduit events sync is disabled - model removed")
-        
-        return {
-            'entity_type': entity_type,
-            'started_at': datetime.now(timezone.utc),
-            'completed_at': datetime.now(timezone.utc),
-            'records_processed': 0,
-            'records_created': 0,
-            'records_updated': 0,
-            'records_failed': 0,
-            'skipped': True,
-            'reason': 'Events sync disabled - model removed',
-            'success': True
-        }
     
     async def sync_leads(self, 
                         start_date: Optional[datetime] = None,
                         end_date: Optional[datetime] = None,
                         force: bool = False) -> Dict[str, Any]:
         """
-        Sync LeadConduit leads (derived from events)
+        Sync LeadConduit leads from API
         
-        Processes source events to extract lead data
+        Processes lead data from LeadConduit API using batched processing
+        for memory efficiency with large datasets.
         """
         entity_type = "leads"
         logger.info(f"Starting {self.SOURCE_SYSTEM} {entity_type} sync")
@@ -318,14 +285,6 @@ class LeadConduitSyncEngine:
             logger.debug(f"Recorded sync completion for {entity_type}: {records_processed} processed, {records_created} created, {records_updated} updated")
         except Exception as e:
             logger.error(f"Failed to record sync completion: {e}")
-
-
-class LeadConduitEventsSyncEngine(LeadConduitSyncEngine):
-    """Events-only sync engine"""
-    
-    async def sync(self, **kwargs) -> Dict[str, Any]:
-        """Sync only events"""
-        return await self.sync_events(**kwargs)
 
 
 class LeadConduitLeadsSyncEngine(LeadConduitSyncEngine):

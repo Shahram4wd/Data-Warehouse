@@ -1,7 +1,7 @@
 """
-LeadConduit Events Client
+LeadConduit Leads Client
 
-Specialized client for LeadConduit event data retrieval following
+Specialized client for LeadConduit lead data retrieval following
 sync_crm_guide architecture and optimization patterns.
 """
 import logging
@@ -13,128 +13,20 @@ from .base import LeadConduitBaseClient
 logger = logging.getLogger(__name__)
 
 
-class LeadConduitEventsClient(LeadConduitBaseClient):
+class LeadConduitLeadsClient(LeadConduitBaseClient):
     """
-    Specialized client for LeadConduit event data with optimized retrieval
+    Specialized client for LeadConduit lead data with optimized retrieval
     
-    Implements entity-specific logic for events including:
-    - Event-specific API endpoints
+    Implements entity-specific logic for leads including:
+    - Lead-specific API endpoints via events
     - Optimized data filtering
-    - Event type processing
+    - Batched processing for memory efficiency
     """
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.entity_type = "events"
-        logger.info("Initialized LeadConduit Events client")
-    
-    async def get_events_for_date_range(self, 
-                                      start_date: datetime, 
-                                      end_date: datetime,
-                                      batch_size: int = 1000) -> AsyncGenerator[List[Dict[str, Any]], None]:
-        """
-        Get all LeadConduit events for a date range using optimized pagination
-        
-        Args:
-            start_date: Start date in UTC
-            end_date: End date in UTC  
-            batch_size: Records per API request
-            
-        Yields:
-            List[Dict]: Batches of event records
-        """
-        logger.info(f"Fetching LeadConduit events from {start_date} to {end_date}")
-        
-        total_events = 0
-        async with self as client:
-            async for batch in client.fetch_events_paginated(start_date, end_date, batch_size):
-                if batch:
-                    # Process and clean each batch
-                    processed_batch = []
-                    for event in batch:
-                        processed_event = self.process_event_record(event)
-                        if processed_event:
-                            processed_batch.append(processed_event)
-                    
-                    if processed_batch:
-                        total_events += len(processed_batch)
-                        logger.debug(f"Processed batch of {len(processed_batch)} events (total: {total_events})")
-                        yield processed_batch
-        
-        logger.info(f"Completed: Retrieved {total_events} total events")
-    
-    def process_event_record(self, raw_event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """
-        Process and clean individual event record
-        
-        Following optimization patterns for data extraction and normalization
-        """
-        try:
-            # Extract and normalize event data
-            event_record = {
-                # Core identifiers
-                'event_id': raw_event.get('id', ''),
-                'event_type': raw_event.get('type', ''),
-                
-                # Timing (ensure UTC)
-                'start_timestamp': raw_event.get('start_timestamp'),
-                'end_timestamp': raw_event.get('end_timestamp'),
-                'submitted_utc': self.parse_timestamp_to_utc(raw_event.get('start_timestamp')),
-                
-                # Outcome data
-                'outcome': raw_event.get('outcome', ''),
-                'reason': raw_event.get('reason', ''),
-                'outcome_combined': f"{raw_event.get('outcome', '')} {raw_event.get('reason', '')}".strip(),
-                
-                # Extract flow and source
-                'flow_name': self.extract_flow_source_name(raw_event, 'flow'),
-                'source_name': self.extract_flow_source_name(raw_event, 'source'),
-                
-                # Event metadata
-                'host': raw_event.get('host', ''),
-                'wait_ms': raw_event.get('wait_ms'),
-                'overhead_ms': raw_event.get('overhead_ms'),
-                'lag_ms': raw_event.get('lag_ms'),
-                'handler_version': raw_event.get('handler_version', ''),
-                'cap_reached': raw_event.get('cap_reached', False),
-                'ping_limit_reached': raw_event.get('ping_limit_reached', False),
-                'expires_at': raw_event.get('expires_at'),
-                'step_count': raw_event.get('step_count'),
-                
-                # Store complete raw data for reference
-                'raw_data': raw_event,
-                'vars_data': raw_event.get('vars', {}),
-                'appended_data': raw_event.get('appended', {})
-            }
-            
-            # Extract lead data if this is a source event
-            if raw_event.get('type') == 'source':
-                vars_data = raw_event.get('vars', {})
-                lead_data = vars_data.get('lead', {})
-                
-                if lead_data:
-                    # Extract common lead fields using the reusable extract_value function
-                    event_record.update({
-                        'first_name': self.extract_value(lead_data.get('first_name'), ['first_name', 'value']),
-                        'last_name': self.extract_value(lead_data.get('last_name'), ['last_name', 'value']),
-                        'email': self.extract_value(lead_data.get('email'), ['email', 'value']),
-                        'phone': self.extract_value(lead_data.get('phone'), ['phone', 'value']),
-                        'address': self.extract_value(lead_data.get('address'), ['address', 'value']),
-                        'city': self.extract_value(lead_data.get('city'), ['city', 'value']),
-                        'state': self.extract_value(lead_data.get('state'), ['state', 'value']),
-                        'zip_code': self.extract_value(lead_data.get('zip_code'), ['zip_code', 'postal_code', 'zip', 'value'])
-                    })
-            
-            # Validate required fields
-            if not event_record['event_id']:
-                logger.warning(f"Event record missing required event_id: {raw_event}")
-                return None
-                
-            return event_record
-            
-        except Exception as e:
-            logger.error(f"Error processing event record {raw_event.get('id', 'unknown')}: {e}")
-            return None
+        self.entity_type = "leads"
+        logger.info("Initialized LeadConduit Leads client")
     
     def extract_flow_source_name(self, event: Dict[str, Any], field_type: str) -> str:
         """Extract flow or source name from event vars data"""
