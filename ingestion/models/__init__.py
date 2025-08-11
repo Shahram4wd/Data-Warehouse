@@ -28,6 +28,9 @@ from .salespro import SalesPro_CreditApplication, SalesPro_Customer, SalesPro_Es
 # Import SalesRabbit models
 from .salesrabbit import SalesRabbit_Lead
 
+# Import LeadConduit models
+from .leadconduit import LeadConduit_Lead
+
 # Import Hubspot models
 from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_Appointment, Hubspot_Division, Hubspot_SyncHistory
 
@@ -55,6 +58,9 @@ from .callrail import (
 # Import alerts models
 from .alerts import AlertModel, AlertRule
 
+# Import Google Sheets models
+from .gsheet import GoogleSheetMarketingLead
+
 # Import all models to maintain backwards compatibility
 # This allows existing code to continue using: from ingestion.models import X
 __all__ = [
@@ -74,7 +80,9 @@ __all__ = [
     'MarketSharp_Lead', 'MarketSharp_ProductDetail', 'MarketSharp_ProductInterest',
     'MarketSharp_ProductType', 'MarketSharp_Prospect',
     'SalesRabbit_Lead',
+    'LeadConduit_Lead',
     'CallRail_Account', 'CallRail_Company', 'CallRail_Call', 'CallRail_Tracker',
     'CallRail_FormSubmission', 'CallRail_TextMessage', 'CallRail_Tag', 'CallRail_User',
-    'AlertModel', 'AlertRule'
+    'AlertModel', 'AlertRule',
+    'GoogleSheetMarketingLead'
 ]

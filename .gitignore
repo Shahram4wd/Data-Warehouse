@@ -18,3 +18,5 @@ __pycache__/
 .idea/
 .vscode/
 leads_export.json
+credentials.json
+token.json
