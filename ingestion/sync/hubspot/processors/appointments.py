@@ -296,6 +296,39 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'genius_resubmit': 'string',
         }
     
+    def _truncate_field(self, value: Any, max_length: int, field_name: str, record_id: str) -> Optional[str]:
+        """Truncate field value to fit within max_length constraint"""
+        if value is None:
+            return None
+        
+        str_value = str(value)
+        if len(str_value) <= max_length:
+            return str_value
+        
+        logger.warning(f"Truncating {field_name} from {len(str_value)} to {max_length} chars for record {record_id}")
+        return str_value[:max_length]
+    
+    def _sanitize_time_field(self, value: Any) -> Optional[str]:
+        """Sanitize time field to handle invalid formats"""
+        if value is None:
+            return None
+        
+        str_value = str(value)
+        
+        # Handle datetime format in time field (extract just the time part)
+        if 'T' in str_value and ('z' in str_value.lower() or '+' in str_value or '-' in str_value[-6:]):
+            try:
+                # Parse as datetime and extract time
+                if str_value.endswith('z') or str_value.endswith('Z'):
+                    str_value = str_value[:-1] + '+00:00'
+                dt = datetime.fromisoformat(str_value.replace('Z', '+00:00'))
+                return dt.strftime('%H:%M:%S')
+            except ValueError:
+                logger.warning(f"Invalid datetime format in time field: {str_value}")
+                return None
+        
+        return str_value
+    
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform HubSpot appointment record to model format"""
         properties = record.get('properties', {})
@@ -328,7 +361,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'zip': self._truncate_field(properties.get('zip'), 20, 'zip', record_id),
             # Appointment details
             'date': self._parse_datetime(properties.get('date')),
-            'time': self._parse_time(properties.get('time'), record_id, 'time'),
+            'time': self._sanitize_time_field(properties.get('time')),
             'duration': self.parse_duration(properties.get('duration')),
             'appointment_status': self._truncate_field(properties.get('appointment_status'), 100, 'appointment_status', record_id),
             'appointment_confirmed': self._truncate_field(properties.get('appointment_confirmed'), 100, 'appointment_confirmed', record_id),

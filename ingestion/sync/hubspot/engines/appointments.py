@@ -148,8 +148,24 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
         if not validated_data:
             return results
 
+        # Deduplicate records by ID to avoid PostgreSQL "cannot affect row a second time" error
+        # Keep the last occurrence of each ID (most recent data)
+        seen_ids = set()
+        deduplicated_data = []
+        for record in reversed(validated_data):  # Reverse to keep last occurrence
+            record_id = record.get('id')
+            if record_id and record_id not in seen_ids:
+                seen_ids.add(record_id)
+                deduplicated_data.append(record)
+        
+        deduplicated_data.reverse()  # Restore original order
+        
+        if len(deduplicated_data) != len(validated_data):
+            duplicates_count = len(validated_data) - len(deduplicated_data)
+            logger.warning(f"Removed {duplicates_count} duplicate appointment IDs from batch of {len(validated_data)} records")
+
         # Prepare objects
-        appointment_objects = [Hubspot_Appointment(**record) for record in validated_data]
+        appointment_objects = [Hubspot_Appointment(**record) for record in deduplicated_data]
         try:
             created_appointments = await sync_to_async(Hubspot_Appointment.objects.bulk_create)(
                 appointment_objects,
@@ -161,10 +177,10 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
                 unique_fields=["id"]
             )
             results['created'] = len([obj for obj in created_appointments if obj._state.adding])
-            results['updated'] = len(validated_data) - results['created']
+            results['updated'] = len(deduplicated_data) - results['created']
         except Exception as e:
             logger.error(f"Bulk upsert failed: {e}")
-            results['failed'] = len(validated_data)
+            results['failed'] = len(deduplicated_data)
         return results
 
     async def _individual_save_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
