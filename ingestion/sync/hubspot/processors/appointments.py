@@ -214,7 +214,6 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'hs_appointment_end': 'datetime', 
             'hs_createdate': 'datetime',
             'hs_lastmodifieddate': 'datetime',
-            'date': 'datetime',
             'hubspot_owner_assigneddate': 'datetime',
             'complete_date': 'datetime',
             'confirm_date': 'datetime',
@@ -222,8 +221,11 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'add_date': 'datetime',
             'arrivy_appt_date': 'datetime',
             'arrivy_confirm_date': 'datetime',
-            'salespro_deadline': 'date',
-            'salespro_requested_start': 'date',
+            
+            # Date fields (not datetime)
+            'date': 'date',
+            'salespro_deadline': 'string',  # Changed from 'date' to 'string' to match CharField model
+            'salespro_requested_start': 'string',  # Changed from 'date' to 'string' to match CharField model
             'set_date': 'date',
             
             # Time fields
@@ -242,8 +244,8 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             
             # Boolean fields
             'is_complete': 'boolean',
-            'salespro_both_homeowners': 'boolean',
-            'spouses_present': 'boolean',
+            'salespro_both_homeowners': 'string',  # Changed from 'boolean' to 'string' to match CharField model
+            'spouses_present': 'integer',  # Changed from 'boolean' to 'integer' to match IntegerField model
             
             # URL fields  
             'salespro_fileurl_contract': 'url',

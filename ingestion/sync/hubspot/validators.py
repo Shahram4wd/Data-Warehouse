@@ -95,11 +95,35 @@ class HubSpotTimestampValidator:
             if value_str.endswith('z'):
                 value_str = value_str[:-1] + 'Z'
             
+            # Try Django's parse_datetime first
             parsed = parse_datetime(value_str)
             if parsed:
                 return parsed if parsed.tzinfo else timezone.make_aware(parsed)
-            else:
-                raise ValidationException(f"Could not parse datetime: {value}")
+            
+            # Handle HubSpot's M/D/YY H:MM AM/PM EDT format
+            import re
+            hubspot_pattern = r'(\d{1,2})/(\d{1,2})/(\d{2,4})\s+(\d{1,2}):(\d{2})\s+(AM|PM)\s+EDT'
+            match = re.match(hubspot_pattern, value_str)
+            if match:
+                month, day, year, hour, minute, ampm = match.groups()
+                
+                # Convert 2-digit year to 4-digit (assuming 20xx for years < 50, 19xx for >= 50)
+                if len(year) == 2:
+                    year_int = int(year)
+                    year = f"20{year}" if year_int < 50 else f"19{year}"
+                
+                # Convert 12-hour to 24-hour format
+                hour_int = int(hour)
+                if ampm == 'PM' and hour_int != 12:
+                    hour_int += 12
+                elif ampm == 'AM' and hour_int == 12:
+                    hour_int = 0
+                
+                # Create datetime object (EDT is UTC-4, but we'll use UTC for consistency)
+                dt = datetime(int(year), int(month), int(day), hour_int, int(minute))
+                return timezone.make_aware(dt)
+            
+            raise ValidationException(f"Could not parse datetime: {value}")
         except Exception as e:
             raise ValidationException(f"Invalid datetime format: {value} - {e}")
 
