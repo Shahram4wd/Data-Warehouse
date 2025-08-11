@@ -150,18 +150,17 @@ class HubSpotAppointmentsClient(HubSpotBaseClient):
                 
                 response_data = await self.make_request("POST", endpoint, json=payload)
             else:
-                # Use search endpoint for full sync to avoid URL length issues
-                endpoint = "crm/v3/objects/0-421/search"
-                
-                payload = {
-                    "properties": properties,
-                    "limit": limit
+                # Use regular endpoint for full sync to avoid 10k pagination limit
+                endpoint = "crm/v3/objects/0-421"
+                params = {
+                    "limit": str(limit),
+                    "properties": ",".join(properties)
                 }
                 
                 if page_token:
-                    payload["after"] = page_token
+                    params["after"] = page_token
                 
-                response_data = await self.make_request("POST", endpoint, json=payload)
+                response_data = await self.make_request("GET", endpoint, params=params)
             
             results = response_data.get("results", [])
             paging = response_data.get("paging", {})
