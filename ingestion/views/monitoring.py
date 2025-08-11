@@ -106,17 +106,28 @@ class PerformanceView(View):
             yesterday = now - timedelta(days=1)
             
             # Get sync performance data
-            sync_data = SyncHistory.objects.filter(
+            recent_syncs = SyncHistory.objects.filter(
                 start_time__gte=yesterday,
-                status='success'
-            ).aggregate(
-                total_records=Sum('records_processed'),
-                avg_duration=Avg('duration_seconds')
+                status='success',
+                end_time__isnull=False
             )
             
+            total_records = recent_syncs.aggregate(
+                total=Sum('records_processed')
+            )['total'] or 0
+            
+            # Calculate average duration manually since duration_seconds is a property
+            durations = []
+            for sync in recent_syncs:
+                if sync.duration_seconds:
+                    durations.append(sync.duration_seconds)
+            
+            avg_duration = sum(durations) / len(durations) if durations else 0
+            
             return JsonResponse({
-                'total_records_processed': sync_data['total_records'] or 0,
-                'avg_duration_seconds': sync_data['avg_duration'] or 0,
+                'total_records_processed': total_records,
+                'avg_duration_seconds': round(avg_duration, 2),
+                'sync_count': recent_syncs.count(),
                 'timestamp': now.isoformat()
             })
             

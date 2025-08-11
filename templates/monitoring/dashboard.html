@@ -350,6 +350,9 @@
             initializeWebSocket();
             initializeTabNavigation();
             
+            // Initial data load
+            refreshDashboard();
+            
             // Auto-refresh every 30 seconds
             setInterval(refreshDashboard, 30000);
         });
@@ -624,33 +627,51 @@
             const refreshIcon = document.getElementById('refreshIcon');
             refreshIcon.classList.add('refresh-indicator');
             
-            fetch('/api/monitoring/metrics/')
-                .then(response => response.json())
-                .then(data => {
-                    updateDashboard(data.data);
-                    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
-                })
-                .finally(() => {
-                    refreshIcon.classList.remove('refresh-indicator');
+            // Fetch stats data
+            Promise.all([
+                fetch('/ingestion/monitoring/api/stats/').then(r => r.json()),
+                fetch('/ingestion/monitoring/api/performance/').then(r => r.json()),
+                fetch('/ingestion/monitoring/api/connections/').then(r => r.json())
+            ])
+            .then(([statsData, perfData, connData]) => {
+                updateDashboard({
+                    stats: statsData,
+                    performance: perfData,
+                    connections: connData
                 });
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+            })
+            .catch(error => {
+                console.error('Error fetching dashboard data:', error);
+            })
+            .finally(() => {
+                refreshIcon.classList.remove('refresh-indicator');
+            });
         }
         
         // Update dashboard with new data
         function updateDashboard(data) {
-            const metrics = data.metrics;
+            const stats = data.stats;
+            const performance = data.performance;
             
             // Update key metrics
-            document.getElementById('successRate').textContent = (metrics.success_rate_24h * 100).toFixed(1) + '%';
-            document.getElementById('avgSpeed').textContent = Math.round(metrics.avg_processing_speed);
-            document.getElementById('activeSync').textContent = metrics.active_syncs;
-            document.getElementById('dataQuality').textContent = (metrics.data_quality_score * 100).toFixed(1) + '%';
+            document.getElementById('successRate').textContent = (stats.success_rate * 100).toFixed(1) + '%';
+            document.getElementById('activeSync').textContent = stats.active_syncs;
+            
+            // Calculate records per minute from performance data
+            const recordsPerMin = performance.avg_duration_seconds > 0 ? 
+                Math.round((performance.total_records_processed / performance.sync_count) / (performance.avg_duration_seconds / 60)) : 0;
+            document.getElementById('avgSpeed').textContent = recordsPerMin;
+            
+            // For now, use success rate as data quality placeholder
+            document.getElementById('dataQuality').textContent = (stats.success_rate * 100).toFixed(1) + '%';
             
             // Update charts if they exist
             if (charts.health) {
                 charts.health.data.datasets[0].data = [
-                    metrics.success_rate_24h * 100,
-                    metrics.validation_error_rate * 100,
-                    metrics.failed_syncs_24h
+                    stats.total_syncs - stats.failed_syncs,  // Healthy
+                    0,  // Warning (placeholder)
+                    stats.failed_syncs  // Critical
                 ];
                 charts.health.update();
             }

@@ -33,6 +33,9 @@ urlpatterns = [
     # Dashboard redirect to explorer
     path('dashboard/', RedirectView.as_view(url='/explorer/', permanent=False), name='dashboard'),
     
+    # Monitoring URLs (direct access)
+    path('monitoring/', RedirectView.as_view(url='/ingestion/monitoring/', permanent=False), name='monitoring'),
+    
     # Ingestion module URLs
     path('ingestion/', include('ingestion.urls')),
 
