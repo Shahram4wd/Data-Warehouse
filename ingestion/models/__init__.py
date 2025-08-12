@@ -59,7 +59,7 @@ from .callrail import (
 from .alerts import AlertModel, AlertRule
 
 # Import Google Sheets models
-from .gsheet import GoogleSheetMarketingLead
+from .gsheet import GoogleSheetMarketingLead, GoogleSheetMarketingSpend
 
 # Import all models to maintain backwards compatibility
 # This allows existing code to continue using: from ingestion.models import X
@@ -84,5 +84,5 @@ __all__ = [
     'CallRail_Account', 'CallRail_Company', 'CallRail_Call', 'CallRail_Tracker',
     'CallRail_FormSubmission', 'CallRail_TextMessage', 'CallRail_Tag', 'CallRail_User',
     'AlertModel', 'AlertRule',
-    'GoogleSheetMarketingLead'
+    'GoogleSheetMarketingLead', 'GoogleSheetMarketingSpend'
 ]

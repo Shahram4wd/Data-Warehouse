@@ -185,3 +185,80 @@ class GoogleSheetMarketingLead(models.Model):
     def has_contact_info(self):
         """Check if lead has usable contact information"""
         return bool(self.phone_number or self.email_address)
+
+
+class GoogleSheetMarketingSpend(models.Model):
+    """Marketing spends data from Google Sheets"""
+    
+    # Primary key - using sheet row number as natural primary key
+    sheet_row_number = models.PositiveIntegerField(primary_key=True)
+    
+    # System timestamps
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Sheet metadata
+    sheet_last_modified = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Sheet last modification time"
+    )
+    
+    # Marketing spend data
+    spend_date = models.DateField(null=True, blank=True, help_text="Date of marketing spend")
+    cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Marketing cost amount")
+    division = models.CharField(max_length=50, null=True, blank=True, help_text="Marketing division")
+    channel = models.CharField(max_length=50, null=True, blank=True, help_text="Marketing channel")
+    campaign = models.CharField(max_length=100, null=True, blank=True, help_text="Marketing campaign name")
+    event_start_date = models.DateField(null=True, blank=True, help_text="Event start date")
+    event_end_date = models.DateField(null=True, blank=True, help_text="Event end date")
+    
+    # Metadata - preserve original raw data
+    raw_data = models.JSONField(
+        default=dict,
+        help_text="Complete row data from sheet"
+    )
+    
+    class Meta:
+        db_table = 'ingestion_gsheet_marketing_spend'
+        verbose_name = 'Google Sheet Marketing Spend'
+        verbose_name_plural = 'Google Sheet Marketing Spends'
+        ordering = ['-spend_date', '-created_at']
+        indexes = [
+            # Core spend identification
+            models.Index(fields=['spend_date', 'division']),
+            models.Index(fields=['division', 'channel']),
+            models.Index(fields=['campaign', 'spend_date']),
+            
+            # Marketing attribution
+            models.Index(fields=['channel', 'campaign']),
+            models.Index(fields=['spend_date', 'channel']),
+            
+            # System fields
+            models.Index(fields=['sheet_row_number']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['spend_date']),
+            
+            # Performance tracking
+            models.Index(fields=['division', 'spend_date', 'cost']),
+        ]
+
+    def __str__(self):
+        return f"Row {self.sheet_row_number}: {self.division or 'No Division'} - {self.channel or 'No Channel'} - ${self.cost or 0} on {self.spend_date or 'No Date'}"
+
+    def save(self, *args, **kwargs):
+        # Ensure raw_data is properly formatted
+        if not isinstance(self.raw_data, dict):
+            self.raw_data = {}
+        super().save(*args, **kwargs)
+
+    @property
+    def cost_formatted(self):
+        """Get formatted cost as currency string"""
+        if self.cost:
+            return f"${self.cost:,.2f}"
+        return "$0.00"
+    
+    @property
+    def has_event_dates(self):
+        """Check if spend has event date information"""
+        return bool(self.event_start_date or self.event_end_date)
