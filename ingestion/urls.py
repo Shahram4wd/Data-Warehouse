@@ -11,7 +11,12 @@ try:
         DashboardStatsView,
         AlertView,
         PerformanceView,
-        ConnectionView
+        ConnectionView,
+        ConnectionHealthView,
+        AutomationStatusView,
+        ApproveActionView,
+        RejectActionView,
+        SecurityStatusView
     )
     monitoring_available = True
 except ImportError:
@@ -28,6 +33,11 @@ monitoring_urlpatterns = [
     path('api/alerts/', AlertView.as_view(), name='monitoring_api_alerts'),
     path('api/performance/', PerformanceView.as_view(), name='monitoring_api_performance'),
     path('api/connections/', ConnectionView.as_view(), name='monitoring_api_connections'),
+    path('api/connection-health/', ConnectionHealthView.as_view(), name='monitoring_api_connection_health'),
+    path('api/automation-status/', AutomationStatusView.as_view(), name='monitoring_api_automation_status'),
+    path('api/security-status/', SecurityStatusView.as_view(), name='monitoring_api_security_status'),
+    path('api/approve-action/<str:approval_id>/', ApproveActionView.as_view(), name='monitoring_api_approve_action'),
+    path('api/reject-action/<str:approval_id>/', RejectActionView.as_view(), name='monitoring_api_reject_action'),
 ] if monitoring_available else []
 
 urlpatterns = [
