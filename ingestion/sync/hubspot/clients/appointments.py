@@ -13,10 +13,12 @@ class HubSpotAppointmentsClient(HubSpotBaseClient):
     
     async def fetch_appointments(self, last_sync: Optional[datetime] = None,
                                limit: int = 100, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
-        """Fetch appointments from HubSpot custom object 0-421 with pagination"""
+        """Fetch appointments from HubSpot custom object 0-421 with improved pagination and deduplication"""
         page_token = None
-        retry_count = 0
-        max_retries = 3
+        seen_appointment_ids = set()  # Track seen IDs to prevent duplicates
+        total_fetched = 0
+        consecutive_empty_pages = 0
+        max_empty_pages = 3  # Stop after 3 consecutive empty pages
         
         while True:
             try:
@@ -27,28 +29,49 @@ class HubSpotAppointmentsClient(HubSpotBaseClient):
                 )
                 
                 if not appointments:
-                    break
-                    
-                yield appointments
+                    consecutive_empty_pages += 1
+                    if consecutive_empty_pages >= max_empty_pages:
+                        logger.info(f"Stopping fetch after {consecutive_empty_pages} consecutive empty pages")
+                        break
+                    if not next_token:
+                        break
+                    page_token = next_token
+                    continue
+                
+                # Reset empty page counter on successful fetch
+                consecutive_empty_pages = 0
+                
+                # Deduplicate appointments at fetch level
+                unique_appointments = []
+                duplicates_in_batch = 0
+                
+                for appointment in appointments:
+                    appointment_id = appointment.get('id') or appointment.get('hs_object_id')
+                    if appointment_id and appointment_id not in seen_appointment_ids:
+                        seen_appointment_ids.add(appointment_id)
+                        unique_appointments.append(appointment)
+                    elif appointment_id:
+                        duplicates_in_batch += 1
+                
+                if duplicates_in_batch > 0:
+                    logger.warning(f"Filtered {duplicates_in_batch} duplicate appointments in current batch")
+                
+                total_fetched += len(unique_appointments)
+                
+                if unique_appointments:
+                    yield unique_appointments
                 
                 if not next_token:
                     break
                     
                 page_token = next_token
-                retry_count = 0  # Reset retry count on successful request
                 
             except Exception as e:
-                logger.error(f"Error fetching appointments: {e}")
-                
-                # Handle HTTP 400 errors with retry logic
-                if "400" in str(e) and retry_count < max_retries:
-                    retry_count += 1
-                    logger.warning(f"HTTP 400 error, retry {retry_count}/{max_retries} - resetting pagination")
-                    page_token = None  # Reset pagination
-                    continue
-                else:
-                    logger.error(f"Max retries exceeded or non-recoverable error: {e}")
-                    break
+                logger.error(f"Error fetching appointments (page_token={page_token}): {e}")
+                break
+        
+        logger.info(f"Total unique appointments fetched: {total_fetched}")
+        logger.info(f"Total duplicate appointments filtered: {len(seen_appointment_ids) - total_fetched if len(seen_appointment_ids) > total_fetched else 0}")
     
     async def _fetch_appointments_page(self, last_sync: Optional[datetime] = None,
                                      page_token: Optional[str] = None,
@@ -171,11 +194,5 @@ class HubSpotAppointmentsClient(HubSpotBaseClient):
             
         except Exception as e:
             logger.error(f"Error fetching appointments page: {e}")
-            # Handle specific HubSpot errors
-            if "Invalid pagination token" in str(e) and page_token:
-                logger.warning("Invalid pagination token detected, resetting to first page")
-                return await self._fetch_appointments_page(last_sync=last_sync, page_token=None, limit=limit)
-            elif "HTTP 400" in str(e) and page_token:
-                logger.warning("HTTP 400 with pagination token, resetting to first page")
-                return await self._fetch_appointments_page(last_sync=last_sync, page_token=None, limit=limit)
+            # Improved error handling - don't reset pagination automatically
             return [], None

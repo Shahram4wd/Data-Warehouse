@@ -9,15 +9,19 @@ from ingestion.sync.hubspot.clients.appointments import HubSpotAppointmentsClien
 from ingestion.sync.hubspot.processors.appointments import HubSpotAppointmentProcessor
 from ingestion.sync.hubspot.engines.base import HubSpotBaseSyncEngine
 from ingestion.models.hubspot import Hubspot_Appointment
+from ingestion.config.appointment_field_config import APPOINTMENT_FIELD_LIMITS
 
 logger = logging.getLogger(__name__)
 
 class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
-    """Sync engine for HubSpot appointments"""
+    """Sync engine for HubSpot appointments with enhanced monitoring"""
     
     def __init__(self, **kwargs):
         super().__init__('appointments', **kwargs)
         self.force_overwrite = kwargs.get('force_overwrite', False)
+        self.sync_start_time = None
+        self.last_progress_log = None
+        self.processed_appointment_ids = set()  # Track processed IDs to detect loops
         
     async def initialize_client(self) -> None:
         """Initialize HubSpot appointments client and processor"""
@@ -29,7 +33,7 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
         self.processor = HubSpotAppointmentProcessor()
         
     async def fetch_data(self, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
-        """Fetch appointment data from HubSpot"""
+        """Fetch appointment data from HubSpot with progress tracking"""
         last_sync = kwargs.get('last_sync')
         limit = kwargs.get('limit', self.batch_size)
         max_records = kwargs.get('max_records', 0)
@@ -39,6 +43,8 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
         
         try:
             records_fetched = 0
+            batches_processed = 0
+            
             async for batch in self.client.fetch_appointments(
                 last_sync=last_sync,
                 limit=limit
@@ -46,6 +52,7 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
                 # If max_records is set, limit the records returned
                 if max_records > 0:
                     if records_fetched >= max_records:
+                        logger.info(f"Reached max_records limit ({max_records}), stopping fetch")
                         break
                     
                     # If this batch would exceed max_records, truncate it
@@ -53,11 +60,20 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
                         batch = batch[:max_records - records_fetched]
                 
                 records_fetched += len(batch)
+                batches_processed += 1
+                
+                # Log progress every 10 batches to avoid log spam
+                if batches_processed % 10 == 0:
+                    logger.info(f"Progress: {batches_processed} batches, {records_fetched} appointments fetched")
+                
                 yield batch
                 
                 # If we've reached max_records, stop fetching
                 if max_records > 0 and records_fetched >= max_records:
+                    logger.info(f"Reached max_records limit ({max_records}), stopping fetch")
                     break
+            
+            logger.info(f"Fetch completed: {batches_processed} batches, {records_fetched} total appointments")
                     
         except Exception as e:
             logger.error(f"Error fetching appointments: {e}")
@@ -65,23 +81,39 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
             await self.handle_sync_error(e, {
                 'operation': 'fetch_data',
                 'entity_type': 'appointments',
-                'records_fetched': records_fetched
+                'records_fetched': records_fetched,
+                'batches_processed': batches_processed
             })
             raise SyncException(f"Failed to fetch appointments: {e}")
             
     async def transform_data(self, raw_data: List[Dict]) -> List[Dict]:
-        """Transform appointment data"""
+        """Transform appointment data with loop detection"""
         if not self.processor:
             raise SyncException("Processor not initialized")
         
         transformed_data = []
+        loop_detected_count = 0
+        
         for record in raw_data:
             try:
+                # Check for processing loops
+                record_id = record.get('id') or record.get('hs_object_id')
+                if record_id and record_id in self.processed_appointment_ids:
+                    loop_detected_count += 1
+                    logger.warning(f"Loop detected: Appointment ID {record_id} already processed - skipping")
+                    continue
+                
+                if record_id:
+                    self.processed_appointment_ids.add(record_id)
+                
                 transformed = self.processor.transform_record(record)
                 transformed_data.append(transformed)
             except Exception as e:
                 logger.error(f"Error transforming appointment record {record.get('id')}: {e}")
                 # Continue processing other records
+        
+        if loop_detected_count > 0:
+            logger.warning(f"Loop detection: Skipped {loop_detected_count} duplicate appointments in this batch")
                 
         return transformed_data
         
@@ -139,11 +171,18 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
         logger.info(f"Appointment sync completed - Created: {results['created']}, "
                    f"Updated: {results['updated']}, Failed: {results['failed']}, "
                    f"Success Rate: {success_rate:.2%}")
+        
+        # Log comprehensive sync statistics
+        total_unique_processed = len(self.processed_appointment_ids)
+        logger.info(f"Sync Statistics - Total unique appointments processed: {total_unique_processed}")
+        
+        if total_unique_processed != total_processed:
+            logger.warning(f"Duplicate detection: {total_processed - total_unique_processed} duplicate records were filtered during processing")
 
         return results
 
     async def _bulk_save_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
-        """True bulk upsert for appointments using bulk_create with update_conflicts=True"""
+        """Improved bulk upsert for appointments with better error handling"""
         results = {'created': 0, 'updated': 0, 'failed': 0}
         if not validated_data:
             return results
@@ -164,8 +203,18 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
             duplicates_count = len(validated_data) - len(deduplicated_data)
             logger.warning(f"Removed {duplicates_count} duplicate appointment IDs from batch of {len(validated_data)} records")
 
+        # Truncate long field values to prevent database errors
+        for record in deduplicated_data:
+            self._truncate_long_fields(record)
+
         # Prepare objects
-        appointment_objects = [Hubspot_Appointment(**record) for record in deduplicated_data]
+        try:
+            appointment_objects = [Hubspot_Appointment(**record) for record in deduplicated_data]
+        except Exception as e:
+            logger.error(f"Error creating appointment objects: {e}")
+            results['failed'] = len(deduplicated_data)
+            return results
+            
         try:
             created_appointments = await sync_to_async(Hubspot_Appointment.objects.bulk_create)(
                 appointment_objects,
@@ -180,8 +229,28 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
             results['updated'] = len(deduplicated_data) - results['created']
         except Exception as e:
             logger.error(f"Bulk upsert failed: {e}")
+            # Log specific field issues if they exist
+            if "value too long" in str(e):
+                logger.error(f"Field length validation error - check field lengths in appointment data")
             results['failed'] = len(deduplicated_data)
         return results
+
+    def _truncate_long_fields(self, record: Dict[str, Any]) -> None:
+        """Truncate fields that are too long for database constraints"""
+        for field_name, max_length in APPOINTMENT_FIELD_LIMITS.items():
+            if field_name in record and record[field_name] is not None:
+                field_value = str(record[field_name])
+                if len(field_value) > max_length:
+                    original_length = len(field_value)
+                    record[field_name] = field_value[:max_length]
+                    logger.warning(f"Truncated field '{field_name}' from {original_length} to {max_length} chars for record {record.get('id')}")
+
+    def reset_progress_tracking(self) -> None:
+        """Reset progress tracking for new sync operations"""
+        self.processed_appointment_ids.clear()
+        self.sync_start_time = None
+        self.last_progress_log = None
+        logger.info("Progress tracking reset for new sync operation")
 
     async def _individual_save_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
         """Fallback individual save operation with detailed error handling"""
