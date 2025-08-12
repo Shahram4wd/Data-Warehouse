@@ -123,7 +123,7 @@ class HubSpotAppointmentsClient(HubSpotBaseClient):
             "created_by_make", "f9_tfuid", "set_date",
             
             # Genius integration fields
-            "genius_quote_id", "genius_quote_response", "genius_quote_response_status",
+            "genius_quote_id", "genius_prospect_id", "genius_quote_response", "genius_quote_response_status",
             "genius_response", "genius_response_status", "genius_resubmit"
         ]
         

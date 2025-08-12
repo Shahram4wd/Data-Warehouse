@@ -325,6 +325,7 @@ class Hubspot_Appointment(models.Model):
     
     # Genius integration fields - Added missing fields
     genius_quote_id = models.CharField(max_length=255, null=True, blank=True)
+    genius_prospect_id = models.CharField(max_length=255, null=True, blank=True)
     genius_quote_response = models.TextField(null=True, blank=True)
     genius_quote_response_status = models.CharField(max_length=255, null=True, blank=True)
     genius_response = models.TextField(null=True, blank=True)

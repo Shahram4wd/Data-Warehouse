@@ -151,6 +151,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             
             # Genius integration fields
             'properties.genius_quote_id': 'genius_quote_id',
+            'properties.genius_prospect_id': 'genius_prospect_id',
             'properties.genius_quote_response': 'genius_quote_response',
             'properties.genius_quote_response_status': 'genius_quote_response_status',
             'properties.genius_response': 'genius_response',
@@ -291,6 +292,7 @@ class HubSpotAppointmentProcessor(HubSpotBaseProcessor):
             'salespro_result_reason_demo': 'string',
             'salespro_result_reason_no_demo': 'string',
             'genius_quote_id': 'string',
+            'genius_prospect_id': 'string',
             'genius_quote_response_status': 'string',
             'genius_response_status': 'string',
             'genius_resubmit': 'string',
