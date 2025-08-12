@@ -187,14 +187,20 @@ class HubSpotBaseSyncEngine(BaseSyncEngine):
                    f"Success Rate: {metrics.get('success_rate', 0):.2%}")
         
         # Send performance alert if needed (but don't generate full automation reports per batch)
+        # Only send alert if success rate is very low and we haven't sent one recently
         try:
-            if self.alert_system and metrics.get('success_rate', 0) < 0.95:
+            if (self.alert_system and 
+                metrics.get('success_rate', 0) < 0.05 and  # Only alert for very low success rates (< 5%)
+                not hasattr(self, '_last_performance_alert') or 
+                (timezone.now() - getattr(self, '_last_performance_alert', timezone.now())).total_seconds() > 300):  # 5 minute throttle
+                
                 await self.alert_system.send_alert(
                     'sync_performance',
-                    f"Sync performance degraded for {self.entity_type}: {metrics.get('success_rate', 0):.2%} success rate",
+                    f"Sync performance critically degraded for {self.entity_type}: {metrics.get('success_rate', 0):.2%} success rate",
                     context=metrics,
-                    severity='warning'
+                    severity='critical'
                 )
+                self._last_performance_alert = timezone.now()
         except Exception as e:
             logger.warning(f"Failed to send performance alert: {e}")
             

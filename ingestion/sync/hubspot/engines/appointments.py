@@ -147,9 +147,27 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
             else:
                 # Try bulk operations first for better performance
                 results = await self._bulk_save_appointments(validated_data)
+                
+            # If bulk operation had failures, retry only the failed records individually
+            if results['failed'] > 0 and 'failed_records' in results and results['failed_records']:
+                failed_records = results['failed_records']
+                logger.warning(f"Bulk operation had {results['failed']} failures, retrying {len(failed_records)} records individually")
+                
+                # Retry only the failed records individually
+                retry_results = await self._individual_save_appointments(failed_records) if not self.force_overwrite else await self._individual_force_save_appointments(failed_records)
+                
+                # Update results by combining successful bulk + successful individual retries
+                results['created'] += retry_results['created']
+                results['updated'] += retry_results['updated']
+                results['failed'] = retry_results['failed']  # Only count the ones that still failed after retry
+                
+                if retry_results['failed'] < len(failed_records):
+                    recovered_count = len(failed_records) - retry_results['failed']
+                    logger.info(f"Individual retry recovered {recovered_count} records from bulk failures")
+                    
         except Exception as bulk_error:
-            logger.warning(f"Bulk save failed, falling back to individual saves: {bulk_error}")
-            # Fallback to individual saves
+            logger.warning(f"Bulk save operation threw exception, falling back to individual saves: {bulk_error}")
+            # Fallback to individual saves for all records
             if self.force_overwrite:
                 results = await self._individual_force_save_appointments(validated_data)
             else:
@@ -182,8 +200,8 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
         return results
 
     async def _bulk_save_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
-        """Improved bulk upsert for appointments with better error handling"""
-        results = {'created': 0, 'updated': 0, 'failed': 0}
+        """Improved bulk upsert for appointments with better error handling and failed record tracking"""
+        results = {'created': 0, 'updated': 0, 'failed': 0, 'failed_records': []}
         if not validated_data:
             return results
 
@@ -207,32 +225,44 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
         for record in deduplicated_data:
             self._truncate_long_fields(record)
 
-        # Prepare objects
-        try:
-            appointment_objects = [Hubspot_Appointment(**record) for record in deduplicated_data]
-        except Exception as e:
-            logger.error(f"Error creating appointment objects: {e}")
-            results['failed'] = len(deduplicated_data)
-            return results
-            
-        try:
-            created_appointments = await sync_to_async(Hubspot_Appointment.objects.bulk_create)(
-                appointment_objects,
-                batch_size=self.batch_size,
-                update_conflicts=True,
-                update_fields=[
-                    "appointment_id", "genius_appointment_id", "genius_prospect_id", "marketsharp_id", "hs_appointment_name", "hs_appointment_start", "hs_appointment_end", "hs_duration", "hs_object_id", "hs_createdate", "hs_lastmodifieddate", "hs_pipeline", "hs_pipeline_stage", "hs_all_accessible_team_ids", "hs_all_assigned_business_unit_ids", "hs_all_owner_ids", "hs_all_team_ids", "hs_created_by_user_id", "hs_merged_object_ids", "hs_object_source", "hs_object_source_detail_1", "hs_object_source_detail_2", "hs_object_source_detail_3", "hs_object_source_id", "hs_object_source_label", "hs_object_source_user_id", "hs_owning_teams", "hs_read_only", "hs_shared_team_ids", "hs_shared_user_ids", "hs_unique_creation_key", "hs_updated_by_user_id", "hs_user_ids_of_all_notification_followers", "hs_user_ids_of_all_notification_unfollowers", "hs_user_ids_of_all_owners", "hs_was_imported", "first_name", "last_name", "email", "phone1", "phone2", "address1", "address2", "city", "state", "zip", "date", "time", "duration", "appointment_status", "appointment_confirmed", "appointment_response", "is_complete", "cancel_reason", "div_cancel_reasons", "qc_cancel_reasons", "appointment_services", "lead_services", "product_interest_primary", "product_interest_secondary", "user_id", "canvasser", "canvasser_id", "canvasser_email", "hubspot_owner_id", "hubspot_owner_assigneddate", "hubspot_team_id", "division_id", "division", "primary_source", "secondary_source", "prospect_id", "prospect_source_id", "hscontact_id", "sourcefield", "type_id", "type_id_text", "marketsharp_appt_type", "complete_date", "complete_outcome_id", "complete_outcome_id_text", "complete_user_id", "confirm_date", "confirm_user_id", "confirm_with", "assign_date", "add_date", "add_user_id", "arrivy_appt_date", "arrivy_confirm_date", "arrivy_confirm_user", "arrivy_created_by", "arrivy_details", "arrivy_notes", "arrivy_object_id", "arrivy_result_full_string", "arrivy_salesrep_first_name", "arrivy_salesrep_last_name", "arrivy_status", "arrivy_status_title", "arrivy_user", "arrivy_user_divison_id", "arrivy_user_external_id", "arrivy_username", "salespro_both_homeowners", "salespro_consider_solar", "salespro_customer_id", "salespro_deadline", "salespro_deposit_type", "salespro_estimate_id", "salespro_fileurl_contract", "salespro_fileurl_estimate", "salespro_financing", "salespro_job_size", "salespro_job_type", "salespro_last_price_offered", "salespro_notes", "salespro_one_year_price", "salespro_preferred_payment", "salespro_requested_start", "salespro_result", "salespro_result_notes", "salespro_result_reason_demo", "salespro_result_reason_no_demo", "notes", "log", "title", "marketing_task_id", "leap_estimate_id", "spouses_present", "year_built", "error_details", "tester_test", "created_by_make", "f9_tfuid", "set_date", "genius_quote_id", "genius_quote_response", "genius_quote_response_status", "genius_response", "genius_response_status", "genius_resubmit", "created_at", "updated_at", "archived"
-                ],
-                unique_fields=["id"]
-            )
-            results['created'] = len([obj for obj in created_appointments if obj._state.adding])
-            results['updated'] = len(deduplicated_data) - results['created']
-        except Exception as e:
-            logger.error(f"Bulk upsert failed: {e}")
-            # Log specific field issues if they exist
-            if "value too long" in str(e):
-                logger.error(f"Field length validation error - check field lengths in appointment data")
-            results['failed'] = len(deduplicated_data)
+        # Try to prepare objects and catch individual record errors
+        appointment_objects = []
+        failed_records = []
+        
+        for record in deduplicated_data:
+            try:
+                appointment_obj = Hubspot_Appointment(**record)
+                appointment_objects.append(appointment_obj)
+            except Exception as e:
+                logger.error(f"Error creating appointment object for record {record.get('id')}: {e}")
+                failed_records.append(record)
+        
+        # If we have valid objects, try bulk create
+        if appointment_objects:
+            try:
+                created_appointments = await sync_to_async(Hubspot_Appointment.objects.bulk_create)(
+                    appointment_objects,
+                    batch_size=self.batch_size,
+                    update_conflicts=True,
+                    update_fields=[
+                        "appointment_id", "genius_appointment_id", "genius_prospect_id", "marketsharp_id", "hs_appointment_name", "hs_appointment_start", "hs_appointment_end", "hs_duration", "hs_object_id", "hs_createdate", "hs_lastmodifieddate", "hs_pipeline", "hs_pipeline_stage", "hs_all_accessible_team_ids", "hs_all_assigned_business_unit_ids", "hs_all_owner_ids", "hs_all_team_ids", "hs_created_by_user_id", "hs_merged_object_ids", "hs_object_source", "hs_object_source_detail_1", "hs_object_source_detail_2", "hs_object_source_detail_3", "hs_object_source_id", "hs_object_source_label", "hs_object_source_user_id", "hs_owning_teams", "hs_read_only", "hs_shared_team_ids", "hs_shared_user_ids", "hs_unique_creation_key", "hs_updated_by_user_id", "hs_user_ids_of_all_notification_followers", "hs_user_ids_of_all_notification_unfollowers", "hs_user_ids_of_all_owners", "hs_was_imported", "first_name", "last_name", "email", "phone1", "phone2", "address1", "address2", "city", "state", "zip", "date", "time", "duration", "appointment_status", "appointment_confirmed", "appointment_response", "is_complete", "cancel_reason", "div_cancel_reasons", "qc_cancel_reasons", "appointment_services", "lead_services", "product_interest_primary", "product_interest_secondary", "user_id", "canvasser", "canvasser_id", "canvasser_email", "hubspot_owner_id", "hubspot_owner_assigneddate", "hubspot_team_id", "division_id", "division", "primary_source", "secondary_source", "prospect_id", "prospect_source_id", "hscontact_id", "sourcefield", "type_id", "type_id_text", "marketsharp_appt_type", "complete_date", "complete_outcome_id", "complete_outcome_id_text", "complete_user_id", "confirm_date", "confirm_user_id", "confirm_with", "assign_date", "add_date", "add_user_id", "arrivy_appt_date", "arrivy_confirm_date", "arrivy_confirm_user", "arrivy_created_by", "arrivy_details", "arrivy_notes", "arrivy_object_id", "arrivy_result_full_string", "arrivy_salesrep_first_name", "arrivy_salesrep_last_name", "arrivy_status", "arrivy_status_title", "arrivy_user", "arrivy_user_divison_id", "arrivy_user_external_id", "arrivy_username", "salespro_both_homeowners", "salespro_consider_solar", "salespro_customer_id", "salespro_deadline", "salespro_deposit_type", "salespro_estimate_id", "salespro_fileurl_contract", "salespro_fileurl_estimate", "salespro_financing", "salespro_job_size", "salespro_job_type", "salespro_last_price_offered", "salespro_notes", "salespro_one_year_price", "salespro_preferred_payment", "salespro_requested_start", "salespro_result", "salespro_result_notes", "salespro_result_reason_demo", "salespro_result_reason_no_demo", "notes", "log", "title", "marketing_task_id", "leap_estimate_id", "spouses_present", "year_built", "error_details", "tester_test", "created_by_make", "f9_tfuid", "set_date", "genius_quote_id", "genius_quote_response", "genius_quote_response_status", "genius_response", "genius_response_status", "genius_resubmit", "created_at", "updated_at", "archived"
+                    ],
+                    unique_fields=["id"]
+                )
+                results['created'] = len([obj for obj in created_appointments if obj._state.adding])
+                results['updated'] = len(appointment_objects) - results['created']
+            except Exception as e:
+                logger.error(f"Bulk upsert failed: {e}")
+                # Log specific field issues if they exist
+                if "value too long" in str(e):
+                    logger.error(f"Field length validation error - check field lengths in appointment data")
+                # If bulk create fails, all objects become failed records
+                failed_records.extend([dict(obj.__dict__) for obj in appointment_objects])
+        
+        # Track failed records for individual retry
+        results['failed'] = len(failed_records)
+        results['failed_records'] = failed_records
+        
         return results
 
     def _truncate_long_fields(self, record: Dict[str, Any]) -> None:
@@ -253,32 +283,100 @@ class HubSpotAppointmentSyncEngine(HubSpotBaseSyncEngine):
         logger.info("Progress tracking reset for new sync operation")
 
     async def _individual_save_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
-        """Fallback individual save operation with detailed error handling"""
+        """Fallback individual save operation with detailed error handling and recovery"""
         results = {'created': 0, 'updated': 0, 'failed': 0}
+        error_categories = {'missing_id': 0, 'field_errors': 0, 'constraint_errors': 0, 'other_errors': 0}
+        
         for record in validated_data:
             try:
                 appointment_id = record.get('id')
                 if not appointment_id:
                     logger.error(f"Appointment record missing ID: {record}")
                     results['failed'] += 1
+                    error_categories['missing_id'] += 1
                     continue
+                
+                # Clean and truncate fields before attempting save
+                cleaned_record = record.copy()
+                self._truncate_long_fields(cleaned_record)
+                
+                # Try to clean problematic fields
+                self._clean_record_fields(cleaned_record)
+                
                 appointment, created = await sync_to_async(Hubspot_Appointment.objects.get_or_create)(
                     id=appointment_id,
-                    defaults=record
+                    defaults=cleaned_record
                 )
                 if not created:
-                    for field, value in record.items():
+                    # Update existing record
+                    for field, value in cleaned_record.items():
                         if hasattr(appointment, field):
                             setattr(appointment, field, value)
                     await sync_to_async(appointment.save)()
+                
                 if created:
                     results['created'] += 1
                 else:
                     results['updated'] += 1
+                    
             except Exception as e:
+                error_str = str(e)
                 logger.error(f"Error saving appointment {record.get('id')}: {e}")
                 results['failed'] += 1
+                
+                # Categorize errors for better debugging
+                if "duplicate key" in error_str:
+                    error_categories['constraint_errors'] += 1
+                elif "value too long" in error_str:
+                    error_categories['field_errors'] += 1
+                    logger.error(f"Field length error for appointment {record.get('id')}: {e}")
+                elif "invalid input syntax" in error_str:
+                    error_categories['field_errors'] += 1
+                    logger.error(f"Field format error for appointment {record.get('id')}: {e}")
+                else:
+                    error_categories['other_errors'] += 1
+        
+        # Log error summary
+        if results['failed'] > 0:
+            logger.warning(f"Individual save errors breakdown: {error_categories}")
+            
         return results
+
+    def _clean_record_fields(self, record: Dict[str, Any]) -> None:
+        """Clean problematic field values that commonly cause database errors"""
+        # Clean email fields
+        if 'email' in record and record['email']:
+            email = str(record['email']).strip()
+            if email == '.' or email == '' or len(email) < 3 or '@' not in email:
+                record['email'] = None
+        
+        # Clean phone fields
+        for phone_field in ['phone1', 'phone2']:
+            if phone_field in record and record[phone_field]:
+                phone = str(record[phone_field]).strip()
+                if phone in ['(No value)', '.', '', 'N/A'] or len(phone) < 3:
+                    record[phone_field] = None
+        
+        # Clean URL fields
+        for url_field in ['salespro_fileurl_contract', 'salespro_fileurl_estimate']:
+            if url_field in record and record[url_field]:
+                url = str(record[url_field]).strip()
+                if url in ['N', 'n/a', '', '.'] or not url.startswith(('http://', 'https://')):
+                    record[url_field] = None
+        
+        # Clean zip codes
+        if 'zip' in record and record['zip']:
+            zip_code = str(record['zip']).strip()
+            if len(zip_code) < 4 or not zip_code.replace('-', '').isdigit():
+                record['zip'] = None
+        
+        # Clean numeric fields that might have invalid values
+        for numeric_field in ['type_id', 'complete_outcome_id', 'complete_user_id', 'confirm_user_id', 'add_user_id']:
+            if numeric_field in record and record[numeric_field]:
+                try:
+                    int(record[numeric_field])
+                except (ValueError, TypeError):
+                    record[numeric_field] = None
 
     async def _force_overwrite_appointments(self, validated_data: List[Dict]) -> Dict[str, int]:
         """Force overwrite all appointments using bulk operations, ignoring timestamps"""

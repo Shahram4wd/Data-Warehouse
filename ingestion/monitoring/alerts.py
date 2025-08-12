@@ -4,6 +4,8 @@ Enterprise Alert System for CRM Integrations
 import asyncio
 import logging
 import smtplib
+import uuid
+import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Callable
 from dataclasses import dataclass, field
@@ -93,6 +95,8 @@ class AlertManager:
         self.notification_channels = []
         self.cooldown_tracker = {}
         self.alert_counter = {}
+        self._alert_id_counter = 0
+        self._alert_id_lock = threading.Lock()
         self.load_alert_rules()
         self.setup_notification_channels()
     
@@ -194,7 +198,7 @@ class AlertManager:
         return triggered_alerts
     
     async def create_alert(self, rule: AlertRule, metrics: Dict) -> Optional[Alert]:
-        """Create an alert if conditions are met"""
+        """Create an alert if conditions are met with enhanced deduplication"""
         alert_key = f"{rule.name}_{rule.alert_type.value}"
         
         # Check cooldown
@@ -205,13 +209,21 @@ class AlertManager:
         if self.exceeds_rate_limit(alert_key, rule.max_alerts_per_hour):
             return None
         
+        # Create alert message
+        alert_message = rule.message_template.format(**metrics)
+        
+        # Check for duplicate alert content in recent alerts
+        if self.is_duplicate_alert_content(rule.name, alert_message):
+            logger.debug(f"Skipping duplicate alert for {rule.name}: {alert_message}")
+            return None
+        
         # Create alert
         alert = Alert(
             id=self.generate_alert_id(),
             alert_type=rule.alert_type,
             severity=rule.severity,
             title=f"{rule.name.replace('_', ' ').title()} Alert",
-            message=rule.message_template.format(**metrics),
+            message=alert_message,
             details=metrics,
             timestamp=timezone.now(),
             source="alert_manager"
@@ -270,8 +282,28 @@ class AlertManager:
         ]
     
     def generate_alert_id(self) -> str:
-        """Generate unique alert ID"""
-        return f"alert_{int(timezone.now().timestamp())}_{id(self)}"
+        """Generate unique alert ID using timestamp, counter, and random component"""
+        with self._alert_id_lock:
+            self._alert_id_counter += 1
+            timestamp_ms = int(timezone.now().timestamp() * 1000)  # Millisecond precision
+            random_component = str(uuid.uuid4().hex)[:8]  # Short random string
+            return f"alert_{timestamp_ms}_{self._alert_id_counter}_{random_component}"
+
+    def is_duplicate_alert_content(self, rule_name: str, message: str, lookback_minutes: int = 10) -> bool:
+        """Check if an alert with similar content was recently created"""
+        cutoff_time = timezone.now() - timedelta(minutes=lookback_minutes)
+        
+        # Check recent alerts in history
+        for alert in reversed(self.alert_history[-50:]):  # Check last 50 alerts
+            if alert.timestamp < cutoff_time:
+                break
+                
+            # Check if it's the same rule and same message
+            if (alert.title.lower().replace(' ', '_') == f"{rule_name}_alert" and 
+                alert.message == message):
+                return True
+                
+        return False
     
     async def send_notifications(self, alert: Alert):
         """Send alert notifications through all channels"""
@@ -636,24 +668,31 @@ class DatabaseNotificationChannel(NotificationChannel):
     """Database notification channel for storing alerts"""
     
     async def send_notification(self, alert: Alert):
-        """Store alert in database"""
+        """Store alert in database with duplicate handling"""
         try:
-            # Store in database (assuming you have an Alert model)
+            # Store in database using get_or_create to handle potential duplicates
             from ingestion.models.alerts import AlertModel
+            from asgiref.sync import sync_to_async
             
-            await AlertModel.objects.acreate(
+            # Convert the get_or_create to async
+            alert_obj, created = await sync_to_async(AlertModel.objects.get_or_create)(
                 alert_id=alert.id,
-                alert_type=alert.alert_type.value,
-                severity=alert.severity.value,
-                title=alert.title,
-                message=alert.message,
-                details=alert.details,
-                timestamp=alert.timestamp,
-                source=alert.source,
-                resolved=alert.resolved
+                defaults={
+                    'alert_type': alert.alert_type.value,
+                    'severity': alert.severity.value,
+                    'title': alert.title,
+                    'message': alert.message,
+                    'details': alert.details,
+                    'timestamp': alert.timestamp,
+                    'source': alert.source,
+                    'resolved': alert.resolved
+                }
             )
             
-            logger.info(f"Alert stored in database: {alert.title}")
+            if created:
+                logger.info(f"Alert stored in database: {alert.title}")
+            else:
+                logger.info(f"Alert already exists in database: {alert.title}")
             
         except Exception as e:
             logger.error(f"Failed to store alert in database: {e}")
