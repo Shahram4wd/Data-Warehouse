@@ -377,3 +377,128 @@ class ValidateParametersAPIView(BaseAPIView):
         except Exception as e:
             logger.error(f"Error validating parameters: {e}")
             return self.error_response(str(e), 500)
+
+
+class SyncSchemasAPIView(BaseAPIView):
+    """API endpoint for getting parameter schemas for sync commands"""
+    
+    def get(self, request):
+        try:
+            # Default parameter schemas for common sync commands
+            schemas = [
+                {
+                    'command': 'sync_hubspot_all',
+                    'description': 'Sync all HubSpot data',
+                    'parameters': [
+                        {
+                            'name': 'force',
+                            'type': 'boolean',
+                            'default': False,
+                            'description': 'Force full sync ignoring last sync time'
+                        },
+                        {
+                            'name': 'skip-associations',
+                            'type': 'boolean',
+                            'default': False,
+                            'description': 'Skip association syncing'
+                        },
+                        {
+                            'name': 'batch-size',
+                            'type': 'number',
+                            'default': 100,
+                            'min': 1,
+                            'max': 1000,
+                            'description': 'Batch size for processing'
+                        }
+                    ]
+                },
+                {
+                    'command': 'sync_genius_all',
+                    'description': 'Sync all Genius data',
+                    'parameters': [
+                        {
+                            'name': 'force',
+                            'type': 'boolean',
+                            'default': False,
+                            'description': 'Force full sync'
+                        },
+                        {
+                            'name': 'full',
+                            'type': 'boolean',
+                            'default': False,
+                            'description': 'Perform full sync'
+                        },
+                        {
+                            'name': 'since',
+                            'type': 'datetime',
+                            'description': 'Sync records since this date (YYYY-MM-DD format)'
+                        }
+                    ]
+                },
+                {
+                    'command': 'sync_gsheet_marketing_spends',
+                    'description': 'Sync Google Sheets marketing spend data',
+                    'parameters': [
+                        {
+                            'name': 'force',
+                            'type': 'boolean',
+                            'default': False,
+                            'description': 'Force update of existing records'
+                        },
+                        {
+                            'name': 'sheet-id',
+                            'type': 'string',
+                            'description': 'Specific Google Sheet ID to sync'
+                        }
+                    ]
+                },
+                {
+                    'command': 'sync_callrail_all',
+                    'description': 'Sync all CallRail data',
+                    'parameters': [
+                        {
+                            'name': 'force',
+                            'type': 'boolean',
+                            'default': False,
+                            'description': 'Force full sync'
+                        },
+                        {
+                            'name': 'days',
+                            'type': 'number',
+                            'default': 30,
+                            'min': 1,
+                            'max': 365,
+                            'description': 'Number of days to sync back'
+                        }
+                    ]
+                },
+                {
+                    'command': 'sync_salesrabbit_all',
+                    'description': 'Sync all SalesRabbit data',
+                    'parameters': [
+                        {
+                            'name': 'force',
+                            'type': 'boolean',
+                            'default': False,
+                            'description': 'Force full sync'
+                        },
+                        {
+                            'name': 'batch-size',
+                            'type': 'number',
+                            'default': 100,
+                            'min': 1,
+                            'max': 500,
+                            'description': 'Batch size for processing'
+                        }
+                    ]
+                }
+            ]
+            
+            return self.json_response({
+                'success': True,
+                'data': schemas
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting sync schemas: {e}")
+            return self.error_response(str(e), 500)

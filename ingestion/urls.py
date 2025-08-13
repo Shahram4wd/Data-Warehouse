@@ -23,7 +23,8 @@ try:
         RunningSyncsAPIView,
         SyncHistoryAPIView,
         AvailableCommandsAPIView,
-        ValidateParametersAPIView
+        ValidateParametersAPIView,
+        SyncSchemasAPIView
     )
     crm_dashboard_available = True
 except ImportError:
@@ -61,6 +62,7 @@ crm_dashboard_urlpatterns = [
     path('api/sync/running/', RunningSyncsAPIView.as_view(), name='api_running_syncs'),
     path('api/sync/history/', SyncHistoryAPIView.as_view(), name='api_sync_history'),
     path('api/sync/validate/', ValidateParametersAPIView.as_view(), name='api_validate_parameters'),
+    path('api/sync/schemas/', SyncSchemasAPIView.as_view(), name='api_sync_schemas'),
     
     # Dashboard pages (dynamic patterns at the end)
     path('', CRMDashboardView.as_view(), name='crm_dashboard'),
