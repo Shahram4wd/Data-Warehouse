@@ -1,0 +1,497 @@
+{% extends 'crm_dashboard/base.html' %}
+
+{% block title %}CRM Management Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Summary metrics -->
+    <div class="col-12 mb-4">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <div class="card">
+                    <div class="card-body metric-card">
+                        <div class="metric-value">{{ total_crms|default:0 }}</div>
+                        <div class="metric-label">CRM Sources</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card">
+                    <div class="card-body metric-card">
+                        <div class="metric-value text-info">{{ running_count|default:0 }}</div>
+                        <div class="metric-label">Running Syncs</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card">
+                    <div class="card-body metric-card">
+                        <div class="metric-value text-success" id="totalModels">0</div>
+                        <div class="metric-label">Total Models</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card">
+                    <div class="card-body metric-card">
+                        <div class="metric-value text-warning" id="totalRecords">0</div>
+                        <div class="metric-label">Total Records</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Running syncs alert -->
+{% if running_syncs %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info" role="alert">
+            <h5 class="alert-heading"><i class="fas fa-sync-alt fa-spin"></i> Running Syncs</h5>
+            <div class="row">
+                {% for sync in running_syncs %}
+                <div class="col-md-4 mb-2">
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-info me-2">{{ sync.crm_source }}</span>
+                        <span class="small">{{ sync.sync_type }} - {{ sync.elapsed_seconds|floatformat:0 }}s</span>
+                        <button class="btn btn-sm btn-outline-danger ms-auto" onclick="stopSync({{ sync.id }})">
+                            <i class="fas fa-stop"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- CRM Sources grid -->
+<div class="row" id="crmSourcesGrid">
+    {% for crm in crm_sources %}
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100 crm-card" data-crm="{{ crm.name }}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <span class="crm-icon me-2">{{ crm.icon }}</span>
+                    <h5 class="mb-0">{{ crm.display_name }}</h5>
+                </div>
+                <span class="status-badge status-{{ crm.status }}">
+                    {% if crm.status == 'success' %}✅ Success
+                    {% elif crm.status == 'warning' %}⚠️ Warning
+                    {% elif crm.status == 'error' %}❌ Error
+                    {% elif crm.status == 'running' %}🔄 Running
+                    {% elif crm.status == 'never_synced' %}⏸️ Never Synced
+                    {% elif crm.status == 'outdated' %}⏰ Outdated
+                    {% else %}❓ Unknown
+                    {% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <div class="h4 mb-0 text-primary">{{ crm.model_count }}</div>
+                            <small class="text-muted">Models</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 mb-0 text-success">{{ crm.total_records|default:"0" }}</div>
+                        <small class="text-muted">Records</small>
+                    </div>
+                </div>
+                
+                {% if crm.last_sync %}
+                <div class="mt-3">
+                    <div class="small text-muted">
+                        <i class="fas fa-clock"></i> Last sync: {{ crm.last_sync.time_ago }}
+                    </div>
+                    {% if crm.last_sync.sync_type %}
+                    <div class="small text-muted">
+                        <i class="fas fa-database"></i> Type: {{ crm.last_sync.sync_type }}
+                    </div>
+                    {% endif %}
+                    {% if crm.last_sync.error_message %}
+                    <div class="small text-danger mt-1">
+                        <i class="fas fa-exclamation-triangle"></i> {{ crm.last_sync.error_message|truncatechars:50 }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="mt-3">
+                    <div class="small text-muted">
+                        <i class="fas fa-info-circle"></i> No sync history
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <div class="d-flex gap-2">
+                    <a href="{% url 'crm_dashboard:crm_models' crm.name %}" class="btn btn-primary btn-sm flex-fill">
+                        <i class="fas fa-list"></i> View Models
+                    </a>
+                    <button class="btn btn-outline-success btn-sm" onclick="syncAllCRM('{{ crm.name }}')">
+                        <i class="fas fa-sync-alt"></i> Sync All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">No CRM Sources Found</h4>
+                <p class="text-muted">No CRM model files detected in the ingestion/models directory.</p>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Recent sync activity -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-history"></i> Recent Sync Activity</h5>
+                <a href="{% url 'crm_dashboard:sync_history' %}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-external-link-alt"></i> View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_syncs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>CRM</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Started</th>
+                                <th>Duration</th>
+                                <th>Records</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sync in recent_syncs %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-secondary">{{ sync.crm_source }}</span>
+                                </td>
+                                <td>{{ sync.sync_type }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ sync.status }}">
+                                        {% if sync.status == 'success' %}✅ Success
+                                        {% elif sync.status == 'partial' %}⚠️ Partial
+                                        {% elif sync.status == 'failed' %}❌ Failed
+                                        {% elif sync.status == 'running' %}🔄 Running
+                                        {% else %}{{ sync.status }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ sync.start_time|date:"M d, H:i" }}</small>
+                                </td>
+                                <td>
+                                    {% if sync.duration_seconds %}
+                                        <small>{{ sync.duration_seconds|floatformat:1 }}s</small>
+                                    {% else %}
+                                        <small class="text-muted">-</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>
+                                        {% if sync.records_processed %}
+                                            {{ sync.records_processed }}
+                                            {% if sync.records_failed > 0 %}
+                                                <span class="text-danger">({{ sync.records_failed }} failed)</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if sync.status == 'running' %}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="stopSync({{ sync.id }})">
+                                        <i class="fas fa-stop"></i>
+                                    </button>
+                                    {% else %}
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewSyncDetails({{ sync.id }})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clock fa-2x text-muted mb-3"></i>
+                    <p class="text-muted">No recent sync activity</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading spinner (hidden by default) -->
+<div class="loading-spinner">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Loading CRM data...</p>
+</div>
+
+<!-- Sync execution modal -->
+<div class="modal fade" id="syncModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Start Sync</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="syncForm">
+                    <div class="mb-3">
+                        <label class="form-label">CRM Source</label>
+                        <input type="text" class="form-control" id="syncCrmSource" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Sync Type</label>
+                        <select class="form-select" id="syncType" required>
+                            <option value="all">All Models</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Parameters</h6>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="forceParam">
+                            <label class="form-check-label" for="forceParam">
+                                --force (Force overwrite existing records)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="fullParam">
+                            <label class="form-check-label" for="fullParam">
+                                --full (Full sync, ignore last sync timestamp)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="dryRunParam">
+                            <label class="form-check-label" for="dryRunParam">
+                                --dry-run (Test mode, no database writes)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Since Date (optional)</label>
+                        <input type="date" class="form-control" id="sinceParam">
+                        <div class="form-text">Sync records modified since this date</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeSyncCommand()">Start Sync</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load real-time data
+    loadDashboardData();
+    
+    // Set up auto-refresh every 30 seconds
+    setInterval(loadDashboardData, 30000);
+    
+    // Set up WebSocket for real-time updates (if available)
+    if (window.WebSocket) {
+        setupWebSocket();
+    }
+});
+
+async function loadDashboardData() {
+    try {
+        // Load CRM sources
+        const response = await CRMDashboard.apiCall('{% url "crm_dashboard:api_crm_list" %}');
+        if (response.success) {
+            updateMetrics(response.data);
+            updateCRMCards(response.data);
+        }
+        
+        // Load running syncs
+        const runningResponse = await CRMDashboard.apiCall('{% url "crm_dashboard:api_running_syncs" %}');
+        if (runningResponse.success) {
+            updateRunningSyncs(runningResponse.data);
+        }
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        CRMDashboard.showError('Failed to load dashboard data', document.querySelector('.main-content'));
+    }
+}
+
+function updateMetrics(crmData) {
+    const totalModels = crmData.reduce((sum, crm) => sum + (crm.model_count || 0), 0);
+    const totalRecords = crmData.reduce((sum, crm) => sum + (crm.total_records || 0), 0);
+    
+    document.getElementById('totalModels').textContent = totalModels.toLocaleString();
+    document.getElementById('totalRecords').textContent = totalRecords.toLocaleString();
+}
+
+function updateCRMCards(crmData) {
+    // Update existing CRM cards with fresh data
+    crmData.forEach(crm => {
+        const card = document.querySelector(`[data-crm="${crm.name}"]`);
+        if (card) {
+            // Update status badge
+            const statusBadge = card.querySelector('.status-badge');
+            if (statusBadge) {
+                statusBadge.className = `status-badge status-${crm.status}`;
+                statusBadge.textContent = getStatusText(crm.status);
+            }
+            
+            // Update record count
+            const recordCount = card.querySelector('.text-success');
+            if (recordCount) {
+                recordCount.textContent = (crm.total_records || 0).toLocaleString();
+            }
+        }
+    });
+}
+
+function updateRunningSyncs(runningSyncs) {
+    // Update running syncs count in metrics
+    const runningCountElement = document.querySelector('.metric-value.text-info');
+    if (runningCountElement) {
+        runningCountElement.textContent = runningSyncs.length;
+    }
+    
+    // You could also update the running syncs alert section here
+}
+
+function getStatusText(status) {
+    const statusMap = {
+        'success': '✅ Success',
+        'warning': '⚠️ Warning',
+        'error': '❌ Error',
+        'running': '🔄 Running',
+        'never_synced': '⏸️ Never Synced',
+        'outdated': '⏰ Outdated'
+    };
+    return statusMap[status] || '❓ Unknown';
+}
+
+function syncAllCRM(crmSource) {
+    // Open sync modal for all models
+    document.getElementById('syncCrmSource').value = crmSource;
+    document.getElementById('syncType').value = 'all';
+    
+    const modal = new bootstrap.Modal(document.getElementById('syncModal'));
+    modal.show();
+}
+
+async function executeSyncCommand() {
+    const crmSource = document.getElementById('syncCrmSource').value;
+    const syncType = document.getElementById('syncType').value;
+    
+    const parameters = {
+        force: document.getElementById('forceParam').checked,
+        full: document.getElementById('fullParam').checked,
+        dry_run: document.getElementById('dryRunParam').checked,
+        since: document.getElementById('sinceParam').value || null
+    };
+    
+    try {
+        const response = await CRMDashboard.apiCall('{% url "crm_dashboard:api_sync_execute" %}', {
+            method: 'POST',
+            body: JSON.stringify({
+                crm_source: crmSource,
+                sync_type: syncType,
+                parameters: parameters
+            })
+        });
+        
+        if (response.success) {
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('syncModal')).hide();
+            
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="fas fa-check-circle"></i> Sync started successfully for ${crmSource} ${syncType}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.main-content').insertBefore(alert, document.querySelector('.main-content').firstElementChild);
+            
+            // Refresh dashboard data
+            setTimeout(loadDashboardData, 2000);
+        } else {
+            throw new Error(response.error || 'Failed to start sync');
+        }
+        
+    } catch (error) {
+        console.error('Error executing sync:', error);
+        CRMDashboard.showError('Failed to start sync: ' + error.message, document.querySelector('.modal-body'));
+    }
+}
+
+async function stopSync(syncId) {
+    if (!confirm('Are you sure you want to stop this sync?')) {
+        return;
+    }
+    
+    try {
+        const response = await CRMDashboard.apiCall(`{% url "crm_dashboard:api_sync_stop" 0 %}`.replace('0', syncId), {
+            method: 'POST'
+        });
+        
+        if (response.success) {
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-warning alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="fas fa-stop-circle"></i> Sync stopped successfully
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.main-content').insertBefore(alert, document.querySelector('.main-content').firstElementChild);
+            
+            // Refresh dashboard data
+            setTimeout(loadDashboardData, 2000);
+        } else {
+            throw new Error(response.error || 'Failed to stop sync');
+        }
+        
+    } catch (error) {
+        console.error('Error stopping sync:', error);
+        CRMDashboard.showError('Failed to stop sync: ' + error.message, document.querySelector('.main-content'));
+    }
+}
+
+function viewSyncDetails(syncId) {
+    // This could open a modal with detailed sync information
+    // For now, just log the ID
+    console.log('View details for sync:', syncId);
+    // TODO: Implement sync details modal
+}
+
+function setupWebSocket() {
+    // TODO: Implement WebSocket connection for real-time updates
+    // This would connect to a WebSocket endpoint for live sync status updates
+    console.log('WebSocket setup not yet implemented');
+}
+</script>
+{% endblock %}
