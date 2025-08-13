@@ -33,7 +33,6 @@ class CRMDiscoveryService:
             'leadconduit': '⚡',
             'marketsharp': '📈',
             'gsheet': '📊',
-            'callreil': '📞',  # Handle typo in filename
         }
     
     def get_all_crm_sources(self) -> List[Dict]:
@@ -215,7 +214,6 @@ class CRMDiscoveryService:
         display_names = {
             'hubspot': 'HubSpot',
             'callrail': 'CallRail',
-            'callreil': 'CallRail',  # Handle typo
             'salespro': 'SalesPro',
             'salesrabbit': 'SalesRabbit',
             'leadconduit': 'LeadConduit',
