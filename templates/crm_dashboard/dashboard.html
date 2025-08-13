@@ -1,43 +1,188 @@
 {% extends 'crm_dashboard/base.html' %}
+{% load static %}
 
 {% block title %}CRM Management Dashboard{% endblock %}
 
+{% block extra_head %}
+<!-- Chart.js for enhanced visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Phase 3 Enhanced CSS -->
+<link rel="stylesheet" href="{% static 'crm_dashboard/css/dashboard.css' %}">
+<!-- Additional CSS for Phase 3 enhancements -->
+<style>
+.metric-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+}
+
+.hover-shadow {
+    transition: box-shadow 0.3s ease;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1) !important;
+}
+
+.realtime-status {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 20px;
+    font-size: 12px;
+    border: 1px solid #dee2e6;
+}
+
+.activity-item {
+    transition: background-color 0.2s ease;
+}
+
+.activity-item:hover {
+    background-color: #f8f9fa;
+}
+
+.quick-action-bar {
+    position: sticky;
+    top: 20px;
+    z-index: 100;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.filter-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    margin: 2px;
+    background: #e9ecef;
+    border-radius: 15px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-chip.active {
+    background: #007bff;
+    color: white;
+}
+
+.notification-container {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 1060;
+    max-width: 400px;
+}
+
+#sync-chart-container {
+    height: 300px;
+}
+
+.metric-box {
+    padding: 10px;
+    border-radius: 8px;
+    transition: transform 0.2s ease;
+}
+
+.metric-box:hover {
+    transform: scale(1.05);
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row">
-    <!-- Summary metrics -->
-    <div class="col-12 mb-4">
-        <div class="row">
-            <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body metric-card">
-                        <div class="metric-value">{{ total_crms|default:0 }}</div>
-                        <div class="metric-label">CRM Sources</div>
-                    </div>
+<!-- Real-time Status Indicator -->
+<div class="realtime-status" id="realtime-status">
+    <i class="fas fa-circle text-success"></i> Live
+</div>
+
+<!-- Notification Container -->
+<div class="notification-container" id="notification-container"></div>
+
+<!-- Quick Action Bar -->
+<div class="quick-action-bar">
+    <div class="row align-items-center">
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="crm-search" placeholder="Search CRMs... (Ctrl+K)">
+            </div>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="status-filter">
+                <option value="all">All Status</option>
+                <option value="success">Success</option>
+                <option value="warning">Warning</option>
+                <option value="error">Error</option>
+                <option value="running">Running</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select class="form-select" id="time-range-filter">
+                <option value="1h">Last Hour</option>
+                <option value="24h" selected>Last 24h</option>
+                <option value="7d">Last 7 days</option>
+                <option value="30d">Last 30 days</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <div class="btn-group w-100" role="group">
+                <button class="btn btn-outline-primary btn-sm" id="manual-refresh" title="Refresh (Ctrl+R)">
+                    <i class="fas fa-sync"></i>
+                </button>
+                <button class="btn btn-outline-warning btn-sm" id="auto-refresh-toggle">
+                    <i class="fas fa-pause me-1"></i>Pause Auto-refresh
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" id="export-dashboard" title="Export Data">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Summary Metrics -->
+<div class="row mb-4" id="sync-metrics-container">
+    <!-- Metrics will be dynamically loaded here -->
+</div>
+
+<!-- Charts and Analytics Row -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Sync Activity Trends
+                </h6>
+                <div class="filter-chips">
+                    <span class="filter-chip active" data-range="24h">24h</span>
+                    <span class="filter-chip" data-range="7d">7d</span>
+                    <span class="filter-chip" data-range="30d">30d</span>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body metric-card">
-                        <div class="metric-value text-info">{{ running_count|default:0 }}</div>
-                        <div class="metric-label">Running Syncs</div>
-                    </div>
+            <div class="card-body">
+                <div id="sync-chart-container">
+                    <canvas id="syncTrendsChart"></canvas>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body metric-card">
-                        <div class="metric-value text-success" id="totalModels">0</div>
-                        <div class="metric-label">Total Models</div>
-                    </div>
-                </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>Active Syncs
+                    <span class="badge bg-primary active-syncs-count ms-2">0</span>
+                </h6>
+                <small class="text-muted last-refresh-time">Loading...</small>
             </div>
-            <div class="col-md-3 mb-3">
-                <div class="card">
-                    <div class="card-body metric-card">
-                        <div class="metric-value text-warning" id="totalRecords">0</div>
-                        <div class="metric-label">Total Records</div>
-                    </div>
-                </div>
+            <div id="active-syncs-dashboard">
+                <!-- Active syncs will be loaded here -->
             </div>
         </div>
     </div>
@@ -55,7 +200,7 @@
                     <div class="d-flex align-items-center">
                         <span class="badge bg-info me-2">{{ sync.crm_source }}</span>
                         <span class="small">{{ sync.sync_type }} - {{ sync.elapsed_seconds|floatformat:0 }}s</span>
-                        <button class="btn btn-sm btn-outline-danger ms-auto" onclick="stopSync({{ sync.id }})">
+                        <button class="btn btn-sm btn-outline-danger ms-auto sync-action-btn" data-action="stop" data-sync-id="{{ sync.id }}">
                             <i class="fas fa-stop"></i>
                         </button>
                     </div>
@@ -67,88 +212,52 @@
 </div>
 {% endif %}
 
-<!-- CRM Sources grid -->
-<div class="row" id="crmSourcesGrid">
-    {% for crm in crm_sources %}
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card h-100 crm-card" data-crm="{{ crm.name }}">
+<!-- Enhanced CRM Sources Grid -->
+<div class="row" id="crm-cards-container">
+    <!-- CRM cards will be dynamically loaded here by JavaScript -->
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-3 text-muted">Loading CRM data...</p>
+    </div>
+</div>
+
+<!-- Sync Queue and Management -->
+<div class="row mt-4">
+    <div class="col-lg-6">
+        <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center">
-                    <span class="crm-icon me-2">{{ crm.icon }}</span>
-                    <h5 class="mb-0">{{ crm.display_name }}</h5>
-                </div>
-                <span class="status-badge status-{{ crm.status }}">
-                    {% if crm.status == 'success' %}✅ Success
-                    {% elif crm.status == 'warning' %}⚠️ Warning
-                    {% elif crm.status == 'error' %}❌ Error
-                    {% elif crm.status == 'running' %}🔄 Running
-                    {% elif crm.status == 'never_synced' %}⏸️ Never Synced
-                    {% elif crm.status == 'outdated' %}⏰ Outdated
-                    {% else %}❓ Unknown
-                    {% endif %}
-                </span>
+                <h6 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Sync Queue
+                    <span class="badge bg-warning queued-syncs-count ms-2">0</span>
+                </h6>
+                <button class="btn btn-sm btn-outline-secondary" id="processQueueBtn">
+                    <i class="fas fa-play me-1"></i>Process Queue
+                </button>
             </div>
             <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-6">
-                        <div class="border-end">
-                            <div class="h4 mb-0 text-primary">{{ crm.model_count }}</div>
-                            <small class="text-muted">Models</small>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="h4 mb-0 text-success">{{ crm.total_records|default:"0" }}</div>
-                        <small class="text-muted">Records</small>
-                    </div>
-                </div>
-                
-                {% if crm.last_sync %}
-                <div class="mt-3">
-                    <div class="small text-muted">
-                        <i class="fas fa-clock"></i> Last sync: {{ crm.last_sync.time_ago }}
-                    </div>
-                    {% if crm.last_sync.sync_type %}
-                    <div class="small text-muted">
-                        <i class="fas fa-database"></i> Type: {{ crm.last_sync.sync_type }}
-                    </div>
-                    {% endif %}
-                    {% if crm.last_sync.error_message %}
-                    <div class="small text-danger mt-1">
-                        <i class="fas fa-exclamation-triangle"></i> {{ crm.last_sync.error_message|truncatechars:50 }}
-                    </div>
-                    {% endif %}
-                </div>
-                {% else %}
-                <div class="mt-3">
-                    <div class="small text-muted">
-                        <i class="fas fa-info-circle"></i> No sync history
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-            <div class="card-footer">
-                <div class="d-flex gap-2">
-                    <a href="{% url 'crm_dashboard:crm_models' crm.name %}" class="btn btn-primary btn-sm flex-fill">
-                        <i class="fas fa-list"></i> View Models
-                    </a>
-                    <button class="btn btn-outline-success btn-sm" onclick="syncAllCRM('{{ crm.name }}')">
-                        <i class="fas fa-sync-alt"></i> Sync All
-                    </button>
+                <div id="sync-queue-container">
+                    <div class="text-muted">No queued syncs</div>
                 </div>
             </div>
         </div>
     </div>
-    {% empty %}
-    <div class="col-12">
+    <div class="col-lg-6">
         <div class="card">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-database fa-3x text-muted mb-3"></i>
-                <h4 class="text-muted">No CRM Sources Found</h4>
-                <p class="text-muted">No CRM model files detected in the ingestion/models directory.</p>
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Active Sync Processes
+                    <span class="badge bg-primary active-syncs-count ms-2">0</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="active-syncs-container">
+                    <div class="text-muted">No active syncs</div>
+                </div>
             </div>
         </div>
     </div>
-    {% endfor %}
 </div>
 
 <!-- Recent sync activity -->
@@ -217,11 +326,11 @@
                                 </td>
                                 <td>
                                     {% if sync.status == 'running' %}
-                                    <button class="btn btn-sm btn-outline-danger" onclick="stopSync({{ sync.id }})">
+                                    <button class="btn btn-sm btn-outline-danger sync-action-btn" data-action="stop" data-sync-id="{{ sync.id }}">
                                         <i class="fas fa-stop"></i>
                                     </button>
                                     {% else %}
-                                    <button class="btn btn-sm btn-outline-primary" onclick="viewSyncDetails({{ sync.id }})">
+                                    <button class="btn btn-sm btn-outline-primary sync-action-btn" data-action="details" data-sync-id="{{ sync.id }}">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     {% endif %}
@@ -300,7 +409,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="executeSyncCommand()">Start Sync</button>
+                <button type="button" class="btn btn-primary" id="executeSyncBtn">Start Sync</button>
             </div>
         </div>
     </div>
@@ -308,190 +417,318 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Phase 3 JavaScript Modules -->
+<script src="{% static 'crm_dashboard/js/real_time_updates.js' %}"></script>
+<script src="{% static 'crm_dashboard/js/sync_management.js' %}"></script>
+<script src="{% static 'crm_dashboard/js/dashboard.js' %}"></script>
+
 <script>
+// Phase 3 Enhanced Dashboard Implementation
 document.addEventListener('DOMContentLoaded', function() {
-    // Load real-time data
-    loadDashboardData();
-    
-    // Set up auto-refresh every 30 seconds
-    setInterval(loadDashboardData, 30000);
-    
-    // Set up WebSocket for real-time updates (if available)
-    if (window.WebSocket) {
-        setupWebSocket();
+    // Initialize Dashboard Manager
+    if (typeof DashboardManager !== 'undefined') {
+        window.dashboardManager = new DashboardManager({
+            autoRefreshInterval: 30000,
+            chartContainers: {
+                sync: 'syncChart',
+                performance: 'performanceChart'
+            },
+            apiEndpoints: {
+                crmList: '{% url "crm_dashboard:api_crm_list" %}',
+                runningSync: '{% url "crm_dashboard:api_running_syncs" %}',
+                syncHistory: '{% url "crm_dashboard:api_sync_history" %}',
+                syncExecute: '{% url "crm_dashboard:api_sync_execute" %}',
+                syncStop: '{% url "crm_dashboard:api_sync_stop" 0 %}'
+            }
+        });
+
+        // Initialize with data load
+        dashboardManager.initialize();
     }
+
+    // Initialize Real-time Updates Manager
+    if (typeof RealTimeUpdatesManager !== 'undefined') {
+        window.realTimeManager = new RealTimeUpdatesManager({
+            websocketUrl: '{{ websocket_url|default:"" }}',
+            fallbackPolling: true,
+            pollingInterval: 10000,
+            apiEndpoints: {
+                status: '{% url "crm_dashboard:api_running_syncs" %}',
+                metrics: '{% url "crm_dashboard:api_crm_list" %}'
+            }
+        });
+
+        // Connect real-time updates
+        realTimeManager.connect();
+    }
+
+    // Initialize Sync Management
+    if (typeof SyncManager !== 'undefined') {
+        window.syncManager = new SyncManager({
+            apiEndpoints: {
+                execute: '{% url "crm_dashboard:api_sync_execute" %}',
+                stop: '{% url "crm_dashboard:api_sync_stop" 0 %}',
+                status: '{% url "crm_dashboard:api_sync_status" 0 %}'
+            },
+            maxConcurrentSyncs: 3,
+            confirmDestructive: true
+        });
+    }
+
+    // Enhanced Event Handlers
+    setupEventHandlers();
+    
+    // Initialize modals
+    initializeModals();
+    
+    // Setup keyboard shortcuts
+    setupKeyboardShortcuts();
 });
 
-async function loadDashboardData() {
-    try {
-        // Load CRM sources
-        const response = await CRMDashboard.apiCall('{% url "crm_dashboard:api_crm_list" %}');
-        if (response.success) {
-            updateMetrics(response.data);
-            updateCRMCards(response.data);
-        }
-        
-        // Load running syncs
-        const runningResponse = await CRMDashboard.apiCall('{% url "crm_dashboard:api_running_syncs" %}');
-        if (runningResponse.success) {
-            updateRunningSyncs(runningResponse.data);
-        }
-        
-    } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        CRMDashboard.showError('Failed to load dashboard data', document.querySelector('.main-content'));
-    }
-}
-
-function updateMetrics(crmData) {
-    const totalModels = crmData.reduce((sum, crm) => sum + (crm.model_count || 0), 0);
-    const totalRecords = crmData.reduce((sum, crm) => sum + (crm.total_records || 0), 0);
-    
-    document.getElementById('totalModels').textContent = totalModels.toLocaleString();
-    document.getElementById('totalRecords').textContent = totalRecords.toLocaleString();
-}
-
-function updateCRMCards(crmData) {
-    // Update existing CRM cards with fresh data
-    crmData.forEach(crm => {
-        const card = document.querySelector(`[data-crm="${crm.name}"]`);
-        if (card) {
-            // Update status badge
-            const statusBadge = card.querySelector('.status-badge');
-            if (statusBadge) {
-                statusBadge.className = `status-badge status-${crm.status}`;
-                statusBadge.textContent = getStatusText(crm.status);
-            }
+function setupEventHandlers() {
+    // Sync action buttons (stop/details)
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.sync-action-btn')) {
+            const btn = e.target.closest('.sync-action-btn');
+            const action = btn.getAttribute('data-action');
+            const syncId = btn.getAttribute('data-sync-id');
             
-            // Update record count
-            const recordCount = card.querySelector('.text-success');
-            if (recordCount) {
-                recordCount.textContent = (crm.total_records || 0).toLocaleString();
+            if (action === 'stop') {
+                handleStopSync(syncId);
+            } else if (action === 'details') {
+                handleViewSyncDetails(syncId);
             }
         }
     });
-}
 
-function updateRunningSyncs(runningSyncs) {
-    // Update running syncs count in metrics
-    const runningCountElement = document.querySelector('.metric-value.text-info');
-    if (runningCountElement) {
-        runningCountElement.textContent = runningSyncs.length;
+    // Quick action buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.quick-action-btn')) {
+            const btn = e.target.closest('.quick-action-btn');
+            const action = btn.getAttribute('data-action');
+            const crm = btn.getAttribute('data-crm');
+            
+            handleQuickAction(action, crm);
+        }
+    });
+
+    // Execute sync button in modal
+    const executeSyncBtn = document.getElementById('executeSyncBtn');
+    if (executeSyncBtn) {
+        executeSyncBtn.addEventListener('click', handleExecuteSync);
     }
+
+    // Search functionality
+    const searchInput = document.getElementById('searchCRM');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(handleSearch, 300));
+    }
+
+    // Auto-refresh toggle
+    const autoRefreshToggle = document.getElementById('autoRefreshToggle');
+    if (autoRefreshToggle) {
+        autoRefreshToggle.addEventListener('change', handleAutoRefreshToggle);
+    }
+
+    // Process queue button
+    const processQueueBtn = document.getElementById('processQueueBtn');
+    if (processQueueBtn) {
+        processQueueBtn.addEventListener('click', function() {
+            if (window.syncManager) {
+                syncManager.processQueue();
+            }
+        });
+    }
+}
+
+function handleStopSync(syncId) {
+    if (window.syncManager) {
+        syncManager.stopSync(syncId).then(success => {
+            if (success) {
+                showNotification('Sync stopped successfully', 'success');
+                if (window.dashboardManager) {
+                    dashboardManager.refreshData();
+                }
+            }
+        });
+    }
+}
+
+function handleViewSyncDetails(syncId) {
+    // Open sync details modal or navigate to details page
+    console.log('Viewing details for sync:', syncId);
+    // TODO: Implement sync details modal
+}
+
+function handleQuickAction(action, crm) {
+    if (action === 'sync-all' && window.syncManager) {
+        // Open sync modal for this CRM
+        openSyncModal(crm, 'all');
+    } else if (action === 'view-config') {
+        // Navigate to CRM configuration
+        window.location.href = `{% url 'crm_dashboard:crm_config' %}?crm=${crm}`;
+    }
+}
+
+function handleExecuteSync() {
+    const form = document.getElementById('syncForm');
+    const formData = new FormData(form);
     
-    // You could also update the running syncs alert section here
-}
-
-function getStatusText(status) {
-    const statusMap = {
-        'success': '✅ Success',
-        'warning': '⚠️ Warning',
-        'error': '❌ Error',
-        'running': '🔄 Running',
-        'never_synced': '⏸️ Never Synced',
-        'outdated': '⏰ Outdated'
+    const syncData = {
+        crm_source: document.getElementById('syncCrmSource').value,
+        sync_type: document.getElementById('syncType').value,
+        parameters: {
+            force: document.getElementById('forceParam').checked,
+            full: document.getElementById('fullParam').checked,
+            dry_run: document.getElementById('dryRunParam').checked,
+            since: document.getElementById('sinceParam').value || null
+        }
     };
-    return statusMap[status] || '❓ Unknown';
+    
+    if (window.syncManager) {
+        syncManager.executeSync(syncData).then(success => {
+            if (success) {
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('syncModal'));
+                modal.hide();
+                
+                showNotification('Sync started successfully', 'success');
+                
+                if (window.dashboardManager) {
+                    dashboardManager.refreshData();
+                }
+            }
+        });
+    }
 }
 
-function syncAllCRM(crmSource) {
-    // Open sync modal for all models
+function handleSearch(e) {
+    const query = e.target.value.toLowerCase();
+    const crmCards = document.querySelectorAll('.crm-card');
+    
+    crmCards.forEach(card => {
+        const crmName = card.getAttribute('data-crm').toLowerCase();
+        const visible = crmName.includes(query);
+        card.style.display = visible ? 'block' : 'none';
+    });
+}
+
+function handleAutoRefreshToggle(e) {
+    if (window.dashboardManager) {
+        if (e.target.checked) {
+            dashboardManager.startAutoRefresh();
+        } else {
+            dashboardManager.stopAutoRefresh();
+        }
+    }
+}
+
+function openSyncModal(crmSource, syncType = 'all') {
     document.getElementById('syncCrmSource').value = crmSource;
-    document.getElementById('syncType').value = 'all';
+    document.getElementById('syncType').value = syncType;
     
     const modal = new bootstrap.Modal(document.getElementById('syncModal'));
     modal.show();
 }
 
-async function executeSyncCommand() {
-    const crmSource = document.getElementById('syncCrmSource').value;
-    const syncType = document.getElementById('syncType').value;
+function initializeModals() {
+    // Sync modal initialization
+    const syncModal = document.getElementById('syncModal');
+    if (syncModal) {
+        syncModal.addEventListener('show.bs.modal', function() {
+            // Reset form when modal opens
+            const form = document.getElementById('syncForm');
+            if (form) {
+                form.reset();
+            }
+        });
+    }
+}
+
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+R or F5 for refresh
+        if ((e.ctrlKey && e.key === 'r') || e.key === 'F5') {
+            e.preventDefault();
+            if (window.dashboardManager) {
+                dashboardManager.refreshData();
+            }
+            return false;
+        }
+        
+        // Ctrl+/ for search focus
+        if (e.ctrlKey && e.key === '/') {
+            e.preventDefault();
+            const searchInput = document.getElementById('searchCRM');
+            if (searchInput) {
+                searchInput.focus();
+            }
+        }
+        
+        // Escape to close modals
+        if (e.key === 'Escape') {
+            const openModals = document.querySelectorAll('.modal.show');
+            openModals.forEach(modal => {
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            });
+        }
+    });
+}
+
+function showNotification(message, type = 'info') {
+    const container = document.getElementById('notificationContainer');
+    if (!container) return;
     
-    const parameters = {
-        force: document.getElementById('forceParam').checked,
-        full: document.getElementById('fullParam').checked,
-        dry_run: document.getElementById('dryRunParam').checked,
-        since: document.getElementById('sinceParam').value || null
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    container.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Utility function for debouncing
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
     };
-    
-    try {
-        const response = await CRMDashboard.apiCall('{% url "crm_dashboard:api_sync_execute" %}', {
-            method: 'POST',
-            body: JSON.stringify({
-                crm_source: crmSource,
-                sync_type: syncType,
-                parameters: parameters
-            })
-        });
-        
-        if (response.success) {
-            // Close modal
-            bootstrap.Modal.getInstance(document.getElementById('syncModal')).hide();
-            
-            // Show success message
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-success alert-dismissible fade show';
-            alert.innerHTML = `
-                <i class="fas fa-check-circle"></i> Sync started successfully for ${crmSource} ${syncType}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.querySelector('.main-content').insertBefore(alert, document.querySelector('.main-content').firstElementChild);
-            
-            // Refresh dashboard data
-            setTimeout(loadDashboardData, 2000);
-        } else {
-            throw new Error(response.error || 'Failed to start sync');
-        }
-        
-    } catch (error) {
-        console.error('Error executing sync:', error);
-        CRMDashboard.showError('Failed to start sync: ' + error.message, document.querySelector('.modal-body'));
-    }
 }
 
-async function stopSync(syncId) {
-    if (!confirm('Are you sure you want to stop this sync?')) {
-        return;
-    }
-    
-    try {
-        const response = await CRMDashboard.apiCall(`{% url "crm_dashboard:api_sync_stop" 0 %}`.replace('0', syncId), {
-            method: 'POST'
-        });
-        
-        if (response.success) {
-            // Show success message
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-warning alert-dismissible fade show';
-            alert.innerHTML = `
-                <i class="fas fa-stop-circle"></i> Sync stopped successfully
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            document.querySelector('.main-content').insertBefore(alert, document.querySelector('.main-content').firstElementChild);
-            
-            // Refresh dashboard data
-            setTimeout(loadDashboardData, 2000);
-        } else {
-            throw new Error(response.error || 'Failed to stop sync');
-        }
-        
-    } catch (error) {
-        console.error('Error stopping sync:', error);
-        CRMDashboard.showError('Failed to stop sync: ' + error.message, document.querySelector('.main-content'));
-    }
-}
+// Legacy support for any remaining onclick handlers
+window.syncAllCRM = function(crmSource) {
+    openSyncModal(crmSource, 'all');
+};
 
-function viewSyncDetails(syncId) {
-    // This could open a modal with detailed sync information
-    // For now, just log the ID
-    console.log('View details for sync:', syncId);
-    // TODO: Implement sync details modal
-}
-
-function setupWebSocket() {
-    // TODO: Implement WebSocket connection for real-time updates
-    // This would connect to a WebSocket endpoint for live sync status updates
-    console.log('WebSocket setup not yet implemented');
-}
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (window.realTimeManager) {
+        realTimeManager.disconnect();
+    }
+    if (window.dashboardManager) {
+        dashboardManager.cleanup();
+    }
+});
 </script>
 {% endblock %}
