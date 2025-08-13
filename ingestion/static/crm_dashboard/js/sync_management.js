@@ -34,7 +34,19 @@ class AdvancedSyncManager {
         try {
             const response = await fetch('/ingestion/crm-dashboard/api/sync/running/');
             if (response.ok) {
-                const runningSync = await response.json();
+                const result = await response.json();
+                
+                // Handle wrapped response format
+                let runningSyncs = [];
+                if (result.success && Array.isArray(result.data)) {
+                    runningSyncs = result.data;
+                } else if (Array.isArray(result)) {
+                    runningSyncs = result;
+                } else {
+                    console.warn('Unexpected running syncs format:', result);
+                    return;
+                }
+                
                 runningSyncs.forEach(sync => {
                     this.activeSyncs.set(sync.id, sync);
                 });
@@ -50,14 +62,19 @@ class AdvancedSyncManager {
         try {
             const response = await fetch('/ingestion/crm-dashboard/api/sync/schemas/');
             if (response.ok) {
-                const schemas = await response.json();
-                schemas.forEach(schema => {
-                    this.parameterSchemas.set(schema.command, schema);
-                });
+                const result = await response.json();
+                const schemas = result.success ? result.data : result;
+                if (Array.isArray(schemas)) {
+                    schemas.forEach(schema => {
+                        this.parameterSchemas.set(schema.command, schema);
+                    });
+                }
+            } else if (response.status === 404) {
+                // Silently use defaults when endpoint not available
+                this.loadDefaultSchemas();
             }
         } catch (error) {
-            console.warn('Could not load parameter schemas:', error);
-            // Fallback to default schemas
+            // Silently fall back to defaults
             this.loadDefaultSchemas();
         }
     }
@@ -641,7 +658,6 @@ class AdvancedSyncManager {
     }
 }
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.syncManager = new AdvancedSyncManager();
-});
+// Export the class for use in templates - alias for template compatibility
+window.SyncManager = AdvancedSyncManager;
+window.AdvancedSyncManager = AdvancedSyncManager;

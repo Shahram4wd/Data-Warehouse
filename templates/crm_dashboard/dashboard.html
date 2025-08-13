@@ -428,9 +428,15 @@
 <script>
 // Phase 3 Enhanced Dashboard Implementation
 document.addEventListener('DOMContentLoaded', function() {
+    // Prevent duplicate initialization
+    if (window.crmDashboardInitialized) {
+        console.log('CRM Dashboard already initialized, skipping...');
+        return;
+    }
+
     // Initialize Dashboard Manager
-    if (typeof DashboardManager !== 'undefined') {
-        window.dashboardManager = new DashboardManager({
+    if (typeof EnhancedDashboardManager !== 'undefined' && !window.dashboardManager) {
+        window.dashboardManager = new EnhancedDashboardManager({
             autoRefreshInterval: 30000,
             chartContainers: {
                 sync: 'syncChart',
@@ -445,12 +451,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Initialize with data load
-        dashboardManager.initialize();
+        // Dashboard manager initializes itself in constructor
     }
 
     // Initialize Real-time Updates Manager
-    if (typeof RealTimeUpdatesManager !== 'undefined') {
+    if (typeof RealTimeUpdatesManager !== 'undefined' && !window.realTimeManager) {
         window.realTimeManager = new RealTimeUpdatesManager({
             websocketUrl: '{{ websocket_url|default:"" }}',
             fallbackPolling: true,
@@ -466,7 +471,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Initialize Sync Management
-    if (typeof SyncManager !== 'undefined') {
+    if (typeof SyncManager !== 'undefined' && !window.syncManager) {
         window.syncManager = new SyncManager({
             apiEndpoints: {
                 execute: '{% url "crm_dashboard:api_sync_execute" %}',
@@ -477,6 +482,9 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmDestructive: true
         });
     }
+
+    // Mark dashboard as initialized
+    window.crmDashboardInitialized = true;
 
     // Enhanced Event Handlers
     setupEventHandlers();
@@ -568,8 +576,8 @@ function handleQuickAction(action, crm) {
         // Open sync modal for this CRM
         openSyncModal(crm, 'all');
     } else if (action === 'view-config') {
-        // Navigate to CRM configuration
-        window.location.href = `{% url 'crm_dashboard:crm_config' %}?crm=${crm}`;
+        // Navigate to CRM models page instead of config
+        window.location.href = `{% url 'crm_dashboard:crm_models' 'PLACEHOLDER' %}`.replace('PLACEHOLDER', crm);
     }
 }
 
@@ -723,12 +731,22 @@ window.syncAllCRM = function(crmSource) {
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {
+    console.log('CRM Dashboard: Cleaning up resources...');
+    
     if (window.realTimeManager) {
         realTimeManager.disconnect();
+        window.realTimeManager = null;
     }
     if (window.dashboardManager) {
         dashboardManager.cleanup();
+        window.dashboardManager = null;
     }
+    if (window.syncManager) {
+        window.syncManager = null;
+    }
+    
+    // Reset initialization flag
+    window.crmDashboardInitialized = false;
 });
 </script>
 {% endblock %}

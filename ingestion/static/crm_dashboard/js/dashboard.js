@@ -31,7 +31,7 @@ class EnhancedDashboardManager {
         try {
             this.showLoadingState();
             
-            const [crmsData, syncHistory, runningSync] = await Promise.all([
+            const [crmsData, syncHistory, runningSyncs] = await Promise.all([
                 this.fetchCRMsData(),
                 this.fetchSyncHistory(),
                 this.fetchRunningSyncs()
@@ -53,24 +53,134 @@ class EnhancedDashboardManager {
     async fetchCRMsData() {
         const response = await fetch('/ingestion/crm-dashboard/api/crms/');
         if (!response.ok) throw new Error('Failed to fetch CRM data');
-        return await response.json();
+        const result = await response.json();
+        
+        // Handle wrapped response format
+        if (result.success && Array.isArray(result.data)) {
+            return result.data;
+        }
+        
+        // Handle direct array response
+        if (Array.isArray(result)) {
+            return result;
+        }
+        
+        console.warn('Unexpected CRM data format:', result);
+        return [];
     }
-    
+
     async fetchSyncHistory() {
         const response = await fetch(`/ingestion/crm-dashboard/api/sync/history/?limit=100&time_range=${this.filters.timeRange}`);
         if (!response.ok) throw new Error('Failed to fetch sync history');
-        return await response.json();
+        const result = await response.json();
+        
+        // Handle wrapped response format
+        if (result.success && Array.isArray(result.data)) {
+            return result.data;
+        }
+        
+        // Handle direct array response
+        if (Array.isArray(result)) {
+            return result;
+        }
+        
+        console.warn('Unexpected sync history format:', result);
+        return [];
     }
-    
+
     async fetchRunningSyncs() {
         const response = await fetch('/ingestion/crm-dashboard/api/sync/running/');
         if (!response.ok) throw new Error('Failed to fetch running syncs');
-        return await response.json();
+        const result = await response.json();
+        
+        // Handle wrapped response format
+        if (result.success && Array.isArray(result.data)) {
+            return result.data;
+        }
+        
+        // Handle direct array response
+        if (Array.isArray(result)) {
+            return result;
+        }
+        
+        console.warn('Unexpected running syncs format:', result);
+        return [];
+    }    setupCharts() {
+        // Initialize Chart.js charts if containers exist
+        const syncChartContainer = document.getElementById('syncChart');
+        const performanceChartContainer = document.getElementById('performanceChart');
+        
+        if (syncChartContainer) {
+            this.initializeSyncChart(syncChartContainer);
+        }
+        
+        if (performanceChartContainer) {
+            this.initializePerformanceChart(performanceChartContainer);
+        }
+    }
+    
+    setupSearch() {
+        const searchInput = document.getElementById('searchCRM');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.filters.search = e.target.value.toLowerCase();
+                this.renderCRMCards(this.lastCRMData || []);
+            });
+        }
+    }
+    
+    setupFilters() {
+        // Setup filter dropdowns and controls
+        const statusFilter = document.getElementById('statusFilter');
+        const timeRangeFilter = document.getElementById('timeRangeFilter');
+        
+        if (statusFilter) {
+            statusFilter.addEventListener('change', (e) => {
+                this.filters.status = e.target.value;
+                this.renderCRMCards(this.lastCRMData || []);
+            });
+        }
+        
+        if (timeRangeFilter) {
+            timeRangeFilter.addEventListener('change', (e) => {
+                this.filters.timeRange = e.target.value;
+                this.loadDashboardData();
+            });
+        }
+    }
+    
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+R or F5 for refresh
+            if ((e.ctrlKey && e.key === 'r') || e.key === 'F5') {
+                e.preventDefault();
+                this.loadDashboardData();
+                return false;
+            }
+            
+            // Ctrl+/ for search focus
+            if (e.ctrlKey && e.key === '/') {
+                e.preventDefault();
+                const searchInput = document.getElementById('searchCRM');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }
+        });
     }
     
     renderCRMCards(crmsData) {
         const container = document.getElementById('crm-cards-container');
         if (!container) return;
+        
+        // Ensure crmsData is an array
+        if (!Array.isArray(crmsData)) {
+            console.warn('CRM data is not an array:', crmsData);
+            crmsData = [];
+        }
+        
+        // Store the data for future filtering
+        this.lastCRMData = crmsData;
         
         // Apply search filter
         const filteredCRMs = this.applyFilters(crmsData);
@@ -84,7 +194,9 @@ class EnhancedDashboardManager {
         
         filteredCRMs.forEach(crm => {
             const cardElement = this.createCRMCard(crm);
-            container.appendChild(cardElement);
+            if (cardElement) { // Only append if card was created successfully
+                container.appendChild(cardElement);
+            }
         });
         
         // Add animation to cards
@@ -92,42 +204,59 @@ class EnhancedDashboardManager {
     }
     
     createCRMCard(crm) {
+        // Validate CRM data
+        if (!crm || typeof crm !== 'object') {
+            console.warn('Invalid CRM data provided to createCRMCard');
+            return null;
+        }
+        
+        // Provide defaults for missing properties
+        const crmData = {
+            source: crm.source || 'unknown',
+            display_name: crm.display_name || 'Unknown CRM',
+            overall_status: crm.overall_status || 'unknown',
+            model_count: crm.model_count || 0,
+            record_count: crm.record_count || 0,
+            last_sync: crm.last_sync || 'Never',
+            ...crm
+        };
+        
         const card = document.createElement('div');
         card.className = 'col-lg-4 col-md-6 mb-4 crm-card-col';
-        card.setAttribute('data-crm-source', crm.source);
+        card.setAttribute('data-crm-source', crmData.source);
         
-        const statusClass = this.getStatusClass(crm.overall_status);
-        const statusIcon = this.getStatusIcon(crm.overall_status);
+        const statusClass = this.getStatusClass(crmData.overall_status);
+        const statusIcon = this.getStatusIcon(crmData.overall_status);
         
         card.innerHTML = `
             <div class="card crm-card h-100 shadow-sm hover-shadow">
                 <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
-                        <i class="fas ${this.getCRMIcon(crm.source)} fa-lg me-2"></i>
-                        <h5 class="mb-0">${crm.display_name}</h5>
+                        <i class="fas ${this.getCRMIcon(crmData.source)} fa-lg me-2"></i>
+                        <h5 class="mb-0">${crmData.display_name}</h5>
                     </div>
                     <span class="badge ${statusClass}">
                         <i class="fas ${statusIcon} me-1"></i>
-                        ${crm.overall_status}
+                        ${crmData.overall_status}
                     </span>
                 </div>
                 <div class="card-body">
                     <div class="row text-center mb-3">
                         <div class="col-4">
                             <div class="metric-box">
-                                <h3 class="text-primary mb-1" data-crm-models-count="${crm.source}">${crm.model_count}</h3>
+                                <h3 class="text-primary mb-1" data-crm-models-count="${crmData.source}">${crmData.model_count}</h3>
                                 <small class="text-muted">Models</small>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="metric-box">
-                                <h3 class="text-success mb-1" data-crm-records-count="${crm.source}">${this.formatNumber(crm.total_records)}</h3>
+                                <h3 class="text-success mb-1" data-crm-records-count="${crmData.source}">${this.formatNumber(crmData.total_records)}</h3>
                                 <small class="text-muted">Records</small>
                             </div>
                         </div>
                         <div class="col-4">
                             <div class="metric-box">
-                                <h3 class="text-info mb-1">${crm.sync_count_24h || 0}</h3>
+                                <h3 class="text-info mb-1">${crmData.sync_count_24h || 0}</h3>
                                 <small class="text-muted">Syncs (24h)</small>
                             </div>
                         </div>
@@ -136,14 +265,14 @@ class EnhancedDashboardManager {
                     <div class="sync-info mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <small class="text-muted">Last Sync</small>
-                            <small class="text-muted" data-crm-last-sync="${crm.source}">
-                                ${crm.last_sync ? this.formatTimeAgo(new Date(crm.last_sync)) : 'Never'}
+                            <small class="text-muted" data-crm-last-sync="${crmData.source}">
+                                ${crmData.last_sync ? this.formatTimeAgo(new Date(crmData.last_sync)) : 'Never'}
                             </small>
                         </div>
-                        ${crm.last_sync_error ? `
+                        ${crmData.last_sync_error ? `
                             <div class="alert alert-warning alert-sm py-2 mb-0">
                                 <i class="fas fa-exclamation-triangle me-1"></i>
-                                <small>${crm.last_sync_error}</small>
+                                <small>${crmData.last_sync_error}</small>
                             </div>
                         ` : ''}
                     </div>
@@ -151,15 +280,15 @@ class EnhancedDashboardManager {
                     <div class="model-preview mb-3">
                         <h6 class="text-muted mb-2">Recent Models</h6>
                         <div class="model-list">
-                            ${crm.models.slice(0, 3).map(model => `
+                            ${(crmData.models || []).slice(0, 3).map(model => `
                                 <div class="model-item d-flex justify-content-between align-items-center py-1">
-                                    <span class="model-name">${model.display_name}</span>
-                                    <span class="badge bg-light text-dark">${this.formatNumber(model.record_count)}</span>
+                                    <span class="model-name">${model.display_name || 'Unknown'}</span>
+                                    <span class="badge bg-light text-dark">${this.formatNumber(model.record_count || 0)}</span>
                                 </div>
                             `).join('')}
-                            ${crm.models.length > 3 ? `
+                            ${(crmData.models || []).length > 3 ? `
                                 <div class="text-center mt-2">
-                                    <small class="text-muted">+${crm.models.length - 3} more models</small>
+                                    <small class="text-muted">+${crmData.models.length - 3} more models</small>
                                 </div>
                             ` : ''}
                         </div>
@@ -168,12 +297,12 @@ class EnhancedDashboardManager {
                 <div class="card-footer bg-transparent">
                     <div class="row">
                         <div class="col-6">
-                            <a href="/ingestion/crm-dashboard/${crm.source}/" class="btn btn-outline-primary btn-sm w-100">
+                            <a href="/ingestion/crm-dashboard/${crmData.source}/" class="btn btn-outline-primary btn-sm w-100">
                                 <i class="fas fa-list me-1"></i>View Models
                             </a>
                         </div>
                         <div class="col-6">
-                            <button class="btn btn-primary btn-sm w-100" onclick="window.dashboardManager.quickSync('${crm.source}')">
+                            <button class="btn btn-primary btn-sm w-100" onclick="window.dashboardManager.quickSync('${crmData.source}')">
                                 <i class="fas fa-sync me-1"></i>Quick Sync
                             </button>
                         </div>
@@ -207,6 +336,12 @@ class EnhancedDashboardManager {
     }
     
     prepareSyncChartData(syncHistory) {
+        // Ensure syncHistory is an array
+        if (!Array.isArray(syncHistory)) {
+            console.warn('prepareSyncChartData received non-array data:', syncHistory);
+            syncHistory = [];
+        }
+        
         const now = new Date();
         const timeRange = this.filters.timeRange;
         let intervalMs, labelFormat;
@@ -523,6 +658,12 @@ class EnhancedDashboardManager {
     }
     
     applyFilters(crmsData) {
+        // Ensure crmsData is an array
+        if (!Array.isArray(crmsData)) {
+            console.warn('applyFilters received non-array data:', crmsData);
+            return [];
+        }
+        
         return crmsData.filter(crm => {
             // Search filter
             if (this.filters.search) {
@@ -854,6 +995,10 @@ class EnhancedDashboardManager {
     
     // Utility methods
     getCRMIcon(source) {
+        if (!source || typeof source !== 'string') {
+            return 'fa-database'; // Default icon for invalid/missing source
+        }
+        
         const iconMap = {
             'genius': 'fa-brain',
             'hubspot': 'fa-hubspot',
@@ -1062,16 +1207,118 @@ class EnhancedDashboardManager {
         });
         this.charts.clear();
     }
+    
+    // Methods expected by template
+    refreshData() {
+        return this.loadDashboardData();
+    }
+    
+    startAutoRefresh() {
+        this.isAutoRefreshEnabled = true;
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+        }
+        this.refreshTimer = setInterval(() => {
+            this.loadDashboardData();
+        }, this.refreshInterval);
+    }
+    
+    stopAutoRefresh() {
+        this.isAutoRefreshEnabled = false;
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = null;
+        }
+    }
+    
+    cleanup() {
+        this.stopAutoRefresh();
+        this.destroy();
+    }
+    
+    quickSync(crmSource) {
+        // Open sync modal for quick sync
+        const modal = document.getElementById('syncModal');
+        if (modal) {
+            const crmSourceInput = document.getElementById('syncCrmSource');
+            const syncTypeSelect = document.getElementById('syncType');
+            
+            if (crmSourceInput) crmSourceInput.value = crmSource;
+            if (syncTypeSelect) syncTypeSelect.value = 'all';
+            
+            const bootstrapModal = new bootstrap.Modal(modal);
+            bootstrapModal.show();
+        }
+    }
+    
+    updateRunningSyncs(runningSyncs) {
+        // Update running syncs display
+        this.renderActiveSyncs(runningSyncs);
+    }
+    
+    initializeSyncChart(container) {
+        // Initialize sync trends chart
+        if (typeof Chart === 'undefined') return;
+        
+        const ctx = container.getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Sync Success Rate',
+                    data: [],
+                    borderColor: '#28a745',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+        
+        this.charts.set('sync', chart);
+    }
+    
+    initializePerformanceChart(container) {
+        // Initialize performance metrics chart
+        if (typeof Chart === 'undefined') return;
+        
+        const ctx = container.getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Sync Duration (seconds)',
+                    data: [],
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        this.charts.set('performance', chart);
+    }
 }
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.dashboardManager = new EnhancedDashboardManager();
-});
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (window.dashboardManager) {
-        window.dashboardManager.destroy();
-    }
-});
+// Export the class for use in templates
+window.EnhancedDashboardManager = EnhancedDashboardManager;

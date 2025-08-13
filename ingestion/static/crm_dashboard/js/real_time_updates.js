@@ -10,21 +10,63 @@ class RealTimeUpdatesManager {
         this.reconnectInterval = 3000;
         this.isConnected = false;
         this.eventHandlers = new Map();
+        this.pollingStarted = false;
+        this.connectionAttempted = false;
         
         this.initializeWebSocket();
         this.setupEventHandlers();
     }
     
+    connect() {
+        // Prevent multiple connection attempts
+        if (this.connectionAttempted) {
+            return;
+        }
+        this.connectionAttempted = true;
+        
+        // Public method to start connection
+        this.initializeWebSocket();
+    }
+    
+    disconnect() {
+        // Public method to disconnect
+        if (this.websocket) {
+            this.websocket.close();
+            this.websocket = null;
+        }
+        this.isConnected = false;
+        this.connectionAttempted = false; // Allow reconnection
+        this.updateConnectionStatus(false);
+    }
+    
+    setupEventHandlers() {
+        // Setup any DOM event handlers
+        const connectionIndicator = document.getElementById('connection-status');
+        if (connectionIndicator) {
+            connectionIndicator.addEventListener('click', () => {
+                if (!this.isConnected) {
+                    this.connect();
+                }
+            });
+        }
+    }
+    
     initializeWebSocket() {
+        // Prevent multiple WebSocket initialization attempts
+        if (this.websocket || this.connectionAttempted) {
+            return;
+        }
+        this.connectionAttempted = true;
+        
+        // Silently attempt WebSocket connection
         try {
-            // Use secure WebSocket for HTTPS, regular for HTTP
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/sync-status/`;
             
             this.websocket = new WebSocket(wsUrl);
             this.setupWebSocketHandlers();
         } catch (error) {
-            console.warn('WebSocket not available, falling back to polling:', error);
+            // Silently fall back to polling
             this.fallbackToPolling();
         }
     }
@@ -47,33 +89,38 @@ class RealTimeUpdatesManager {
         };
         
         this.websocket.onclose = (event) => {
-            console.log('WebSocket disconnected');
+            // Silently handle close - expected when no WebSocket server
             this.isConnected = false;
             this.updateConnectionStatus(false);
-            this.attemptReconnect();
+            
+            // Skip reconnect attempts, go straight to polling
+            if (this.reconnectAttempts === 0) {
+                this.fallbackToPolling();
+            }
         };
         
         this.websocket.onerror = (error) => {
-            console.error('WebSocket error:', error);
+            // Silently handle errors - expected when no WebSocket server
             this.updateConnectionStatus(false);
         };
     }
     
     attemptReconnect() {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.reconnectAttempts++;
-            console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-            
-            setTimeout(() => {
-                this.initializeWebSocket();
-            }, this.reconnectInterval);
-        } else {
-            console.warn('Max reconnection attempts reached, falling back to polling');
+        // Skip reconnection attempts and go straight to polling
+        // since we know WebSocket server is not available
+        if (this.reconnectAttempts === 0) {
             this.fallbackToPolling();
         }
     }
     
     fallbackToPolling() {
+        // Prevent multiple polling intervals
+        if (this.pollingStarted) return;
+        
+        // Use polling mode - single info message
+        console.info('Real-time updates: Using polling mode');
+        this.pollingStarted = true;
+        
         // Poll for updates every 10 seconds when WebSocket is unavailable
         setInterval(() => {
             this.pollForUpdates();
@@ -84,11 +131,60 @@ class RealTimeUpdatesManager {
         try {
             const response = await fetch('/ingestion/crm-dashboard/api/sync/running/');
             if (response.ok) {
-                const data = await response.json();
+                const result = await response.json();
+                
+                // Handle wrapped response format
+                let data = [];
+                if (result.success && Array.isArray(result.data)) {
+                    data = result.data;
+                } else if (Array.isArray(result)) {
+                    data = result;
+                } else {
+                    console.warn('Unexpected polling response format:', result);
+                    return;
+                }
+                
                 this.handleSyncStatusUpdate(data);
             }
         } catch (error) {
             console.error('Error polling for updates:', error);
+        }
+    }
+    
+    handleSyncStatusUpdate(data) {
+        // Handle sync status updates from polling
+        if (Array.isArray(data)) {
+            // Update running syncs display
+            this.updateRunningSyncsDisplay(data);
+            
+            // Notify dashboard manager if available
+            if (window.dashboardManager && typeof window.dashboardManager.updateRunningSyncs === 'function') {
+                window.dashboardManager.updateRunningSyncs(data);
+            }
+        }
+    }
+    
+    updateRunningSyncsDisplay(runningSyncs) {
+        // Update the running syncs count in the UI
+        const runningCountElement = document.querySelector('.running-syncs-count');
+        if (runningCountElement) {
+            runningCountElement.textContent = runningSyncs.length;
+        }
+        
+        // Update active syncs container
+        const activeSyncsContainer = document.getElementById('active-syncs-container');
+        if (activeSyncsContainer && runningSyncs.length > 0) {
+            activeSyncsContainer.innerHTML = runningSyncs.map(sync => `
+                <div class="d-flex align-items-center mb-2">
+                    <span class="badge bg-info me-2">${sync.crm_source}</span>
+                    <span class="small">${sync.sync_type} - ${sync.elapsed_seconds || 0}s</span>
+                    <button class="btn btn-sm btn-outline-danger ms-auto sync-action-btn" data-action="stop" data-sync-id="${sync.id}">
+                        <i class="fas fa-stop"></i>
+                    </button>
+                </div>
+            `).join('');
+        } else if (activeSyncsContainer) {
+            activeSyncsContainer.innerHTML = '<div class="text-muted">No active syncs</div>';
         }
     }
     
@@ -383,14 +479,5 @@ class RealTimeUpdatesManager {
     }
 }
 
-// Initialize real-time updates when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    window.realTimeUpdates = new RealTimeUpdatesManager();
-});
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (window.realTimeUpdates) {
-        window.realTimeUpdates.destroy();
-    }
-});
+// Export the class for use in templates  
+window.RealTimeUpdatesManager = RealTimeUpdatesManager;
