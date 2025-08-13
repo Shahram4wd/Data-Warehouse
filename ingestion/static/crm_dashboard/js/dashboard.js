@@ -12,11 +12,12 @@ class EnhancedDashboardManager {
             status: 'all',
             timeRange: '24h'
         };
-        this.isAutoRefreshEnabled = true;
+    // Auto-refresh disabled by default (manual refresh only)
+    this.isAutoRefreshEnabled = false;
         
         this.initializeDashboard();
         this.setupEventHandlers();
-        this.startAutoRefresh();
+    // No auto-start of refresh; user uses Refresh button
     }
     
     initializeDashboard() {
@@ -151,13 +152,6 @@ class EnhancedDashboardManager {
     
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
-            // Ctrl+R or F5 for refresh
-            if ((e.ctrlKey && e.key === 'r') || e.key === 'F5') {
-                e.preventDefault();
-                this.loadDashboardData();
-                return false;
-            }
-            
             // Ctrl+/ for search focus
             if (e.ctrlKey && e.key === '/') {
                 e.preventDefault();
@@ -212,12 +206,13 @@ class EnhancedDashboardManager {
         
         // Provide defaults for missing properties
         const crmData = {
-            source: crm.source || 'unknown',
+            // API returns: name, display_name, status, last_sync (object), total_records
+            source: crm.name || crm.source || 'unknown',
             display_name: crm.display_name || 'Unknown CRM',
-            overall_status: crm.overall_status || 'unknown',
+            overall_status: crm.status || crm.overall_status || 'unknown',
             model_count: crm.model_count || 0,
-            record_count: crm.record_count || 0,
-            last_sync: crm.last_sync || 'Never',
+            total_records: crm.total_records ?? crm.record_count ?? 0,
+            last_sync: crm.last_sync || null,
             ...crm
         };
         
@@ -225,14 +220,14 @@ class EnhancedDashboardManager {
         card.className = 'col-lg-4 col-md-6 mb-4 crm-card-col';
         card.setAttribute('data-crm-source', crmData.source);
         
-        const statusClass = this.getStatusClass(crmData.overall_status);
-        const statusIcon = this.getStatusIcon(crmData.overall_status);
+    const statusClass = this.getStatusClass(crmData.overall_status);
+    const statusIcon = this.getStatusIcon(crmData.overall_status);
         
         card.innerHTML = `
             <div class="card crm-card h-100 shadow-sm hover-shadow">
-                <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center">
-                        <i class="fas ${this.getCRMIcon(crmData.source)} fa-lg me-2"></i>
+                        <i class="${this.getCRMIconClass(crmData.source)} fa-lg me-2"></i>
                         <h5 class="mb-0">${crmData.display_name}</h5>
                     </div>
                     <span class="badge ${statusClass}">
@@ -242,56 +237,24 @@ class EnhancedDashboardManager {
                 </div>
                 <div class="card-body">
                     <div class="row text-center mb-3">
-                        <div class="col-4">
+                        <div class="col-6">
                             <div class="metric-box">
                                 <h3 class="text-primary mb-1" data-crm-models-count="${crmData.source}">${crmData.model_count}</h3>
                                 <small class="text-muted">Models</small>
                             </div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-6">
                             <div class="metric-box">
                                 <h3 class="text-success mb-1" data-crm-records-count="${crmData.source}">${this.formatNumber(crmData.total_records)}</h3>
                                 <small class="text-muted">Records</small>
                             </div>
                         </div>
-                        <div class="col-4">
-                            <div class="metric-box">
-                                <h3 class="text-info mb-1">${crmData.sync_count_24h || 0}</h3>
-                                <small class="text-muted">Syncs (24h)</small>
-                            </div>
-                        </div>
                     </div>
-                    
-                    <div class="sync-info mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="text-muted">Last Sync</small>
-                            <small class="text-muted" data-crm-last-sync="${crmData.source}">
-                                ${crmData.last_sync ? this.formatTimeAgo(new Date(crmData.last_sync)) : 'Never'}
-                            </small>
-                        </div>
-                        ${crmData.last_sync_error ? `
-                            <div class="alert alert-warning alert-sm py-2 mb-0">
-                                <i class="fas fa-exclamation-triangle me-1"></i>
-                                <small>${crmData.last_sync_error}</small>
-                            </div>
-                        ` : ''}
-                    </div>
-                    
-                    <div class="model-preview mb-3">
-                        <h6 class="text-muted mb-2">Recent Models</h6>
-                        <div class="model-list">
-                            ${(crmData.models || []).slice(0, 3).map(model => `
-                                <div class="model-item d-flex justify-content-between align-items-center py-1">
-                                    <span class="model-name">${model.display_name || 'Unknown'}</span>
-                                    <span class="badge bg-light text-dark">${this.formatNumber(model.record_count || 0)}</span>
-                                </div>
-                            `).join('')}
-                            ${(crmData.models || []).length > 3 ? `
-                                <div class="text-center mt-2">
-                                    <small class="text-muted">+${crmData.models.length - 3} more models</small>
-                                </div>
-                            ` : ''}
-                        </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">Last Sync</small>
+                        <small class="text-muted" data-crm-last-sync="${crmData.source}">
+                            ${crmData.last_sync ? (crmData.last_sync.time_ago || (crmData.last_sync.start_time ? this.formatTimeAgo(new Date(crmData.last_sync.start_time)) : 'Never')) : 'Never'}
+                        </small>
                     </div>
                 </div>
                 <div class="card-footer bg-transparent">
@@ -303,7 +266,7 @@ class EnhancedDashboardManager {
                         </div>
                         <div class="col-6">
                             <button class="btn btn-primary btn-sm w-100" onclick="window.dashboardManager.quickSync('${crmData.source}')">
-                                <i class="fas fa-sync me-1"></i>Quick Sync
+                                <i class="fas fa-sync me-1"></i>Sync All
                             </button>
                         </div>
                     </div>
@@ -847,7 +810,7 @@ class EnhancedDashboardManager {
         }
     }
     
-    // Auto-refresh functionality
+    // Auto-refresh functionality (disabled by default; still available if toggled via code)
     startAutoRefresh() {
         if (this.refreshTimer) {
             clearInterval(this.refreshTimer);
@@ -873,28 +836,11 @@ class EnhancedDashboardManager {
         this.updateAutoRefreshUI();
     }
     
-    updateAutoRefreshUI() {
-        const toggleBtn = document.getElementById('auto-refresh-toggle');
-        if (toggleBtn) {
-            if (this.isAutoRefreshEnabled) {
-                toggleBtn.innerHTML = '<i class="fas fa-pause me-2"></i>Pause Auto-refresh';
-                toggleBtn.className = 'btn btn-outline-warning btn-sm';
-            } else {
-                toggleBtn.innerHTML = '<i class="fas fa-play me-2"></i>Resume Auto-refresh';
-                toggleBtn.className = 'btn btn-outline-success btn-sm';
-            }
-        }
-    }
+    updateAutoRefreshUI() { /* auto-refresh UI removed */ }
     
     // Keyboard shortcuts
     setupKeyboardShortcuts() {
-        document.addEventListener('keydown', (e) => {
-            // Ctrl/Cmd + R: Refresh dashboard
-            if ((e.ctrlKey || e.metaKey) && e.key === 'r' && !e.shiftKey) {
-                e.preventDefault();
-                this.loadDashboardData();
-            }
-            
+    document.addEventListener('keydown', (e) => {
             // Ctrl/Cmd + K: Focus search
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
@@ -1010,44 +956,45 @@ class EnhancedDashboardManager {
     }
     
     // Utility methods
-    getCRMIcon(source) {
-        if (!source || typeof source !== 'string') {
-            return 'fa-database'; // Default icon for invalid/missing source
-        }
-        
-        const iconMap = {
-            'genius': 'fa-brain',
-            'hubspot': 'fa-hubspot',
-            'salesforce': 'fa-salesforce',
-            'pipedrive': 'fa-pipe',
-            'zoho': 'fa-z',
-            'leadconduit': 'fa-funnel-dollar',
-            'callrail': 'fa-phone',
-            'arrivy': 'fa-truck',
-            'salesrabbit': 'fa-rabbit',
-            'gsheet': 'fa-table'
+    getCRMIconClass(source) {
+        // Return full Font Awesome classes (supports brand icons)
+        if (!source || typeof source !== 'string') return 'fas fa-database';
+        const s = source.toLowerCase();
+        const map = {
+            genius: 'fas fa-brain',
+            hubspot: 'fab fa-hubspot',
+            callrail: 'fas fa-phone',
+            arrivy: 'fas fa-truck',
+            salespro: 'fas fa-briefcase',
+            salesrabbit: 'fas fa-bug',
+            leadconduit: 'fas fa-bolt',
+            marketsharp: 'fas fa-chart-line',
+            gsheet: 'fas fa-table',
+            google: 'fas fa-table'
         };
-        return iconMap[source.toLowerCase()] || 'fa-database';
+        return map[s] || 'fas fa-database';
     }
     
     getStatusClass(status) {
         const classMap = {
-            'success': 'bg-success',
-            'error': 'bg-danger',
-            'warning': 'bg-warning',
-            'running': 'bg-primary',
-            'pending': 'bg-secondary'
+            success: 'bg-success',
+            error: 'bg-danger',
+            warning: 'bg-warning',
+            running: 'bg-primary',
+            never_synced: 'bg-secondary',
+            outdated: 'bg-warning'
         };
         return classMap[status] || 'bg-secondary';
     }
     
     getStatusIcon(status) {
         const iconMap = {
-            'success': 'fa-check-circle',
-            'error': 'fa-times-circle',
-            'warning': 'fa-exclamation-triangle',
-            'running': 'fa-spinner fa-spin',
-            'pending': 'fa-clock'
+            success: 'fa-check-circle',
+            error: 'fa-times-circle',
+            warning: 'fa-exclamation-triangle',
+            running: 'fa-spinner fa-spin',
+            never_synced: 'fa-circle',
+            outdated: 'fa-clock'
         };
         return iconMap[status] || 'fa-question-circle';
     }
@@ -1145,13 +1092,7 @@ class EnhancedDashboardManager {
     }
     
     setupEventHandlers() {
-        // Auto-refresh toggle
-        const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
-        if (autoRefreshToggle) {
-            autoRefreshToggle.addEventListener('click', () => {
-                this.toggleAutoRefresh();
-            });
-        }
+    // Auto-refresh toggle removed (manual refresh only)
         
         // Manual refresh button
         const refreshBtn = document.getElementById('manual-refresh');

@@ -96,11 +96,6 @@
 {% endblock %}
 
 {% block content %}
-<!-- Real-time Status Indicator -->
-<div class="realtime-status" id="realtime-status">
-    <i class="fas fa-circle text-success"></i> Live
-</div>
-
 <!-- Notification Container -->
 <div class="notification-container" id="notification-container"></div>
 
@@ -132,11 +127,8 @@
         </div>
         <div class="col-md-3">
             <div class="btn-group w-100" role="group">
-                <button class="btn btn-outline-primary btn-sm" id="manual-refresh" title="Refresh (Ctrl+R)">
+                <button class="btn btn-outline-primary btn-sm" id="manual-refresh" title="Refresh">
                     <i class="fas fa-sync"></i>
-                </button>
-                <button class="btn btn-outline-warning btn-sm" id="auto-refresh-toggle">
-                    <i class="fas fa-pause me-1"></i>Pause Auto-refresh
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" id="export-dashboard" title="Export Data">
                     <i class="fas fa-download"></i>
@@ -277,7 +269,6 @@
                         <thead>
                             <tr>
                                 <th>CRM</th>
-                                <th>Type</th>
                                 <th>Status</th>
                                 <th>Started</th>
                                 <th>Duration</th>
@@ -291,7 +282,6 @@
                                 <td>
                                     <span class="badge bg-secondary">{{ sync.crm_source }}</span>
                                 </td>
-                                <td>{{ sync.sync_type }}</td>
                                 <td>
                                     <span class="status-badge status-{{ sync.status }}">
                                         {% if sync.status == 'success' %}✅ Success
@@ -454,21 +444,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Dashboard manager initializes itself in constructor
     }
 
-    // Initialize Real-time Updates Manager
-    if (typeof RealTimeUpdatesManager !== 'undefined' && !window.realTimeManager) {
-        window.realTimeManager = new RealTimeUpdatesManager({
-            websocketUrl: '{{ websocket_url|default:"" }}',
-            fallbackPolling: true,
-            pollingInterval: 10000,
-            apiEndpoints: {
-                status: '{% url "crm_dashboard:api_running_syncs" %}',
-                metrics: '{% url "crm_dashboard:api_crm_list" %}'
-            }
-        });
-
-        // Connect real-time updates
-        realTimeManager.connect();
-    }
+    // Real-time updates disabled; user refreshes manually via the Refresh button
 
     // Initialize Sync Management
     if (typeof SyncManager !== 'undefined' && !window.syncManager) {
@@ -535,11 +511,7 @@ function setupEventHandlers() {
         searchInput.addEventListener('input', debounce(handleSearch, 300));
     }
 
-    // Auto-refresh toggle
-    const autoRefreshToggle = document.getElementById('autoRefreshToggle');
-    if (autoRefreshToggle) {
-        autoRefreshToggle.addEventListener('change', handleAutoRefreshToggle);
-    }
+    // Auto-refresh disabled; no toggle
 
     // Process queue button
     const processQueueBtn = document.getElementById('processQueueBtn');
@@ -624,15 +596,7 @@ function handleSearch(e) {
     });
 }
 
-function handleAutoRefreshToggle(e) {
-    if (window.dashboardManager) {
-        if (e.target.checked) {
-            dashboardManager.startAutoRefresh();
-        } else {
-            dashboardManager.stopAutoRefresh();
-        }
-    }
-}
+// Auto-refresh disabled; removed toggle handler
 
 function openSyncModal(crmSource, syncType = 'all') {
     document.getElementById('syncCrmSource').value = crmSource;
@@ -658,15 +622,6 @@ function initializeModals() {
 
 function setupKeyboardShortcuts() {
     document.addEventListener('keydown', function(e) {
-        // Ctrl+R or F5 for refresh
-        if ((e.ctrlKey && e.key === 'r') || e.key === 'F5') {
-            e.preventDefault();
-            if (window.dashboardManager) {
-                dashboardManager.refreshData();
-            }
-            return false;
-        }
-        
         // Ctrl+/ for search focus
         if (e.ctrlKey && e.key === '/') {
             e.preventDefault();
