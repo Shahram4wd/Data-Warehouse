@@ -439,6 +439,22 @@ class EnhancedDashboardManager {
         this.charts.set('syncTrends', chart);
     }
     
+    updateChart(chartName, data) {
+        const chart = this.charts.get(chartName);
+        if (!chart) {
+            console.warn(`Chart '${chartName}' not found for update`);
+            return;
+        }
+        
+        // Update chart data
+        chart.data.labels = data.labels;
+        chart.data.datasets[0].data = data.successData;
+        chart.data.datasets[1].data = data.errorData;
+        
+        // Re-render the chart
+        chart.update();
+    }
+    
     renderSyncMetrics(syncHistory) {
         const metricsContainer = document.getElementById('sync-metrics-container');
         if (!metricsContainer) return;

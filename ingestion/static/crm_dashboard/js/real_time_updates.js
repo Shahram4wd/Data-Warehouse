@@ -58,7 +58,13 @@ class RealTimeUpdatesManager {
         }
         this.connectionAttempted = true;
         
-        // Silently attempt WebSocket connection
+        // Skip WebSocket entirely since server is not configured for it
+        // Go directly to polling mode for reliable updates
+        this.fallbackToPolling();
+        return;
+        
+        // Legacy WebSocket code (commented out until server is configured)
+        /*
         try {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws/sync-status/`;
@@ -66,9 +72,9 @@ class RealTimeUpdatesManager {
             this.websocket = new WebSocket(wsUrl);
             this.setupWebSocketHandlers();
         } catch (error) {
-            // Silently fall back to polling
             this.fallbackToPolling();
         }
+        */
     }
     
     setupWebSocketHandlers() {
