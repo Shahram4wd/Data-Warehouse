@@ -49,13 +49,7 @@ except ImportError:
 
 # Define CRM dashboard URLs
 crm_dashboard_urlpatterns = [
-    # Dashboard pages
-    path('', CRMDashboardView.as_view(), name='crm_dashboard'),
-    path('history/', SyncHistoryView.as_view(), name='sync_history'),
-    path('<str:crm_source>/', CRMModelsView.as_view(), name='crm_models'),
-    path('<str:crm_source>/<str:model_name>/', ModelDetailView.as_view(), name='model_detail'),
-    
-    # API endpoints
+    # API endpoints (must come first to avoid conflicts with dynamic patterns)
     path('api/crms/', CRMListAPIView.as_view(), name='api_crm_list'),
     path('api/crms/<str:crm_source>/models/', CRMModelsAPIView.as_view(), name='api_crm_models'),
     path('api/crms/<str:crm_source>/models/<str:model_name>/', ModelDetailAPIView.as_view(), name='api_model_detail'),
@@ -67,6 +61,12 @@ crm_dashboard_urlpatterns = [
     path('api/sync/running/', RunningSyncsAPIView.as_view(), name='api_running_syncs'),
     path('api/sync/history/', SyncHistoryAPIView.as_view(), name='api_sync_history'),
     path('api/sync/validate/', ValidateParametersAPIView.as_view(), name='api_validate_parameters'),
+    
+    # Dashboard pages (dynamic patterns at the end)
+    path('', CRMDashboardView.as_view(), name='crm_dashboard'),
+    path('history/', SyncHistoryView.as_view(), name='sync_history'),
+    path('<str:crm_source>/', CRMModelsView.as_view(), name='crm_models'),
+    path('<str:crm_source>/<str:model_name>/', ModelDetailView.as_view(), name='model_detail'),
 ]
 
 # Define monitoring URLs directly here

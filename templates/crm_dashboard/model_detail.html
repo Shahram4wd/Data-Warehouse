@@ -1,0 +1,615 @@
+{% extends 'crm_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ model_name|title }} Detail - CRM Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border: none;
+        transition: transform 0.2s;
+    }
+    .metric-card:hover {
+        transform: translateY(-2px);
+    }
+    .metric-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .metric-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .data-table-container {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .table-header {
+        background: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        padding: 1rem 1.5rem;
+    }
+    .table th {
+        border: none;
+        font-weight: 600;
+        color: #495057;
+        background: #f8f9fa;
+    }
+    .table td {
+        border: none;
+        border-bottom: 1px solid #f1f3f4;
+        vertical-align: middle;
+    }
+    .search-controls {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .breadcrumb {
+        background: none;
+        padding: 0;
+        margin-bottom: 1.5rem;
+    }
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: "›";
+        color: #6c757d;
+    }
+    .sync-status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .pagination {
+        margin-bottom: 0;
+    }
+    .page-link {
+        border: none;
+        color: #667eea;
+        padding: 0.5rem 0.75rem;
+    }
+    .page-link:hover {
+        color: #764ba2;
+        background: #f8f9fa;
+    }
+    .page-item.active .page-link {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: transparent;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'crm_dashboard:dashboard' %}" class="text-decoration-none">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'crm_dashboard:crm_models' crm_name %}" class="text-decoration-none">
+                    {{ crm_name|title }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ model_name|title }}</li>
+        </ol>
+    </nav>
+
+    <!-- Detail Header -->
+    <div class="detail-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-table me-2"></i>
+                    {{ model_name|title }}
+                </h1>
+                <p class="mb-0 opacity-75" id="modelDescription">Loading model details...</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button class="btn btn-light me-2" onclick="refreshData()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+                <button class="btn btn-warning" onclick="showSyncModal()">
+                    <i class="fas fa-play me-1"></i>Sync Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Row -->
+    <div class="row g-4 mb-4" id="metricsContainer">
+        <div class="col-xl-3 col-lg-6">
+            <div class="metric-card">
+                <div class="metric-number text-primary" id="totalRecords">-</div>
+                <div class="metric-label">Total Records</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6">
+            <div class="metric-card">
+                <div class="metric-number text-success" id="lastSyncDate">-</div>
+                <div class="metric-label">Last Sync</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6">
+            <div class="metric-card">
+                <div class="metric-number text-info" id="syncDuration">-</div>
+                <div class="metric-label">Duration</div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-lg-6">
+            <div class="metric-card">
+                <div class="metric-number" id="syncStatus">-</div>
+                <div class="metric-label">Status</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Filters -->
+    <div class="search-controls">
+        <div class="row align-items-end">
+            <div class="col-md-4">
+                <label for="searchInput" class="form-label">Search Records</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="searchInput" 
+                           placeholder="Search in all fields...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label for="pageSizeSelect" class="form-label">Records per page</label>
+                <select class="form-select" id="pageSizeSelect">
+                    <option value="10">10 records</option>
+                    <option value="25" selected>25 records</option>
+                    <option value="50">50 records</option>
+                    <option value="100">100 records</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="sortSelect" class="form-label">Sort by</label>
+                <select class="form-select" id="sortSelect">
+                    <option value="id">ID</option>
+                    <option value="created_at">Created Date</option>
+                    <option value="updated_at">Updated Date</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                    <i class="fas fa-filter me-1"></i>Apply
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="data-table-container">
+        <div class="table-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Records
+                        <span id="recordsInfo" class="text-muted small ms-2"></span>
+                    </h5>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportData()">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="tableLoading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading data...</p>
+        </div>
+
+        <!-- Table Content -->
+        <div id="tableContainer" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="dataTable">
+                    <thead id="tableHead"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-5" style="display: none;">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No Records Found</h4>
+            <p class="text-muted">No data records match your current filters.</p>
+        </div>
+
+        <!-- Pagination -->
+        <div id="paginationContainer" class="px-3 py-3 border-top" style="display: none;">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <small class="text-muted" id="paginationInfo"></small>
+                </div>
+                <div class="col-md-6">
+                    <nav aria-label="Table pagination">
+                        <ul class="pagination pagination-sm justify-content-end mb-0" id="paginationList">
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sync Modal -->
+<div class="modal fade" id="syncModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-play me-2"></i>Sync {{ model_name|title }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="syncForm">
+                    <input type="hidden" id="syncCrmName" value="{{ crm_name }}">
+                    <input type="hidden" id="syncModelName" value="{{ model_name }}">
+                    <div class="mb-3">
+                        <label class="form-label">Sync Parameters</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="syncForce">
+                            <label class="form-check-label" for="syncForce">
+                                Force sync (ignore existing data)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="syncFull">
+                            <label class="form-check-label" for="syncFull">
+                                Full sync (all historical data)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="syncSince" class="form-label">Since Date (optional)</label>
+                        <input type="date" class="form-control" id="syncSince">
+                        <div class="form-text">Only sync data modified after this date</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeSync()">
+                    <i class="fas fa-play me-1"></i>Start Sync
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentCrm = '{{ crm_name }}';
+let currentModel = '{{ model_name }}';
+let currentPage = 1;
+let totalPages = 1;
+let modelMetadata = null;
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadModelMetadata();
+    loadTableData();
+    
+    // Set up search input debouncing
+    let searchTimeout;
+    document.getElementById('searchInput').addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(applyFilters, 500);
+    });
+});
+
+function loadModelMetadata() {
+    fetch(`/ingestion/api/crm/${currentCrm}/${currentModel}/metadata/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                modelMetadata = data.metadata;
+                updateMetrics(data.metadata);
+                updateModelDescription(data.metadata);
+            } else {
+                showError('Failed to load metadata: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading metadata:', error);
+        });
+}
+
+function loadTableData(page = 1) {
+    showTableLoading();
+    
+    const params = new URLSearchParams({
+        page: page,
+        page_size: document.getElementById('pageSizeSelect').value,
+        search: document.getElementById('searchInput').value,
+        ordering: document.getElementById('sortSelect').value
+    });
+    
+    fetch(`/ingestion/api/crm/${currentCrm}/${currentModel}/data/?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderTable(data.data, data.metadata);
+                updatePagination(data.pagination);
+                currentPage = page;
+                totalPages = data.pagination.total_pages;
+            } else {
+                showError('Failed to load data: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading data:', error);
+            showError('Failed to load data');
+        })
+        .finally(() => {
+            hideTableLoading();
+        });
+}
+
+function updateMetrics(metadata) {
+    document.getElementById('totalRecords').textContent = formatNumber(metadata.total_records);
+    document.getElementById('lastSyncDate').textContent = formatDateShort(metadata.last_sync);
+    document.getElementById('syncDuration').textContent = metadata.last_sync_duration || 'N/A';
+    
+    const statusElement = document.getElementById('syncStatus');
+    statusElement.textContent = metadata.sync_status;
+    statusElement.className = `metric-number ${getStatusColor(metadata.sync_status)}`;
+}
+
+function updateModelDescription(metadata) {
+    const description = metadata.description || `${currentModel} data model from ${currentCrm}`;
+    document.getElementById('modelDescription').textContent = description;
+}
+
+function renderTable(data, metadata) {
+    const tableContainer = document.getElementById('tableContainer');
+    const emptyState = document.getElementById('emptyState');
+    const recordsInfo = document.getElementById('recordsInfo');
+    
+    if (!data || data.length === 0) {
+        tableContainer.style.display = 'none';
+        emptyState.style.display = 'block';
+        recordsInfo.textContent = '(0 records)';
+        return;
+    }
+    
+    // Update records info
+    recordsInfo.textContent = `(${data.length} records)`;
+    
+    // Build table header
+    const tableHead = document.getElementById('tableHead');
+    const fields = metadata.fields || Object.keys(data[0] || {});
+    
+    tableHead.innerHTML = `
+        <tr>
+            ${fields.map(field => `<th>${formatFieldName(field)}</th>`).join('')}
+        </tr>
+    `;
+    
+    // Build table body
+    const tableBody = document.getElementById('tableBody');
+    tableBody.innerHTML = data.map(row => `
+        <tr>
+            ${fields.map(field => `<td>${formatCellValue(row[field], field)}</td>`).join('')}
+        </tr>
+    `).join('');
+    
+    emptyState.style.display = 'none';
+    tableContainer.style.display = 'block';
+}
+
+function updatePagination(pagination) {
+    const container = document.getElementById('paginationContainer');
+    const info = document.getElementById('paginationInfo');
+    const list = document.getElementById('paginationList');
+    
+    if (pagination.total_pages <= 1) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    // Update pagination info
+    const start = (pagination.current_page - 1) * pagination.page_size + 1;
+    const end = Math.min(start + pagination.page_size - 1, pagination.total_records);
+    info.textContent = `Showing ${start}-${end} of ${pagination.total_records} records`;
+    
+    // Build pagination links
+    let links = '';
+    
+    // Previous button
+    if (pagination.has_previous) {
+        links += `<li class="page-item">
+            <a class="page-link" href="#" onclick="loadTableData(${pagination.current_page - 1})">Previous</a>
+        </li>`;
+    }
+    
+    // Page numbers
+    const startPage = Math.max(1, pagination.current_page - 2);
+    const endPage = Math.min(pagination.total_pages, pagination.current_page + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === pagination.current_page ? 'active' : '';
+        links += `<li class="page-item ${activeClass}">
+            <a class="page-link" href="#" onclick="loadTableData(${i})">${i}</a>
+        </li>`;
+    }
+    
+    // Next button
+    if (pagination.has_next) {
+        links += `<li class="page-item">
+            <a class="page-link" href="#" onclick="loadTableData(${pagination.current_page + 1})">Next</a>
+        </li>`;
+    }
+    
+    list.innerHTML = links;
+    container.style.display = 'flex';
+}
+
+function applyFilters() {
+    currentPage = 1;
+    loadTableData(1);
+}
+
+function refreshData() {
+    loadModelMetadata();
+    loadTableData(currentPage);
+}
+
+function showSyncModal() {
+    new bootstrap.Modal(document.getElementById('syncModal')).show();
+}
+
+function executeSync() {
+    const crm = document.getElementById('syncCrmName').value;
+    const model = document.getElementById('syncModelName').value;
+    const force = document.getElementById('syncForce').checked;
+    const full = document.getElementById('syncFull').checked;
+    const since = document.getElementById('syncSince').value;
+    
+    const params = {};
+    if (force) params.force = true;
+    if (full) params.full = true;
+    if (since) params.since = since;
+    
+    const payload = {
+        crm_name: crm,
+        model_name: model,
+        parameters: params
+    };
+    
+    fetch('/ingestion/api/sync/execute/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Sync started successfully');
+            bootstrap.Modal.getInstance(document.getElementById('syncModal')).hide();
+            setTimeout(refreshData, 2000);
+        } else {
+            showError('Failed to start sync: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error starting sync:', error);
+        showError('Failed to start sync');
+    });
+}
+
+function exportData() {
+    const params = new URLSearchParams({
+        search: document.getElementById('searchInput').value,
+        ordering: document.getElementById('sortSelect').value,
+        export: 'csv'
+    });
+    
+    window.open(`/ingestion/api/crm/${currentCrm}/${currentModel}/data/?${params}`);
+}
+
+function showTableLoading() {
+    document.getElementById('tableLoading').style.display = 'block';
+    document.getElementById('tableContainer').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+}
+
+function hideTableLoading() {
+    document.getElementById('tableLoading').style.display = 'none';
+}
+
+// Utility functions
+function formatFieldName(field) {
+    return field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function formatCellValue(value, field) {
+    if (value === null || value === undefined) return '-';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (field.includes('date') || field.includes('time')) {
+        try {
+            return new Date(value).toLocaleString();
+        } catch {
+            return value;
+        }
+    }
+    if (typeof value === 'number' && value > 1000000) {
+        return value.toLocaleString();
+    }
+    return String(value).length > 50 ? String(value).substring(0, 50) + '...' : value;
+}
+
+function formatNumber(num) {
+    if (!num && num !== 0) return '0';
+    return parseInt(num).toLocaleString();
+}
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return 'Never';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'success': 'text-success',
+        'error': 'text-danger',
+        'running': 'text-primary',
+        'never': 'text-muted'
+    };
+    return colors[status] || 'text-muted';
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function showSuccess(message) {
+    alert('Success: ' + message);
+}
+
+function showError(message) {
+    alert('Error: ' + message);
+}
+</script>
+{% endblock %}

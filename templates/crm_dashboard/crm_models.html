@@ -1,0 +1,433 @@
+{% extends 'crm_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ crm_name|title }} Models - CRM Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .model-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: none;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .model-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .sync-status-badge {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+    .sync-status-success { background: linear-gradient(45deg, #28a745, #20c997); }
+    .sync-status-error { background: linear-gradient(45deg, #dc3545, #fd7e14); }
+    .sync-status-running { background: linear-gradient(45deg, #007bff, #6f42c1); }
+    .sync-status-never { background: linear-gradient(45deg, #6c757d, #adb5bd); }
+    .model-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    .model-metrics {
+        background: rgba(0,0,0,0.05);
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    .metric-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.25rem;
+    }
+    .metric-item:last-child { margin-bottom: 0; }
+    .breadcrumb {
+        background: none;
+        padding: 0;
+        margin-bottom: 1.5rem;
+    }
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: "›";
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'crm_dashboard:dashboard' %}" class="text-decoration-none">
+                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ crm_name|title }}</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-database me-2 text-primary"></i>
+                        {{ crm_name|title }} Models
+                    </h1>
+                    <p class="text-muted mb-0">Manage and monitor {{ crm_name }} data models</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bulkSyncModal">
+                        <i class="fas fa-play me-1"></i>Bulk Sync
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading models...</p>
+    </div>
+
+    <!-- Models Grid -->
+    <div id="modelsContainer" class="row g-4" style="display: none;">
+        <!-- Models will be loaded here via JavaScript -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="text-center py-5" style="display: none;">
+        <i class="fas fa-database fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No Models Found</h4>
+        <p class="text-muted">No data models were found for {{ crm_name }}.</p>
+    </div>
+</div>
+
+<!-- Bulk Sync Modal -->
+<div class="modal fade" id="bulkSyncModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-play me-2"></i>Bulk Sync {{ crm_name|title }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bulkSyncForm">
+                    <div class="mb-3">
+                        <label class="form-label">Sync Parameters</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="forceSync">
+                            <label class="form-check-label" for="forceSync">
+                                Force sync (ignore existing data)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="fullSync">
+                            <label class="form-check-label" for="fullSync">
+                                Full sync (all historical data)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="sinceGroup">
+                        <label for="sinceDate" class="form-label">Since Date (optional)</label>
+                        <input type="date" class="form-control" id="sinceDate">
+                        <div class="form-text">Only sync data modified after this date</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeBulkSync()">
+                    <i class="fas fa-play me-1"></i>Start Sync
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Individual Sync Modal -->
+<div class="modal fade" id="syncModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-play me-2"></i>Sync <span id="syncModelName"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="syncForm">
+                    <input type="hidden" id="syncCrmName" value="{{ crm_name }}">
+                    <input type="hidden" id="syncModelId">
+                    <div class="mb-3">
+                        <label class="form-label">Sync Parameters</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="syncForce">
+                            <label class="form-check-label" for="syncForce">
+                                Force sync (ignore existing data)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="syncFull">
+                            <label class="form-check-label" for="syncFull">
+                                Full sync (all historical data)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="syncSince" class="form-label">Since Date (optional)</label>
+                        <input type="date" class="form-control" id="syncSince">
+                        <div class="form-text">Only sync data modified after this date</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="executeSync()">
+                    <i class="fas fa-play me-1"></i>Start Sync
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentCrm = '{{ crm_name }}';
+
+// Load models on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadModels();
+});
+
+function loadModels() {
+    showLoading();
+    
+    fetch(`/ingestion/api/crm/${currentCrm}/models/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderModels(data.models);
+            } else {
+                showError('Failed to load models: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading models:', error);
+            showError('Failed to load models');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+}
+
+function renderModels(models) {
+    const container = document.getElementById('modelsContainer');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (!models || models.length === 0) {
+        container.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    container.innerHTML = '';
+    emptyState.style.display = 'none';
+    
+    models.forEach(model => {
+        const modelCard = createModelCard(model);
+        container.appendChild(modelCard);
+    });
+    
+    container.style.display = 'flex';
+}
+
+function createModelCard(model) {
+    const col = document.createElement('div');
+    col.className = 'col-xl-3 col-lg-4 col-md-6';
+    
+    const statusClass = `sync-status-${model.sync_status}`;
+    const iconColor = getIconColor(model.sync_status);
+    
+    col.innerHTML = `
+        <div class="card model-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="model-icon" style="background: ${iconColor};">
+                        <i class="fas fa-table"></i>
+                    </div>
+                    <span class="badge ${statusClass} sync-status-badge">${model.sync_status}</span>
+                </div>
+                
+                <h5 class="card-title">${model.name}</h5>
+                <p class="card-text text-muted small">${model.description || 'No description available'}</p>
+                
+                <div class="model-metrics">
+                    <div class="metric-item">
+                        <span class="text-muted small">Records:</span>
+                        <span class="small fw-bold">${formatNumber(model.record_count)}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="text-muted small">Last Sync:</span>
+                        <span class="small">${formatDate(model.last_sync)}</span>
+                    </div>
+                    <div class="metric-item">
+                        <span class="text-muted small">Duration:</span>
+                        <span class="small">${model.last_sync_duration || 'N/A'}</span>
+                    </div>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary btn-sm flex-fill" 
+                            onclick="viewModelDetail('${model.name}')">
+                        <i class="fas fa-eye me-1"></i>View
+                    </button>
+                    <button class="btn btn-primary btn-sm" 
+                            onclick="showSyncModal('${model.name}')">
+                        <i class="fas fa-sync-alt me-1"></i>Sync
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return col;
+}
+
+function getIconColor(status) {
+    const colors = {
+        'success': 'linear-gradient(45deg, #28a745, #20c997)',
+        'error': 'linear-gradient(45deg, #dc3545, #fd7e14)',
+        'running': 'linear-gradient(45deg, #007bff, #6f42c1)',
+        'never': 'linear-gradient(45deg, #6c757d, #adb5bd)'
+    };
+    return colors[status] || colors['never'];
+}
+
+function viewModelDetail(modelName) {
+    window.location.href = `/ingestion/crm-dashboard/${currentCrm}/${modelName}/`;
+}
+
+function showSyncModal(modelName) {
+    document.getElementById('syncModelName').textContent = modelName;
+    document.getElementById('syncModelId').value = modelName;
+    new bootstrap.Modal(document.getElementById('syncModal')).show();
+}
+
+function executeSync() {
+    const crm = document.getElementById('syncCrmName').value;
+    const model = document.getElementById('syncModelId').value;
+    const force = document.getElementById('syncForce').checked;
+    const full = document.getElementById('syncFull').checked;
+    const since = document.getElementById('syncSince').value;
+    
+    const params = {};
+    if (force) params.force = true;
+    if (full) params.full = true;
+    if (since) params.since = since;
+    
+    executeSyncCommand(crm, model, params);
+}
+
+function executeBulkSync() {
+    const force = document.getElementById('forceSync').checked;
+    const full = document.getElementById('fullSync').checked;
+    const since = document.getElementById('sinceDate').value;
+    
+    const params = {};
+    if (force) params.force = true;
+    if (full) params.full = true;
+    if (since) params.since = since;
+    
+    executeSyncCommand(currentCrm, null, params);
+}
+
+function executeSyncCommand(crm, model, params) {
+    const payload = {
+        crm_name: crm,
+        parameters: params
+    };
+    
+    if (model) {
+        payload.model_name = model;
+    }
+    
+    fetch('/ingestion/api/sync/execute/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Sync started successfully');
+            bootstrap.Modal.getInstance(document.querySelector('.modal.show')).hide();
+            setTimeout(loadModels, 2000); // Refresh after 2 seconds
+        } else {
+            showError('Failed to start sync: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error starting sync:', error);
+        showError('Failed to start sync');
+    });
+}
+
+function refreshData() {
+    loadModels();
+}
+
+function showLoading() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('modelsContainer').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+}
+
+function hideLoading() {
+    document.getElementById('loading').style.display = 'none';
+}
+
+function formatNumber(num) {
+    if (!num && num !== 0) return 'N/A';
+    return parseInt(num).toLocaleString();
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return 'Never';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+function showSuccess(message) {
+    // You can implement toast notifications here
+    alert('Success: ' + message);
+}
+
+function showError(message) {
+    // You can implement toast notifications here
+    alert('Error: ' + message);
+}
+</script>
+{% endblock %}

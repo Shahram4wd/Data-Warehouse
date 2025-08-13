@@ -1,0 +1,477 @@
+{% extends 'crm_dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Sync History - CRM Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .history-timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    .history-timeline::before {
+        content: '';
+        position: absolute;
+        left: 1rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #667eea, #764ba2);
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin-left: 1rem;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -2.5rem;
+        top: 1.5rem;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid;
+        z-index: 2;
+    }
+    .timeline-item.success::before { border-color: #28a745; }
+    .timeline-item.error::before { border-color: #dc3545; }
+    .timeline-item.running::before { border-color: #007bff; }
+    .timeline-item.warning::before { border-color: #ffc107; }
+    
+    .sync-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .sync-status.success { background: #d4edda; color: #155724; }
+    .sync-status.error { background: #f8d7da; color: #721c24; }
+    .sync-status.running { background: #cce7ff; color: #004085; }
+    .sync-status.warning { background: #fff3cd; color: #856404; }
+    
+    .filters-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .breadcrumb {
+        background: none;
+        padding: 0;
+        margin-bottom: 1.5rem;
+    }
+    .breadcrumb-item + .breadcrumb-item::before {
+        content: "›";
+        color: #6c757d;
+    }
+    .metric-badge {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    .duration-text {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    .records-count {
+        font-weight: 600;
+        color: #495057;
+    }
+    .error-details {
+        background: #f8f9fa;
+        border-left: 4px solid #dc3545;
+        padding: 1rem;
+        border-radius: 0 8px 8px 0;
+        margin-top: 1rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        white-space: pre-wrap;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .command-display {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 0.75rem;
+        margin-top: 0.5rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        color: #495057;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'crm_dashboard:dashboard' %}" class="text-decoration-none">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Sync History</li>
+        </ol>
+    </nav>
+
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-2">
+                        <i class="fas fa-history me-2 text-primary"></i>
+                        Sync History
+                    </h1>
+                    <p class="text-muted mb-0">View and monitor all CRM synchronization activities</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-primary me-2" onclick="refreshHistory()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                    <button class="btn btn-primary" onclick="exportHistory()">
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="filters-card">
+        <div class="row align-items-end">
+            <div class="col-md-3">
+                <label for="crmFilter" class="form-label">CRM Source</label>
+                <select class="form-select" id="crmFilter">
+                    <option value="">All CRM Sources</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="modelFilter" class="form-label">Model</label>
+                <select class="form-select" id="modelFilter">
+                    <option value="">All Models</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="statusFilter" class="form-label">Status</label>
+                <select class="form-select" id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="success">Success</option>
+                    <option value="error">Error</option>
+                    <option value="running">Running</option>
+                    <option value="warning">Warning</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="dateFilter" class="form-label">Date Range</label>
+                <select class="form-select" id="dateFilter">
+                    <option value="">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">Last 7 days</option>
+                    <option value="month">Last 30 days</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                    <i class="fas fa-filter me-1"></i>Filter
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading sync history...</p>
+    </div>
+
+    <!-- Timeline Container -->
+    <div id="historyContainer" style="display: none;">
+        <div class="history-timeline" id="historyTimeline">
+            <!-- History items will be loaded here -->
+        </div>
+        
+        <!-- Load More Button -->
+        <div class="text-center mt-4" id="loadMoreContainer" style="display: none;">
+            <button class="btn btn-outline-primary" onclick="loadMoreHistory()">
+                <i class="fas fa-chevron-down me-1"></i>Load More
+            </button>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="text-center py-5" style="display: none;">
+        <i class="fas fa-clock fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No Sync History</h4>
+        <p class="text-muted">No synchronization activities match your current filters.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let hasMorePages = true;
+let isLoading = false;
+
+// Load data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadFilters();
+    loadHistory();
+});
+
+function loadFilters() {
+    // Load CRM sources for filter
+    fetch('/ingestion/api/crm/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const crmFilter = document.getElementById('crmFilter');
+                data.crm_sources.forEach(crm => {
+                    const option = document.createElement('option');
+                    option.value = crm.name;
+                    option.textContent = crm.display_name;
+                    crmFilter.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error loading CRM filters:', error));
+}
+
+function loadHistory(reset = true) {
+    if (isLoading) return;
+    isLoading = true;
+    
+    if (reset) {
+        currentPage = 1;
+        showLoading();
+        document.getElementById('historyTimeline').innerHTML = '';
+    }
+    
+    const params = new URLSearchParams({
+        page: currentPage,
+        page_size: 20,
+        crm_name: document.getElementById('crmFilter').value,
+        model_name: document.getElementById('modelFilter').value,
+        status: document.getElementById('statusFilter').value,
+        date_range: document.getElementById('dateFilter').value
+    });
+    
+    fetch(`/ingestion/api/sync/history/?${params}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderHistory(data.history, reset);
+                hasMorePages = data.pagination.has_next;
+                updateLoadMoreButton();
+            } else {
+                showError('Failed to load history: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading history:', error);
+            showError('Failed to load sync history');
+        })
+        .finally(() => {
+            hideLoading();
+            isLoading = false;
+        });
+}
+
+function renderHistory(historyItems, reset = true) {
+    const timeline = document.getElementById('historyTimeline');
+    const container = document.getElementById('historyContainer');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (!historyItems || historyItems.length === 0) {
+        if (reset) {
+            container.style.display = 'none';
+            emptyState.style.display = 'block';
+        }
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    container.style.display = 'block';
+    
+    historyItems.forEach(item => {
+        const timelineItem = createTimelineItem(item);
+        timeline.appendChild(timelineItem);
+    });
+}
+
+function createTimelineItem(item) {
+    const div = document.createElement('div');
+    div.className = `timeline-item ${item.status}`;
+    
+    const statusText = item.status.charAt(0).toUpperCase() + item.status.slice(1);
+    const duration = item.duration ? formatDuration(item.duration) : 'N/A';
+    const recordsText = item.records_processed ? formatNumber(item.records_processed) : '0';
+    
+    div.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+                <span class="sync-status ${item.status}">
+                    <i class="fas fa-${getStatusIcon(item.status)} me-1"></i>
+                    ${statusText}
+                </span>
+                <h6 class="mb-1">${item.crm_name} → ${item.model_name}</h6>
+            </div>
+            <small class="text-muted">${formatDateTime(item.started_at)}</small>
+        </div>
+        
+        <div class="row mb-2">
+            <div class="col-md-6">
+                <small class="duration-text">
+                    <i class="fas fa-clock me-1"></i>Duration: ${duration}
+                </small>
+            </div>
+            <div class="col-md-6">
+                <small class="records-count">
+                    <i class="fas fa-database me-1"></i>Records: ${recordsText}
+                </small>
+            </div>
+        </div>
+        
+        ${item.command ? `
+            <div class="mb-2">
+                <small class="text-muted">Command:</small>
+                <div class="command-display">${item.command}</div>
+            </div>
+        ` : ''}
+        
+        ${item.status === 'error' && item.error_message ? `
+            <div class="error-details">
+                <strong>Error Details:</strong><br>
+                ${item.error_message}
+            </div>
+        ` : ''}
+        
+        ${item.metadata && Object.keys(item.metadata).length > 0 ? `
+            <div class="mt-2">
+                <small class="text-muted">Additional Info:</small>
+                <div class="d-flex flex-wrap gap-2 mt-1">
+                    ${Object.entries(item.metadata).map(([key, value]) => 
+                        `<span class="metric-badge">${key}: ${value}</span>`
+                    ).join('')}
+                </div>
+            </div>
+        ` : ''}
+    `;
+    
+    return div;
+}
+
+function updateLoadMoreButton() {
+    const container = document.getElementById('loadMoreContainer');
+    container.style.display = hasMorePages ? 'block' : 'none';
+}
+
+function loadMoreHistory() {
+    currentPage++;
+    loadHistory(false);
+}
+
+function applyFilters() {
+    loadHistory(true);
+}
+
+function refreshHistory() {
+    loadHistory(true);
+}
+
+function exportHistory() {
+    const params = new URLSearchParams({
+        crm_name: document.getElementById('crmFilter').value,
+        model_name: document.getElementById('modelFilter').value,
+        status: document.getElementById('statusFilter').value,
+        date_range: document.getElementById('dateFilter').value,
+        export: 'csv'
+    });
+    
+    window.open(`/ingestion/api/sync/history/?${params}`);
+}
+
+function showLoading() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('historyContainer').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+}
+
+function hideLoading() {
+    document.getElementById('loading').style.display = 'none';
+}
+
+// Utility functions
+function getStatusIcon(status) {
+    const icons = {
+        'success': 'check-circle',
+        'error': 'exclamation-circle',
+        'running': 'spinner',
+        'warning': 'exclamation-triangle'
+    };
+    return icons[status] || 'question-circle';
+}
+
+function formatDateTime(dateStr) {
+    if (!dateStr) return 'Unknown';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffMinutes = Math.ceil(diffTime / (1000 * 60));
+    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffMinutes < 60) {
+        return `${diffMinutes} minutes ago`;
+    } else if (diffHours < 24) {
+        return `${diffHours} hours ago`;
+    } else if (diffDays < 7) {
+        return `${diffDays} days ago`;
+    } else {
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+}
+
+function formatDuration(seconds) {
+    if (!seconds) return 'N/A';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+        return `${minutes}m ${secs}s`;
+    } else {
+        return `${secs}s`;
+    }
+}
+
+function formatNumber(num) {
+    if (!num && num !== 0) return '0';
+    return parseInt(num).toLocaleString();
+}
+
+function showError(message) {
+    alert('Error: ' + message);
+}
+</script>
+{% endblock %}
