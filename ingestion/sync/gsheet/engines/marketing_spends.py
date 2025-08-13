@@ -451,10 +451,11 @@ class MarketingSpendsSyncEngine(BaseGoogleSheetsSyncEngine):
                         
                         if update_objects:
                             try:
-                                # Get all field names except id and created_at
+                                # Get all field names except primary key and created_at
+                                # Note: sheet_row_number is the primary key, not 'id'
                                 update_fields = [
                                     field.name for field in GoogleSheetMarketingSpend._meta.fields 
-                                    if field.name not in ['id', 'created_at']
+                                    if field.name not in ['sheet_row_number', 'created_at']
                                 ]
                                 
                                 GoogleSheetMarketingSpend.objects.bulk_update(
