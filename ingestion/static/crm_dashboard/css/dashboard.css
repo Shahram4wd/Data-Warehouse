@@ -97,6 +97,30 @@
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
+/* Card Header Styling */
+.crm-card .card-header {
+    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    color: white;
+    border: none;
+    padding: 1rem 1.25rem;
+}
+
+.crm-card .card-header.bg-gradient-primary {
+    background: linear-gradient(135deg, #4e73df 0%, #224abe 100%) !important;
+    color: white !important;
+}
+
+.crm-card .card-header h5 {
+    color: white !important;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.crm-card .card-header .fas {
+    color: white !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
 .crm-header {
     background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     padding: 1.25rem;
@@ -121,6 +145,33 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* Bootstrap Badge Classes for Status */
+.badge.bg-success {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+    color: white !important;
+}
+
+.badge.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #e83e8c) !important;
+    color: white !important;
+}
+
+.badge.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #fd7e14) !important;
+    color: #212529 !important;
+}
+
+.badge.bg-primary {
+    background: linear-gradient(135deg, #007bff, #6610f2) !important;
+    color: white !important;
+    animation: pulse 2s infinite;
+}
+
+.badge.bg-secondary {
+    background: linear-gradient(135deg, #6c757d, #495057) !important;
+    color: white !important;
 }
 
 .status-success {
