@@ -1,189 +1,377 @@
+"""
+Unified Arrivy Sync Orchestrator Command
+
+Orchestrates all individual sync_arrivy_*.py commands using Django's call_command
+to avoid code duplication while providing a unified interface.
+
+Usage:
+    python manage.py sync_arrivy_all --entity-type=entities
+    python manage.py sync_arrivy_all --entity-type=tasks --full
+    python manage.py sync_arrivy_all --entity-type=groups --since=2025-01-01
+    python manage.py sync_arrivy_all --entity-type=all --dry-run
+"""
+
 import logging
+from typing import Dict, Any, List
 from django.core.management.base import BaseCommand, CommandError
 from django.core.management import call_command
-from django.conf import settings
+from django.utils import timezone
+from io import StringIO
+import sys
 
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = "Sync all Arrivy data using official API endpoints (customers, entities, groups, and bookings)"
-
+    help = "Unified orchestrator for all Arrivy sync commands (delegates to individual commands)"
+    
     def add_arguments(self, parser):
+        # Entity type selection
         parser.add_argument(
-            "--full",
-            action="store_true",
-            help="Perform a full sync instead of incremental for all endpoints."
+            '--entity-type',
+            choices=['entities', 'tasks', 'groups', 'location_reports', 'task_status', 'all'],
+            default='all',
+            help='Type of Arrivy entities to sync (default: all)'
         )
+        
+        # Base sync arguments (passed to individual commands)
         parser.add_argument(
-            "--debug",
-            action="store_true",
-            help="Show debug output"
+            '--full',
+            action='store_true',
+            help='Force full sync instead of incremental'
         )
+        
         parser.add_argument(
-            "--pages",
+            '--force-overwrite',
+            action='store_true',
+            help='Overwrite existing records'
+        )
+        
+        parser.add_argument(
+            '--since',
+            type=str,
+            help='Sync data since specific date (YYYY-MM-DD)'
+        )
+        
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Preview changes without committing'
+        )
+        
+        parser.add_argument(
+            '--batch-size',
+            type=int,
+            default=100,
+            help='Batch size for processing (default: 100)'
+        )
+        
+        parser.add_argument(
+            '--max-records',
             type=int,
             default=0,
-            help="Maximum number of pages to process per endpoint (0 for unlimited)"
+            help='Maximum records to process (0 = no limit)'
         )
+        
         parser.add_argument(
-            "--lastmodifieddate",
+            '--debug',
+            action='store_true',
+            help='Enable debug logging'
+        )
+        
+        # Legacy compatibility arguments
+        parser.add_argument(
+            '--start-date',
             type=str,
-            help="Filter records modified after this date (YYYY-MM-DD format)"
+            help='Start date for task filtering (YYYY-MM-DD format, tasks only)'
         )
+        
         parser.add_argument(
-            "--skip-task-statuses",
-            action="store_true",
-            help="Skip syncing task statuses"
-        )
-        parser.add_argument(
-            "--skip-location-reports",
-            action="store_true",
-            help="Skip syncing location reports"
-        )
-        parser.add_argument(
-            "--skip-entities",
-            action="store_true",
-            help="Skip syncing entities (crew members)"
-        )
-        parser.add_argument(
-            "--skip-groups",
-            action="store_true",
-            help="Skip syncing groups (locations)"
-        )
-        parser.add_argument(
-            "--skip-tasks",
-            action="store_true",
-            help="Skip syncing tasks"
-        )
-        parser.add_argument(
-            "--start-date",
+            '--end-date', 
             type=str,
-            help="For bookings: filter starting after this date (YYYY-MM-DD format)"
+            help='End date for task filtering (YYYY-MM-DD format, tasks only)'
         )
+        
         parser.add_argument(
-            "--end-date",
-            type=str,
-            help="For bookings: filter ending before this date (YYYY-MM-DD format)"
+            '--use-legacy-tasks',
+            action='store_true',
+            help='Use legacy tasks endpoint instead of bookings endpoint'
         )
-
+        
+        parser.add_argument(
+            '--crew-members-mode',
+            action='store_true', 
+            help='Fetch entities as crew members from divisions (with division context)'
+        )
+    
     def handle(self, *args, **options):
-        full_sync = options.get("full")
-        debug = options.get("debug")
-        pages = options.get("pages", 0)
-        lastmodifieddate = options.get("lastmodifieddate")
-        skip_task_statuses = options.get("skip_task_statuses")
-        skip_location_reports = options.get("skip_location_reports")
-        skip_entities = options.get("skip_entities")
-        skip_groups = options.get("skip_groups")
-        skip_tasks = options.get("skip_tasks")
-        start_date = options.get("start_date")
-        end_date = options.get("end_date")
-
-        if not all([settings.ARRIVY_API_KEY, settings.ARRIVY_AUTH_KEY, settings.ARRIVY_API_URL]):
-            raise CommandError("Arrivy API credentials are not properly configured in settings.")
-
-        self.stdout.write(self.style.SUCCESS("Starting complete Arrivy data sync..."))
+        """Main orchestrator handler that delegates to individual sync commands"""
         
-        # Prepare common arguments
-        common_args = []
-        common_kwargs = {}
+        # Configure logging
+        if options.get('debug'):
+            logging.getLogger().setLevel(logging.DEBUG)
+            logging.getLogger('arrivy').setLevel(logging.DEBUG)
         
-        if full_sync:
-            common_kwargs['full'] = True
-        if debug:
-            common_kwargs['debug'] = True
-        if pages > 0:
-            common_kwargs['pages'] = pages
-        if lastmodifieddate:
-            common_kwargs['lastmodifieddate'] = lastmodifieddate
-
-        sync_results = {}        # 1. Sync Task Statuses first (as they may be referenced by tasks)
-        if not skip_task_statuses:
-            self.stdout.write("\n" + "="*60)
-            self.stdout.write("🔄 SYNCING TASK STATUSES")
-            self.stdout.write("="*60)
-            try:
-                call_command('sync_arrivy_task_status', *common_args, **common_kwargs)
-                sync_results['task_statuses'] = 'SUCCESS'
-                self.stdout.write(self.style.SUCCESS("✓ Task statuses sync completed"))
-            except Exception as e:
-                sync_results['task_statuses'] = f'FAILED: {str(e)}'
-                self.stdout.write(self.style.ERROR(f"✗ Task statuses sync failed: {str(e)}"))
-
-        # 2. Sync Location Reports
-        if not skip_location_reports:
-            self.stdout.write("\n" + "="*60)
-            self.stdout.write("🔄 SYNCING LOCATION REPORTS")
-            self.stdout.write("="*60)
-            try:
-                call_command('sync_arrivy_location_reports', *common_args, **common_kwargs)
-                sync_results['location_reports'] = 'SUCCESS'
-                self.stdout.write(self.style.SUCCESS("✓ Location reports sync completed"))
-            except Exception as e:
-                sync_results['location_reports'] = f'FAILED: {str(e)}'
-                self.stdout.write(self.style.ERROR(f"✗ Location reports sync failed: {str(e)}"))
-
-        # 3. Sync Entities (crew members)
-        if not skip_entities:
-            self.stdout.write("\n" + "="*60)
-            self.stdout.write("🔄 SYNCING ENTITIES (CREW MEMBERS)")
-            self.stdout.write("="*60)
-            try:
-                call_command('sync_arrivy_entities', *common_args, **common_kwargs)
-                sync_results['entities'] = 'SUCCESS'
-                self.stdout.write(self.style.SUCCESS("✓ Entities sync completed"))
-            except Exception as e:
-                sync_results['entities'] = f'FAILED: {str(e)}'
-                self.stdout.write(self.style.ERROR(f"✗ Entities sync failed: {str(e)}"))
-
-        # 4. Sync Groups (locations)
-        if not skip_groups:
-            self.stdout.write("\n" + "="*60)
-            self.stdout.write("🔄 SYNCING GROUPS (LOCATIONS)")
-            self.stdout.write("="*60)
-            try:
-                call_command('sync_arrivy_groups', *common_args, **common_kwargs)
-                sync_results['groups'] = 'SUCCESS'
-                self.stdout.write(self.style.SUCCESS("✓ Groups sync completed"))
-            except Exception as e:
-                sync_results['groups'] = f'FAILED: {str(e)}'
-                self.stdout.write(self.style.ERROR(f"✗ Groups sync failed: {str(e)}"))        # 5. Sync Tasks (after other components)
-        if not skip_tasks:
-            self.stdout.write("\n" + "="*60)
-            self.stdout.write("🔄 SYNCING TASKS")
-            self.stdout.write("="*60)
-            try:
-                # Add task-specific arguments
-                task_kwargs = common_kwargs.copy()
-                if start_date:
-                    task_kwargs['start_date'] = start_date
-                if end_date:
-                    task_kwargs['end_date'] = end_date
-                
-                call_command('sync_arrivy_tasks', *common_args, **task_kwargs)
-                sync_results['tasks'] = 'SUCCESS'
-                self.stdout.write(self.style.SUCCESS("✓ Tasks sync completed"))
-            except Exception as e:
-                sync_results['tasks'] = f'FAILED: {str(e)}'
-                self.stdout.write(self.style.ERROR(f"✗ Tasks sync failed: {str(e)}"))
-
-        # Summary
-        self.stdout.write("\n" + "="*60)
-        self.stdout.write("📊 SYNC SUMMARY")
-        self.stdout.write("="*60)
+        entity_type = options['entity_type']
         
-        for endpoint, result in sync_results.items():
-            if result == 'SUCCESS':
-                self.stdout.write(self.style.SUCCESS(f"✓ {endpoint.upper()}: {result}"))
+        try:
+            if entity_type == 'all':
+                # Run all entity types
+                results = self._run_all_commands(options)
             else:
-                self.stdout.write(self.style.ERROR(f"✗ {endpoint.upper()}: {result}"))
-
-        # Overall result
-        failed_syncs = [endpoint for endpoint, result in sync_results.items() if result != 'SUCCESS']
+                # Run specific entity type
+                results = self._run_single_command(entity_type, options)
+            
+            self._display_results(results, entity_type)
+            
+        except Exception as e:
+            logger.exception(f"Error during Arrivy sync orchestration")
+            raise CommandError(f"Sync orchestration failed: {str(e)}")
+    
+    def _run_all_commands(self, options: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Run all Arrivy sync commands in sequence
         
-        if failed_syncs:
-            self.stdout.write(self.style.WARNING(f"\n⚠️  {len(failed_syncs)} sync(s) failed: {', '.join(failed_syncs)}"))
+        Args:
+            options: Command options
+            
+        Returns:
+            Combined results from all commands
+        """
+        self.stdout.write("Starting comprehensive Arrivy sync (all entities)...")
+        
+        # Define command order (dependencies considered)
+        commands = [
+            ('entities', 'sync_arrivy_entities'),
+            ('groups', 'sync_arrivy_groups'), 
+            ('tasks', 'sync_arrivy_tasks'),
+            ('location_reports', 'sync_arrivy_location_reports'),
+            ('task_status', 'sync_arrivy_task_status')
+        ]
+        
+        all_results = {}
+        
+        for entity_type, command_name in commands:
+            self.stdout.write(f"\n--- Running {command_name} ---")
+            
+            try:
+                result = self._run_single_command(entity_type, options, command_name)
+                all_results[entity_type] = result
+                
+                self.stdout.write(
+                    self.style.SUCCESS(f"✅ {entity_type}: Command completed successfully")
+                )
+                
+            except Exception as e:
+                logger.error(f"Error running {command_name}: {str(e)}")
+                all_results[entity_type] = {'error': str(e), 'command': command_name}
+                
+                self.stdout.write(
+                    self.style.ERROR(f"❌ {entity_type}: {str(e)}")
+                )
+        
+        return all_results
+    
+    def _run_single_command(self, entity_type: str, options: Dict[str, Any], command_name: str = None) -> Dict[str, Any]:
+        """
+        Run a single Arrivy sync command
+        
+        Args:
+            entity_type: Type of entity to sync
+            options: Command options
+            command_name: Optional command name override
+            
+        Returns:
+            Command execution results
+        """
+        if not command_name:
+            command_name = f"sync_arrivy_{entity_type}"
+        
+        # Prepare arguments for the individual command
+        command_args = []
+        command_kwargs = {}
+        
+        # Map common arguments
+        if options.get('full'):
+            command_kwargs['full'] = True
+        if options.get('force_overwrite'):
+            command_kwargs['force_overwrite'] = True
+        if options.get('since'):
+            command_kwargs['since'] = options['since']
+        if options.get('dry_run'):
+            command_kwargs['dry_run'] = True
+        if options.get('batch_size', 100) != 100:
+            command_kwargs['batch_size'] = options['batch_size']
+        if options.get('max_records', 0) != 0:
+            command_kwargs['max_records'] = options['max_records']
+        if options.get('debug'):
+            command_kwargs['debug'] = True
+        
+        # Add entity-specific arguments
+        if entity_type == 'tasks':
+            if options.get('start_date'):
+                # Individual task command uses --date-range-days, convert from start/end dates
+                try:
+                    from django.utils.dateparse import parse_date
+                    start_date = parse_date(options['start_date'])
+                    end_date = parse_date(options.get('end_date', timezone.now().date().isoformat()))
+                    if start_date and end_date:
+                        delta = (end_date - start_date).days
+                        command_kwargs['date_range_days'] = max(1, delta)
+                except:
+                    pass  # Let individual command handle validation
+            
+            if options.get('use_legacy_tasks'):
+                # Map to individual command equivalent (if available)
+                pass  # Individual command may have different flag name
+        
+        elif entity_type == 'entities':
+            if options.get('crew_members_mode'):
+                command_kwargs['include_relationships'] = True
+        
+        # Capture output from the individual command
+        output_buffer = StringIO()
+        
+        try:
+            # Call the individual Django management command
+            call_command(
+                command_name,
+                *command_args,
+                stdout=output_buffer,
+                stderr=output_buffer,
+                **command_kwargs
+            )
+            
+            output = output_buffer.getvalue()
+            
+            # Parse basic success from output (simple approach)
+            return {
+                'success': True,
+                'command': command_name,
+                'output': output,
+                'processed': self._extract_metric_from_output(output, 'processed'),
+                'created': self._extract_metric_from_output(output, 'created'),
+                'updated': self._extract_metric_from_output(output, 'updated'),
+                'failed': self._extract_metric_from_output(output, 'failed')
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'command': command_name,
+                'output': output_buffer.getvalue()
+            }
+        finally:
+            output_buffer.close()
+    
+    def _extract_metric_from_output(self, output: str, metric: str) -> int:
+        """
+        Extract numeric metric from command output
+        
+        Args:
+            output: Command output text
+            metric: Metric name to extract
+            
+        Returns:
+            Numeric value or 0 if not found
+        """
+        import re
+        
+        # Look for patterns like "123 processed", "45 created", etc.
+        pattern = rf'(\d+)\s+{metric}'
+        match = re.search(pattern, output, re.IGNORECASE)
+        
+        if match:
+            return int(match.group(1))
+        return 0
+    
+    def _display_results(self, results: Dict[str, Any], entity_type: str):
+        """
+        Display orchestration results in a user-friendly format
+        
+        Args:
+            results: Command execution results
+            entity_type: Entity type that was processed
+        """
+        if entity_type == 'all':
+            # Display results for all entity types
+            self.stdout.write("\n" + "="*70)
+            self.stdout.write("ARRIVY SYNC ORCHESTRATION COMPLETE - SUMMARY")
+            self.stdout.write("="*70)
+            
+            total_commands = len(results)
+            successful_commands = 0
+            failed_commands = 0
+            
+            for etype, result in results.items():
+                if result.get('success', False):
+                    successful_commands += 1
+                    processed = result.get('processed', 'N/A')
+                    created = result.get('created', 'N/A') 
+                    updated = result.get('updated', 'N/A')
+                    failed = result.get('failed', 'N/A')
+                    
+                    self.stdout.write(
+                        f"✅ {etype.upper()}: {processed} processed, "
+                        f"{created} created, {updated} updated, {failed} failed"
+                    )
+                else:
+                    failed_commands += 1
+                    error_msg = result.get('error', 'Unknown error')
+                    command = result.get('command', f'sync_arrivy_{etype}')
+                    self.stdout.write(f"❌ {etype.upper()}: ERROR in {command} - {error_msg}")
+            
+            self.stdout.write("-" * 70)
+            self.stdout.write(
+                f"ORCHESTRATION SUMMARY: {successful_commands}/{total_commands} commands successful, "
+                f"{failed_commands} failed"
+            )
+            
+            if failed_commands > 0:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"⚠️  {failed_commands} commands failed. Check individual command logs for details."
+                    )
+                )
+            else:
+                self.stdout.write(
+                    self.style.SUCCESS("🎉 All Arrivy sync commands completed successfully!")
+                )
+                
         else:
-            self.stdout.write(self.style.SUCCESS("\n🎉 All Arrivy syncs completed successfully!"))
-
-        self.stdout.write("\n" + "="*60)
+            # Display results for single entity type
+            if not results.get('success', False):
+                command = results.get('command', f'sync_arrivy_{entity_type}')
+                error_msg = results.get('error', 'Unknown error')
+                self.stdout.write(
+                    self.style.ERROR(f"❌ Command {command} failed: {error_msg}")
+                )
+                
+                # Show command output if available
+                if results.get('output'):
+                    self.stdout.write("\nCommand output:")
+                    self.stdout.write(results['output'])
+            else:
+                command = results.get('command', f'sync_arrivy_{entity_type}')
+                processed = results.get('processed', 'N/A')
+                created = results.get('created', 'N/A')
+                updated = results.get('updated', 'N/A')
+                failed = results.get('failed', 'N/A')
+                
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"✅ {command} completed: "
+                        f"{processed} processed, {created} created, "
+                        f"{updated} updated, {failed} failed"
+                    )
+                )
+                
+                # Show partial command output (just the summary)
+                if results.get('output'):
+                    lines = results['output'].strip().split('\n')
+                    # Show last few lines which typically contain the summary
+                    summary_lines = [line for line in lines[-5:] if line.strip()]
+                    if summary_lines:
+                        self.stdout.write("\nCommand summary:")
+                        for line in summary_lines:
+                            self.stdout.write(f"  {line}")

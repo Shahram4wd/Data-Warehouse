@@ -30,6 +30,13 @@ class APIException(SyncException):
         self.status_code = status_code
         self.response_data = response_data
 
+class APIClientException(APIException):
+    """Exception raised by API client operations"""
+    def __init__(self, message, endpoint=None, method=None, **kwargs):
+        super().__init__(message, **kwargs)
+        self.endpoint = endpoint
+        self.method = method
+
 class AuthenticationException(APIException):
     """Exception raised for authentication failures"""
     def __init__(self, message, **kwargs):

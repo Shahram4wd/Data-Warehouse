@@ -1,76 +1,119 @@
+"""
+Arrivy Location Reports Sync Command
+
+Enterprise-grade sync command for Arrivy location tracking and GPS reports following crm_sync_guide.md patterns.
+Uses standardized SyncHistory table and modular architecture.
+
+Usage:
+    python manage.py sync_arrivy_location_reports
+    python manage.py sync_arrivy_location_reports --full
+    python manage.py sync_arrivy_location_reports --since=2025-01-01
+    python manage.py sync_arrivy_location_reports --include-gps-tracks
+"""
+
+import asyncio
 import logging
+from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from django.db import transaction
-from ingestion.models import Arrivy_LocationReport, Arrivy_SyncHistory
-from ingestion.arrivy.arrivy_client import ArrivyClient
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+from ingestion.base.commands import BaseSyncCommand
+from ingestion.sync.arrivy.engines.location_reports import ArrivyLocationReportsSyncEngine
+
 logger = logging.getLogger(__name__)
 
-class Command(BaseCommand):
-    help = "Sync location reports from Arrivy API"
-
+class Command(BaseSyncCommand):
+    help = "Sync Arrivy location reports and GPS tracking data using enterprise CRM sync patterns"
+    
     def add_arguments(self, parser):
-        parser.add_argument(
-            "--pages",
-            type=int,
-            default=0,
-            help="Maximum number of pages to process (0 for unlimited) - Note: Location reports API doesn't use pagination"
-        )
-        parser.add_argument(
-            "--debug",
-            action="store_true",
-            help="Show debug output"
-        )
-
-    def handle(self, *args, **options):
-        pages = options.get("pages", 0)
-        debug = options.get("debug", False)
+        # Add base sync arguments (--full, --force-overwrite, --since, --dry-run, --batch-size, etc.)
+        super().add_arguments(parser)
         
-        if debug:
-            logging.getLogger().setLevel(logging.DEBUG)
-            
+        # Add location reports specific arguments
+        parser.add_argument(
+            '--include-gps-tracks',
+            action='store_true',
+            help='Include detailed GPS tracking data (larger dataset)'
+        )
+        
+        parser.add_argument(
+            '--track-interval',
+            type=int,
+            default=300,
+            help='GPS tracking interval in seconds (default: 300s/5min)'
+        )
+        
+        parser.add_argument(
+            '--location-type',
+            type=str,
+            choices=['checkin', 'checkout', 'track', 'all'],
+            default='all',
+            help='Filter by location event type'
+        )
+        
+        parser.add_argument(
+            '--entity-type',
+            type=str,
+            choices=['task', 'customer', 'team', 'all'],
+            default='all',
+            help='Filter by related entity type'
+        )
+        
+        parser.add_argument(
+            '--date-range-hours',
+            type=int,
+            default=24,
+            help='Default time range in hours for incremental sync (default: 24h)'
+        )
+        
+        parser.add_argument(
+            '--accuracy-threshold',
+            type=int,
+            default=100,
+            help='GPS accuracy threshold in meters (default: 100m)'
+        )
+    
+    def handle(self, *args, **options):
+        """Main command handler following enterprise patterns"""
+        
         try:
-            self.stdout.write("Starting Arrivy location reports sync...")            # Fetch location reports from the API
-            client = ArrivyClient()
-            response = client.get_location_reports()
-
-            # Handle both dictionary and list responses
-            if isinstance(response, dict):
-                reports = response.get("data", [])
-            elif isinstance(response, list):
-                reports = response
-            else:
-                reports = []
-
-            if not reports:
-                self.stdout.write("No location reports to process.")
-                return
-
-            # Process each location report
-            with transaction.atomic():
-                for report in reports:
-                    Arrivy_LocationReport.objects.update_or_create(
-                        id=report["id"],
-                        defaults={
-                            "task_id": report.get("task_id"),
-                            "entity_id": report.get("entity_id"),
-                            "latitude": report.get("latitude"),
-                            "longitude": report.get("longitude"),
-                            "timestamp": report.get("timestamp"),
-                        },
-                    )            # Update sync history
-            Arrivy_SyncHistory.objects.update_or_create(
-                sync_type="location_reports",
-                defaults={"last_synced_at": timezone.now()},
+            # Step 1: Configure logging
+            self.configure_logging(options)
+            
+            # Step 2: Validate arguments
+            self.validate_arguments(options)
+            
+            self.stdout.write("Starting Arrivy location reports sync...")
+            
+            # Create sync engine with options
+            engine = ArrivyLocationReportsSyncEngine(
+                batch_size=options.get('batch_size', 100),
+                max_records=options.get('max_records', 0),
+                dry_run=options.get('dry_run', False),
+                force_overwrite=options.get('force_overwrite', False),
+                debug=options.get('debug', False)
             )
-
-            self.stdout.write(
-                self.style.SUCCESS(f"Arrivy location reports sync complete. Processed {len(reports)} reports.")
-            )
-
+            
+            # Prepare sync options
+            sync_options = {
+                'force_full': options.get('full', False),
+                'since_param': options.get('since'),
+                'include_gps_tracks': options.get('include_gps_tracks', False),
+                'track_interval': options.get('track_interval', 300),
+                'location_type': options.get('location_type', 'all'),
+                'entity_type': options.get('entity_type', 'all'),
+                'date_range_hours': options.get('date_range_hours', 24),
+                'accuracy_threshold': options.get('accuracy_threshold', 100)
+            }
+            
+            # Execute sync
+            results = asyncio.run(engine.execute_sync(**sync_options))
+            
+            # Step 4: Display results using base class method
+            self.display_sync_summary(results, 'location_reports')
+            
         except Exception as e:
-            logger.exception("Error during Arrivy location reports sync")
-            raise CommandError(f"Sync failed: {str(e)}")
+            # Step 5: Handle errors using base class method
+            self.handle_execution_error(e, 'location_reports')
+            raise CommandError(f"Location reports sync failed: {str(e)}")
+

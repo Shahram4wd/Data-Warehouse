@@ -1,57 +1,105 @@
+"""
+Arrivy Task Status Sync Command
+
+Enterprise-grade sync command for Arrivy task status definitions and mappings following crm_sync_guide.md patterns.
+Uses standardized SyncHistory table and modular architecture.
+
+Usage:
+    python manage.py sync_arrivy_task_status
+    python manage.py sync_arrivy_task_status --full
+    python manage.py sync_arrivy_task_status --include-custom-statuses
+"""
+
+import asyncio
 import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from django.db import transaction
-from ingestion.models.arrivy import Arrivy_TaskStatus, Arrivy_SyncHistory
-from ingestion.arrivy.arrivy_client import ArrivyClient
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+from ingestion.base.commands import BaseSyncCommand
+from ingestion.sync.arrivy.engines.task_status import ArrivyTaskStatusSyncEngine
+
 logger = logging.getLogger(__name__)
 
-class Command(BaseCommand):
-    help = "Sync task statuses from Arrivy API"
-
+class Command(BaseSyncCommand):
+    help = "Sync Arrivy task status definitions and mappings using enterprise CRM sync patterns"
+    
+    def add_arguments(self, parser):
+        # Add base sync arguments (--full, --force-overwrite, --since, --dry-run, --batch-size, etc.)
+        super().add_arguments(parser)
+        
+        # Add task status specific arguments
+        parser.add_argument(
+            '--include-custom-statuses',
+            action='store_true',
+            help='Include custom/company-specific task statuses'
+        )
+        
+        parser.add_argument(
+            '--include-deprecated',
+            action='store_true',
+            help='Include deprecated/inactive status definitions'
+        )
+        
+        parser.add_argument(
+            '--status-category',
+            type=str,
+            choices=['active', 'pending', 'completed', 'cancelled', 'all'],
+            default='all',
+            help='Filter by status category'
+        )
+        
+        parser.add_argument(
+            '--include-workflow-states',
+            action='store_true',
+            help='Include workflow state definitions and transitions'
+        )
+        
+        parser.add_argument(
+            '--validate-mappings',
+            action='store_true',
+            help='Validate status mappings against existing tasks'
+        )
+    
     def handle(self, *args, **options):
+        """Main command handler following enterprise patterns"""
+        
         try:
-            self.stdout.write("Starting Arrivy task status sync...")            # Fetch task statuses from the API
-            client = ArrivyClient()
-            response = client.get_task_statuses()
-
-            # Handle both dictionary and list responses
-            if isinstance(response, dict):
-                statuses = response.get("data", [])
-            elif isinstance(response, list):
-                statuses = response
-            else:
-                statuses = []
-
-            if not statuses:
-                self.stdout.write("No task statuses to process.")
-                return
-
-            # Process each task status
-            with transaction.atomic():
-                for status in statuses:
-                    Arrivy_TaskStatus.objects.update_or_create(
-                        id=status["id"],
-                        defaults={
-                            "name": status.get("name"),
-                            "description": status.get("description"),
-                            "is_active": status.get("is_active", True),
-                            "created_time": status.get("created_time"),
-                            "updated_time": status.get("updated_time"),
-                        },
-                    )            # Update sync history
-            Arrivy_SyncHistory.objects.update_or_create(
-                sync_type="task_statuses",
-                defaults={"last_synced_at": timezone.now()},
+            # Step 1: Configure logging
+            self.configure_logging(options)
+            
+            # Step 2: Validate arguments
+            self.validate_arguments(options)
+            
+            self.stdout.write("Starting Arrivy task status sync...")
+            
+            # Create sync engine with options
+            engine = ArrivyTaskStatusSyncEngine(
+                batch_size=options.get('batch_size', 50),  # Smaller batches for status data
+                max_records=options.get('max_records', 0),
+                dry_run=options.get('dry_run', False),
+                force_overwrite=options.get('force_overwrite', False),
+                debug=options.get('debug', False)
             )
-
-            self.stdout.write(
-                self.style.SUCCESS(f"Arrivy task status sync complete. Processed {len(statuses)} statuses.")
-            )
-
+            
+            # Prepare sync options
+            sync_options = {
+                'force_full': options.get('full', False),
+                'since_param': options.get('since'),
+                'include_custom_statuses': options.get('include_custom_statuses', False),
+                'include_deprecated': options.get('include_deprecated', False),
+                'status_category': options.get('status_category', 'all'),
+                'include_workflow_states': options.get('include_workflow_states', False),
+                'validate_mappings': options.get('validate_mappings', False)
+            }
+            
+            # Execute sync
+            results = asyncio.run(engine.execute_sync(**sync_options))
+            
+            # Step 4: Display results using base class method
+            self.display_sync_summary(results, 'task_status')
+            
         except Exception as e:
-            logger.exception("Error during Arrivy task status sync")
-            raise CommandError(f"Sync failed: {str(e)}")
+            # Step 5: Handle errors using base class method
+            self.handle_execution_error(e, 'task_status')
+            raise CommandError(f"Task status sync failed: {str(e)}")
+
