@@ -12,7 +12,26 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = "Sync location reports from Arrivy API"
 
+    def add_arguments(self, parser):
+        parser.add_argument(
+            "--pages",
+            type=int,
+            default=0,
+            help="Maximum number of pages to process (0 for unlimited) - Note: Location reports API doesn't use pagination"
+        )
+        parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Show debug output"
+        )
+
     def handle(self, *args, **options):
+        pages = options.get("pages", 0)
+        debug = options.get("debug", False)
+        
+        if debug:
+            logging.getLogger().setLevel(logging.DEBUG)
+            
         try:
             self.stdout.write("Starting Arrivy location reports sync...")            # Fetch location reports from the API
             client = ArrivyClient()

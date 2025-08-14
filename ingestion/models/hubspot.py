@@ -14,7 +14,8 @@ class Hubspot_Contact(models.Model):  # Updated table name
     comments = models.TextField(null=True, blank=True)
     createdate = models.DateTimeField(null=True, blank=True)
     division = models.CharField(max_length=255, null=True, blank=True)
-    email = models.EmailField(null=True, blank=True)
+    # HubSpot defines email as a string; allow any value to avoid strict email validation
+    email = models.CharField(max_length=255, null=True, blank=True)
     firstname = models.CharField(max_length=255, null=True, blank=True)
     hs_google_click_id = models.CharField(max_length=255, null=True, blank=True)
     hs_object_id = models.CharField(max_length=255, null=True, blank=True)
@@ -282,10 +283,12 @@ class Hubspot_Appointment(models.Model):
     arrivy_username = models.CharField(max_length=255, null=True, blank=True)
     
     # SalesPro integration fields
-    salespro_both_homeowners = models.BooleanField(null=True, blank=True)
+    # HubSpot has this as a free-form string (e.g., "Other", "Missing Party"), not boolean
+    salespro_both_homeowners = models.CharField(max_length=255, null=True, blank=True)
     salespro_consider_solar = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
     salespro_customer_id = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
-    salespro_deadline = models.DateField(null=True, blank=True)
+    # HubSpot property is string (various free text like "July", "$33,000" etc.)
+    salespro_deadline = models.CharField(max_length=255, null=True, blank=True)
     salespro_deposit_type = models.CharField(max_length=255, null=True, blank=True)
     salespro_estimate_id = models.CharField(max_length=255, null=True, blank=True)  # Added missing field
     salespro_fileurl_contract = models.URLField(null=True, blank=True)
@@ -297,7 +300,8 @@ class Hubspot_Appointment(models.Model):
     salespro_notes = models.TextField(null=True, blank=True)
     salespro_one_year_price = models.CharField(max_length=255, null=True, blank=True)
     salespro_preferred_payment = models.CharField(max_length=255, null=True, blank=True)
-    salespro_requested_start = models.DateField(null=True, blank=True)
+    # HubSpot property is string (values like "RTG ASAP", numeric codes, etc.)
+    salespro_requested_start = models.CharField(max_length=255, null=True, blank=True)
     salespro_result = models.CharField(max_length=255, null=True, blank=True)
     salespro_result_notes = models.TextField(null=True, blank=True)
     salespro_result_reason_demo = models.CharField(max_length=255, null=True, blank=True)
@@ -309,7 +313,7 @@ class Hubspot_Appointment(models.Model):
     title = models.CharField(max_length=255, null=True, blank=True)
     marketing_task_id = models.IntegerField(null=True, blank=True)  # Fixed: Changed from CharField to IntegerField
     leap_estimate_id = models.CharField(max_length=255, null=True, blank=True)
-    spouses_present = models.BooleanField(null=True, blank=True)
+    spouses_present = models.IntegerField(null=True, blank=True)
     year_built = models.IntegerField(null=True, blank=True)
     error_details = models.TextField(null=True, blank=True)
     tester_test = models.CharField(max_length=255, null=True, blank=True)
@@ -321,6 +325,7 @@ class Hubspot_Appointment(models.Model):
     
     # Genius integration fields - Added missing fields
     genius_quote_id = models.CharField(max_length=255, null=True, blank=True)
+    genius_prospect_id = models.CharField(max_length=255, null=True, blank=True)
     genius_quote_response = models.TextField(null=True, blank=True)
     genius_quote_response_status = models.CharField(max_length=255, null=True, blank=True)
     genius_response = models.TextField(null=True, blank=True)

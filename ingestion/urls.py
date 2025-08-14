@@ -7,11 +7,16 @@ from .views import GeniusUserSyncView
 # Import monitoring views directly to avoid module conflicts
 try:
     from ingestion.views.monitoring import (
-        MonitoringDashboardView,
-        MonitoringAPIView,
-        SyncConfigurationView,
-        SyncControlView,
-        HealthCheckView
+        DashboardView,
+        DashboardStatsView,
+        AlertView,
+        PerformanceView,
+        ConnectionView,
+        ConnectionHealthView,
+        AutomationStatusView,
+        ApproveActionView,
+        RejectActionView,
+        SecurityStatusView
     )
     monitoring_available = True
 except ImportError:
@@ -20,14 +25,19 @@ except ImportError:
 # Define monitoring URLs directly here
 monitoring_urlpatterns = [
     # Dashboard views
-    path('', MonitoringDashboardView.as_view(), name='monitoring_dashboard'),
-    path('dashboard/', MonitoringDashboardView.as_view(), name='monitoring_dashboard_home'),
+    path('', DashboardView.as_view(), name='monitoring_dashboard'),
+    path('dashboard/', DashboardView.as_view(), name='monitoring_dashboard_home'),
     
     # API endpoints
-    path('api/data/', MonitoringAPIView.as_view(), name='monitoring_api_data'),
-    path('api/config/', SyncConfigurationView.as_view(), name='monitoring_api_config'),
-    path('api/control/', SyncControlView.as_view(), name='monitoring_api_control'),
-    path('api/health/', HealthCheckView.as_view(), name='monitoring_api_health'),
+    path('api/stats/', DashboardStatsView.as_view(), name='monitoring_api_stats'),
+    path('api/alerts/', AlertView.as_view(), name='monitoring_api_alerts'),
+    path('api/performance/', PerformanceView.as_view(), name='monitoring_api_performance'),
+    path('api/connections/', ConnectionView.as_view(), name='monitoring_api_connections'),
+    path('api/connection-health/', ConnectionHealthView.as_view(), name='monitoring_api_connection_health'),
+    path('api/automation-status/', AutomationStatusView.as_view(), name='monitoring_api_automation_status'),
+    path('api/security-status/', SecurityStatusView.as_view(), name='monitoring_api_security_status'),
+    path('api/approve-action/<str:approval_id>/', ApproveActionView.as_view(), name='monitoring_api_approve_action'),
+    path('api/reject-action/<str:approval_id>/', RejectActionView.as_view(), name='monitoring_api_reject_action'),
 ] if monitoring_available else []
 
 urlpatterns = [

@@ -357,13 +357,11 @@ class ArrivyClient:
 
     def get_location_reports(self):
         """Get location reports from Arrivy API (synchronous)."""
-        # Try different possible endpoints for location reports
+        # Based on Arrivy documentation: https://app.arrivy.com/developer-portal/api#express-api-7-location-reports
+        # The correct endpoint is GET /entities which returns last report for all entities
         possible_endpoints = [
-            "location-reports",
-            "location_reports", 
-            "reports",
-            "locationreports",
-            "tracking"
+            "entities",  # GET /entities - Get last report for all entities (primary endpoint)
+            "entities/readings",  # Alternative if they support bulk readings
         ]
         
         for endpoint in possible_endpoints:
@@ -393,12 +391,13 @@ class ArrivyClient:
                                 continue
                         except:
                             continue
-                logger.debug(f"Endpoint {endpoint} returned: {response.status_code}")
+                logger.debug(f"Location reports endpoint {endpoint} returned: {response.status_code}")
             except Exception as e:
-                logger.debug(f"Endpoint {endpoint} failed: {str(e)}")
+                logger.debug(f"Location reports endpoint {endpoint} failed: {str(e)}")
                 continue
         
-        logger.warning("No valid location reports endpoint found")
+        # Location reports endpoint not available - this might be expected for some configurations
+        logger.info("Location reports endpoint not available in this Arrivy API configuration")
         return {"data": []}
 
     # Backward compatibility alias
