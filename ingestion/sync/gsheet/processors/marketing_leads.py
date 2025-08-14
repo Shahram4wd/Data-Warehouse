@@ -118,6 +118,9 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
             
             # Campaign Rename
             'google_ads_campaign_rename': 'google_ads_campaign_rename',
+            
+            # Marketing Channel
+            'marketing_channel': 'marketing_channel',
         }
     
     def process_row_sync(self, row_data: Dict[str, Any]) -> Dict[str, Any]:
