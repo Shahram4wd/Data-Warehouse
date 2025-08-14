@@ -71,12 +71,26 @@ class CRMModelsAPIView(BaseAPIView):
         try:
             crm_discovery = CRMDiscoveryService()
             models = crm_discovery.get_crm_models(crm_source)
-            
+
+            # Ensure models are JSON serializable and include only needed fields
+            serializable_models = []
+            for m in models:
+                serializable_models.append({
+                    'name': m.get('name'),
+                    'table_name': m.get('table_name'),
+                    'verbose_name': m.get('verbose_name'),
+                    'verbose_name_plural': m.get('verbose_name_plural'),
+                    'record_count': m.get('record_count', 0),
+                    'status': m.get('status'),
+                    'sync_info': m.get('sync_info'),
+                    'has_management_command': m.get('has_management_command', False)
+                })
+
             return self.json_response({
                 'success': True,
                 'crm_source': crm_source,
-                'data': models,
-                'total': len(models)
+                'data': serializable_models,
+                'total': len(serializable_models)
             })
             
         except Exception as e:
@@ -107,14 +121,20 @@ class ModelDetailAPIView(BaseAPIView):
             models = crm_discovery.get_crm_models(crm_source)
             model_info = next((m for m in models if m['name'].lower() == model_name.lower()), None)
             
-            return self.json_response({
+            response = {
                 'success': True,
                 'crm_source': crm_source,
                 'model_name': model_name,
                 'metadata': metadata,
                 'statistics': statistics,
                 'sync_info': model_info.get('sync_info') if model_info else None
-            })
+            }
+
+            # Backwards-compatible aliases
+            if response['sync_info'] and 'start_time' in response['sync_info']:
+                response['last_sync'] = response['sync_info']['start_time']
+
+            return self.json_response(response)
             
         except Exception as e:
             logger.error(f"Error getting model detail for {crm_source}.{model_name}: {e}")

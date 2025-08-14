@@ -1,7 +1,7 @@
 {% extends 'crm_dashboard/base.html' %}
 {% load static %}
 
-{% block title %}{{ crm_name|title }} Models - CRM Dashboard{% endblock %}
+{% block title %}{{ crm_source|title }} Models - CRM Dashboard{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -23,6 +23,8 @@
     .sync-status-error { background: linear-gradient(45deg, #dc3545, #fd7e14); }
     .sync-status-running { background: linear-gradient(45deg, #007bff, #6f42c1); }
     .sync-status-never { background: linear-gradient(45deg, #6c757d, #adb5bd); }
+    .sync-status-warning { background: linear-gradient(45deg, #ffc107, #fd7e14); }
+    .sync-status-outdated { background: linear-gradient(45deg, #6c757d, #adb5bd); }
     .model-icon {
         width: 48px;
         height: 48px;
@@ -66,11 +68,11 @@
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item">
-                        <a href="{% url 'crm_dashboard:dashboard' %}" class="text-decoration-none">
+                        <a href="{% url 'crm_dashboard:crm_dashboard' %}" class="text-decoration-none">
                             <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                         </a>
                     </li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ crm_name|title }}</li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ crm_source|title }}</li>
                 </ol>
             </nav>
             
@@ -78,9 +80,9 @@
                 <div>
                     <h1 class="h3 mb-2">
                         <i class="fas fa-database me-2 text-primary"></i>
-                        {{ crm_name|title }} Models
+                        {{ crm_source|title }} Models
                     </h1>
-                    <p class="text-muted mb-0">Manage and monitor {{ crm_name }} data models</p>
+                    <p class="text-muted mb-0">Manage and monitor {{ crm_source }} data models</p>
                 </div>
                 <div>
                     <button class="btn btn-outline-primary me-2" onclick="refreshData()">
@@ -111,7 +113,7 @@
     <div id="emptyState" class="text-center py-5" style="display: none;">
         <i class="fas fa-database fa-3x text-muted mb-3"></i>
         <h4 class="text-muted">No Models Found</h4>
-        <p class="text-muted">No data models were found for {{ crm_name }}.</p>
+    <p class="text-muted">No data models were found for {{ crm_source }}.</p>
     </div>
 </div>
 
@@ -121,7 +123,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="fas fa-play me-2"></i>Bulk Sync {{ crm_name|title }}
+                    <i class="fas fa-play me-2"></i>Bulk Sync {{ crm_source|title }}
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -171,7 +173,7 @@
             </div>
             <div class="modal-body">
                 <form id="syncForm">
-                    <input type="hidden" id="syncCrmName" value="{{ crm_name }}">
+                    <input type="hidden" id="syncCrmName" value="{{ crm_source }}">
                     <input type="hidden" id="syncModelId">
                     <div class="mb-3">
                         <label class="form-label">Sync Parameters</label>
@@ -208,7 +210,7 @@
 
 {% block extra_js %}
 <script>
-let currentCrm = '{{ crm_name }}';
+let currentCrm = '{{ crm_source }}';
 
 // Load models on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -218,13 +220,13 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadModels() {
     showLoading();
     
-    fetch(`/ingestion/api/crm/${currentCrm}/models/`)
+    fetch(`/ingestion/crm-dashboard/api/crms/${currentCrm}/models/`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                renderModels(data.models);
+            if (data && data.success) {
+                renderModels(data.data);
             } else {
-                showError('Failed to load models: ' + data.message);
+                showError('Failed to load models' + (data && (data.message || data.error) ? (': ' + (data.message || data.error)) : ''));
             }
         })
         .catch(error => {
@@ -261,8 +263,8 @@ function createModelCard(model) {
     const col = document.createElement('div');
     col.className = 'col-xl-3 col-lg-4 col-md-6';
     
-    const statusClass = `sync-status-${model.sync_status}`;
-    const iconColor = getIconColor(model.sync_status);
+    const statusClass = getStatusBadgeClass(model.status);
+    const iconColor = getIconColor(model.status);
     
     col.innerHTML = `
         <div class="card model-card h-100">
@@ -271,11 +273,11 @@ function createModelCard(model) {
                     <div class="model-icon" style="background: ${iconColor};">
                         <i class="fas fa-table"></i>
                     </div>
-                    <span class="badge ${statusClass} sync-status-badge">${model.sync_status}</span>
+                    <span class="badge ${statusClass} sync-status-badge">${formatStatus(model.status)}</span>
                 </div>
                 
                 <h5 class="card-title">${model.name}</h5>
-                <p class="card-text text-muted small">${model.description || 'No description available'}</p>
+                <p class="card-text text-muted small">${model.verbose_name || model.description || 'No description available'}</p>
                 
                 <div class="model-metrics">
                     <div class="metric-item">
@@ -284,11 +286,11 @@ function createModelCard(model) {
                     </div>
                     <div class="metric-item">
                         <span class="text-muted small">Last Sync:</span>
-                        <span class="small">${formatDate(model.last_sync)}</span>
+                        <span class="small">${model.sync_info && model.sync_info.time_ago ? model.sync_info.time_ago : 'Never'}</span>
                     </div>
                     <div class="metric-item">
                         <span class="text-muted small">Duration:</span>
-                        <span class="small">${model.last_sync_duration || 'N/A'}</span>
+                        <span class="small">${model.sync_info && model.sync_info.duration ? model.sync_info.duration : 'N/A'}</span>
                     </div>
                 </div>
                 
@@ -314,9 +316,34 @@ function getIconColor(status) {
         'success': 'linear-gradient(45deg, #28a745, #20c997)',
         'error': 'linear-gradient(45deg, #dc3545, #fd7e14)',
         'running': 'linear-gradient(45deg, #007bff, #6f42c1)',
-        'never': 'linear-gradient(45deg, #6c757d, #adb5bd)'
+        'never': 'linear-gradient(45deg, #6c757d, #adb5bd)',
+        'never_synced': 'linear-gradient(45deg, #6c757d, #adb5bd)',
+        'outdated': 'linear-gradient(45deg, #6c757d, #adb5bd)',
+        'warning': 'linear-gradient(45deg, #ffc107, #fd7e14)'
     };
     return colors[status] || colors['never'];
+}
+
+function getStatusBadgeClass(status) {
+    const map = {
+        'success': 'sync-status-success',
+        'error': 'sync-status-error',
+        'running': 'sync-status-running',
+        'never': 'sync-status-never',
+        'never_synced': 'sync-status-never',
+        'outdated': 'sync-status-outdated',
+        'warning': 'sync-status-warning'
+    };
+    return map[status] || 'sync-status-never';
+}
+
+function formatStatus(status) {
+    if (!status) return 'Unknown';
+    const map = {
+        'never_synced': 'never',
+    };
+    const s = map[status] || status;
+    return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 function viewModelDetail(modelName) {
@@ -359,15 +386,12 @@ function executeBulkSync() {
 
 function executeSyncCommand(crm, model, params) {
     const payload = {
-        crm_name: crm,
+        crm_source: crm,
+        sync_type: model ? modelNameToSyncType(model) : 'all',
         parameters: params
     };
-    
-    if (model) {
-        payload.model_name = model;
-    }
-    
-    fetch('/ingestion/api/sync/execute/', {
+
+    fetch('/ingestion/crm-dashboard/api/sync/execute/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -377,18 +401,34 @@ function executeSyncCommand(crm, model, params) {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.success) {
+        if (data && data.success) {
             showSuccess('Sync started successfully');
             bootstrap.Modal.getInstance(document.querySelector('.modal.show')).hide();
             setTimeout(loadModels, 2000); // Refresh after 2 seconds
         } else {
-            showError('Failed to start sync: ' + data.message);
+            showError('Failed to start sync' + (data && (data.message || data.error) ? (': ' + (data.message || data.error)) : ''));
         }
     })
     .catch(error => {
         console.error('Error starting sync:', error);
         showError('Failed to start sync');
     });
+}
+
+function modelNameToSyncType(modelName) {
+    if (!modelName) return '';
+    let name = modelName;
+    const prefixes = ['Genius', 'Hubspot', 'HubSpot', 'Callrail', 'Salespro', 'Salesrabbit', 'Arrivy'];
+    for (const p of prefixes) {
+        if (name.startsWith(p)) {
+            name = name.substring(p.length);
+            break;
+        }
+    }
+    name = name.toLowerCase();
+    if (name.endsWith('y')) return name.slice(0, -1) + 'ies';
+    if (name.endsWith('s')) return name; // already plural
+    return name + 's';
 }
 
 function refreshData() {
@@ -417,7 +457,8 @@ function formatDate(dateStr) {
 }
 
 function getCsrfToken() {
-    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
 }
 
 function showSuccess(message) {

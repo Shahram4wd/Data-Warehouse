@@ -103,13 +103,13 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
-                <a href="{% url 'crm_dashboard:dashboard' %}" class="text-decoration-none">
+                <a href="{% url 'crm_dashboard:crm_dashboard' %}" class="text-decoration-none">
                     <i class="fas fa-tachometer-alt me-1"></i>Dashboard
                 </a>
             </li>
             <li class="breadcrumb-item">
-                <a href="{% url 'crm_dashboard:crm_models' crm_name %}" class="text-decoration-none">
-                    {{ crm_name|title }}
+                <a href="{% url 'crm_dashboard:crm_models' crm_source %}" class="text-decoration-none">
+                    {{ crm_source|title }}
                 </a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">{{ model_name|title }}</li>
@@ -273,7 +273,7 @@
             </div>
             <div class="modal-body">
                 <form id="syncForm">
-                    <input type="hidden" id="syncCrmName" value="{{ crm_name }}">
+                    <input type="hidden" id="syncCrmName" value="{{ crm_source }}">
                     <input type="hidden" id="syncModelName" value="{{ model_name }}">
                     <div class="mb-3">
                         <label class="form-label">Sync Parameters</label>
@@ -310,7 +310,7 @@
 
 {% block extra_js %}
 <script>
-let currentCrm = '{{ crm_name }}';
+let currentCrm = '{{ crm_source }}';
 let currentModel = '{{ model_name }}';
 let currentPage = 1;
 let totalPages = 1;
@@ -330,15 +330,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadModelMetadata() {
-    fetch(`/ingestion/api/crm/${currentCrm}/${currentModel}/metadata/`)
+    fetch(`/ingestion/crm-dashboard/api/crms/${currentCrm}/models/${currentModel}/`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
+            if (data && data.success) {
                 modelMetadata = data.metadata;
-                updateMetrics(data.metadata);
+                updateMetrics(data);
                 updateModelDescription(data.metadata);
             } else {
-                showError('Failed to load metadata: ' + data.message);
+                showError('Failed to load metadata' + (data && (data.message || data.error) ? (': ' + (data.message || data.error)) : ''));
             }
         })
         .catch(error => {
@@ -351,21 +351,21 @@ function loadTableData(page = 1) {
     
     const params = new URLSearchParams({
         page: page,
-        page_size: document.getElementById('pageSizeSelect').value,
+        per_page: document.getElementById('pageSizeSelect').value,
         search: document.getElementById('searchInput').value,
-        ordering: document.getElementById('sortSelect').value
+        order_by: document.getElementById('sortSelect').value
     });
-    
-    fetch(`/ingestion/api/crm/${currentCrm}/${currentModel}/data/?${params}`)
+
+    fetch(`/ingestion/crm-dashboard/api/crms/${currentCrm}/models/${currentModel}/data/?${params}`)
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                renderTable(data.data, data.metadata);
+            if (data && data.success) {
+                renderTable(data.data, modelMetadata || {});
                 updatePagination(data.pagination);
                 currentPage = page;
                 totalPages = data.pagination.total_pages;
             } else {
-                showError('Failed to load data: ' + data.message);
+                showError('Failed to load data' + (data && (data.message || data.error) ? (': ' + (data.message || data.error)) : ''));
             }
         })
         .catch(error => {
@@ -377,14 +377,17 @@ function loadTableData(page = 1) {
         });
 }
 
-function updateMetrics(metadata) {
-    document.getElementById('totalRecords').textContent = formatNumber(metadata.total_records);
-    document.getElementById('lastSyncDate').textContent = formatDateShort(metadata.last_sync);
-    document.getElementById('syncDuration').textContent = metadata.last_sync_duration || 'N/A';
+function updateMetrics(detail) {
+    const stats = (detail.statistics && detail.statistics.statistics) ? detail.statistics.statistics : {};
+    document.getElementById('totalRecords').textContent = formatNumber(stats.total_records);
+    const last = detail.sync_info && detail.sync_info.start_time ? detail.sync_info.start_time : null;
+    document.getElementById('lastSyncDate').textContent = formatDateShort(last);
+    document.getElementById('syncDuration').textContent = detail.sync_info && detail.sync_info.duration ? detail.sync_info.duration : 'N/A';
     
     const statusElement = document.getElementById('syncStatus');
-    statusElement.textContent = metadata.sync_status;
-    statusElement.className = `metric-number ${getStatusColor(metadata.sync_status)}`;
+    const status = detail.sync_info && detail.sync_info.status ? detail.sync_info.status : 'never';
+    statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+    statusElement.className = `metric-number ${getStatusColor(status)}`;
 }
 
 function updateModelDescription(metadata) {
@@ -409,7 +412,7 @@ function renderTable(data, metadata) {
     
     // Build table header
     const tableHead = document.getElementById('tableHead');
-    const fields = metadata.fields || Object.keys(data[0] || {});
+    const fields = (metadata.fields ? (metadata.fields.map(f => f.name)) : Object.keys(data[0] || {}));
     
     tableHead.innerHTML = `
         <tr>
@@ -434,15 +437,15 @@ function updatePagination(pagination) {
     const info = document.getElementById('paginationInfo');
     const list = document.getElementById('paginationList');
     
-    if (pagination.total_pages <= 1) {
+    if (!pagination || pagination.total_pages <= 1) {
         container.style.display = 'none';
         return;
     }
     
     // Update pagination info
-    const start = (pagination.current_page - 1) * pagination.page_size + 1;
-    const end = Math.min(start + pagination.page_size - 1, pagination.total_records);
-    info.textContent = `Showing ${start}-${end} of ${pagination.total_records} records`;
+    const start = pagination.start_index || ((pagination.current_page - 1) * pagination.items_per_page + 1);
+    const end = pagination.end_index || Math.min(start + pagination.items_per_page - 1, pagination.total_items);
+    info.textContent = `Showing ${start}-${end} of ${pagination.total_items} records`;
     
     // Build pagination links
     let links = '';
@@ -503,12 +506,12 @@ function executeSync() {
     if (since) params.since = since;
     
     const payload = {
-        crm_name: crm,
-        model_name: model,
+        crm_source: crm,
+        sync_type: modelNameToSyncType(model),
         parameters: params
     };
-    
-    fetch('/ingestion/api/sync/execute/', {
+
+    fetch('/ingestion/crm-dashboard/api/sync/execute/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -539,7 +542,7 @@ function exportData() {
         export: 'csv'
     });
     
-    window.open(`/ingestion/api/crm/${currentCrm}/${currentModel}/data/?${params}`);
+    window.open(`/ingestion/crm-dashboard/api/crms/${currentCrm}/models/${currentModel}/data/?${params}`);
 }
 
 function showTableLoading() {
@@ -595,13 +598,33 @@ function getStatusColor(status) {
         'success': 'text-success',
         'error': 'text-danger',
         'running': 'text-primary',
-        'never': 'text-muted'
+        'never': 'text-muted',
+        'never_synced': 'text-muted',
+        'outdated': 'text-muted',
+        'warning': 'text-warning'
     };
     return colors[status] || 'text-muted';
 }
 
+function modelNameToSyncType(modelName) {
+    if (!modelName) return '';
+    let name = modelName;
+    const prefixes = ['Genius', 'Hubspot', 'HubSpot', 'Callrail', 'Salespro', 'Salesrabbit', 'Arrivy'];
+    for (const p of prefixes) {
+        if (name.startsWith(p)) {
+            name = name.substring(p.length);
+            break;
+        }
+    }
+    name = name.toLowerCase();
+    if (name.endsWith('y')) return name.slice(0, -1) + 'ies';
+    if (name.endsWith('s')) return name; // already plural
+    return name + 's';
+}
+
 function getCsrfToken() {
-    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
 }
 
 function showSuccess(message) {
