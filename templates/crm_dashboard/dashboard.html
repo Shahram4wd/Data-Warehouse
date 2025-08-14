@@ -92,6 +92,60 @@
 .metric-box:hover {
     transform: scale(1.05);
 }
+
+/* Summary counters (CRM Sources, Running, Total Models, Total Records) */
+/* Updated: 2025-08-13 - Clean minimal design */
+.summary-row {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(200px, 1fr)) !important;
+    gap: 24px !important;
+    margin: 2rem 0 !important;
+    padding: 0 !important;
+}
+@media (max-width: 992px) {
+    .summary-row { 
+        grid-template-columns: repeat(2, minmax(200px, 1fr)) !important; 
+        gap: 20px !important;
+    }
+}
+@media (max-width: 576px) {
+    .summary-row { 
+        grid-template-columns: 1fr !important; 
+        gap: 16px !important;
+    }
+}
+.summary-card {
+    background: #ffffff !important;
+    border: 1px solid #e9ecef !important;
+    border-radius: 12px !important;
+    padding: 28px 24px !important;
+    box-shadow: 0 6px 16px rgba(16,24,40,0.04) !important;
+    text-align: center !important;
+    min-height: 120px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+.summary-card:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 24px rgba(16,24,40,0.08) !important;
+}
+.summary-value {
+    font-size: 2.75rem !important;
+    font-weight: 700 !important;
+    color: #0d6efd !important;
+    line-height: 1 !important;
+    margin-bottom: 10px !important;
+}
+.summary-label {
+    font-size: 0.8rem !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    color: #6c757d !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+}
 </style>
 {% endblock %}
 
@@ -139,7 +193,7 @@
 </div>
 
 <!-- Enhanced Summary Metrics -->
-<div class="row mb-4" id="sync-metrics-container">
+<div class="mt-4 mb-5" id="sync-metrics-container">
     <!-- Metrics will be dynamically loaded here -->
 </div>
 
