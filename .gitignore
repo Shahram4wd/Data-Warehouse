@@ -20,3 +20,4 @@ __pycache__/
 leads_export.json
 credentials.json
 token.json
+celerybeat-schedule

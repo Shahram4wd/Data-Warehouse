@@ -6,7 +6,9 @@ import asyncio
 import os
 from django.core.management.base import BaseCommand, CommandError
 from django.conf import settings
+from django.utils import timezone
 from ingestion.sync.callrail.engines.accounts import AccountsSyncEngine
+from ingestion.models.common import SyncHistory
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Handle the command execution"""
+        sync_record = None
         try:
             # Check if CallRail API key is configured
             api_key = getattr(settings, 'CALLRAIL_API_KEY', None) or os.getenv('CALLRAIL_API_KEY')
@@ -71,12 +74,33 @@ class Command(BaseCommand):
             max_records = options['max_records']
             debug = options.get('debug', False)
             
+            # Create SyncHistory record for tracking
+            sync_record = SyncHistory.objects.create(
+                crm_source='callrail',
+                sync_type='accounts',
+                status='running',
+                start_time=timezone.now(),
+                configuration={
+                    'command': 'sync_callrail_accounts',
+                    'parameters': {
+                        'dry_run': dry_run,
+                        'full_sync': full_sync,
+                        'force_overwrite': force_overwrite,
+                        'since': since,
+                        'batch_size': batch_size,
+                        'max_records': max_records,
+                        'debug': debug
+                    },
+                    'execution_method': 'management_command'
+                }
+            )
+            
             # Set up debug logging if requested
             if debug:
                 logging.getLogger('ingestion.sync.callrail').setLevel(logging.DEBUG)
             
             self.stdout.write(
-                self.style.SUCCESS('Starting CallRail accounts sync')
+                self.style.SUCCESS(f'Starting CallRail accounts sync (Sync ID: {sync_record.id})')
             )
             
             if dry_run:
@@ -111,9 +135,22 @@ class Command(BaseCommand):
             
             # Display results
             if result.get('success', False):
+                # Update sync record on success
+                sync_record.status = 'success'
+                sync_record.end_time = timezone.now()
+                sync_record.records_processed = result.get('records_processed', 0)
+                sync_record.records_created = result.get('records_created', 0)
+                sync_record.records_updated = result.get('records_updated', 0)
+                sync_record.records_failed = len(result.get('errors', []))
+                sync_record.performance_metrics = {
+                    'total_fetched': result.get('records_fetched', 0),
+                    'execution_method': 'management_command'
+                }
+                sync_record.save()
+                
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Sync completed successfully!\n"
+                        f"Sync completed successfully! (Sync ID: {sync_record.id})\n"
                         f"Records fetched: {result.get('records_fetched', 0)}\n"
                         f"Records processed: {result.get('records_processed', 0)}\n"
                         f"Records created: {result.get('records_created', 0)}\n"
@@ -123,12 +160,27 @@ class Command(BaseCommand):
                 )
             else:
                 error_msg = result.get('error', 'Unknown error occurred')
+                
+                # Update sync record on failure
+                if sync_record:
+                    sync_record.status = 'failed'
+                    sync_record.end_time = timezone.now()
+                    sync_record.error_message = error_msg
+                    sync_record.save()
+                
                 self.stdout.write(
-                    self.style.ERROR(f"Sync failed: {error_msg}")
+                    self.style.ERROR(f"Sync failed (Sync ID: {sync_record.id if sync_record else 'N/A'}): {error_msg}")
                 )
                 raise CommandError(f"Sync failed: {error_msg}")
                 
         except Exception as e:
+            # Update sync record on exception
+            if sync_record:
+                sync_record.status = 'failed'
+                sync_record.end_time = timezone.now()
+                sync_record.error_message = str(e)
+                sync_record.save()
+            
             logger.error(f"Command execution failed: {e}")
             raise CommandError(f"Command execution failed: {e}")
 
