@@ -1,5 +1,87 @@
 from django.db import models
 
+class SalesPro_Office(models.Model):
+    """SalesPro office model based on SalesPro offices CSV export"""
+
+    office_id = models.CharField(max_length=50, primary_key=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    company_id = models.CharField(max_length=50, blank=True, null=True)
+    company_name = models.CharField(max_length=255, blank=True, null=True)
+
+    can_search_all_estimates = models.BooleanField(default=False)
+    last_edit_user = models.CharField(max_length=255, blank=True, null=True)
+
+    created_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+    last_edit_date = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'ingestion_salespro_office'
+        verbose_name = 'SalesPro Office'
+        verbose_name_plural = 'SalesPro Offices'
+        indexes = [
+            models.Index(fields=['company_id']),
+            models.Index(fields=['name']),
+        ]
+
+    def __str__(self):
+        return self.name or self.office_id
+
+class SalesPro_User(models.Model):
+    """SalesPro user model based on SalesPro export CSV
+    Source CSV columns include: objectId, username, nameFirst, nameLast, isActive, isManager,
+    createdAt, updatedAt, allowedOffices, canActivateUsers, canChangeSettings, canSubmitCreditApps,
+    company, deactivatedDate, disableChangeCompany, email, identifier, isAvailableToCall,
+    lastLoginDate, licenseNumber, phoneNumber, selectedOffice
+    """
+
+    user_object_id = models.CharField(max_length=50, primary_key=True)
+    username = models.CharField(max_length=255, blank=True, null=True)
+    first_name = models.CharField(max_length=100, blank=True, null=True)
+    last_name = models.CharField(max_length=100, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    phone_number = models.CharField(max_length=50, blank=True, null=True)
+
+    # Status and roles
+    is_active = models.BooleanField(default=True)
+    is_manager = models.BooleanField(default=False)
+    is_available_to_call = models.BooleanField(default=False)
+
+    # Permissions
+    can_activate_users = models.BooleanField(default=False)
+    can_change_settings = models.BooleanField(default=False)
+    can_submit_credit_apps = models.BooleanField(default=False)
+    disable_change_company = models.BooleanField(default=False)
+
+    # Organization
+    company_id = models.CharField(max_length=50, blank=True, null=True)
+    selected_office = models.CharField(max_length=50, blank=True, null=True)
+    allowed_offices = models.TextField(blank=True, null=True, help_text="JSON array from CSV of Office pointers")
+
+    # Identity and compliance
+    identifier = models.CharField(max_length=255, blank=True, null=True)
+    license_number = models.CharField(max_length=100, blank=True, null=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(blank=True, null=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+    last_login_date = models.DateTimeField(blank=True, null=True)
+    deactivated_date = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'ingestion_salespro_user'
+        verbose_name = 'SalesPro User'
+        verbose_name_plural = 'SalesPro Users'
+        indexes = [
+            models.Index(fields=['username']),
+            models.Index(fields=['email']),
+            models.Index(fields=['company_id']),
+        ]
+
+    def __str__(self):
+        name = f"{self.first_name or ''} {self.last_name or ''}".strip()
+        return name or (self.username or self.user_object_id)
+
 class SalesPro_CreditApplication(models.Model):
     leap_credit_app_id = models.CharField(max_length=255, primary_key=True)
     company_id = models.CharField(max_length=255, blank=True, null=True)
