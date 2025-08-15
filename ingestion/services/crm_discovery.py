@@ -180,9 +180,13 @@ class CRMDiscoveryService:
         running_syncs = SyncHistory.objects.filter(
             crm_source=crm_source,
             status='running'
-        ).exists()
+        )
         
-        if running_syncs:
+        if running_syncs.exists():
+            # Check if there's a bulk 'all' sync running
+            bulk_sync_running = running_syncs.filter(sync_type='all').exists()
+            if bulk_sync_running:
+                return 'bulk_sync_running'  # Special status for bulk sync
             return 'running'
         
         # Get the most recent sync status
@@ -307,12 +311,22 @@ class CRMDiscoveryService:
             last_sync = None
             for sync_type in possible_sync_types:
                 if sync_type:
-                    last_sync = SyncHistory.objects.filter(
+                    # Get recent syncs for this type and prioritize successful ones
+                    recent_syncs = SyncHistory.objects.filter(
                         crm_source=crm_source,
                         sync_type=sync_type
-                    ).order_by('-start_time').first()
+                    ).order_by('-start_time')[:5]  # Check last 5 syncs
                     
-                    if last_sync:
+                    if recent_syncs:
+                        # Look for the most recent successful sync first
+                        for sync in recent_syncs:
+                            if sync.status == 'success':
+                                last_sync = sync
+                                break
+                        
+                        # If no successful sync found, use the most recent one
+                        if not last_sync:
+                            last_sync = recent_syncs[0]
                         break
             
             if last_sync:
@@ -339,25 +353,47 @@ class CRMDiscoveryService:
     
     def _model_name_to_sync_type(self, model_name: str) -> str:
         """Convert model name to likely sync_type name"""
-        # Remove common prefixes (Genius, Hubspot, etc.)
-        sync_type = model_name
-        for prefix in ['Genius', 'Hubspot', 'Callrail', 'Salespro', 'Salesrabbit', 'Arrivy']:
-            if sync_type.startswith(prefix):
-                sync_type = sync_type[len(prefix):]
-                break
+        if not model_name:
+            return ''
         
-        # Convert to lowercase and handle pluralization
-        sync_type = sync_type.lower()
+        # Handle specific model mappings first
+        model_mappings = {
+            'CallRail_Account': 'accounts',
+            'CallRail_Call': 'calls', 
+            'CallRail_Company': 'companies',
+            'CallRail_FormSubmission': 'form_submissions',
+            'CallRail_Tag': 'tags',
+            'CallRail_TextMessage': 'text_messages',
+            'CallRail_Tracker': 'trackers',
+            'CallRail_User': 'users'
+        }
         
-        # Common pluralization patterns
-        if sync_type.endswith('y'):
-            sync_type = sync_type[:-1] + 'ies'  # company -> companies
-        elif sync_type.endswith('s'):
-            pass  # already plural
-        else:
-            sync_type += 's'  # appointment -> appointments
+        if model_name in model_mappings:
+            return model_mappings[model_name]
         
-        return sync_type
+        # Fall back to general conversion for other CRMs
+        name = model_name
+        
+        # Handle specific CRM patterns first
+        if name.startswith('CallRail_'):
+            name = name[9:]  # Remove 'CallRail_'
+        elif name.startswith('Genius'):
+            name = name[6:]  # Remove 'Genius'
+        elif name.startswith('Hubspot') or name.startswith('HubSpot'):
+            name = name[7:]  # Remove 'Hubspot'/'HubSpot'
+        elif name.startswith('Salespro'):
+            name = name[8:]  # Remove 'Salespro'
+        elif name.startswith('Salesrabbit'):
+            name = name[11:]  # Remove 'Salesrabbit'
+        elif name.startswith('Arrivy'):
+            name = name[6:]  # Remove 'Arrivy'
+        
+        name = name.lower()
+        if name.endswith('y'):
+            return name[:-1] + 'ies'
+        if name.endswith('s'):
+            return name  # already plural
+        return name + 's'
     
     def _determine_model_status(self, sync_info: Optional[Dict]) -> str:
         """Determine status for a specific model"""
@@ -380,6 +416,16 @@ class CRMDiscoveryService:
         elif status == 'partial':
             return 'warning'
         elif status == 'failed':
+            # Check if there's a bulk sync running that might affect this model
+            crm_source = getattr(sync_info, 'crm_source', None)
+            if crm_source:
+                bulk_sync_running = SyncHistory.objects.filter(
+                    crm_source=crm_source,
+                    sync_type='all',
+                    status='running'
+                ).exists()
+                if bulk_sync_running:
+                    return 'bulk_sync_running'  # Don't show failed during bulk sync
             return 'error'
         else:
             return 'unknown'

@@ -214,6 +214,15 @@ class SyncManagementService:
                     'sync_id': None
                 }
             
+            # Check for concurrent syncs
+            concurrent_check = self._check_concurrent_syncs(crm_source, sync_type)
+            if not concurrent_check['can_proceed']:
+                return {
+                    'success': False,
+                    'error': concurrent_check['message'],
+                    'sync_id': None
+                }
+            
             # Build command
             command = self.build_sync_command(crm_source, sync_type, validation['sanitized_params'])
             if not command:
@@ -253,6 +262,49 @@ class SyncManagementService:
                 'success': False,
                 'error': str(e),
                 'sync_id': None
+            }
+    
+    def _check_concurrent_syncs(self, crm_source: str, sync_type: str) -> Dict[str, Any]:
+        """Check if there are concurrent syncs that would conflict"""
+        try:
+            # Check for any running syncs for this CRM source
+            running_syncs = SyncHistory.objects.filter(
+                crm_source=crm_source,
+                status='running'
+            )
+            
+            # If requesting an 'all' sync, check if any individual syncs are running
+            if sync_type == 'all':
+                if running_syncs.exists():
+                    running_types = list(running_syncs.values_list('sync_type', flat=True))
+                    return {
+                        'can_proceed': False,
+                        'message': f'Cannot start bulk sync while individual syncs are running: {", ".join(running_types)}'
+                    }
+            else:
+                # If requesting an individual sync, check for conflicts
+                for running_sync in running_syncs:
+                    # Block if same sync type is already running
+                    if running_sync.sync_type == sync_type:
+                        return {
+                            'can_proceed': False,
+                            'message': f'Sync for {sync_type} is already running (started {running_sync.start_time})'
+                        }
+                    
+                    # Block if 'all' sync is running
+                    if running_sync.sync_type == 'all':
+                        return {
+                            'can_proceed': False,
+                            'message': f'Cannot start individual sync while bulk sync is running (started {running_sync.start_time})'
+                        }
+            
+            return {'can_proceed': True, 'message': 'No conflicts detected'}
+            
+        except Exception as e:
+            logger.error(f"Error checking concurrent syncs: {e}")
+            return {
+                'can_proceed': True,  # Allow sync to proceed if check fails
+                'message': 'Could not check for concurrent syncs, proceeding anyway'
             }
     
     def _execute_command_async(self, sync_id: int, command: str):

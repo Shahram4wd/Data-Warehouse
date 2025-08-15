@@ -586,8 +586,18 @@ function formatDateShort(dateStr) {
     const date = new Date(dateStr);
     const now = new Date();
     const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
+    // Same day - show relative time
+    if (date.toDateString() === now.toDateString()) {
+        if (diffMinutes < 1) return 'Just now';
+        if (diffMinutes < 60) return `${diffMinutes} minutes ago`;
+        return `${diffHours} hours ago`;
+    }
+    
+    // Different days
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
     return date.toLocaleDateString();
@@ -608,14 +618,41 @@ function getStatusColor(status) {
 
 function modelNameToSyncType(modelName) {
     if (!modelName) return '';
-    let name = modelName;
-    const prefixes = ['Genius', 'Hubspot', 'HubSpot', 'Callrail', 'Salespro', 'Salesrabbit', 'Arrivy'];
-    for (const p of prefixes) {
-        if (name.startsWith(p)) {
-            name = name.substring(p.length);
-            break;
-        }
+    
+    // Handle specific model mappings first
+    const modelMappings = {
+        'CallRail_Account': 'accounts',
+        'CallRail_Call': 'calls', 
+        'CallRail_Company': 'companies',
+        'CallRail_FormSubmission': 'form_submissions',
+        'CallRail_Tag': 'tags',
+        'CallRail_TextMessage': 'text_messages',
+        'CallRail_Tracker': 'trackers',
+        'CallRail_User': 'users'
+    };
+    
+    if (modelMappings[modelName]) {
+        return modelMappings[modelName];
     }
+    
+    // Fall back to general conversion for other CRMs
+    let name = modelName;
+    
+    // Handle specific CRM patterns first
+    if (name.startsWith('CallRail_')) {
+        name = name.substring(9); // Remove 'CallRail_'
+    } else if (name.startsWith('Genius')) {
+        name = name.substring(6); // Remove 'Genius'
+    } else if (name.startsWith('Hubspot') || name.startsWith('HubSpot')) {
+        name = name.substring(7); // Remove 'Hubspot'/'HubSpot'
+    } else if (name.startsWith('Salespro')) {
+        name = name.substring(8); // Remove 'Salespro'
+    } else if (name.startsWith('Salesrabbit')) {
+        name = name.substring(11); // Remove 'Salesrabbit'
+    } else if (name.startsWith('Arrivy')) {
+        name = name.substring(6); // Remove 'Arrivy'
+    }
+    
     name = name.toLowerCase();
     if (name.endsWith('y')) return name.slice(0, -1) + 'ies';
     if (name.endsWith('s')) return name; // already plural

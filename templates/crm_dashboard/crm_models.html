@@ -316,6 +316,7 @@ function getIconColor(status) {
         'success': 'linear-gradient(45deg, #28a745, #20c997)',
         'error': 'linear-gradient(45deg, #dc3545, #fd7e14)',
         'running': 'linear-gradient(45deg, #007bff, #6f42c1)',
+        'bulk_sync_running': 'linear-gradient(45deg, #17a2b8, #6f42c1)',
         'never': 'linear-gradient(45deg, #6c757d, #adb5bd)',
         'never_synced': 'linear-gradient(45deg, #6c757d, #adb5bd)',
         'outdated': 'linear-gradient(45deg, #6c757d, #adb5bd)',
@@ -329,6 +330,7 @@ function getStatusBadgeClass(status) {
         'success': 'sync-status-success',
         'error': 'sync-status-error',
         'running': 'sync-status-running',
+        'bulk_sync_running': 'sync-status-running',
         'never': 'sync-status-never',
         'never_synced': 'sync-status-never',
         'outdated': 'sync-status-outdated',
@@ -341,6 +343,7 @@ function formatStatus(status) {
     if (!status) return 'Unknown';
     const map = {
         'never_synced': 'never',
+        'bulk_sync_running': 'bulk sync running'
     };
     const s = map[status] || status;
     return s.charAt(0).toUpperCase() + s.slice(1);
@@ -417,14 +420,41 @@ function executeSyncCommand(crm, model, params) {
 
 function modelNameToSyncType(modelName) {
     if (!modelName) return '';
-    let name = modelName;
-    const prefixes = ['Genius', 'Hubspot', 'HubSpot', 'Callrail', 'Salespro', 'Salesrabbit', 'Arrivy'];
-    for (const p of prefixes) {
-        if (name.startsWith(p)) {
-            name = name.substring(p.length);
-            break;
-        }
+    
+    // Handle specific model mappings first
+    const modelMappings = {
+        'CallRail_Account': 'accounts',
+        'CallRail_Call': 'calls', 
+        'CallRail_Company': 'companies',
+        'CallRail_FormSubmission': 'form_submissions',
+        'CallRail_Tag': 'tags',
+        'CallRail_TextMessage': 'text_messages',
+        'CallRail_Tracker': 'trackers',
+        'CallRail_User': 'users'
+    };
+    
+    if (modelMappings[modelName]) {
+        return modelMappings[modelName];
     }
+    
+    // Fall back to general conversion for other CRMs
+    let name = modelName;
+    
+    // Handle specific CRM patterns first
+    if (name.startsWith('CallRail_')) {
+        name = name.substring(9); // Remove 'CallRail_'
+    } else if (name.startsWith('Genius')) {
+        name = name.substring(6); // Remove 'Genius'
+    } else if (name.startsWith('Hubspot') || name.startsWith('HubSpot')) {
+        name = name.substring(7); // Remove 'Hubspot'/'HubSpot'
+    } else if (name.startsWith('Salespro')) {
+        name = name.substring(8); // Remove 'Salespro'
+    } else if (name.startsWith('Salesrabbit')) {
+        name = name.substring(11); // Remove 'Salesrabbit'
+    } else if (name.startsWith('Arrivy')) {
+        name = name.substring(6); // Remove 'Arrivy'
+    }
+    
     name = name.toLowerCase();
     if (name.endsWith('y')) return name.slice(0, -1) + 'ies';
     if (name.endsWith('s')) return name; // already plural
