@@ -412,6 +412,165 @@ class Arrivy_LocationReport(models.Model):
         return f"Location Report {self.id} for Task {self.task_id}"
 
 
+class Arrivy_Booking(models.Model):
+    """Arrivy Booking model - represents bookings from official Arrivy bookings endpoint"""
+    
+    # Primary identification
+    id = models.CharField(max_length=50, primary_key=True)
+    url_safe_id = models.CharField(max_length=255, null=True, blank=True)
+    external_id = models.CharField(max_length=255, null=True, blank=True)
+    title = models.CharField(max_length=500, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    details = models.TextField(null=True, blank=True)
+    
+    # Audit trail
+    owner = models.CharField(max_length=50, null=True, blank=True)
+    created_by = models.CharField(max_length=50, null=True, blank=True)
+    updated_by = models.CharField(max_length=50, null=True, blank=True)
+    created_by_user = models.CharField(max_length=255, null=True, blank=True)
+    updated_by_user = models.CharField(max_length=255, null=True, blank=True)
+    
+    # API timestamp fields
+    created = models.DateTimeField(null=True, blank=True)
+    updated = models.DateTimeField(null=True, blank=True)
+    created_time = models.DateTimeField(null=True, blank=True)  # Alternative timestamp field
+    updated_time = models.DateTimeField(null=True, blank=True)  # Alternative timestamp field
+    
+    # Scheduling - datetime fields (combined date/time from API)
+    start_datetime = models.DateTimeField(null=True, blank=True)
+    end_datetime = models.DateTimeField(null=True, blank=True)
+    start_datetime_original_iso_str = models.CharField(max_length=50, null=True, blank=True)
+    end_datetime_original_iso_str = models.CharField(max_length=50, null=True, blank=True)
+    
+    # Derived scheduling fields (for easier querying)
+    start_date = models.DateField(null=True, blank=True)  # Derived from start_datetime
+    start_time = models.TimeField(null=True, blank=True)  # Derived from start_datetime
+    end_date = models.DateField(null=True, blank=True)  # Derived from end_datetime
+    end_time = models.TimeField(null=True, blank=True)  # Derived from end_datetime
+    
+    # Status and workflow
+    status = models.CharField(max_length=50, null=True, blank=True)
+    status_id = models.IntegerField(null=True, blank=True)
+    task_type = models.CharField(max_length=100, null=True, blank=True)
+    
+    # Duration and timing
+    duration_estimate = models.IntegerField(null=True, blank=True)  # in minutes
+    actual_start_datetime = models.DateTimeField(null=True, blank=True)
+    actual_end_datetime = models.DateTimeField(null=True, blank=True)
+    timezone = models.CharField(max_length=50, null=True, blank=True)
+    
+    # Boolean flags
+    is_recurring = models.BooleanField(default=False)
+    is_all_day = models.BooleanField(default=False)
+    enable_time_window_display = models.BooleanField(default=False)
+    unscheduled = models.BooleanField(default=False)
+    
+    # Customer information
+    customer_id = models.CharField(max_length=50, null=True, blank=True)
+    customer_name = models.CharField(max_length=255, null=True, blank=True)
+    customer_first_name = models.CharField(max_length=255, null=True, blank=True)
+    customer_last_name = models.CharField(max_length=255, null=True, blank=True)
+    customer_company_name = models.CharField(max_length=255, null=True, blank=True)
+    customer_email = models.EmailField(null=True, blank=True)
+    customer_phone = models.CharField(max_length=20, null=True, blank=True)
+    customer_mobile_number = models.CharField(max_length=20, null=True, blank=True)
+    customer_notes = models.TextField(null=True, blank=True)
+    customer_timezone = models.CharField(max_length=50, null=True, blank=True)
+    
+    # Address information
+    address_line_1 = models.CharField(max_length=255, null=True, blank=True)
+    address_line_2 = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    country = models.CharField(max_length=100, null=True, blank=True)
+    zipcode = models.CharField(max_length=20, null=True, blank=True)
+    complete_address = models.TextField(null=True, blank=True)
+    exact_location = models.JSONField(null=True, blank=True)
+    is_address_geo_coded = models.BooleanField(default=False)
+    use_lat_lng_address = models.BooleanField(default=False)
+    
+    # Derived location fields (for easier querying)
+    latitude = models.FloatField(null=True, blank=True)  # From exact_location
+    longitude = models.FloatField(null=True, blank=True)  # From exact_location
+    
+    # Team and resource assignment
+    assigned_team_members = models.JSONField(null=True, blank=True)
+    team_member_ids = models.TextField(null=True, blank=True)
+    entity_ids = models.JSONField(null=True, blank=True)
+    crew_ids = models.JSONField(null=True, blank=True)
+    worker_ids = models.JSONField(null=True, blank=True)
+    number_of_workers_required = models.IntegerField(null=True, blank=True)
+    resource_ids = models.JSONField(null=True, blank=True)
+    
+    # Template and configuration
+    template_id = models.CharField(max_length=50, null=True, blank=True)
+    template = models.CharField(max_length=255, null=True, blank=True)
+    template_extra_fields = models.JSONField(null=True, blank=True)
+    extra_fields = models.JSONField(null=True, blank=True)
+    custom_fields = models.JSONField(null=True, blank=True)
+    
+    # Group and organizational
+    group = models.CharField(max_length=255, null=True, blank=True)
+    group_id = models.CharField(max_length=50, null=True, blank=True)
+    
+    # External integration
+    external_type = models.CharField(max_length=100, null=True, blank=True)
+    external_resource_type = models.CharField(max_length=100, null=True, blank=True)
+    linked_internal_ref = models.CharField(max_length=50, null=True, blank=True)
+    linked_external_ref = models.CharField(max_length=255, null=True, blank=True)
+    is_linked = models.BooleanField(default=False)
+    
+    # Routing and navigation
+    route_id = models.CharField(max_length=50, null=True, blank=True)
+    route_name = models.CharField(max_length=255, null=True, blank=True)
+    internal_route_id = models.CharField(max_length=50, null=True, blank=True)
+    routes = models.JSONField(null=True, blank=True)
+    entity_routes = models.JSONField(null=True, blank=True)
+    additional_addresses = models.JSONField(null=True, blank=True)
+    current_destination = models.JSONField(null=True, blank=True)
+    
+    # Communication and notifications
+    notifications = models.JSONField(null=True, blank=True)
+    outbound_sms_count = models.IntegerField(null=True, blank=True)
+    inbound_sms_count = models.IntegerField(null=True, blank=True)
+    outbound_email_count = models.IntegerField(null=True, blank=True)
+    inbound_email_count = models.IntegerField(null=True, blank=True)
+    
+    # Performance and tracking
+    rating = models.FloatField(null=True, blank=True)
+    rating_text = models.TextField(null=True, blank=True)
+    travel_time = models.CharField(max_length=255, null=True, blank=True)
+    wait_time = models.CharField(max_length=255, null=True, blank=True)
+    task_time = models.CharField(max_length=255, null=True, blank=True)
+    total_time = models.CharField(max_length=255, null=True, blank=True)
+    mileage = models.FloatField(null=True, blank=True)
+    
+    # Documents and files
+    document_ids = models.JSONField(null=True, blank=True)
+    file_ids = models.JSONField(null=True, blank=True)
+    files = models.JSONField(null=True, blank=True)
+    forms = models.JSONField(null=True, blank=True)
+    
+    # Instructions and workflow
+    instructions = models.TextField(null=True, blank=True)
+    
+    # Additional tracking
+    items = models.JSONField(null=True, blank=True)
+    entity_confirmation_statuses = models.JSONField(null=True, blank=True)
+    
+    # Tracking fields
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ingestion_arrivy_booking'
+        verbose_name = 'Arrivy Booking'
+        verbose_name_plural = 'Arrivy Bookings'
+
+    def __str__(self):
+        return f"{self.title} ({self.id})" if self.title else f"Booking {self.id}"
+
+
 class Arrivy_SyncHistory(models.Model):
     """Tracks the synchronization history for Arrivy data."""
     id = models.AutoField(primary_key=True)

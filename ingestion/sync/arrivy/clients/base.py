@@ -8,6 +8,7 @@ Implements standardized client interface with proper error handling and rate lim
 import logging
 import json
 import asyncio
+import time
 from datetime import datetime
 from typing import Dict, List, Optional, AsyncGenerator, Any
 import aiohttp
@@ -160,14 +161,35 @@ class ArrivyBaseClient(BaseAPIClient):
         logger.debug(f"Making request to: {url}")
         logger.debug(f"Params: {params}")
         
+        # Performance optimization: Use persistent session with connection pooling
+        connector = aiohttp.TCPConnector(
+            limit=20,  # Total connection limit
+            limit_per_host=5,  # Per-host connection limit
+            ttl_dns_cache=300,  # DNS cache TTL
+            use_dns_cache=True,
+            enable_cleanup_closed=True,
+            keepalive_timeout=60,
+            force_close=False
+        )
+        
+        timeout = aiohttp.ClientTimeout(
+            total=60,  # Reduced from 120 to 60 seconds
+            connect=10,  # Connection timeout
+            sock_read=30  # Socket read timeout
+        )
+        
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url, 
-                    headers=self.headers, 
-                    params=params, 
-                    timeout=aiohttp.ClientTimeout(total=120)  # Increased from 60 to 120 seconds
-                ) as response:
+            async with aiohttp.ClientSession(
+                connector=connector,
+                timeout=timeout,
+                headers=self.headers
+            ) as session:
+                start_time = time.time()
+                async with session.get(url, params=params) as response:
+                    end_time = time.time()
+                    response_time = end_time - start_time
+                    logger.debug(f"API request took {response_time:.2f} seconds")
+                    
                     status = response.status
                     response_text = await response.text()
                     
@@ -175,7 +197,9 @@ class ArrivyBaseClient(BaseAPIClient):
                     logger.debug(f"Response body (first 500 chars): {response_text[:500]}")
                     
                     if status == 200:
-                        return self._parse_response(response_text)
+                        result = self._parse_response(response_text)
+                        logger.debug(f"Parsed {len(result.get('data', []))} records in {response_time:.2f}s")
+                        return result
                     elif status == 401:
                         logger.error("Arrivy API authentication failed")
                         raise APIClientException("Authentication failed - check API keys")
@@ -256,21 +280,28 @@ class ArrivyBaseClient(BaseAPIClient):
         """
         Fetch paginated data with delta sync support
         
+        NOTE: Arrivy API appears to ignore page_size parameter and returns ~500 records per page.
+        We'll optimize by using larger effective page sizes and chunking the results.
+        
         Args:
             endpoint: API endpoint
             last_sync: Last sync timestamp for delta sync
-            page_size: Records per page (max 200 recommended)
+            page_size: Desired records per batch (will chunk API response)
             **kwargs: Additional parameters
         
         Yields:
-            Batches of records
+            Batches of records (chunked to requested page_size)
         """
         page = 1
         has_more = True
         
+        logger.info(f"Starting pagination for {endpoint} with requested page_size={page_size}")
+        
         while has_more:
-            params = {
-                "page_size": page_size,
+            # Since Arrivy API ignores page_size, request larger pages
+            # to reduce API calls and improve performance
+            api_params = {
+                "page_size": 500,  # Use API's natural page size
                 "page": page,
                 **kwargs
             }
@@ -278,33 +309,40 @@ class ArrivyBaseClient(BaseAPIClient):
             # Add delta sync filter if provided (though Arrivy API may ignore it)
             if last_sync:
                 last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
-                params["updated_after"] = last_sync_str
+                api_params["updated_after"] = last_sync_str
             
             try:
-                result = await self._make_request(endpoint, params)
+                start_time = time.time()
+                result = await self._make_request(endpoint, api_params)
+                request_time = time.time() - start_time
+                
                 data = result.get('data', [])
                 pagination = result.get('pagination')
                 
-                logger.debug(f"Page {page}: Retrieved {len(data)} records")
+                logger.info(f"Page {page}: Retrieved {len(data)} records in {request_time:.2f}s")
                 
                 if data:
-                    yield data
+                    # Chunk the large API response into requested page_size batches
+                    for i in range(0, len(data), page_size):
+                        chunk = data[i:i + page_size]
+                        logger.debug(f"Yielding chunk of {len(chunk)} records")
+                        yield chunk
                 
                 # Arrivy API pagination logic:
-                # - Continue until a page returns 0 records (per documentation)
+                # - Continue until a page returns 0 records
                 # - Don't rely on pagination metadata as it may not be present
                 if len(data) == 0:
-                    logger.debug(f"Page {page} returned 0 records, stopping pagination")
+                    logger.info(f"Page {page} returned 0 records, stopping pagination")
                     has_more = False
-                elif len(data) < page_size:
-                    logger.debug(f"Page {page} returned {len(data)} < {page_size} records, this might be the last page")
-                    # Continue to next page to confirm (some APIs return partial pages)
+                elif len(data) < 500:  # Less than expected API page size
+                    logger.info(f"Page {page} returned {len(data)} < 500 records, likely last page")
+                    # This might be the last page, but check next page to confirm
                 
                 # Check pagination metadata if available (fallback)
                 if pagination:
                     has_pagination_next = pagination.get('has_next', False)
                     if not has_pagination_next:
-                        logger.debug(f"Pagination metadata indicates no more pages")
+                        logger.info(f"Pagination metadata indicates no more pages")
                         has_more = False
                         
             except Exception as e:
@@ -312,6 +350,66 @@ class ArrivyBaseClient(BaseAPIClient):
                 raise
             
             page += 1
+    
+    async def fetch_concurrent_pages(self, endpoint: str, start_page: int = 1, max_pages: int = 5,
+                                   page_size: int = 500, **kwargs) -> List[List[Dict]]:
+        """
+        Fetch multiple pages concurrently for maximum performance
+        
+        WARNING: Use carefully to avoid overwhelming the API
+        
+        Args:
+            endpoint: API endpoint
+            start_page: Starting page number
+            max_pages: Maximum number of pages to fetch concurrently
+            page_size: Records per page
+            **kwargs: Additional parameters
+        
+        Returns:
+            List of page results (each containing list of records)
+        """
+        logger.info(f"Fetching {max_pages} pages concurrently from {endpoint}")
+        
+        async def fetch_single_page(page_num: int) -> List[Dict]:
+            """Fetch a single page"""
+            params = {
+                "page_size": page_size,
+                "page": page_num,
+                **kwargs
+            }
+            
+            try:
+                result = await self._make_request(endpoint, params)
+                data = result.get('data', [])
+                logger.debug(f"Concurrent page {page_num}: {len(data)} records")
+                return data
+            except Exception as e:
+                logger.error(f"Error fetching concurrent page {page_num}: {str(e)}")
+                return []
+        
+        # Create concurrent tasks for multiple pages
+        tasks = []
+        for page_num in range(start_page, start_page + max_pages):
+            task = fetch_single_page(page_num)
+            tasks.append(task)
+        
+        # Execute all requests concurrently
+        start_time = time.time()
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        total_time = time.time() - start_time
+        
+        # Process results and handle exceptions
+        valid_results = []
+        total_records = 0
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.error(f"Concurrent page {start_page + i} failed: {result}")
+            else:
+                valid_results.append(result)
+                total_records += len(result)
+        
+        logger.info(f"Concurrent fetch: {len(valid_results)} pages, {total_records} records in {total_time:.2f}s")
+        return valid_results
     
     # Implementation of abstract methods from BaseAPIClient
     

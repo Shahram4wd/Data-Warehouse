@@ -6,6 +6,7 @@ from .base import ArrivyBaseProcessor
 from .entities import EntitiesProcessor
 from .groups import GroupsProcessor
 from .tasks import TasksProcessor
+from .bookings import BookingsProcessor
 from .location_reports import LocationReportsProcessor
 from .task_status import TaskStatusProcessor
 
@@ -14,6 +15,7 @@ __all__ = [
     'EntitiesProcessor', 
     'GroupsProcessor',
     'TasksProcessor',
+    'BookingsProcessor',
     'LocationReportsProcessor',
     'TaskStatusProcessor'
 ]

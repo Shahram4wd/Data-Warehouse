@@ -6,6 +6,7 @@ Tasks represent work assignments, appointments, and service calls.
 """
 
 import logging
+import time
 from typing import Dict, Any, List, Optional, AsyncGenerator
 from datetime import datetime, timedelta
 
@@ -58,7 +59,7 @@ class ArrivyTasksSyncEngine(ArrivyBaseSyncEngine):
     
     async def execute_sync(self, **kwargs) -> Dict[str, Any]:
         """
-        Execute tasks sync with additional task-specific options
+        Execute tasks sync with additional task-specific options and performance modes
         
         Args:
             **kwargs: Sync options including:
@@ -66,6 +67,8 @@ class ArrivyTasksSyncEngine(ArrivyBaseSyncEngine):
                 - end_date: Filter tasks until this date
                 - task_status: Filter by task status
                 - assigned_to: Filter by assignee
+                - high_performance: Enable concurrent page fetching
+                - concurrent_pages: Number of pages to fetch concurrently (default: 3)
         
         Returns:
             Sync results
@@ -78,17 +81,128 @@ class ArrivyTasksSyncEngine(ArrivyBaseSyncEngine):
         self.task_status = kwargs.get('task_status')
         self.assigned_to = kwargs.get('assigned_to')
         
-        # Call parent execute_sync
-        results = await super().execute_sync(**kwargs)
+        # Check for high-performance mode
+        high_performance = kwargs.get('high_performance', False)
+        concurrent_pages = kwargs.get('concurrent_pages', 3)
+        
+        if high_performance:
+            logger.info("Using high-performance concurrent mode")
+            # Remove concurrent_pages from kwargs to avoid duplicate argument
+            kwargs_copy = {k: v for k, v in kwargs.items() if k != 'concurrent_pages'}
+            results = await self._execute_high_performance_sync(concurrent_pages, **kwargs_copy)
+        else:
+            logger.info("Using standard sequential mode")
+            results = await super().execute_sync(**kwargs)
         
         # Add task-specific metrics
         results['endpoint_used'] = 'tasks'
+        results['mode'] = 'high_performance' if high_performance else 'sequential'
         
         if self.start_date or self.end_date:
             results['date_range'] = {
                 'start': self.start_date.isoformat() if self.start_date else None,
                 'end': self.end_date.isoformat() if self.end_date else None
             }
+        
+        return results
+    
+    async def _execute_high_performance_sync(self, concurrent_pages: int, **kwargs) -> Dict[str, Any]:
+        """
+        Execute high-performance sync using concurrent page fetching
+        
+        Args:
+            concurrent_pages: Number of pages to fetch concurrently
+            **kwargs: Sync configuration
+        
+        Returns:
+            Sync results
+        """
+        start_time = time.time()
+        
+        # Initialize client first (important!)
+        await self.initialize_client()
+        
+        results = {
+            'total_processed': 0,
+            'total_created': 0,
+            'total_updated': 0,
+            'total_failed': 0,
+            'errors': [],
+            'batches_processed': 0,
+            'api_calls': 0,
+            'mode': 'high_performance'
+        }
+        
+        max_records = kwargs.get('max_records')
+        records_processed = 0
+        page = 1
+        
+        logger.info(f"Starting high-performance sync with {concurrent_pages} concurrent pages")
+        
+        while True:
+            # Fetch multiple pages concurrently
+            page_results = await self.client.fetch_concurrent_pages(
+                endpoint='tasks',
+                start_page=page,
+                max_pages=concurrent_pages,
+                page_size=500
+            )
+            
+            results['api_calls'] += len(page_results)
+            
+            if not page_results or all(len(page_data) == 0 for page_data in page_results):
+                logger.info("No more data available, stopping sync")
+                break
+            
+            # Process all pages
+            total_records_in_batch = 0
+            for page_data in page_results:
+                if not page_data:
+                    continue
+                
+                # Check max_records limit
+                if max_records and records_processed >= max_records:
+                    logger.info(f"Reached max_records limit of {max_records}")
+                    break
+                
+                # Trim if needed
+                if max_records and records_processed + len(page_data) > max_records:
+                    remaining = max_records - records_processed
+                    page_data = page_data[:remaining]
+                
+                # Process the batch
+                batch_results = await self.process_batch(page_data)
+                
+                # Aggregate results
+                results['total_processed'] += batch_results.get('processed', 0)
+                results['total_created'] += batch_results.get('created', 0)
+                results['total_updated'] += batch_results.get('updated', 0)
+                results['total_failed'] += batch_results.get('failed', 0)
+                results['errors'].extend(batch_results.get('errors', []))
+                results['batches_processed'] += 1
+                
+                records_processed += len(page_data)
+                total_records_in_batch += len(page_data)
+                
+                logger.info(f"Processed batch: {len(page_data)} records "
+                          f"(created: {batch_results.get('created', 0)}, "
+                          f"updated: {batch_results.get('updated', 0)})")
+            
+            if max_records and records_processed >= max_records:
+                break
+            
+            # Check if we got fewer records than expected (might be last batch)
+            if total_records_in_batch < concurrent_pages * 500:
+                logger.info("Received fewer records than expected, likely reached end")
+                break
+            
+            page += concurrent_pages
+        
+        results['duration'] = time.time() - start_time
+        results['records_per_second'] = results['total_processed'] / results['duration'] if results['duration'] > 0 else 0
+        
+        logger.info(f"High-performance sync completed: {results['total_processed']} records "
+                   f"in {results['duration']:.2f}s ({results['records_per_second']:.1f} records/sec)")
         
         return results
     

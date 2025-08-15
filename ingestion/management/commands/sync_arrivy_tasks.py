@@ -53,6 +53,20 @@ class Command(BaseSyncCommand):
             type=str,
             help='Filter tasks assigned to specific entity ID'
         )
+        
+        # Performance optimization arguments
+        parser.add_argument(
+            '--high-performance',
+            action='store_true',
+            help='Enable high-performance mode with concurrent API calls (use with caution)'
+        )
+        
+        parser.add_argument(
+            '--concurrent-pages',
+            type=int,
+            default=3,
+            help='Number of pages to fetch concurrently in high-performance mode (default: 3)'
+        )
     
     def handle(self, *args, **options):
         """Main command handler following enterprise patterns"""
@@ -92,6 +106,16 @@ class Command(BaseSyncCommand):
                 sync_options['task_status'] = options['task_status']
             if options.get('assigned_to'):
                 sync_options['assigned_to'] = options['assigned_to']
+            
+            # Add performance options
+            if options.get('high_performance'):
+                sync_options['high_performance'] = True
+                sync_options['concurrent_pages'] = options.get('concurrent_pages', 3)
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"🚀 High-performance mode enabled with {options.get('concurrent_pages', 3)} concurrent pages"
+                    )
+                )
             
             # Execute sync
             results = asyncio.run(engine.execute_sync(**sync_options))
