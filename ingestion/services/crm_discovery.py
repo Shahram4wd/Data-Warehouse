@@ -176,9 +176,7 @@ class CRMDiscoveryService:
         if not last_sync_info:
             return 'never_synced'
         
-        status = last_sync_info['status']
-        
-        # Check for running syncs
+        # Check for running syncs first
         running_syncs = SyncHistory.objects.filter(
             crm_source=crm_source,
             status='running'
@@ -187,26 +185,32 @@ class CRMDiscoveryService:
         if running_syncs:
             return 'running'
         
-        # Check recent sync status (last 24 hours)
+        # Get the most recent sync status
+        most_recent_status = last_sync_info['status']
+        
+        # Check if the most recent sync is very old (more than 24 hours)
         recent_cutoff = timezone.now() - timedelta(hours=24)
-        recent_syncs = SyncHistory.objects.filter(
-            crm_source=crm_source,
-            start_time__gte=recent_cutoff
-        )
+        if last_sync_info.get('start_time'):
+            try:
+                last_sync_time = last_sync_info['start_time']
+                if isinstance(last_sync_time, str):
+                    last_sync_time = datetime.fromisoformat(last_sync_time.replace('Z', '+00:00'))
+                
+                if last_sync_time < recent_cutoff:
+                    return 'outdated'
+            except (ValueError, TypeError):
+                pass
         
-        if not recent_syncs.exists():
-            return 'outdated'
-        
-        # Check for any recent failures
-        recent_failures = recent_syncs.filter(status='failed').exists()
-        recent_partials = recent_syncs.filter(status='partial').exists()
-        
-        if recent_failures:
+        # Return the status of the most recent sync
+        # This prioritizes recent activity over older failures
+        if most_recent_status == 'failed':
             return 'error'
-        elif recent_partials:
+        elif most_recent_status == 'partial':
             return 'warning'
-        else:
+        elif most_recent_status == 'success':
             return 'success'
+        else:
+            return 'unknown'
     
     def _format_display_name(self, crm_source: str) -> str:
         """Format CRM source name for display"""

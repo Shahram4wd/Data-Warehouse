@@ -146,9 +146,29 @@ class SyncManagementService:
             if sync_type == 'all':
                 command_name = f'sync_{crm_source}_all'
             else:
-                # Convert sync_type to command format
-                sync_type_singular = sync_type.rstrip('s')  # Remove plural 's'
-                command_name = f'sync_{crm_source}_{sync_type_singular}'
+                # Use sync_type as-is, don't modify it
+                # The sync_type should match the actual command name
+                command_name = f'sync_{crm_source}_{sync_type}'
+            
+            # Verify command exists before proceeding
+            command_file = os.path.join(self.management_commands_dir, f'{command_name}.py')
+            if not os.path.exists(command_file):
+                logger.warning(f"Command file not found: {command_file}")
+                # Fallback: try common variations
+                variations = [
+                    f'sync_{crm_source}_{sync_type}',  # exact match
+                    f'sync_{crm_source}_{sync_type.rstrip("s")}',  # remove trailing 's'
+                    f'sync_{crm_source}_{sync_type}s',  # add 's' if missing
+                ]
+                
+                for variation in variations:
+                    test_file = os.path.join(self.management_commands_dir, f'{variation}.py')
+                    if os.path.exists(test_file):
+                        command_name = variation
+                        logger.info(f"Found command variation: {command_name}")
+                        break
+                else:
+                    raise Exception(f"No valid command found for {crm_source} {sync_type}")
             
             # Start with base command
             cmd_parts = ['python', 'manage.py', command_name]
@@ -241,16 +261,27 @@ class SyncManagementService:
             try:
                 # Change to project directory
                 project_dir = getattr(settings, 'BASE_DIR', os.getcwd())
+                logger.info(f"Executing sync command {sync_id}: {command}")
+                logger.info(f"Working directory: {project_dir}")
+                
+                # For Docker execution, modify the command to use the correct Python path
+                # The UI runs from within the Docker container, so we need to use the container's Python
+                command_parts = command.split()
+                if command_parts[0] == 'python':
+                    # In Docker, we should use the full path or ensure Python is in PATH
+                    # Since we're already in the container, 'python' should work
+                    pass
                 
                 # Execute command
                 process = subprocess.Popen(
-                    command.split(),
+                    command_parts,
                     cwd=project_dir,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
                     bufsize=1,
-                    universal_newlines=True
+                    universal_newlines=True,
+                    env=os.environ.copy()  # Ensure environment variables are passed
                 )
                 
                 # Store process for potential cancellation
@@ -259,6 +290,12 @@ class SyncManagementService:
                 # Wait for completion
                 stdout, stderr = process.communicate()
                 return_code = process.returncode
+                
+                logger.info(f"Command {sync_id} completed with return code: {return_code}")
+                if stdout:
+                    logger.info(f"Command {sync_id} stdout: {stdout[:500]}...")
+                if stderr:
+                    logger.warning(f"Command {sync_id} stderr: {stderr[:500]}...")
                 
                 # Update SyncHistory record
                 self._update_sync_record_on_completion(
