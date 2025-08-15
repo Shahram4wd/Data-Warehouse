@@ -28,7 +28,7 @@ class Command(BaseCommand):
         # Entity type selection
         parser.add_argument(
             '--entity-type',
-            choices=['entities', 'tasks', 'groups', 'bookings', 'location_reports', 'task_status', 'all'],
+            choices=['entities', 'tasks', 'groups', 'bookings', 'location_reports', 'status', 'all'],
             default='all',
             help='Type of Arrivy entities to sync (default: all)'
         )
@@ -146,7 +146,7 @@ class Command(BaseCommand):
             ('tasks', 'sync_arrivy_tasks'),
             ('bookings', 'sync_arrivy_bookings'),
             ('location_reports', 'sync_arrivy_location_reports'),
-            ('task_status', 'sync_arrivy_task_status')
+            ('status', 'sync_arrivy_statuses')
         ]
         
         all_results = {}
@@ -185,7 +185,16 @@ class Command(BaseCommand):
             Command execution results
         """
         if not command_name:
-            command_name = f"sync_arrivy_{entity_type}"
+            # Map entity types to command names (handle special cases)
+            command_mapping = {
+                'status': 'sync_arrivy_statuses',
+                'entities': 'sync_arrivy_entities',
+                'tasks': 'sync_arrivy_tasks',
+                'groups': 'sync_arrivy_groups',
+                'bookings': 'sync_arrivy_bookings',
+                'location_reports': 'sync_arrivy_location_reports'
+            }
+            command_name = command_mapping.get(entity_type, f"sync_arrivy_{entity_type}")
         
         # Prepare arguments for the individual command
         command_args = []
