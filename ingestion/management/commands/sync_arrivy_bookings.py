@@ -57,98 +57,66 @@ class Command(BaseSyncCommand):
     def handle(self, *args, **options):
         """Execute the sync with comprehensive error handling and logging"""
         
-        # Configure logging based on verbosity
-        log_level = self.get_log_level(options['verbosity'])
-        logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        
         try:
-            # Parse dates if provided
-            start_date = self.parse_date(options.get('start_date')) if options.get('start_date') else None
-            end_date = self.parse_date(options.get('end_date')) if options.get('end_date') else None
+            # Step 1: Configure logging
+            self.configure_logging(options)
             
-            # Initialize engine with options
-            engine = ArrivyBookingsSyncEngine(
-                dry_run=options.get('dry_run', False),
-                batch_size=options.get('batch_size', 100),
-                max_records=options.get('max_records'),
-                force_overwrite=options.get('force_overwrite', False)
-            )
+            # Step 2: Validate arguments  
+            self.validate_arguments(options)
             
-            # Run appropriate sync method
-            if options.get('booking_id'):
-                self.stdout.write(f"Syncing specific booking: {options['booking_id']}")
-                results = asyncio.run(engine.sync_booking_by_id(options['booking_id']))
-            elif start_date and end_date:
-                self.stdout.write(f"Syncing bookings for date range: {start_date} to {end_date}")
-                results = asyncio.run(engine.sync_bookings_for_date_range(start_date, end_date))
-            else:
-                # Standard sync
-                self.stdout.write("Starting Arrivy bookings sync...")
-                
-                # Determine sync mode
-                if options.get('full'):
-                    self.stdout.write("Running FULL sync (ignoring last sync timestamp)")
-                    results = asyncio.run(engine.execute_sync(full_sync=True))
-                elif options.get('since'):
-                    since_date = self.parse_date(options['since'])
-                    self.stdout.write(f"Running sync since: {since_date}")
-                    results = asyncio.run(engine.execute_sync(since_date=since_date))
-                else:
-                    self.stdout.write("Running incremental sync...")
-                    results = asyncio.run(engine.execute_sync())
+            self.stdout.write("Starting Arrivy bookings sync...")
             
-            # Display results
-            self.display_results(results, 'bookings')
+            # Execute sync
+            results = self._sync_bookings(options)
+            self._display_results(results)
             
-            # Exit with appropriate code
-            if results.get('status') == 'failed':
-                raise CommandError(f"Sync failed: {results.get('error', 'Unknown error')}")
-            elif results.get('total_errors', 0) > 0:
-                self.stdout.write(
-                    self.style.WARNING(f"Sync completed with {results['total_errors']} errors")
-                )
-            else:
-                self.stdout.write(self.style.SUCCESS("Sync completed successfully"))
-                
         except Exception as e:
-            logger.error(f"Command execution failed: {str(e)}")
-            raise CommandError(f"Sync command failed: {str(e)}")
+            logger.exception("Error during Arrivy bookings sync")
+            raise CommandError(f"Bookings sync failed: {str(e)}")
     
-    def display_results(self, results: dict, sync_type: str):
-        """Display sync results in a formatted way"""
-        self.stdout.write("\n" + "="*60)
-        self.stdout.write(f"ARRIVY {sync_type.upper()} SYNC RESULTS")
-        self.stdout.write("="*60)
+    def _sync_bookings(self, options):
+        """Execute bookings sync using the engine"""
         
-        # Basic info
-        self.stdout.write(f"Status: {results.get('status', 'unknown')}")
-        self.stdout.write(f"Sync Type: {results.get('sync_type', sync_type)}")
+        # Parse dates if provided
+        start_date = self.parse_date(options.get('start_date')) if options.get('start_date') else None
+        end_date = self.parse_date(options.get('end_date')) if options.get('end_date') else None
         
-        if results.get('dry_run'):
-            self.stdout.write(self.style.WARNING("DRY RUN MODE - No changes were made"))
+        # Initialize engine with options
+        engine = ArrivyBookingsSyncEngine(
+            dry_run=options.get('dry_run', False),
+            batch_size=options.get('batch_size', 100),
+            max_records=options.get('max_records', 0),
+            debug=options.get('debug', False)
+        )
         
-        # Metrics
-        if 'total_processed' in results:
-            self.stdout.write(f"Total Processed: {results['total_processed']}")
-            self.stdout.write(f"Created: {results.get('total_created', 0)}")
-            self.stdout.write(f"Updated: {results.get('total_updated', 0)}")
-            self.stdout.write(f"Errors: {results.get('total_errors', 0)}")
-            self.stdout.write(f"Batches: {results.get('batch_count', 0)}")
+        # Prepare sync options
+        sync_options = {
+            'force_full': options.get('full', False),
+            'since_param': options.get('since'),
+            'start_date': start_date,
+            'end_date': end_date,
+            'booking_status': options.get('booking_status'),
+            'booking_id': options.get('booking_id')
+        }
         
-        # Timing
-        if 'sync_duration' in results:
-            self.stdout.write(f"Duration: {results['sync_duration']:.2f} seconds")
+        # Execute sync
+        return asyncio.run(engine.execute_sync(**sync_options))
+    
+    def _display_results(self, results):
+        """Display sync results in a user-friendly format"""
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"✅ Arrivy bookings sync completed!\n"
+                f"📊 Results: {results.get('total_processed', 0)} processed, "
+                f"{results.get('total_created', 0)} created, "
+                f"{results.get('total_updated', 0)} updated, "
+                f"{results.get('total_errors', 0)} failed\n"
+                f"⚡ Performance: {results.get('records_per_second', 0):.2f} records/second, "
+                f"{results.get('sync_duration', 0):.2f} seconds total\n"
+                f"🔗 Endpoint: bookings\n"
+                f"📋 Filters: {results.get('filters', 'none')}"
+            )
+        )
         
-        # Date range info
-        if 'date_range' in results:
-            self.stdout.write(f"Date Range: {results['date_range']}")
-        
-        # Specific booking info
-        if 'booking_id' in results:
-            self.stdout.write(f"Booking ID: {results['booking_id']}")
-        
-        # Error details
-        if results.get('error'):
-            self.stdout.write(self.style.ERROR(f"Error: {results['error']}"))
-        
-        self.stdout.write("="*60 + "\n")
+        if results.get('total_errors', 0) > 0:
+            self.stdout.write(f"⚠️  {results['total_errors']} records failed to sync")
