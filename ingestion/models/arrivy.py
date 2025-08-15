@@ -406,24 +406,6 @@ class Arrivy_Status(models.Model):
         return self.title or self.name or f"Status {self.id}"
 
 
-class Arrivy_LocationReport(models.Model):
-    """Represents a location report in Arrivy."""
-    id = models.CharField(max_length=50, primary_key=True)
-    task_id = models.CharField(max_length=50, null=True, blank=True)
-    entity_id = models.CharField(max_length=50, null=True, blank=True)
-    latitude = models.FloatField(null=True, blank=True)
-    longitude = models.FloatField(null=True, blank=True)
-    timestamp = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        db_table = 'ingestion_arrivy_location_report'
-        verbose_name = 'Arrivy Location Report'
-        verbose_name_plural = 'Arrivy Location Reports'
-
-    def __str__(self):
-        return f"Location Report {self.id} for Task {self.task_id}"
-
-
 class Arrivy_Booking(models.Model):
     """Arrivy Booking model - represents bookings from official Arrivy bookings endpoint"""
     
@@ -581,20 +563,3 @@ class Arrivy_Booking(models.Model):
 
     def __str__(self):
         return f"{self.title} ({self.id})" if self.title else f"Booking {self.id}"
-
-
-class Arrivy_SyncHistory(models.Model):
-    """Tracks the synchronization history for Arrivy data."""
-    id = models.AutoField(primary_key=True)
-    sync_type = models.CharField(max_length=50, default='tasks')  # e.g., 'tasks', 'entities', 'task_statuses', etc.
-    last_synced_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'ingestion_arrivy_sync_history'
-        verbose_name = 'Arrivy Sync History'
-        verbose_name_plural = 'Arrivy Sync Histories'
-
-    def __str__(self):
-        return f"{self.sync_type} last synced at {self.last_synced_at}"

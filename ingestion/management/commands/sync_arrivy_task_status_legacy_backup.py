@@ -2,8 +2,9 @@ import logging
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 from django.db import transaction
-from ingestion.models.arrivy import Arrivy_TaskStatus, Arrivy_SyncHistory
-from ingestion.arrivy.arrivy_client import ArrivyClient
+from ingestion.models.arrivy import Arrivy_TaskStatus
+from ingestion.models.common import SyncHistory
+from ingestion.sync.arrivy.clients.status import ArrivyStatusClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,7 +37,7 @@ class Command(BaseCommand):
             self.stdout.write("Starting Arrivy task status sync...")
             
             # Initialize client
-            client = ArrivyClient()
+            client = ArrivyStatusClient()
             all_statuses = []
             
             if options.get('full', False):
@@ -156,10 +157,17 @@ class Command(BaseCommand):
                     else:
                         updated_count += 1
 
-            # Update sync history
-            Arrivy_SyncHistory.objects.update_or_create(
-                sync_type="task_statuses",
-                defaults={"last_synced_at": timezone.now()},
+            # Update sync history using standardized format
+            SyncHistory.objects.create(
+                crm_source='arrivy',
+                sync_type='task_statuses',
+                status='success',
+                start_time=timezone.now(),
+                end_time=timezone.now(),
+                records_processed=len(statuses),
+                records_created=created_count,
+                records_updated=updated_count,
+                records_failed=0
             )
 
             # Display results

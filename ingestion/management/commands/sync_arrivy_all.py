@@ -28,7 +28,7 @@ class Command(BaseCommand):
         # Entity type selection
         parser.add_argument(
             '--entity-type',
-            choices=['entities', 'tasks', 'groups', 'bookings', 'location_reports', 'status', 'all'],
+            choices=['entities', 'tasks', 'groups', 'bookings', 'status', 'all'],
             default='all',
             help='Type of Arrivy entities to sync (default: all)'
         )
@@ -145,7 +145,6 @@ class Command(BaseCommand):
             ('groups', 'sync_arrivy_groups'), 
             ('tasks', 'sync_arrivy_tasks'),
             ('bookings', 'sync_arrivy_bookings'),
-            ('location_reports', 'sync_arrivy_location_reports'),
             ('status', 'sync_arrivy_statuses')
         ]
         
@@ -191,8 +190,7 @@ class Command(BaseCommand):
                 'entities': 'sync_arrivy_entities',
                 'tasks': 'sync_arrivy_tasks',
                 'groups': 'sync_arrivy_groups',
-                'bookings': 'sync_arrivy_bookings',
-                'location_reports': 'sync_arrivy_location_reports'
+                'bookings': 'sync_arrivy_bookings'
             }
             command_name = command_mapping.get(entity_type, f"sync_arrivy_{entity_type}")
         
