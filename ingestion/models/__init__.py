@@ -44,7 +44,7 @@ from .leadconduit import LeadConduit_Lead
 from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_Appointment, Hubspot_Division, Hubspot_SyncHistory
 
 # Import Arrivy models
-from .arrivy import Arrivy_Entity, Arrivy_Group, Arrivy_Task, Arrivy_TaskStatus, Arrivy_LocationReport, Arrivy_SyncHistory
+from .arrivy import Arrivy_Entity, Arrivy_Group, Arrivy_Task, Arrivy_Status, Arrivy_LocationReport, Arrivy_SyncHistory
 
 # Import MarketSharp models
 from .marketsharp import (

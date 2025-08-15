@@ -1,5 +1,5 @@
 """
-Arrivy task status data processor
+Arrivy status data processor
 """
 import logging
 from typing import Dict, Any
@@ -8,26 +8,34 @@ from .base import ArrivyBaseProcessor
 logger = logging.getLogger(__name__)
 
 
-class TaskStatusProcessor(ArrivyBaseProcessor):
-    """Processor for Arrivy task status data"""
+class StatusProcessor(ArrivyBaseProcessor):
+    """Processor for Arrivy status data"""
     
     def __init__(self, **kwargs):
-        from ingestion.models.arrivy import Arrivy_TaskStatus
-        super().__init__(model_class=Arrivy_TaskStatus, **kwargs)
+        from ingestion.models.arrivy import Arrivy_Status
+        super().__init__(model_class=Arrivy_Status, **kwargs)
         
     def get_field_mappings(self) -> Dict[str, str]:
         """Return field mappings from Arrivy API to database fields"""
         return {
             'id': 'id',  # Primary key field
-            'name': 'name',
+            'title': 'title',  # Direct API field mapping
+            'name': 'name',  # Fallback field
             'description': 'description',
             'is_active': 'is_active',
-            'created_time': 'created_time',
-            'updated_time': 'updated_time'
+            'type_id': 'type_id',
+            'type': 'status_type',  # API field 'type' maps to 'status_type'
+            'order': 'order',  # Display order
+            'visible_to_customer': 'visible_to_customer',
+            'require_signature': 'require_signature',
+            'require_rating': 'require_rating',
+            'color': 'color',
+            'created': 'created',
+            'updated': 'updated'
         }
         
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform Arrivy task status record to database format"""
+        """Transform Arrivy status record to database format"""
         try:
             # Get field mappings
             mappings = self.get_field_mappings()
@@ -41,36 +49,28 @@ class TaskStatusProcessor(ArrivyBaseProcessor):
                     # Special handling for specific fields
                     if source_field in ['created', 'updated']:
                         value = self.normalize_datetime(value)
-                    elif source_field in ['is_active', 'is_default', 'is_final', 'allows_editing', 'auto_transition']:
-                        value = bool(value) if value is not None else False
-                    elif source_field in ['order']:
+                    elif source_field in ['is_active', 'visible_to_customer', 'require_signature', 'require_rating']:
+                        value = bool(value) if value is not None else None
+                    elif source_field in ['type_id', 'order']:
                         try:
-                            value = int(value) if value is not None else 0
+                            value = int(value) if value is not None else None
                         except (ValueError, TypeError):
-                            value = 0
-                    elif source_field in ['workflow_id']:
-                        value = str(value) if value is not None else None
-                    elif source_field in ['permissions', 'conditions', 'notifications']:
-                        # Ensure these are stored as JSON-serializable data
-                        if isinstance(value, (dict, list)):
-                            pass  # Keep as is
-                        elif isinstance(value, str):
-                            try:
-                                import json
-                                value = json.loads(value)
-                            except json.JSONDecodeError:
-                                value = [] if source_field in ['permissions', 'conditions'] else {}
-                        else:
-                            value = [] if source_field in ['permissions', 'conditions'] else {}
+                            value = None
+                    elif source_field in ['color']:
+                        # Ensure color starts with # if it's provided
+                        if value and isinstance(value, str) and not value.startswith('#'):
+                            value = f"#{value}"
                     
                     transformed[target_field] = value
             
-            # Ensure required fields
+            # Ensure required fields with fallbacks
             if 'id' not in transformed:
                 transformed['id'] = record.get('id')
             
-            if 'name' not in transformed or not transformed['name']:
-                transformed['name'] = f"Status {transformed.get('id', 'Unknown')}"
+            # Set both title and name fields for compatibility
+            title_value = record.get('title') or record.get('name') or f"Status {transformed.get('id', 'Unknown')}"
+            transformed['title'] = title_value
+            transformed['name'] = title_value
             
             # Set default values for important fields
             if 'status_type' not in transformed:
@@ -119,12 +119,6 @@ class TaskStatusProcessor(ArrivyBaseProcessor):
                         record['order'] = order_val
                 except (ValueError, TypeError):
                     record['order'] = 0
-            
-            # Validate status_type
-            valid_status_types = ['task', 'crew', 'system', 'workflow', 'custom']
-            if record.get('status_type') and record['status_type'] not in valid_status_types:
-                logger.warning(f"Unknown status_type: {record['status_type']}")
-                # Keep the original value but log the warning
             
             # Validate datetime fields
             datetime_fields = ['created', 'updated']

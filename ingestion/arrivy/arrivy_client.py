@@ -400,6 +400,47 @@ class ArrivyClient:
         logger.info("Location reports endpoint not available in this Arrivy API configuration")
         return {"data": []}
 
+    def _make_request_to_endpoint(self, endpoint):
+        """
+        Make a request to a specific endpoint (helper for legacy commands)
+        
+        Args:
+            endpoint: API endpoint path
+            
+        Returns:
+            Response data or None if failed
+        """
+        url = f"{self.base_url}/{endpoint}"
+        try:
+            response = requests.get(url, headers=self.headers, timeout=30)
+            if response.status_code == 200 and response.text.strip():
+                # Check if response is JSON, not HTML
+                if response.headers.get('content-type', '').startswith('application/json'):
+                    data = response.json()
+                    # Ensure consistent format
+                    if isinstance(data, list):
+                        return {"data": data}
+                    elif isinstance(data, dict):
+                        return data if "data" in data else {"data": [data]}
+                    else:
+                        return None
+                elif not response.text.startswith('<!DOCTYPE html>'):
+                    try:
+                        data = response.json()
+                        # Ensure consistent format
+                        if isinstance(data, list):
+                            return {"data": data}
+                        elif isinstance(data, dict):
+                            return data if "data" in data else {"data": [data]}
+                        else:
+                            return None
+                    except:
+                        return None
+            return None
+        except Exception as e:
+            logger.debug(f"Request to {endpoint} failed: {str(e)}")
+            return None
+
     # Backward compatibility alias
     async def get_team_members(self, page_size=100, page=1, last_sync=None, endpoint="crews"):
         """Get team members from Arrivy API. (Deprecated: use get_crews instead)"""

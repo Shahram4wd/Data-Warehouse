@@ -370,12 +370,24 @@ class Arrivy_Task(models.Model):
         return f"{self.title or self.task_title} ({self.id})"
 
 
-class Arrivy_TaskStatus(models.Model):
+class Arrivy_Status(models.Model):
     """Represents the status of a task in Arrivy."""
     id = models.CharField(max_length=50, primary_key=True)
-    name = models.CharField(max_length=255, null=True, blank=True)
+    name = models.CharField(max_length=255, null=True, blank=True)  # API uses 'title' field
+    title = models.CharField(max_length=255, null=True, blank=True)  # Direct API field mapping
     description = models.TextField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    
+    # Additional status configuration fields from API
+    type_id = models.CharField(max_length=50, null=True, blank=True)
+    status_type = models.CharField(max_length=50, null=True, blank=True)  # API field: type
+    order = models.IntegerField(null=True, blank=True)  # Display order
+    visible_to_customer = models.BooleanField(null=True, blank=True, default=False)
+    require_signature = models.BooleanField(null=True, blank=True, default=False)
+    require_rating = models.BooleanField(null=True, blank=True, default=False)
+    
+    # Color configuration
+    color = models.CharField(max_length=20, null=True, blank=True)
     
     # API timestamp fields (consistent with other models)
     created = models.DateTimeField(null=True, blank=True)
@@ -386,12 +398,12 @@ class Arrivy_TaskStatus(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'ingestion_arrivy_task_status'
-        verbose_name = 'Arrivy Task Status'
-        verbose_name_plural = 'Arrivy Task Statuses'
+        db_table = 'ingestion_arrivy_status'
+        verbose_name = 'Arrivy Status'
+        verbose_name_plural = 'Arrivy Statuses'
 
     def __str__(self):
-        return self.name or f"Task Status {self.id}"
+        return self.title or self.name or f"Status {self.id}"
 
 
 class Arrivy_LocationReport(models.Model):

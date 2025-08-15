@@ -21,7 +21,8 @@ from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.arrivy.engines import (
     ArrivyEntitiesSyncEngine,
     ArrivyTasksSyncEngine, 
-    ArrivyGroupsSyncEngine
+    ArrivyGroupsSyncEngine,
+    ArrivyStatusSyncEngine
 )
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ class Command(BaseSyncCommand):
         # Add Arrivy-specific arguments
         parser.add_argument(
             '--entity-type',
-            choices=['entities', 'tasks', 'groups', 'all'],
+            choices=['entities', 'tasks', 'groups', 'statuses', 'all'],
             default='all',
             help='Type of Arrivy entities to sync (default: all)'
         )
@@ -102,7 +103,7 @@ class Command(BaseSyncCommand):
         """
         self.stdout.write("Starting comprehensive Arrivy sync (all entities)...")
         
-        entity_types = ['entities', 'tasks', 'groups']
+        entity_types = ['entities', 'tasks', 'groups', 'statuses']
         all_results = {}
         
         for entity_type in entity_types:
@@ -185,7 +186,8 @@ class Command(BaseSyncCommand):
         engine_map = {
             'entities': ArrivyEntitiesSyncEngine,
             'tasks': ArrivyTasksSyncEngine,
-            'groups': ArrivyGroupsSyncEngine
+            'groups': ArrivyGroupsSyncEngine,
+            'statuses': ArrivyStatusSyncEngine
         }
         
         engine_class = engine_map.get(entity_type)

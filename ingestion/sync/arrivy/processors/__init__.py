@@ -8,7 +8,7 @@ from .groups import GroupsProcessor
 from .tasks import TasksProcessor
 from .bookings import BookingsProcessor
 from .location_reports import LocationReportsProcessor
-from .task_status import TaskStatusProcessor
+from .status import StatusProcessor
 
 __all__ = [
     'ArrivyBaseProcessor',
@@ -17,5 +17,5 @@ __all__ = [
     'TasksProcessor',
     'BookingsProcessor',
     'LocationReportsProcessor',
-    'TaskStatusProcessor'
+    'StatusProcessor'
 ]

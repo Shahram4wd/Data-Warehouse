@@ -1,8 +1,8 @@
 """
-Arrivy Task Status Client
+Arrivy Status Client
 
-Client for fetching task status definitions, workflows, and transitions from Arrivy API.
-Handles status definitions, workflow configurations, and status transition rules.
+Client for fetching status definitions from Arrivy API.
+Handles status definitions using the working 'statuses' endpoint.
 """
 
 import logging
@@ -12,11 +12,69 @@ from .base import ArrivyBaseClient
 
 logger = logging.getLogger(__name__)
 
-class ArrivyTaskStatusClient(ArrivyBaseClient):
-    """Client for Arrivy task status and workflow API"""
+class ArrivyStatusClient(ArrivyBaseClient):
+    """Client for Arrivy status API"""
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+    
+    async def fetch_statuses(
+        self,
+        page_size: int = 100,
+        max_records: Optional[int] = None,
+        include_inactive: bool = False
+    ) -> AsyncGenerator[List[Dict], None]:
+        """
+        Fetch statuses from the working 'statuses' endpoint
+        
+        Args:
+            page_size: Number of records per page (note: Arrivy ignores this parameter)
+            max_records: Maximum total records to fetch
+            include_inactive: Include inactive statuses
+            
+        Yields:
+            Batches of status records
+        """
+        endpoint = "statuses"
+        
+        try:
+            logger.info(f"Fetching statuses from '{endpoint}' endpoint")
+            
+            # Make the API call - statuses endpoint returns all records at once
+            response = await self._make_request(endpoint)
+            
+            if not response:
+                logger.warning(f"No data returned from {endpoint}")
+                return
+            
+            # Handle both list and single record responses
+            if isinstance(response, list):
+                statuses = response
+            elif isinstance(response, dict) and 'data' in response:
+                statuses = response['data']
+            elif isinstance(response, dict) and 'results' in response:
+                statuses = response['results']
+            else:
+                # Assume the response itself is a list of statuses
+                statuses = [response] if isinstance(response, dict) else []
+            
+            if not statuses:
+                logger.warning("No statuses found in API response")
+                return
+            
+            # Filter inactive statuses if requested
+            if not include_inactive:
+                statuses = [s for s in statuses if s.get('is_active', True)]
+            
+            logger.info(f"Found {len(statuses)} statuses")
+            
+            # Yield all statuses as a single batch (since the API returns all at once)
+            if statuses:
+                yield statuses
+            
+        except Exception as e:
+            logger.error(f"Error fetching statuses from {endpoint}: {e}")
+            raise
     
     async def fetch_status_definitions(
         self,
