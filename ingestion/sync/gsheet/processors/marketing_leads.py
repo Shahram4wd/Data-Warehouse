@@ -32,6 +32,8 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
             'email_address': 'email_address',
             
             # Timestamp
+            # Map the sheet's `created_at` column into the model `lead_created_at`
+            # to avoid clobbering the DB-created `created_at` timestamp.
             'created_at': 'lead_created_at',
             
             # UTM Campaign Data
