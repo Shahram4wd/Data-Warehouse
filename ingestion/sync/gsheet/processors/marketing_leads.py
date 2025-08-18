@@ -18,6 +18,10 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
     Handles transformation and validation of marketing leads data
     from Google Sheets to the database model.
     """
+    def __init__(self, *args, **kwargs):
+        """Initialize processor and cache expensive metadata."""
+        super().__init__(*args, **kwargs)
+        self._cached_field_max_lengths: Optional[Dict[str, int]] = None
     
     def get_field_mappings(self) -> Dict[str, str]:
         """
@@ -158,8 +162,10 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
             processed_data['sheet_last_modified'] = timezone.now()
             processed_data['raw_data'] = row_data
             
-            # Apply transform_record for additional business logic (like Boolean conversion)
+            # Use the existing transform_record method but indicate this is already field-mapped
+            processed_data['_already_field_mapped'] = True
             processed_data = self.transform_record(processed_data)
+            del processed_data['_already_field_mapped']  # Remove the flag
             
             return processed_data
             
@@ -176,6 +182,10 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
             return None
             
         try:
+            # Handle boolean fields early to avoid extra transform passes
+            if field_name in ['lead_set', 'manager_followup', 'multiple_inquiry', 'spouses_present']:
+                return self._parse_boolean(value)
+
             # Handle datetime fields
             if field_name in ['lead_created_at', 'first_call_date_time', 'appt_date_time', 'f9_sys_created_date']:
                 return self._parse_datetime(value)
@@ -218,43 +228,67 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
         Returns:
             Dictionary mapping field names to max lengths
         """
+        # Cache the result to avoid per-field introspection overhead
+        if self._cached_field_max_lengths is not None:
+            return self._cached_field_max_lengths
+
         from ingestion.models.gsheet import GoogleSheetMarketingLead
-        
-        max_lengths = {}
+
+        max_lengths: Dict[str, int] = {}
         for field in GoogleSheetMarketingLead._meta.fields:
             if hasattr(field, 'max_length') and field.max_length:
                 max_lengths[field.name] = field.max_length
-        
-        return max_lengths
+
+        self._cached_field_max_lengths = max_lengths
+        return self._cached_field_max_lengths
     
     def _parse_datetime(self, value: Any) -> Optional[datetime]:
         """Parse datetime from various formats"""
         if not value:
             return None
-            
+
         try:
             if isinstance(value, datetime):
                 return timezone.make_aware(value) if timezone.is_naive(value) else value
-            
-            # Try common datetime formats
+
+            # Normalize to string once
+            s = str(value).strip()
+
+            # Fast path: ISO 8601 via fromisoformat, with 'Z' handling
+            try:
+                iso_str = s[:-1] + '+00:00' if s.endswith('Z') else s
+                dt = datetime.fromisoformat(iso_str)
+                return timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+            except Exception:
+                pass
+
+            # Try common datetime formats (ordered by likelihood) with minimal throws
             formats = [
-                '%m/%d/%Y %H:%M:%S',  # 11/1/2023 7:40:08
-                '%Y-%m-%d %H:%M:%S',  # 2023-11-01 07:40:08
-                '%m/%d/%Y %H:%M',     # 11/1/2023 7:40
-                '%Y-%m-%d',           # 2023-11-01
-                '%m/%d/%Y',           # 11/1/2023
+                '%Y-%m-%d %H:%M:%S',       # 2023-11-01 07:40:08
+                '%m/%d/%Y %H:%M:%S',       # 11/1/2023 7:40:08
+                '%Y-%m-%d %H:%M:%S',       # 2023-11-01 07:40:08
+                '%Y-%m-%dT%H:%M:%S%z',     # 2023-11-01T07:40:08+00:00 (ISO format with timezone)
+                '%Y-%m-%dT%H:%M:%S.%f%z',  # 2023-11-01T07:40:08.123456+00:00 (ISO with microseconds)
+                '%Y-%m-%dT%H:%M:%S',       # 2023-11-01T07:40:08 (ISO without timezone)
+                '%m/%d/%Y %H:%M',          # 11/1/2023 7:40
+                '%Y-%m-%d',                # 2023-11-01
+                '%m/%d/%Y',                # 11/1/2023
             ]
-            
+
             for fmt in formats:
                 try:
-                    dt = datetime.strptime(str(value), fmt)
-                    return timezone.make_aware(dt)
+                    dt = datetime.strptime(s, fmt)
+                    # If the datetime already has timezone info (from %z), don't make it aware
+                    if dt.tzinfo is not None:
+                        return dt
+                    else:
+                        return timezone.make_aware(dt)
                 except ValueError:
                     continue
-                    
+
         except Exception as e:
             logger.warning(f"Could not parse datetime: {value} - {e}")
-            
+
         return None
     
     def _parse_date(self, value: Any) -> Optional[datetime]:
@@ -334,13 +368,22 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
         Transform marketing leads record with specific business logic
         
         Args:
-            record: Raw record from Google Sheets
+            record: Raw record from Google Sheets or already field-mapped data
             
         Returns:
             Transformed record
         """
-        # Start with base transformation
-        transformed = super().transform_record(record)
+        # Check if this data is already field-mapped (from process_row_sync)
+        if record.get('_already_field_mapped'):
+            # Fast path: values already parsed field-by-field in process_row_sync.
+            # Avoid re-parsing to reduce per-row overhead.
+            transformed = record.copy()
+            if 'raw_data' in transformed:
+                transformed['raw_data'] = self._serialize_for_json(transformed['raw_data'])
+            return transformed
+        else:
+            # Raw data from Google Sheets, apply base transformation first
+            transformed = super().transform_record(record)
         
         try:
             # Define Boolean fields that need special conversion
