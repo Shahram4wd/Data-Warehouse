@@ -160,7 +160,7 @@ class HubSpotGeniusUsersSyncEngine(BaseSyncEngine):
                 update_fields=[
                     "hs_object_id", "hs_createdate", "hs_lastmodifieddate", "archived",
                     "arrivy_user_id", "division", "division_id", "email", "job_title", "name", "title_id",
-                    "user_account_type", "user_id", "user_status_inactive", "updated_at"
+                    "user_account_type", "user_id", "user_status_inactive", "sync_updated_at"
                 ],
                 unique_fields=["id"]
             )
@@ -324,7 +324,7 @@ class HubSpotGeniusUsersSyncEngine(BaseSyncEngine):
                 update_fields=[
                     "hs_object_id", "hs_createdate", "hs_lastmodifieddate", "archived",
                     "arrivy_user_id", "division", "division_id", "email", "job_title", "name", "title_id",
-                    "user_account_type", "user_id", "user_status_inactive", "updated_at"
+                    "user_account_type", "user_id", "user_status_inactive", "sync_updated_at"
                 ],
                 unique_fields=["id"]
             )

@@ -2,10 +2,12 @@ import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from ingestion.models import Genius_Appointment, Genius_Prospect, Genius_ProspectSource, Genius_AppointmentType, Genius_AppointmentOutcome
+from ingestion.models.common import SyncHistory
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import timezone as dt_timezone
 from datetime import datetime, date, timedelta, time
+from typing import Optional
 
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))
 
@@ -13,6 +15,50 @@ class Command(BaseCommand):
     help = "Download appointments directly from the database and update the local database."
 
     def add_arguments(self, parser):
+        # Standard CRM sync flags according to sync_crm_guide.md
+        parser.add_argument(
+            '--full',
+            action='store_true',
+            help='Perform full sync (ignore last sync timestamp)'
+        )
+        parser.add_argument(
+            '--force-overwrite',
+            action='store_true', 
+            help='Completely replace existing records'
+        )
+        parser.add_argument(
+            '--since',
+            type=str,
+            help='Manual sync start date (YYYY-MM-DD format)'
+        )
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Test run without database writes'
+        )
+        parser.add_argument(
+            '--max-records',
+            type=int,
+            default=0,
+            help='Limit total records (0 = unlimited)'
+        )
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Enable verbose logging'
+        )
+        
+        # Genius-specific arguments (backward compatibility)
+        parser.add_argument(
+            '--start-date',
+            type=str,
+            help='(DEPRECATED) Use --since instead. Start date for sync (YYYY-MM-DD format)'
+        )
+        parser.add_argument(
+            '--end-date',
+            type=str,
+            help='End date for sync (YYYY-MM-DD format)'
+        )
         parser.add_argument(
             "--table",
             type=str,
@@ -31,24 +77,26 @@ class Command(BaseCommand):
             default=1,
             help="Starting page number (each page is BATCH_SIZE records). Defaults to 1. Overrides --start-offset if provided."
         )
-        parser.add_argument(
-            "--dry-run",
-            action="store_true",
-            help="Run the command without making any database changes. Shows what would be processed."
-        )
-        parser.add_argument(
-            "--debug",
-            action="store_true",
-            help="Enable debug mode with verbose logging and detailed output."
-        )
 
     def handle(self, *args, **options):
+        # Setup debug logging if requested
+        if options.get('debug'):
+            import logging
+            logging.getLogger().setLevel(logging.DEBUG)
+            
         table_name = options["table"]
         start_offset = options["start_offset"]
         start_page = options["page"]
         dry_run = options.get("dry_run", False)
         debug = options.get("debug", False)
+        max_records = options.get("max_records", 0)
         connection = None
+        
+        # Parse date arguments following CRM sync guide priority
+        since_date = self._parse_since_parameter(options)
+        end_date = self._parse_date_parameter(options.get('end_date'))
+        force_overwrite = options.get('force_overwrite', False)
+        full_sync = options.get('full', False)
         
         # Initialize counters
         self.corrupted_count = 0
@@ -61,6 +109,9 @@ class Command(BaseCommand):
         if debug:
             self.stdout.write(self.style.SUCCESS("🐛 DEBUG MODE - Verbose logging enabled"))
 
+        # Create SyncHistory record
+        sync_record = self._create_sync_record() if not dry_run else None
+
         try:
             # Database connection and preloading data
             connection = get_mysql_connection()
@@ -69,10 +120,25 @@ class Command(BaseCommand):
             # Preload lookup data for better performance
             lookup_data = self._preload_lookup_data(cursor)
             
+            # Determine sync strategy and build query
+            sync_strategy = self._determine_sync_strategy(since_date, force_overwrite, full_sync)
+            where_clause = self._build_where_clause(sync_strategy['since_date'], end_date)
+            
             # Get total records and process in batches
-            cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            count_query = f"SELECT COUNT(*) FROM {table_name}{where_clause}"
+            cursor.execute(count_query)
             total_records = cursor.fetchone()[0]
-            self.stdout.write(self.style.SUCCESS(f"Total records in table '{table_name}': {total_records}"))
+            
+            if max_records > 0 and max_records < total_records:
+                total_records = max_records
+                self.stdout.write(f"Limiting to {max_records} records (--max-records)")
+            
+            self.stdout.write(self.style.SUCCESS(f"Total records to process from table '{table_name}': {total_records:,}"))
+            
+            if sync_strategy['since_date']:
+                self.stdout.write(f"Delta sync since: {sync_strategy['since_date'].strftime('%Y-%m-%d %H:%M:%S')}")
+            else:
+                self.stdout.write("Full sync (no timestamp filter)")
             
             # Calculate starting offset based on page number (page overrides start_offset if provided)
             if start_page > 1:
@@ -91,8 +157,8 @@ class Command(BaseCommand):
             
             # Process records in batches starting from the calculated offset
             for offset in tqdm(range(start_offset, total_records, BATCH_SIZE), desc="Processing batches"):
-                # Use JOIN to get HubSpot appointment ID directly from third_party_source table
-                cursor.execute(f"""
+                # Build main query with delta sync filtering
+                main_query = f"""
                     SELECT a.id, a.prospect_id, a.prospect_source_id, a.user_id, a.type_id, a.date, a.time, a.duration, 
                            a.address1, a.address2, a.city, a.state, a.zip, a.email, a.notes, a.add_user_id, a.add_date, 
                            a.assign_date, a.confirm_user_id, a.confirm_date, a.confirm_with, a.spouses_present, 
@@ -103,10 +169,17 @@ class Command(BaseCommand):
                       ON tps.id = a.third_party_source_id
                     LEFT JOIN third_party_source_type AS tpst 
                       ON tpst.id = tps.third_party_source_type_id AND tpst.label = 'hubspot'
+                    {where_clause}
                     LIMIT {BATCH_SIZE} OFFSET {offset}
-                """)
+                """
+                cursor.execute(main_query)
                 rows = cursor.fetchall()
                 self._process_batch(rows, **lookup_data)
+                
+                # Apply max_records limit if specified
+                if max_records > 0 and self.processed_count >= max_records:
+                    self.stdout.write(f"Reached max records limit: {max_records}")
+                    break
                 
             self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
             
@@ -122,12 +195,147 @@ class Command(BaseCommand):
                 else:
                     self.stdout.write(self.style.SUCCESS(f"Summary: {self.processed_count} records processed successfully with no data corruption detected."))
             
+            # Update SyncHistory on success
+            if sync_record and not dry_run:
+                self._complete_sync_record(sync_record, 'success')
+                
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"An error occurred: {e}"))
+            # Update SyncHistory on failure
+            if sync_record and not dry_run:
+                self._complete_sync_record(sync_record, 'failed', str(e))
+            raise
         finally:
             if connection:
                 cursor.close()
                 connection.close()
+    
+    def _parse_since_parameter(self, options) -> Optional[datetime]:
+        """Parse --since parameter following CRM sync guide priority order."""
+        # Priority order:
+        # 1. --since parameter (manual override)
+        # 2. --start-date parameter (backward compatibility)
+        # 3. SyncHistory table last successful sync timestamp
+        # 4. Default: None (full sync)
+        
+        since_param = options.get('since')
+        start_date_param = options.get('start_date')  # Backward compatibility
+        
+        if since_param:
+            return self._parse_date_parameter(since_param)
+        elif start_date_param:
+            self.stdout.write(self.style.WARNING('--start-date is deprecated, use --since instead'))
+            return self._parse_date_parameter(start_date_param)
+        
+        return None
+    
+    def _parse_date_parameter(self, date_str: str) -> Optional[datetime]:
+        """Parse date string to datetime object."""
+        if not date_str:
+            return None
+        
+        try:
+            # Parse YYYY-MM-DD format
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+            # Convert to UTC timezone-aware datetime
+            return date_obj.replace(tzinfo=dt_timezone.utc)
+        except ValueError:
+            self.stdout.write(self.style.ERROR(f'Invalid date format "{date_str}". Use YYYY-MM-DD format.'))
+            return None
+    
+    def _get_last_sync_timestamp(self) -> Optional[datetime]:
+        """Get last successful sync timestamp from SyncHistory."""
+        try:
+            last_sync = SyncHistory.objects.filter(
+                crm_source='genius',
+                sync_type='appointments',
+                status='success'
+            ).order_by('-end_time').first()
+            
+            return last_sync.end_time if last_sync else None
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"Could not retrieve last sync timestamp: {e}"))
+            return None
+    
+    def _determine_sync_strategy(self, since_param: Optional[datetime], force_overwrite: bool, full_sync: bool) -> dict:
+        """Determine sync strategy following CRM sync guide."""
+        if force_overwrite or full_sync:
+            # Force full sync
+            return {
+                'since_date': None,
+                'strategy': 'full',
+                'description': 'Full sync (force overwrite)' if force_overwrite else 'Full sync'
+            }
+        elif since_param:
+            # Manual override timestamp
+            return {
+                'since_date': since_param,
+                'strategy': 'delta',
+                'description': f'Delta sync since {since_param.strftime("%Y-%m-%d")}'
+            }
+        else:
+            # Check SyncHistory for last successful sync
+            last_sync = self._get_last_sync_timestamp()
+            return {
+                'since_date': last_sync,
+                'strategy': 'delta' if last_sync else 'full',
+                'description': f'Delta sync since last successful sync ({last_sync.strftime("%Y-%m-%d %H:%M:%S")})' if last_sync else 'Full sync (no previous sync found)'
+            }
+    
+    def _build_where_clause(self, since_date: Optional[datetime], end_date: Optional[datetime]) -> str:
+        """Build WHERE clause for delta sync filtering."""
+        conditions = []
+        
+        if since_date:
+            # Use updated_at for appointments (they can be modified)
+            since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+            conditions.append(f"a.updated_at > '{since_str}'")
+        
+        if end_date:
+            end_str = end_date.strftime('%Y-%m-%d %H:%M:%S') 
+            conditions.append(f"a.updated_at <= '{end_str}'")
+        
+        if conditions:
+            return ' WHERE ' + ' AND '.join(conditions)
+        return ''
+    
+    def _create_sync_record(self) -> SyncHistory:
+        """Create SyncHistory record for tracking."""
+        return SyncHistory.objects.create(
+            crm_source='genius',
+            sync_type='appointments',
+            status='running',
+            start_time=timezone.now(),
+            records_processed=0,
+            records_created=0,
+            records_updated=0,
+            records_failed=0,
+            configuration={
+                'batch_size': BATCH_SIZE,
+                'command': 'db_genius_appointments'
+            }
+        )
+    
+    def _complete_sync_record(self, sync_record: SyncHistory, status: str, error_message: str = None):
+        """Complete SyncHistory record with final status."""
+        sync_record.status = status
+        sync_record.end_time = timezone.now()
+        sync_record.records_processed = self.processed_count
+        sync_record.records_failed = self.corrupted_count
+        
+        if error_message:
+            sync_record.error_message = error_message
+        
+        # Calculate performance metrics
+        if sync_record.start_time and sync_record.end_time:
+            duration = (sync_record.end_time - sync_record.start_time).total_seconds()
+            sync_record.performance_metrics = {
+                'duration_seconds': duration,
+                'records_per_second': self.processed_count / duration if duration > 0 else 0,
+                'corrupted_records': self.corrupted_count
+            }
+        
+        sync_record.save()
     
     def _preload_lookup_data(self, cursor):
         """Preload all lookup data needed for processing."""

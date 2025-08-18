@@ -1,7 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from ingestion.models import Genius_Prospect, Genius_Division
+from ingestion.models import Genius_Prospect, Genius_Division, SyncHistory
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import datetime, timezone as dt_timezone
@@ -40,6 +40,37 @@ class Command(BaseCommand):
             action="store_true",
             help="Enable debug mode with verbose logging and detailed output."
         )
+        # Delta sync arguments
+        parser.add_argument(
+            "--since",
+            type=str,
+            help="Sync records modified since this timestamp (YYYY-MM-DD HH:MM:SS or YYYY-MM-DD). Manual override for sync timestamp."
+        )
+        parser.add_argument(
+            "--force-overwrite",
+            action="store_true", 
+            help="Force overwrite all records regardless of last sync timestamp. Takes precedence over --since."
+        )
+        parser.add_argument(
+            "--full",
+            action="store_true",
+            help="Perform full sync of all records. Equivalent to --force-overwrite."
+        )
+        parser.add_argument(
+            "--start-date",
+            type=str,
+            help="Start date for filtering records (YYYY-MM-DD HH:MM:SS or YYYY-MM-DD). Alias for --since."
+        )
+        parser.add_argument(
+            "--end-date", 
+            type=str,
+            help="End date for filtering records (YYYY-MM-DD HH:MM:SS or YYYY-MM-DD). Filters records updated before this date."
+        )
+        parser.add_argument(
+            "--max-records",
+            type=int,
+            help="Maximum number of records to process in this sync run."
+        )
     
     def handle(self, *args, **options):
         table_name = options["table"]
@@ -47,19 +78,41 @@ class Command(BaseCommand):
         start_page = options["page"]
         dry_run = options.get("dry_run", False)
         debug = options.get("debug", False)
+        max_records = options.get("max_records")
+        end_date = options.get("end_date")
         connection = None
+        sync_record = None
         
         # Initialize counters
         self.processed_count = 0
         self.dry_run = dry_run
         self.debug = debug
         
+        # Determine sync strategy
+        sync_strategy, sync_timestamp = self._determine_sync_strategy(options)
+        
         if dry_run:
             self.stdout.write(self.style.WARNING("🔍 DRY RUN MODE - No database changes will be made"))
         if debug:
             self.stdout.write(self.style.SUCCESS("🐛 DEBUG MODE - Verbose logging enabled"))
+        
+        # Display sync strategy
+        if sync_strategy == 'incremental' and sync_timestamp:
+            self.stdout.write(self.style.SUCCESS(f"📅 INCREMENTAL SYNC - Processing records updated since {sync_timestamp}"))
+        else:
+            self.stdout.write(self.style.SUCCESS("🔄 FULL SYNC - Processing all records"))
+        
+        if max_records:
+            self.stdout.write(self.style.SUCCESS(f"📊 MAX RECORDS - Limited to {max_records:,} records"))
+        
+        if end_date:
+            self.stdout.write(self.style.SUCCESS(f"📅 END DATE - Processing records updated before {end_date}"))
 
         try:
+            # Create sync record for tracking (skip in dry-run mode)
+            if not dry_run:
+                sync_record = self._create_sync_record()
+                
             # Database connection
             connection = get_mysql_connection()
             cursor = connection.cursor()
@@ -68,9 +121,14 @@ class Command(BaseCommand):
             lookups = self._preload_lookup_data(cursor)
             
             # Process records in batches
-            self._process_all_records(cursor, table_name, lookups, start_offset, start_page)
+            self._process_all_records(cursor, table_name, lookups, start_offset, start_page, 
+                                    sync_strategy, sync_timestamp, end_date, max_records)
             
             self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
+            
+            # Complete sync record
+            if sync_record and not dry_run:
+                self._complete_sync_record(sync_record, self.processed_count)
             
             # Print summary
             if dry_run:
@@ -80,11 +138,106 @@ class Command(BaseCommand):
             
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"An error occurred: {e}"))
+            # Mark sync as failed
+            if sync_record and not dry_run:
+                self._complete_sync_record(sync_record, self.processed_count, 'failed')
         finally:
             if connection:
                 cursor.close()
                 connection.close()
     
+    def _parse_since_parameter(self, since_str):
+        """Parse --since parameter to datetime object."""
+        if not since_str:
+            return None
+            
+        # Try different datetime formats
+        formats = [
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d %H:%M',
+            '%Y-%m-%d'
+        ]
+        
+        for fmt in formats:
+            try:
+                naive_dt = datetime.strptime(since_str, fmt)
+                return timezone.make_aware(naive_dt)
+            except ValueError:
+                continue
+                
+        raise ValueError(f"Invalid datetime format: {since_str}. Use YYYY-MM-DD HH:MM:SS or YYYY-MM-DD")
+    
+    def _get_last_sync_timestamp(self):
+        """Get the last successful sync timestamp from SyncHistory."""
+        try:
+            last_sync = SyncHistory.objects.filter(
+                crm_source='genius',
+                sync_type='prospects',
+                status='completed'
+            ).order_by('-completed_at').first()
+            
+            if last_sync:
+                return last_sync.completed_at
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"Could not retrieve last sync timestamp: {e}"))
+        
+        return None
+    
+    def _determine_sync_strategy(self, options):
+        """Determine sync strategy based on arguments with priority order."""
+        # Priority: --since > --force-overwrite > --full > SyncHistory > full sync
+        
+        if options.get('since'):
+            since_dt = self._parse_since_parameter(options['since'])
+            return 'incremental', since_dt
+        
+        # Handle backward compatibility - --start-date is alias for --since  
+        if options.get('start_date'):
+            self.stdout.write(self.style.WARNING("--start-date is deprecated, use --since instead"))
+            since_dt = self._parse_since_parameter(options['start_date'])
+            return 'incremental', since_dt
+            
+        if options.get('force_overwrite') or options.get('full'):
+            return 'full', None
+            
+        # Check SyncHistory for last sync
+        last_sync = self._get_last_sync_timestamp()
+        if last_sync:
+            return 'incremental', last_sync
+            
+        # Default to full sync
+        return 'full', None
+    
+    def _build_where_clause(self, sync_strategy, sync_timestamp, end_date):
+        """Build WHERE clause for filtering records."""
+        conditions = []
+        
+        if sync_strategy == 'incremental' and sync_timestamp:
+            conditions.append(f"p.updated_at >= '{sync_timestamp.strftime('%Y-%m-%d %H:%M:%S')}'")
+            
+        if end_date:
+            end_dt = self._parse_since_parameter(end_date)
+            conditions.append(f"p.updated_at <= '{end_dt.strftime('%Y-%m-%d %H:%M:%S')}'")
+            
+        return " AND ".join(conditions)
+    
+    def _create_sync_record(self):
+        """Create a new sync record."""
+        return SyncHistory.objects.create(
+            crm_source='genius',
+            sync_type='prospects',
+            status='running',
+            started_at=timezone.now(),
+            records_processed=0
+        )
+    
+    def _complete_sync_record(self, sync_record, records_processed, status='completed'):
+        """Complete the sync record."""
+        sync_record.records_processed = records_processed
+        sync_record.completed_at = timezone.now()
+        sync_record.status = status
+        sync_record.save()
+
     def _preload_divisions(self):
         """Preload divisions for lookup."""
         return {division.id: division for division in Genius_Division.objects.all()}
@@ -98,12 +251,21 @@ class Command(BaseCommand):
         return lookups
     
     
-    def _process_all_records(self, cursor, table_name, lookups, start_offset, start_page):
+    def _process_all_records(self, cursor, table_name, lookups, start_offset, start_page, 
+                           sync_strategy, sync_timestamp, end_date, max_records):
         """Process all records in batches."""
-        # Get total record count
-        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+        # Build WHERE clause for filtering
+        where_clause = self._build_where_clause(sync_strategy, sync_timestamp, end_date)
+        where_sql = f" WHERE {where_clause}" if where_clause else ""
+        
+        # Get total record count with filtering
+        cursor.execute(f"SELECT COUNT(*) FROM {table_name} AS p{where_sql}")
         total_records = cursor.fetchone()[0]
-        self.stdout.write(self.style.SUCCESS(f"Total records in table '{table_name}': {total_records}"))
+        self.stdout.write(self.style.SUCCESS(f"Total records in table '{table_name}' matching criteria: {total_records}"))
+        
+        if max_records and total_records > max_records:
+            total_records = max_records
+            self.stdout.write(self.style.SUCCESS(f"Limited to first {max_records:,} records"))
         
         # Calculate starting offset based on page number (page overrides start_offset if provided)
         if start_page > 1:
@@ -121,22 +283,35 @@ class Command(BaseCommand):
                 self.stdout.write(f"Starting from offset {start_offset:,}, processing {remaining_records:,} remaining records")
         
         # Process records in batches starting from the calculated offset
+        processed_so_far = 0
         for offset in tqdm(range(start_offset, total_records, BATCH_SIZE), desc="Processing batches"):
-            self._process_batch_at_offset(cursor, table_name, offset, lookups)
-    def _process_batch_at_offset(self, cursor, table_name, offset, lookups):
+            # Check max_records limit
+            if max_records and processed_so_far >= max_records:
+                break
+                
+            batch_size = min(BATCH_SIZE, total_records - offset)
+            if max_records:
+                batch_size = min(batch_size, max_records - processed_so_far)
+                
+            self._process_batch_at_offset(cursor, table_name, offset, lookups, where_sql, batch_size)
+            processed_so_far += batch_size
+            
+    def _process_batch_at_offset(self, cursor, table_name, offset, lookups, where_sql="", batch_size=BATCH_SIZE):
         """Process a batch of records starting at the specified offset."""
         # Use JOIN to get HubSpot contact ID directly from third_party_source table
         cursor.execute(f"""
-            SELECT p.id, p.division_id, p.first_name, p.last_name, p.alt_first_name, p.alt_last_name,
-                   p.address1, p.address2, p.city, p.county, p.state, p.zip, p.phone1, p.phone2, 
+            SELECT p.id, p.division_id, p.user_id, p.first_name, p.last_name, p.alt_first_name, p.alt_last_name,
+                   p.address1, p.address2, p.city, p.county, p.state, p.zip, p.year_built, p.phone1, p.phone2, 
                    p.email, p.notes, p.add_user_id, p.add_date, p.marketsharp_id, p.leap_customer_id, 
-                   p.third_party_source_id, tps.third_party_id AS hubspot_contact_id
+                   p.third_party_source_id, p.updated_at, tps.third_party_id AS hubspot_contact_id
             FROM {table_name} AS p
             LEFT JOIN third_party_source AS tps 
               ON tps.id = p.third_party_source_id
             LEFT JOIN third_party_source_type AS tpst 
               ON tpst.id = tps.third_party_source_type_id AND tpst.label = 'hubspot'
-            LIMIT {BATCH_SIZE} OFFSET {offset}
+            {where_sql}
+            ORDER BY p.id
+            LIMIT {batch_size} OFFSET {offset}
         """)
         rows = cursor.fetchall()
         
@@ -152,17 +327,17 @@ class Command(BaseCommand):
         for row in rows:
             try:
                 # Validate row length first
-                if len(row) != 22:  # Updated to 22 columns (added third_party_source_id and hubspot_contact_id)
-                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 22. Skipping record."))
+                if len(row) != 25:  # Updated to 25 columns (added user_id and year_built fields)
+                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 25. Skipping record."))
                     continue
                 
                 # Extract fields from row with debugging
                 try:
                     (
-                        record_id, division_id, first_name, last_name, alt_first_name, alt_last_name,
-                        address1, address2, city, county, state, zip, phone1, phone2, email, notes,
+                        record_id, division_id, user_id, first_name, last_name, alt_first_name, alt_last_name,
+                        address1, address2, city, county, state, zip, year_built, phone1, phone2, email, notes,
                         add_user_id, add_date, marketsharp_id, leap_customer_id, third_party_source_id, 
-                        hubspot_contact_id
+                        updated_at, hubspot_contact_id
                     ) = row
                 except ValueError as e:
                     self.stdout.write(self.style.ERROR(f"Error unpacking row for record_id {row[0] if row else 'unknown'}: {e}"))
@@ -174,6 +349,7 @@ class Command(BaseCommand):
                 
                 # Process datetime fields
                 add_date = self._parse_datetime(add_date)
+                updated_at = self._parse_datetime(updated_at)
 
                 # The hubspot_contact_id is already resolved by the SQL JOIN
                 # No additional lookup needed since the JOIN handles the mapping
@@ -189,16 +365,16 @@ class Command(BaseCommand):
 
                 # Create or update record
                 if record_id in existing_records:
-                    record = self._update_record(existing_records[record_id], division, first_name, last_name,
+                    record = self._update_record(existing_records[record_id], division, user_id, first_name, last_name,
                                            alt_first_name, alt_last_name, address1, address2, city, county,
-                                           state, zip, phone1, phone2, email, notes, add_user_id, add_date,
-                                           marketsharp_id, leap_customer_id, hubspot_contact_id)
+                                           state, zip, year_built, phone1, phone2, email, notes, add_user_id, add_date,
+                                           marketsharp_id, leap_customer_id, updated_at, hubspot_contact_id)
                     to_update.append(record)
                 else:
-                    record = self._create_record(record_id, division, first_name, last_name, alt_first_name,
-                                           alt_last_name, address1, address2, city, county, state, zip,
+                    record = self._create_record(record_id, division, user_id, first_name, last_name, alt_first_name,
+                                           alt_last_name, address1, address2, city, county, state, zip, year_built,
                                            phone1, phone2, email, notes, add_user_id, add_date,
-                                           marketsharp_id, leap_customer_id, hubspot_contact_id)
+                                           marketsharp_id, leap_customer_id, updated_at, hubspot_contact_id)
                     to_create.append(record)
                     
             except Exception as e:
@@ -226,11 +402,12 @@ class Command(BaseCommand):
                     if len(to_update) > 5:
                         self.stdout.write(f"  ... and {len(to_update) - 5} more records")
     
-    def _update_record(self, record, division, first_name, last_name, alt_first_name, alt_last_name,
-                     address1, address2, city, county, state, zip, phone1, phone2, email, notes,
-                     add_user_id, add_date, marketsharp_id, leap_customer_id, hubspot_contact_id):
+    def _update_record(self, record, division, user_id, first_name, last_name, alt_first_name, alt_last_name,
+                     address1, address2, city, county, state, zip, year_built, phone1, phone2, email, notes,
+                     add_user_id, add_date, marketsharp_id, leap_customer_id, updated_at, hubspot_contact_id):
         """Update an existing prospect record."""
         record.division = division
+        record.user_id = user_id
         record.first_name = first_name
         record.last_name = last_name
         record.alt_first_name = alt_first_name
@@ -241,6 +418,7 @@ class Command(BaseCommand):
         record.county = county
         record.state = state
         record.zip = zip
+        record.year_built = year_built
         record.phone1 = phone1
         record.phone2 = phone2
         record.email = email
@@ -249,16 +427,18 @@ class Command(BaseCommand):
         record.add_date = add_date
         record.marketsharp_id = marketsharp_id
         record.leap_customer_id = leap_customer_id
+        record.updated_at = updated_at
         record.hubspot_contact_id = hubspot_contact_id
         return record
     
-    def _create_record(self, record_id, division, first_name, last_name, alt_first_name, alt_last_name,
-                     address1, address2, city, county, state, zip, phone1, phone2, email, notes,
-                     add_user_id, add_date, marketsharp_id, leap_customer_id, hubspot_contact_id):
+    def _create_record(self, record_id, division, user_id, first_name, last_name, alt_first_name, alt_last_name,
+                     address1, address2, city, county, state, zip, year_built, phone1, phone2, email, notes,
+                     add_user_id, add_date, marketsharp_id, leap_customer_id, updated_at, hubspot_contact_id):
         """Create a new prospect record."""
         return Genius_Prospect(
             id=record_id,
             division=division,
+            user_id=user_id,
             first_name=first_name,
             last_name=last_name,
             alt_first_name=alt_first_name,
@@ -269,6 +449,7 @@ class Command(BaseCommand):
             county=county,
             state=state,
             zip=zip,
+            year_built=year_built,
             phone1=phone1,
             phone2=phone2,
             email=email,
@@ -277,6 +458,7 @@ class Command(BaseCommand):
             add_date=add_date,
             marketsharp_id=marketsharp_id,
             leap_customer_id=leap_customer_id,
+            updated_at=updated_at,
             hubspot_contact_id=hubspot_contact_id
         )
     
@@ -290,10 +472,10 @@ class Command(BaseCommand):
                 Genius_Prospect.objects.bulk_update(
                     to_update,
                     [
-                        'division', 'first_name', 'last_name', 'alt_first_name', 'alt_last_name',
-                        'address1', 'address2', 'city', 'county', 'state', 'zip', 'phone1', 'phone2',
+                        'division', 'user_id', 'first_name', 'last_name', 'alt_first_name', 'alt_last_name',
+                        'address1', 'address2', 'city', 'county', 'state', 'zip', 'year_built', 'phone1', 'phone2',
                         'email', 'notes', 'add_user_id', 'add_date', 'marketsharp_id', 'leap_customer_id',
-                        'hubspot_contact_id'
+                        'updated_at', 'hubspot_contact_id'
                     ],
                     batch_size=BATCH_SIZE
                 )

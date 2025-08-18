@@ -54,10 +54,11 @@ class Command(BaseCommand):
     
     def _process_batch_at_offset(self, cursor, table_name, offset):
         """Process a batch of records starting at the specified offset."""
-        # Get the batch of records
+        # Get the batch of records including timestamp fields
         cursor.execute(f"""
             SELECT id, title, abbreviation, roles, type_id, section_id, sort, 
-                   pay_component_group_id, is_active, is_unique_per_division
+                   pay_component_group_id, is_active, is_unique_per_division,
+                   created_at, updated_at
             FROM {table_name}
             LIMIT {BATCH_SIZE} OFFSET {offset}
         """)
@@ -74,11 +75,18 @@ class Command(BaseCommand):
 
         for row in rows:
             try:
-                # Extract fields from row
+                # Extract fields from row (now includes timestamp fields)
                 (
                     title_id, title, abbreviation, roles, type_id, section_id, sort,
-                    pay_component_group_id, is_active, is_unique_per_division
+                    pay_component_group_id, is_active, is_unique_per_division,
+                    created_at, updated_at
                 ) = row
+
+                # Convert timestamps to timezone-aware datetimes
+                if created_at:
+                    created_at = timezone.make_aware(created_at) if timezone.is_naive(created_at) else created_at
+                if updated_at:
+                    updated_at = timezone.make_aware(updated_at) if timezone.is_naive(updated_at) else updated_at
 
                 # Process boolean fields (tinyint)
                 is_active = bool(is_active) if is_active is not None else True
@@ -89,14 +97,14 @@ class Command(BaseCommand):
                     record = self._update_record(
                         existing_records[title_id], title, abbreviation, roles, type_id,
                         section_id, sort, pay_component_group_id, is_active,
-                        is_unique_per_division
+                        is_unique_per_division, created_at, updated_at
                     )
                     to_update.append(record)
                 else:
                     record = self._create_record(
                         title_id, title, abbreviation, roles, type_id,
                         section_id, sort, pay_component_group_id, is_active,
-                        is_unique_per_division
+                        is_unique_per_division, created_at, updated_at
                     )
                     to_create.append(record)
                     
@@ -108,7 +116,7 @@ class Command(BaseCommand):
     
     def _update_record(self, record, title, abbreviation, roles, type_id,
                       section_id, sort, pay_component_group_id, is_active,
-                      is_unique_per_division):
+                      is_unique_per_division, created_at, updated_at):
         """Update an existing user title record."""
         record.title = title
         record.abbreviation = abbreviation
@@ -119,12 +127,14 @@ class Command(BaseCommand):
         record.pay_component_group_id = pay_component_group_id
         record.is_active = is_active
         record.is_unique_per_division = is_unique_per_division
+        record.created_at = created_at
+        record.updated_at = updated_at
         
         return record
     
     def _create_record(self, title_id, title, abbreviation, roles, type_id,
                       section_id, sort, pay_component_group_id, is_active,
-                      is_unique_per_division):
+                      is_unique_per_division, created_at, updated_at):
         """Create a new user title record."""
         return Genius_UserTitle(
             id=title_id,
@@ -136,7 +146,9 @@ class Command(BaseCommand):
             sort=sort,
             pay_component_group_id=pay_component_group_id,
             is_active=is_active,
-            is_unique_per_division=is_unique_per_division
+            is_unique_per_division=is_unique_per_division,
+            created_at=created_at,
+            updated_at=updated_at
         )
     
     def _save_records(self, to_create, to_update):
@@ -148,7 +160,8 @@ class Command(BaseCommand):
             if to_update:
                 fields_to_update = [
                     'title', 'abbreviation', 'roles', 'type_id', 'section_id',
-                    'sort', 'pay_component_group_id', 'is_active', 'is_unique_per_division'
+                    'sort', 'pay_component_group_id', 'is_active', 'is_unique_per_division',
+                    'created_at', 'updated_at'
                 ]
                 
                 Genius_UserTitle.objects.bulk_update(to_update, fields_to_update, batch_size=BATCH_SIZE)

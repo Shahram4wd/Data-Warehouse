@@ -2,10 +2,12 @@ import os
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from ingestion.models import Genius_Division, Genius_DivisionGroup
+from ingestion.models.common import SyncHistory
 from ingestion.utils import get_mysql_connection
 from tqdm import tqdm
 from datetime import timezone as dt_timezone
-from datetime import datetime
+from datetime import datetime, date, timedelta, time
+from typing import Optional
 
 BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))
 
@@ -13,6 +15,50 @@ class Command(BaseCommand):
     help = "Download divisions directly from the database and update the local database."
     
     def add_arguments(self, parser):
+        # Standard CRM sync flags according to sync_crm_guide.md
+        parser.add_argument(
+            '--full',
+            action='store_true',
+            help='Perform full sync (ignore last sync timestamp)'
+        )
+        parser.add_argument(
+            '--force-overwrite',
+            action='store_true', 
+            help='Completely replace existing records'
+        )
+        parser.add_argument(
+            '--since',
+            type=str,
+            help='Manual sync start date (YYYY-MM-DD format)'
+        )
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Test run without database writes'
+        )
+        parser.add_argument(
+            '--max-records',
+            type=int,
+            default=0,
+            help='Limit total records (0 = unlimited)'
+        )
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Enable verbose logging'
+        )
+        
+        # Genius-specific arguments (backward compatibility)
+        parser.add_argument(
+            '--start-date',
+            type=str,
+            help='(DEPRECATED) Use --since instead. Start date for sync (YYYY-MM-DD format)'
+        )
+        parser.add_argument(
+            '--end-date',
+            type=str,
+            help='End date for sync (YYYY-MM-DD format)'
+        )
         parser.add_argument(
             "--table",
             type=str,
@@ -61,10 +107,11 @@ class Command(BaseCommand):
     
     def _process_batch_at_offset(self, cursor, table_name, offset, division_groups):
         """Process a batch of records starting at the specified offset."""
-        # Get the batch of records
+        # Get the batch of records including timestamp fields
         cursor.execute(f"""
             SELECT id, group_id, region_id, label, abbreviation, 
-                   is_utility, is_corp, is_omniscient, is_inactive
+                   is_utility, is_corp, is_omniscient, is_inactive,
+                   account_scheduler_id, created_at, updated_at
             FROM {table_name}
             LIMIT {BATCH_SIZE} OFFSET {offset}
         """)
@@ -81,16 +128,21 @@ class Command(BaseCommand):
 
         for row in rows:
             try:
-                # Extract fields from row
+                # Extract fields from row (now includes timestamp fields)
                 (
                     record_id, group_id, region_id, label, abbreviation, 
-                    is_utility, is_corp, is_omniscient, is_inactive
+                    is_utility, is_corp, is_omniscient, is_inactive,
+                    account_scheduler_id, created_at, updated_at
                 ) = row
 
                 # Get division group
                 division_group = division_groups.get(group_id) if group_id else None
                 
-                # Convert tinyint values to appropriate types
+                # Convert timestamps to timezone-aware datetimes
+                if created_at:
+                    created_at = timezone.make_aware(created_at) if timezone.is_naive(created_at) else created_at
+                if updated_at:
+                    updated_at = timezone.make_aware(updated_at) if timezone.is_naive(updated_at) else updated_at
                 is_utility = int(is_utility) if is_utility is not None else 0
                 is_corp = int(is_corp) if is_corp is not None else 0
                 is_omniscient = int(is_omniscient) if is_omniscient is not None else 0
@@ -101,13 +153,15 @@ class Command(BaseCommand):
                     record = self._update_record(
                         existing_records[record_id], 
                         group_id, region_id, label, abbreviation,
-                        is_utility, is_corp, is_omniscient, is_inactive
+                        is_utility, is_corp, is_omniscient, is_inactive,
+                        account_scheduler_id, created_at, updated_at
                     )
                     to_update.append(record)
                 else:
                     record = self._create_record(
                         record_id, group_id, region_id, label, abbreviation,
-                        is_utility, is_corp, is_omniscient, is_inactive
+                        is_utility, is_corp, is_omniscient, is_inactive,
+                        account_scheduler_id, created_at, updated_at
                     )
                     to_create.append(record)
                     
@@ -118,7 +172,8 @@ class Command(BaseCommand):
         self._save_records(to_create, to_update)
     
     def _update_record(self, record, group_id, region_id, label, abbreviation,
-                      is_utility, is_corp, is_omniscient, is_inactive):
+                      is_utility, is_corp, is_omniscient, is_inactive,
+                      account_scheduler_id, created_at, updated_at):
         """Update an existing division record."""
         record.group_id = group_id
         record.region_id = region_id
@@ -128,10 +183,14 @@ class Command(BaseCommand):
         record.is_corp = is_corp
         record.is_omniscient = is_omniscient
         record.is_inactive = is_inactive
+        record.account_scheduler_id = account_scheduler_id
+        record.created_at = created_at
+        record.updated_at = updated_at
         return record
     
     def _create_record(self, record_id, group_id, region_id, label, abbreviation,
-                      is_utility, is_corp, is_omniscient, is_inactive):
+                      is_utility, is_corp, is_omniscient, is_inactive,
+                      account_scheduler_id, created_at, updated_at):
         """Create a new division record."""
         return Genius_Division(
             id=record_id,
@@ -142,7 +201,10 @@ class Command(BaseCommand):
             is_utility=is_utility,
             is_corp=is_corp,
             is_omniscient=is_omniscient,
-            is_inactive=is_inactive
+            is_inactive=is_inactive,
+            account_scheduler_id=account_scheduler_id,
+            created_at=created_at,
+            updated_at=updated_at
         )
     
     def _save_records(self, to_create, to_update):
@@ -156,7 +218,8 @@ class Command(BaseCommand):
                     to_update,
                     [
                         'group_id', 'region_id', 'label', 'abbreviation',
-                        'is_utility', 'is_corp', 'is_omniscient', 'is_inactive'
+                        'is_utility', 'is_corp', 'is_omniscient', 'is_inactive',
+                        'account_scheduler_id', 'created_at', 'updated_at'
                     ],
                     batch_size=BATCH_SIZE
                 )
