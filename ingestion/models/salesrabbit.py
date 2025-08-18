@@ -55,8 +55,8 @@ class SalesRabbit_Lead(models.Model):
     custom_fields = models.JSONField(null=True, blank=True)  # Custom fields from API
     
     # Sync tracking - STANDARDIZED to match other CRM models
-    created_at = models.DateTimeField(auto_now_add=True)  # When record was first created in our DB
-    updated_at = models.DateTimeField(auto_now=True)      # When record was last updated in our DB
+    sync_created_at = models.DateTimeField(auto_now_add=True)  # When record was first created in our DB
+    sync_updated_at = models.DateTimeField(auto_now=True)      # When record was last updated in our DB
 
     class Meta:
         db_table = 'ingestion_salesrabbit_lead'

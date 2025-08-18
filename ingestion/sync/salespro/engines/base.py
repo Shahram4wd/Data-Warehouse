@@ -1015,9 +1015,9 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
                                 self.model_class.objects.get
                             )(estimate_id=estimate_id)
                             
-                            # Check if new record should be applied (updated_at >= existing.updated_at)
+                            # Check if new record should be applied (source updated_at >= existing sync_updated_at)
                             new_updated_at = record.get('updated_at')
-                            if new_updated_at and new_updated_at >= existing_obj.updated_at:
+                            if new_updated_at and new_updated_at >= existing_obj.sync_updated_at:
                                 # Update with newer/equal data
                                 for field, value in record.items():
                                     if hasattr(existing_obj, field):

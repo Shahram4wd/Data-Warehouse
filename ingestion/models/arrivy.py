@@ -100,8 +100,8 @@ class Arrivy_Entity(models.Model):
     okta_user_id = models.CharField(max_length=255, null=True, blank=True)
     
     # Tracking fields
-    updated_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ingestion_arrivy_entity'
@@ -163,8 +163,8 @@ class Arrivy_Group(models.Model):
     updated = models.DateTimeField(null=True, blank=True)
     
     # Tracking fields
-    updated_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ingestion_arrivy_group'
@@ -358,8 +358,8 @@ class Arrivy_Task(models.Model):
     resource_extra_field = models.TextField(null=True, blank=True)
     
     # Tracking fields
-    updated_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ingestion_arrivy_task'
@@ -394,8 +394,8 @@ class Arrivy_Status(models.Model):
     updated = models.DateTimeField(null=True, blank=True)
     
     # Tracking fields
-    updated_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ingestion_arrivy_status'
@@ -553,8 +553,8 @@ class Arrivy_Booking(models.Model):
     entity_confirmation_statuses = models.JSONField(null=True, blank=True)
     
     # Tracking fields
-    updated_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ingestion_arrivy_booking'

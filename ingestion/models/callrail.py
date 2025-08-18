@@ -13,8 +13,8 @@ class CallRail_Account(models.Model):
     numeric_id = models.BigIntegerField(null=True, blank=True)
     
     # Sync tracking
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_callrail_account'
@@ -47,8 +47,8 @@ class CallRail_Company(models.Model):
     
     # Sync tracking
     api_created_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_callrail_company'
@@ -94,8 +94,8 @@ class CallRail_Call(models.Model):
     tags = models.JSONField(null=True, blank=True)
     
     # Sync tracking
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_callrail_call'
@@ -142,8 +142,8 @@ class CallRail_Tracker(models.Model):
     
     # Sync tracking
     api_created_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_callrail_tracker'
@@ -175,8 +175,8 @@ class CallRail_FormSubmission(models.Model):
     submission_time = models.DateTimeField()
     
     # Sync tracking
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_callrail_form_submission'
@@ -206,8 +206,8 @@ class CallRail_TextMessage(models.Model):
     status = models.CharField(max_length=50, null=True, blank=True)
     
     # Sync tracking
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_callrail_text_message'
@@ -236,8 +236,8 @@ class CallRail_Tag(models.Model):
     configuration = models.JSONField(null=True, blank=True)
     
     # Sync tracking
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_callrail_tag'
@@ -267,8 +267,8 @@ class CallRail_User(models.Model):
     is_active = models.BooleanField(default=True)
     
     # Sync tracking
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_callrail_user'

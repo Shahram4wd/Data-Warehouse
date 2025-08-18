@@ -27,9 +27,9 @@ class AccountsSyncEngine(CallRailBaseSyncEngine):
         """Get the last sync timestamp for accounts"""
         from ingestion.models.callrail import CallRail_Account
         latest_account = (CallRail_Account.objects
-                         .order_by('-updated_at')
+                         .order_by('-sync_updated_at')
                          .first())
-        return latest_account.updated_at if latest_account else None
+        return latest_account.sync_updated_at if latest_account else None
     
     async def sync_accounts(self, **kwargs) -> Dict[str, Any]:
         """Sync accounts from CallRail API"""

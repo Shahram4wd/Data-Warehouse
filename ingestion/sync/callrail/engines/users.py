@@ -26,9 +26,9 @@ class UsersSyncEngine(CallRailBaseSyncEngine):
         """Get the last sync timestamp for users"""
         from ingestion.models.callrail import CallRail_User
         latest_user = (CallRail_User.objects
-                      .order_by('-updated_at')
+                      .order_by('-sync_updated_at')
                       .first())
-        return latest_user.updated_at if latest_user else None
+        return latest_user.sync_updated_at if latest_user else None
     
     async def sync_users(self, **kwargs) -> Dict[str, Any]:
         """Sync users from CallRail API"""

@@ -18,8 +18,8 @@ class GoogleSheetMarketingLead(models.Model):
     sheet_row_number = models.PositiveIntegerField(primary_key=True)
     
     # System timestamps
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_updated_at = models.DateTimeField(auto_now=True)
     
     # Sheet metadata
     sheet_last_modified = models.DateTimeField(
@@ -28,7 +28,7 @@ class GoogleSheetMarketingLead(models.Model):
     )
     
     # Lead creation timestamp from sheet
-    lead_created_at = models.DateTimeField(null=True, blank=True, help_text="created_at from sheet")
+    created_at = models.DateTimeField(null=True, blank=True, help_text="created_at from sheet")
     
     # Contact Information
     first_name = models.CharField(max_length=200, null=True, blank=True)  # was 168, rounded to 200
@@ -135,19 +135,19 @@ class GoogleSheetMarketingLead(models.Model):
         db_table = 'ingestion_gsheet_marketing_lead'
         verbose_name = 'Google Sheet Marketing Lead'
         verbose_name_plural = 'Google Sheet Marketing Leads'
-        ordering = ['-lead_created_at', '-created_at']
+        ordering = ['-created_at', '-sync_created_at']
         indexes = [
             # Core lead identification
-            models.Index(fields=['phone_number', 'lead_created_at']),
-            models.Index(fields=['email_address', 'lead_created_at']),
+            models.Index(fields=['phone_number', 'created_at']),
+            models.Index(fields=['email_address', 'created_at']),
             models.Index(fields=['first_name', 'last_name']),
             
             # Marketing attribution
             models.Index(fields=['utm_campaign', 'division']),
             models.Index(fields=['genius_marketing_source', 'division']),
-            models.Index(fields=['lead_created_at', 'utm_campaign']),
+            models.Index(fields=['created_at', 'utm_campaign']),
             models.Index(fields=['marketing_channel', 'division']),
-            models.Index(fields=['marketing_channel', 'lead_created_at']),
+            models.Index(fields=['marketing_channel', 'created_at']),
             
             # Lead management
             models.Index(fields=['lead_set', 'division']),
@@ -157,18 +157,17 @@ class GoogleSheetMarketingLead(models.Model):
             # System fields
             models.Index(fields=['sheet_row_number']),
             models.Index(fields=['created_at']),
-            models.Index(fields=['lead_created_at']),
             
             # Performance tracking
-            models.Index(fields=['division', 'lead_created_at', 'lead_set']),
+            models.Index(fields=['division', 'created_at', 'lead_set']),
         ]
 
     def __str__(self):
         name = f"{self.first_name or ''} {self.last_name or ''}".strip()
         if name:
-            return f"Row {self.sheet_row_number}: {name} - {self.lead_created_at or 'No Date'}"
+            return f"Row {self.sheet_row_number}: {name} - {self.created_at or 'No Date'}"
         else:
-            return f"Row {self.sheet_row_number}: {self.phone_number or 'No Phone'} - {self.lead_created_at or 'No Date'}"
+            return f"Row {self.sheet_row_number}: {self.phone_number or 'No Phone'} - {self.created_at or 'No Date'}"
 
     def save(self, *args, **kwargs):
         # Ensure raw_data is properly formatted
@@ -199,8 +198,8 @@ class GoogleSheetMarketingSpend(models.Model):
     sheet_row_number = models.PositiveIntegerField(primary_key=True)
     
     # System timestamps
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_updated_at = models.DateTimeField(auto_now=True)
     
     # Sheet metadata
     sheet_last_modified = models.DateTimeField(
@@ -227,7 +226,7 @@ class GoogleSheetMarketingSpend(models.Model):
         db_table = 'ingestion_gsheet_marketing_spend'
         verbose_name = 'Google Sheet Marketing Spend'
         verbose_name_plural = 'Google Sheet Marketing Spends'
-        ordering = ['-spend_date', '-created_at']
+        ordering = ['-spend_date', '-sync_created_at']
         indexes = [
             # Core spend identification
             models.Index(fields=['spend_date', 'division']),
@@ -240,7 +239,7 @@ class GoogleSheetMarketingSpend(models.Model):
             
             # System fields
             models.Index(fields=['sheet_row_number']),
-            models.Index(fields=['created_at']),
+            models.Index(fields=['sync_created_at']),
             models.Index(fields=['spend_date']),
             
             # Performance tracking

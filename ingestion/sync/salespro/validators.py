@@ -33,7 +33,7 @@ def validate_table_name(table_name: str) -> bool:
 
 def validate_timestamp_column(table_name: str) -> str:
     """Get the correct timestamp column for incremental sync"""
-    # Tables that use updated_at for filtering
+    # Tables that use updated_at for filtering (from source system)
     updated_at_tables = {'credit_applications', 'customer', 'estimate'}
     
     if table_name in updated_at_tables:

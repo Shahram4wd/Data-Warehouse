@@ -26,9 +26,9 @@ class CompaniesSyncEngine(CallRailBaseSyncEngine):
         """Get the last sync timestamp for companies"""
         from ingestion.models.callrail import CallRail_Company
         latest_company = (CallRail_Company.objects
-                         .order_by('-updated_at')
+                         .order_by('-sync_updated_at')
                          .first())
-        return latest_company.updated_at if latest_company else None
+        return latest_company.sync_updated_at if latest_company else None
     
     async def sync_companies(self, **kwargs) -> Dict[str, Any]:
         """Sync companies from CallRail API"""

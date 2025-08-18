@@ -41,7 +41,11 @@ from .salesrabbit import SalesRabbit_Lead
 from .leadconduit import LeadConduit_Lead
 
 # Import Hubspot models
-from .hubspot import Hubspot_Contact, Hubspot_Deal, Hubspot_Appointment, Hubspot_Division, Hubspot_SyncHistory
+from .hubspot import (
+    Hubspot_Contact, Hubspot_Deal, Hubspot_Appointment, Hubspot_Division,
+    Hubspot_AppointmentContactAssociation, Hubspot_ContactDivisionAssociation,
+    Hubspot_ZipCode, Hubspot_GeniusUser
+)
 
 # Import Arrivy models
 from .arrivy import Arrivy_Entity, Arrivy_Group, Arrivy_Task, Arrivy_Status, Arrivy_Booking

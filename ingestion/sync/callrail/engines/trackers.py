@@ -27,9 +27,9 @@ class TrackersSyncEngine(CallRailBaseSyncEngine):
         """Get the last sync timestamp for trackers"""
         from ingestion.models.callrail import CallRail_Tracker
         latest_tracker = (CallRail_Tracker.objects
-                         .order_by('-updated_at')
+                         .order_by('-sync_updated_at')
                          .first())
-        return latest_tracker.updated_at if latest_tracker else None
+        return latest_tracker.sync_updated_at if latest_tracker else None
     
     async def sync_trackers(self, **kwargs) -> Dict[str, Any]:
         """Sync trackers from CallRail API"""

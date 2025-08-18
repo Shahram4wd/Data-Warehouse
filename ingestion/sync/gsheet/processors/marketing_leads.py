@@ -36,9 +36,9 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
             'email_address': 'email_address',
             
             # Timestamp
-            # Map the sheet's `created_at` column into the model `lead_created_at`
-            # to avoid clobbering the DB-created `created_at` timestamp.
-            'created_at': 'lead_created_at',
+            # Map the sheet's `created_at` column directly to model `created_at`
+            # since we now use sync_created_at for internal tracking
+            'created_at': 'created_at',
             
             # UTM Campaign Data
             'utm_campaign': 'utm_campaign',
@@ -187,7 +187,7 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
                 return self._parse_boolean(value)
 
             # Handle datetime fields
-            if field_name in ['lead_created_at', 'first_call_date_time', 'appt_date_time', 'f9_sys_created_date']:
+            if field_name in ['created_at', 'first_call_date_time', 'appt_date_time', 'f9_sys_created_date']:
                 return self._parse_datetime(value)
             
             # Handle date fields
@@ -401,7 +401,7 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
             
             # Parse datetime fields
             datetime_fields = [
-                'lead_created_at',
+                'created_at',
                 'first_call_date_time',
                 'appt_date_time',
                 'f9_sys_created_date'

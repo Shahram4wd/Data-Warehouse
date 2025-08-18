@@ -27,9 +27,9 @@ class TagsSyncEngine(CallRailBaseSyncEngine):
         from ingestion.models.callrail import CallRail_Tag
         latest_tag = (CallRail_Tag.objects
                      .filter(company_id=account_id)
-                     .order_by('-updated_at')
+                     .order_by('-sync_updated_at')
                      .first())
-        return latest_tag.updated_at if latest_tag else None
+        return latest_tag.sync_updated_at if latest_tag else None
     
     async def sync_tags(self, **kwargs) -> Dict[str, Any]:
         """Sync tags from CallRail API"""

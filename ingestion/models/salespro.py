@@ -11,8 +11,8 @@ class SalesPro_Office(models.Model):
     can_search_all_estimates = models.BooleanField(default=False)
     last_edit_user = models.CharField(max_length=255, blank=True, null=True)
 
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
+    sync_created_at = models.DateTimeField(blank=True, null=True)
+    sync_updated_at = models.DateTimeField(blank=True, null=True)
     last_edit_date = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -63,8 +63,8 @@ class SalesPro_User(models.Model):
     license_number = models.CharField(max_length=100, blank=True, null=True)
 
     # Timestamps
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
+    sync_created_at = models.DateTimeField(blank=True, null=True)
+    sync_updated_at = models.DateTimeField(blank=True, null=True)
     last_login_date = models.DateTimeField(blank=True, null=True)
     deactivated_date = models.DateTimeField(blank=True, null=True)
 
@@ -93,8 +93,8 @@ class SalesPro_CreditApplication(models.Model):
     credit_app_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     credit_app_status = models.CharField(max_length=255, blank=True, null=True)
     credit_app_note = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    sync_created_at = models.DateTimeField()
+    sync_updated_at = models.DateTimeField()
 
     class Meta:
         db_table = 'ingestion_salespro_credit_application'
@@ -114,8 +114,8 @@ class SalesPro_Customer(models.Model):
     customer_last_name = models.CharField(max_length=255, blank=True, null=True)
     crm_source = models.CharField(max_length=255, blank=True, null=True)
     crm_source_id = models.CharField(max_length=255, blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    sync_created_at = models.DateTimeField()
+    sync_updated_at = models.DateTimeField()
 
     class Meta:
         db_table = 'ingestion_salespro_customer'
@@ -151,8 +151,8 @@ class SalesPro_Estimate(models.Model):
     down_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     has_credit_app = models.BooleanField(default=False)
     document_count = models.BigIntegerField(blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    sync_created_at = models.DateTimeField()
+    sync_updated_at = models.DateTimeField()
 
     class Meta:
         db_table = 'ingestion_salespro_estimate'
@@ -167,8 +167,8 @@ class SalesPro_LeadResult(models.Model):
     # Use estimate_id as primary key to keep only latest version
     estimate_id = models.CharField(max_length=255, primary_key=True)
     company_id = models.CharField(max_length=255, blank=True, null=True)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    sync_created_at = models.DateTimeField()
+    sync_updated_at = models.DateTimeField()
     
     # Normalized lead result fields based on the sample data
     appointment_result = models.CharField(max_length=255, blank=True, null=True)  # "Appointment Result"
@@ -188,7 +188,7 @@ class SalesPro_LeadResult(models.Model):
         verbose_name = 'Lead Result'
         verbose_name_plural = 'Lead Results'
         # No unique_together needed since estimate_id is primary key
-        ordering = ['-updated_at']
+        ordering = ['-sync_updated_at']
 
     def __str__(self):
         return f"{self.estimate_id} - {self.appointment_result}"
@@ -203,8 +203,8 @@ class SalesPro_Payment(models.Model):
     payment_type = models.CharField(max_length=100, blank=True, null=True)
     payment_description = models.CharField(max_length=255, blank=True, null=True)
     payment_success = models.BooleanField(default=False)
-    created_at = models.DateTimeField()
-    updated_at = models.DateTimeField()
+    sync_created_at = models.DateTimeField()
+    sync_updated_at = models.DateTimeField()
 
     class Meta:
         db_table = 'ingestion_salespro_payment'
@@ -218,7 +218,7 @@ class SalesPro_Payment(models.Model):
 class SalesPro_UserActivity(models.Model):
     # Add a proper primary key for framework compliance
     id = models.AutoField(primary_key=True)
-    created_at = models.DateTimeField()
+    sync_created_at = models.DateTimeField()
     user_id = models.CharField(max_length=255, blank=True, null=True)
     company_id = models.CharField(max_length=255, blank=True, null=True)
     company_name = models.CharField(max_length=255, blank=True, null=True)
@@ -235,10 +235,10 @@ class SalesPro_UserActivity(models.Model):
         db_table = 'ingestion_salespro_user_activity'
         verbose_name = 'User Activity'
         verbose_name_plural = 'User Activities'
-        # Use combination of created_at, user_id, and activity_note as unique constraint
-        unique_together = [['created_at', 'user_id', 'activity_note']]
-        # Order by created_at by default
-        ordering = ['created_at']
+        # Use combination of sync_created_at, user_id, and activity_note as unique constraint
+        unique_together = [['sync_created_at', 'user_id', 'activity_note']]
+        # Order by sync_created_at by default
+        ordering = ['sync_created_at']
 
     def __str__(self):
         return f"{self.user_id} - {self.activity_identifier}"

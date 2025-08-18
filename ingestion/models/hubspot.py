@@ -36,8 +36,8 @@ class Hubspot_Contact(models.Model):  # Updated table name
     vendorleadid = models.CharField(max_length=255, null=True, blank=True)
     vertical = models.CharField(max_length=255, null=True, blank=True)
     zip = models.CharField(max_length=20, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
     archived = models.BooleanField(default=False)
     
     # Lead-related fields
@@ -126,21 +126,12 @@ class Hubspot_Deal(models.Model):  # Updated table name
     pipeline = models.CharField(max_length=255, null=True, blank=True)
     division = models.CharField(max_length=255, null=True, blank=True)
     priority = models.CharField(max_length=255, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
     
     def __str__(self):
         return f"{self.deal_name} ({self.amount})"
-
-class Hubspot_SyncHistory(models.Model):  # Updated table name
-    endpoint = models.CharField(max_length=100)
-    last_synced_at = models.DateTimeField(null=True, blank=True)
     
-    def __str__(self):
-        return f"{self.endpoint} - {self.last_synced_at}"
-    
-    class Meta:
-        verbose_name_plural = "Hubspot Sync Histories"
 
 class Hubspot_Appointment(models.Model):
     """HubSpot Appointment model for custom object 0-421"""
@@ -333,8 +324,8 @@ class Hubspot_Appointment(models.Model):
     genius_resubmit = models.CharField(max_length=255, null=True, blank=True)
     
     # Metadata
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
     archived = models.BooleanField(default=False)
     
     class Meta:
@@ -378,7 +369,7 @@ class Hubspot_AppointmentContactAssociation(models.Model):
     """Direct mapping of appointment to contact associations"""
     appointment_id = models.CharField(max_length=50, null=True, blank=True)
     contact_id = models.CharField(max_length=50, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ingestion_hubspot_appointment_contact_assoc'
@@ -391,7 +382,7 @@ class Hubspot_ContactDivisionAssociation(models.Model):
     """Direct mapping of contact to division associations via custom object 2-37778609"""
     contact_id = models.CharField(max_length=50, null=True, blank=True)
     division_id = models.CharField(max_length=50, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ingestion_hubspot_contact_division_assoc'
@@ -456,8 +447,8 @@ class Hubspot_Division(models.Model):
     zip = models.CharField(max_length=20, null=True, blank=True)
     
     # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
     archived = models.BooleanField(default=False)
     
     class Meta:
@@ -477,8 +468,8 @@ class Hubspot_ZipCode(models.Model):
     state = models.CharField(max_length=10, null=True, blank=True)
     
     # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
     archived = models.BooleanField(default=False)
     
     class Meta:
@@ -509,8 +500,8 @@ class Hubspot_GeniusUser(models.Model):
     user_id = models.CharField(max_length=255, blank=True, null=True)
     user_status_inactive = models.CharField(max_length=255, blank=True, null=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'ingestion_hubspot_geniususer'
