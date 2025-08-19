@@ -70,18 +70,13 @@ class SalesProCustomerSyncEngine(SalesProBaseSyncEngine):
                     'customer_last_name': 'customer_last_name',
                     'crm_source': 'crm_source',
                     'crm_source_id': 'crm_source_id',
-                    'created_at': 'created_at',
-                    'updated_at': 'updated_at',
                 }
                 
                 context = {'id': customer_id}
                 for source_field, target_field in field_mappings.items():
                     value = record.get(source_field)
                     if value is not None:
-                        if target_field in ['created_at', 'updated_at']:
-                            transformed[target_field] = self._processor._parse_datetime(value)
-                        else:
-                            transformed[target_field] = str(value) if value else ''
+                        transformed[target_field] = str(value) if value else ''
                 
             else:
                 # If record is a tuple/list (raw from Athena), map by position
@@ -100,8 +95,6 @@ class SalesProCustomerSyncEngine(SalesProBaseSyncEngine):
                         'customer_last_name': record[5] or '',  # 'Klick'
                         'crm_source': record[6] or '',   # ''
                         'crm_source_id': record[7] or '', # ''
-                        'created_at': self._processor._parse_datetime(record[8]) if len(record) > 8 else None,
-                        'updated_at': self._processor._parse_datetime(record[9]) if len(record) > 9 else None,
                     }
                     
                     logger.info(f"Transformed from tuple: {transformed}")

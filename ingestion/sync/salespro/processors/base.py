@@ -82,10 +82,6 @@ class SalesProBaseProcessor(BaseDataProcessor):
             'price': 'price',
             'local_customer_uuid': 'local_customer_uuid',
             'original_row_num': 'original_row_num',
-            
-            # Timestamps
-            'created_at': 'sync_created_at',
-            'updated_at': 'sync_updated_at',
         }
     
     def get_field_types(self) -> Dict[str, str]:
