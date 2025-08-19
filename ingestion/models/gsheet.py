@@ -42,7 +42,7 @@ class GoogleSheetMarketingLead(models.Model):
     utm_content = models.CharField(max_length=100, null=True, blank=True)   # was 86, rounded to 100
     
     # Marketing Attribution
-    marketing_channel = models.CharField(max_length=100, null=True, blank=True, help_text="Marketing channel (GMB, Google Ads, Bing Ads, Direct Mail, Web Organic, FM Flyer, etc.)")
+    channel = models.CharField(max_length=100, null=True, blank=True, help_text="Marketing channel (GMB, Google Ads, Bing Ads, Direct Mail, Web Organic, FM Flyer, etc.)")
     
     # Page and Source Information
     page_source_name = models.CharField(max_length=128, null=True, blank=True)  # was 122, power of 2
@@ -146,8 +146,8 @@ class GoogleSheetMarketingLead(models.Model):
             models.Index(fields=['utm_campaign', 'division']),
             models.Index(fields=['genius_marketing_source', 'division']),
             models.Index(fields=['created_at', 'utm_campaign']),
-            models.Index(fields=['marketing_channel', 'division']),
-            models.Index(fields=['marketing_channel', 'created_at']),
+            models.Index(fields=['channel', 'division']),
+            models.Index(fields=['channel', 'created_at']),
             
             # Lead management
             models.Index(fields=['lead_set', 'division']),

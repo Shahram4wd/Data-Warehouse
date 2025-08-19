@@ -79,10 +79,6 @@ class BaseGoogleSheetsProcessor(BaseDataProcessor):
                     if model_field_name not in transformed:
                         transformed[model_field_name] = self._clean_field_value(field_value)
             
-            # Add metadata
-            transformed['created_at'] = timezone.now()
-            transformed['updated_at'] = timezone.now()
-            
             return transformed
             
         except Exception as e:
