@@ -32,7 +32,10 @@ class AlertModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'ingestion_alerts'
+        db_table = 'monitoring.alerts'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Database model for storing system alerts'
         ordering = ['-timestamp']
         indexes = [
             models.Index(fields=['alert_type']),
@@ -96,6 +99,10 @@ class AlertRule(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
+        db_table = 'monitoring.alert_rules'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Database model for alert rules configuration'
         ordering = ['name']
         indexes = [
             models.Index(fields=['alert_type']),

@@ -16,6 +16,14 @@ class Genius_DivisionGroup(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'genius_division_group'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Division Group data stored in ingestion schema'
+        verbose_name = 'Genius Division Group'
+        verbose_name_plural = 'Genius Division Groups'
+
     def __str__(self):
         return self.group_label or f"DivisionGroup {self.id}"
 
@@ -35,6 +43,14 @@ class Genius_Division(models.Model):
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_division'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Division data stored in ingestion schema'
+        verbose_name = 'Genius Division'
+        verbose_name_plural = 'Genius Divisions'
 
     def __str__(self):
         return self.label or f"Division {self.id}"
@@ -67,6 +83,14 @@ class Genius_UserData(models.Model):
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_userdata'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius UserData stored in ingestion schema'
+        verbose_name = 'Genius User Data'
+        verbose_name_plural = 'Genius User Data'
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}".strip()
@@ -101,6 +125,14 @@ class Genius_Prospect(models.Model):
     user_id = models.IntegerField(null=True, blank=True)
     year_built = models.SmallIntegerField(null=True, blank=True)
 
+    class Meta:
+        db_table = 'genius_prospect'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Prospect data stored in ingestion schema'
+        verbose_name = 'Genius Prospect'
+        verbose_name_plural = 'Genius Prospects'
+
     def __str__(self):
         return f"{self.first_name} {self.last_name or ''}".strip()
 
@@ -117,6 +149,14 @@ class Genius_ProspectSource(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'genius_prospect_source'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Prospect Source data stored in ingestion schema'
+        verbose_name = 'Genius Prospect Source'
+        verbose_name_plural = 'Genius Prospect Sources'
+
     def __str__(self):
         return f"Source {self.marketing_source_id or 'N/A'} for Prospect {self.prospect_id or 'N/A'}"
 
@@ -127,6 +167,14 @@ class Genius_AppointmentType(models.Model):
     is_active = models.BooleanField(default=True)
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_appointment_type'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Appointment Type data stored in ingestion schema'
+        verbose_name = 'Genius Appointment Type'
+        verbose_name_plural = 'Genius Appointment Types'
 
     def __str__(self):
         return self.label or f"AppointmentType {self.id}"
@@ -142,6 +190,14 @@ class Genius_AppointmentOutcomeType(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'genius_appointment_outcome_type'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Appointment Outcome Type data stored in ingestion schema'
+        verbose_name = 'Genius Appointment Outcome Type'
+        verbose_name_plural = 'Genius Appointment Outcome Types'
+
     def __str__(self):
         return self.label or f"Appointment Outcome Type {self.id}"
 
@@ -155,6 +211,14 @@ class Genius_AppointmentOutcome(models.Model):
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_appointment_outcome'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius AppointmentOutcome data stored in ingestion schema'
+        verbose_name = 'Genius AppointmentOutcome'
+        verbose_name_plural = 'Genius AppointmentOutcomes'
 
     def __str__(self):
         return self.label or f"Appointment Outcome {self.id}"
@@ -196,6 +260,14 @@ class Genius_Appointment(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'genius_appointment'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Appointment data stored in ingestion schema'
+        verbose_name = 'Genius Appointment'
+        verbose_name_plural = 'Genius Appointments'
+
     def __str__(self):
         return f"Appointment {self.id} for Prospect {self.prospect_id}"
 
@@ -211,6 +283,14 @@ class Genius_Service(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'genius_service'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Service data stored in ingestion schema'
+        verbose_name = 'Genius Service'
+        verbose_name_plural = 'Genius Services'
+
     def __str__(self):
         return self.label or f"Service {self.id}"
 
@@ -218,13 +298,19 @@ class Genius_Service(models.Model):
 class Genius_AppointmentService(models.Model):
     appointment = models.ForeignKey('Genius_Appointment', on_delete=models.CASCADE)
     service = models.ForeignKey('Genius_Service', on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = ('appointment', 'service')
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_appointment_service'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius AppointmentService data stored in ingestion schema'
+        verbose_name = 'Genius AppointmentService'
+        verbose_name_plural = 'Genius AppointmentServices'
+        unique_together = ('appointment', 'service')
 
 
 class Genius_Quote(models.Model):
@@ -247,6 +333,14 @@ class Genius_Quote(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'genius_quote'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Quote data stored in ingestion schema'
+        verbose_name = 'Genius Quote'
+        verbose_name_plural = 'Genius Quotes'
+
     def __str__(self):
         return f"Quote {self.id} – ${self.amount:.2f}"
 
@@ -261,6 +355,14 @@ class Genius_MarketingSourceType(models.Model):
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_marketing_source_type'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius MarketingSourceType data stored in ingestion schema'
+        verbose_name = 'Genius MarketingSourceType'
+        verbose_name_plural = 'Genius MarketingSourceTypes'
 
     def __str__(self):
         return self.label or f"Marketing Source Type {self.id}"
@@ -281,6 +383,14 @@ class Genius_MarketingSource(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'genius_marketing_source'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius MarketingSource data stored in ingestion schema'
+        verbose_name = 'Genius MarketingSource'
+        verbose_name_plural = 'Genius MarketingSources'
+
     def __str__(self):
         return self.label or f"Marketing Source {self.id}"
 
@@ -300,6 +410,14 @@ class Genius_UserTitle(models.Model):
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_user_title'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius UserTitle data stored in ingestion schema'
+        verbose_name = 'Genius UserTitle'
+        verbose_name_plural = 'Genius UserTitles'
 
     def __str__(self):
         return self.title or f"Title {self.id}"
@@ -403,6 +521,14 @@ class Genius_Lead(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'genius_lead'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Lead data stored in ingestion schema'
+        verbose_name = 'Genius Lead'
+        verbose_name_plural = 'Genius Leads'
+
     def __str__(self):
         return f"{self.first_name} {self.last_name or ''}".strip() or f"Lead {self.lead_id}"
 
@@ -417,6 +543,14 @@ class Genius_MarketSharpSource(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        db_table = 'genius_marketsharp_source'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius MarketSharpSource data stored in ingestion schema'
+        verbose_name = 'Genius MarketSharpSource'
+        verbose_name_plural = 'Genius MarketSharpSources'
+
     def __str__(self):
         return self.source_name or f"MarketSharp Source {self.id}"
 
@@ -427,6 +561,15 @@ class Genius_MarketSharpMarketingSourceMap(models.Model):
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'genius_marketsharp_marketing_source_map'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius MarketSharpMarketingSourceMap data stored in ingestion schema'
+        verbose_name = 'Genius MarketSharpMarketingSourceMap'
+        verbose_name_plural = 'Genius MarketSharpMarketingSourceMaps'
+
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -535,6 +678,15 @@ class Genius_Job(models.Model):
     is_coc_pdf_attached = models.SmallIntegerField(default=0)
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'genius_job'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Job data stored in ingestion schema'
+        verbose_name = 'Genius Job'
+        verbose_name_plural = 'Genius Jobs'
+
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -565,6 +717,15 @@ class Genius_JobChangeOrder(models.Model):
     financing_note = models.CharField(max_length=255, null=True, blank=True)
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'genius_job_change_order'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius JobChangeOrder data stored in ingestion schema'
+        verbose_name = 'Genius JobChangeOrder'
+        verbose_name_plural = 'Genius JobChangeOrders'
+
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -579,6 +740,15 @@ class Genius_JobChangeOrderItem(models.Model):
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'genius_job_change_order_item'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius JobChangeOrderItem data stored in ingestion schema'
+        verbose_name = 'Genius JobChangeOrderItem'
+        verbose_name_plural = 'Genius JobChangeOrderItems'
+
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -590,6 +760,15 @@ class Genius_JobChangeOrderReason(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     description = models.CharField(max_length=255, null=True, blank=True)
     sync_created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'genius_job_change_order_reason'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius JobChangeOrderReason data stored in ingestion schema'
+        verbose_name = 'Genius JobChangeOrderReason'
+        verbose_name_plural = 'Genius JobChangeOrderReasons'
+
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -601,6 +780,15 @@ class Genius_JobChangeOrderStatus(models.Model):
     label = models.CharField(max_length=32)
     is_selectable = models.SmallIntegerField(default=1)
     sync_created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'genius_job_change_order_status'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius JobChangeOrderStatus data stored in ingestion schema'
+        verbose_name = 'Genius JobChangeOrderStatus'
+        verbose_name_plural = 'Genius JobChangeOrderStatuss'
+
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -611,6 +799,15 @@ class Genius_JobChangeOrderType(models.Model):
     id = models.AutoField(primary_key=True)
     label = models.CharField(max_length=32, null=True, blank=True)
     sync_created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'genius_job_change_order_type'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius JobChangeOrderType data stored in ingestion schema'
+        verbose_name = 'Genius JobChangeOrderType'
+        verbose_name_plural = 'Genius JobChangeOrderTypes'
+
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
@@ -622,6 +819,15 @@ class Genius_JobStatus(models.Model):
     label = models.CharField(max_length=50, null=True, blank=True)
     is_system = models.SmallIntegerField(default=0)
     sync_created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'genius_job_status'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius JobStatus data stored in ingestion schema'
+        verbose_name = 'Genius JobStatus'
+        verbose_name_plural = 'Genius JobStatuss'
+
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

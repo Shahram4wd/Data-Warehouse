@@ -104,7 +104,10 @@ class Arrivy_Entity(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'ingestion_arrivy_entity'
+        db_table = 'arrivy_entity'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Arrivy Entity data stored in ingestion schema'
         verbose_name = 'Arrivy Entity'
         verbose_name_plural = 'Arrivy Entities'
 
@@ -167,7 +170,10 @@ class Arrivy_Group(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'ingestion_arrivy_group'
+        db_table = 'arrivy_group'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Arrivy Group data stored in ingestion schema'
         verbose_name = 'Arrivy Group'
         verbose_name_plural = 'Arrivy Groups'
 
@@ -362,7 +368,10 @@ class Arrivy_Task(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'ingestion_arrivy_task'
+        db_table = 'arrivy_task'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Arrivy Task data stored in ingestion schema'
         verbose_name = 'Arrivy Task'
         verbose_name_plural = 'Arrivy Tasks'
 
@@ -398,7 +407,10 @@ class Arrivy_Status(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'ingestion_arrivy_status'
+        db_table = 'arrivy_status'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Arrivy Status data stored in ingestion schema'
         verbose_name = 'Arrivy Status'
         verbose_name_plural = 'Arrivy Statuses'
 
@@ -557,7 +569,10 @@ class Arrivy_Booking(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'ingestion_arrivy_booking'
+        db_table = 'arrivy_booking'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Arrivy Booking data stored in ingestion schema'
         verbose_name = 'Arrivy Booking'
         verbose_name_plural = 'Arrivy Bookings'
 

@@ -12,6 +12,12 @@ class SyncTracker(models.Model):
     object_name = models.CharField(max_length=255, unique=True)
     last_synced_at = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        db_table = 'orchestration.sync_tracker'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Tracks the last synchronization time for various data sources'
+
     def __str__(self):
         return f"{self.object_name}: {self.last_synced_at}"
 
@@ -52,7 +58,10 @@ class SyncHistory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        db_table = 'sync_history'
+        db_table = 'orchestration.sync_history'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Universal sync history for all CRM operations'
         indexes = [
             models.Index(fields=['crm_source', 'sync_type']),
             models.Index(fields=['start_time']),
@@ -118,7 +127,10 @@ class SyncConfiguration(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'sync_configuration'
+        db_table = 'orchestration.sync_configuration'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Dynamic sync configuration'
         unique_together = ['crm_source', 'sync_type']
         verbose_name = 'Sync Configuration'
         verbose_name_plural = 'Sync Configurations'
@@ -138,6 +150,9 @@ class APICredential(models.Model):
     
     class Meta:
         db_table = 'api_credentials'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Encrypted API credentials'
         verbose_name = 'API Credential'
         verbose_name_plural = 'API Credentials'
     

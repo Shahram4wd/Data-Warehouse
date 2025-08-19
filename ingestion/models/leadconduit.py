@@ -61,7 +61,10 @@ class LeadConduit_Lead(models.Model):
     sync_updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'ingestion_leadconduit_lead'
+        db_table = 'leadconduit_lead'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'LeadConduit Lead data stored in ingestion schema'
         indexes = [
             models.Index(fields=['email', 'phone']),
             models.Index(fields=['state', 'zip_code']),

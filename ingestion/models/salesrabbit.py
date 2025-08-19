@@ -59,7 +59,10 @@ class SalesRabbit_Lead(models.Model):
     sync_updated_at = models.DateTimeField(auto_now=True)      # When record was last updated in our DB
 
     class Meta:
-        db_table = 'ingestion_salesrabbit_lead'
+        db_table = 'salesrabbit_lead'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesRabbit Lead data stored in ingestion schema'
         verbose_name = "SalesRabbit Lead"
         verbose_name_plural = "SalesRabbit Leads"
         indexes = [
