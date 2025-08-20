@@ -25,6 +25,10 @@ class MarketSharp_Activity(models.Model):
     activity_reference_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
+        db_table = 'marketsharp_activity'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Activity data stored in ingestion schema'
         verbose_name = "Activity"
         verbose_name_plural = "Activities"
 
@@ -45,6 +49,10 @@ class MarketSharp_ActivityReference(models.Model):
     last_update_utc = models.DateTimeField()
 
     class Meta:
+        db_table = 'marketsharp_activity_reference'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Activity Reference data stored in ingestion schema'
         verbose_name = "Activity Reference"
         verbose_name_plural = "Activity References"
 
@@ -69,6 +77,10 @@ class MarketSharp_ActivityResult(models.Model):
     count_as_contacted = models.BooleanField(default=False)
 
     class Meta:
+        db_table = 'marketsharp_activity_result'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Activity Result data stored in ingestion schema'
         verbose_name = "Activity Result"
         verbose_name_plural = "Activity Results"
 
@@ -96,6 +108,10 @@ class MarketSharp_Address(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        db_table = 'marketsharp_address'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Address data stored in ingestion schema'
         verbose_name = "Address"
         verbose_name_plural = "Addresses"
 
@@ -124,6 +140,10 @@ class MarketSharp_Appointment(models.Model):
     created_date = models.DateTimeField(blank=True, null=True)
 
     class Meta:
+        db_table = 'marketsharp_appointment'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Appointment data stored in ingestion schema'
         verbose_name = "Appointment"
         verbose_name_plural = "Appointments"
 
@@ -139,6 +159,10 @@ class MarketSharp_AppointmentResult(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        db_table = 'marketsharp_appointment_result'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Appointment Result data stored in ingestion schema'
         verbose_name = "Appointment Result"
         verbose_name_plural = "Appointment Results"
 
@@ -164,6 +188,10 @@ class MarketSharp_Company(models.Model):
     time_zone = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
+        db_table = 'marketsharp_company'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Company data stored in ingestion schema'
         verbose_name = "Company"
         verbose_name_plural = "Companies"
 
@@ -215,6 +243,10 @@ class MarketSharp_Contact(models.Model):
     created_date = models.DateTimeField()
 
     class Meta:
+        db_table = 'marketsharp_contact'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Contact data stored in ingestion schema'
         verbose_name = "Contact"
         verbose_name_plural = "Contacts"
 
@@ -240,6 +272,10 @@ class MarketSharp_ContactPhone(models.Model):
     other_phone2 = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
+        db_table = 'marketsharp_contact_phone'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Contact Phone data stored in ingestion schema'
         verbose_name = "Contact Phone"
         verbose_name_plural = "Contact Phones"
 
@@ -254,6 +290,10 @@ class MarketSharp_ContactType(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        db_table = 'marketsharp_contact_type'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Contact Type data stored in ingestion schema'
         verbose_name = "Contact Type"
         verbose_name_plural = "Contact Types"
 
@@ -268,6 +308,10 @@ class MarketSharp_CustomField(models.Model):
     contact_id = models.UUIDField(blank=True, null=True)
 
     class Meta:
+        db_table = 'marketsharp_custom_field'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Custom Field data stored in ingestion schema'
         verbose_name = "Custom Field"
         verbose_name_plural = "Custom Fields"
 
@@ -320,6 +364,10 @@ class MarketSharp_Customer(models.Model):
     created_date = models.DateTimeField()
 
     class Meta:
+        db_table = 'marketsharp_customer'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Customer data stored in ingestion schema'
         verbose_name = "Customer"
         verbose_name_plural = "Customers"
 
@@ -335,6 +383,10 @@ class MarketSharp_Employee(models.Model):
     company_id = models.IntegerField()
 
     class Meta:
+        db_table = 'marketsharp_employee'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Employee data stored in ingestion schema'
         verbose_name = "Employee"
         verbose_name_plural = "Employees"
 
@@ -371,6 +423,10 @@ class MarketSharp_Inquiry(models.Model):
     created_date = models.DateTimeField(blank=True, null=True)
 
     class Meta:
+        db_table = 'marketsharp_inquiry'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Inquiry data stored in ingestion schema'
         verbose_name = "Inquiry"
         verbose_name_plural = "Inquiries"
 
@@ -385,6 +441,10 @@ class MarketSharp_InquirySourcePrimary(models.Model):
     company_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
+        db_table = 'marketsharp_inquiry_source_primary'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Inquiry Source Primary data stored in ingestion schema'
         verbose_name = "Inquiry Source Primary"
         verbose_name_plural = "Inquiry Source Primaries"
 
@@ -400,6 +460,10 @@ class MarketSharp_InquirySourceSecondary(models.Model):
     company_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
+        db_table = 'marketsharp_inquiry_source_secondary'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Inquiry Source Secondary data stored in ingestion schema'
         verbose_name = "Inquiry Source Secondary"
         verbose_name_plural = "Inquiry Source Secondaries"
 
@@ -418,6 +482,10 @@ class MarketSharp_InquiryStatus(models.Model):
     created_date_utc = models.DateTimeField()
 
     class Meta:
+        db_table = 'marketsharp_inquiry_status'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Inquiry Status data stored in ingestion schema'
         verbose_name = "Inquiry Status"
         verbose_name_plural = "Inquiry Statuses"
 
@@ -452,6 +520,10 @@ class MarketSharp_Job(models.Model):
     exported_to_guild_quality = models.BooleanField(default=False)
 
     class Meta:
+        db_table = 'marketsharp_job'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Job data stored in ingestion schema'
         verbose_name = "Job"
         verbose_name_plural = "Jobs"
 
@@ -504,6 +576,10 @@ class MarketSharp_Lead(models.Model):
     created_date = models.DateTimeField()
 
     class Meta:
+        db_table = 'marketsharp_lead'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Lead data stored in ingestion schema'
         verbose_name = "Lead"
         verbose_name_plural = "Leads"
 
@@ -519,6 +595,10 @@ class MarketSharp_ProductDetail(models.Model):
     company_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
+        db_table = 'marketsharp_product_detail'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Product Detail data stored in ingestion schema'
         verbose_name = "Product Detail"
         verbose_name_plural = "Product Details"
 
@@ -536,6 +616,10 @@ class MarketSharp_ProductInterest(models.Model):
     last_update = models.DateTimeField()
 
     class Meta:
+        db_table = 'marketsharp_product_interest'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Product Interest data stored in ingestion schema'
         verbose_name = "Product Interest"
         verbose_name_plural = "Product Interests"
 
@@ -550,6 +634,10 @@ class MarketSharp_ProductType(models.Model):
     company_id = models.IntegerField(blank=True, null=True)
 
     class Meta:
+        db_table = 'marketsharp_product_type'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Product Type data stored in ingestion schema'
         verbose_name = "Product Type"
         verbose_name_plural = "Product Types"
 
@@ -602,6 +690,10 @@ class MarketSharp_Prospect(models.Model):
     created_date = models.DateTimeField()
 
     class Meta:
+        db_table = 'marketsharp_prospect'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'MarketSharp Prospect data stored in ingestion schema'
         verbose_name = "Prospect"
         verbose_name_plural = "Prospects"
 
@@ -610,3 +702,4 @@ class MarketSharp_Prospect(models.Model):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
+

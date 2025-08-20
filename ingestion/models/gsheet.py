@@ -132,7 +132,10 @@ class GoogleSheetMarketingLead(models.Model):
     
     
     class Meta:
-        db_table = 'ingestion_gsheet_marketing_lead'
+        db_table = 'gsheet_marketing_lead'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Google Sheet Marketing Lead data stored in ingestion schema'
         verbose_name = 'Google Sheet Marketing Lead'
         verbose_name_plural = 'Google Sheet Marketing Leads'
         ordering = ['-created_at', '-sync_created_at']
@@ -223,7 +226,10 @@ class GoogleSheetMarketingSpend(models.Model):
     )
     
     class Meta:
-        db_table = 'ingestion_gsheet_marketing_spend'
+        db_table = 'gsheet_marketing_spend'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Google Sheet Marketing Spend data stored in ingestion schema'
         verbose_name = 'Google Sheet Marketing Spend'
         verbose_name_plural = 'Google Sheet Marketing Spends'
         ordering = ['-spend_date', '-sync_created_at']

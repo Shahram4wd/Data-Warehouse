@@ -125,6 +125,21 @@ if not DEBUG:
         'MIN_CONNS': 1,
     }
 
+# Configure PostgreSQL schema search path for Django tables separation
+if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
+    if 'OPTIONS' not in DATABASES['default']:
+        DATABASES['default']['OPTIONS'] = {}
+
+    # Set search path to include all necessary schemas
+    search_path = 'django,orchestration,monitoring,warehouse'
+    
+    # Add schema search path to connection options
+    if 'options' in DATABASES['default']['OPTIONS']:
+        existing_options = DATABASES['default']['OPTIONS']['options']
+        DATABASES['default']['OPTIONS']['options'] = f"{existing_options} -c search_path={search_path}"
+    else:
+        DATABASES['default']['OPTIONS']['options'] = f'-c search_path={search_path}'
+
 # Password validation (optional for dev)
 AUTH_PASSWORD_VALIDATORS = []
 
