@@ -130,8 +130,8 @@ if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
     if 'OPTIONS' not in DATABASES['default']:
         DATABASES['default']['OPTIONS'] = {}
 
-    # Set search path to prioritize django schema for framework tables, then warehouse for app tables
-    search_path = 'django,warehouse'
+    # Set search path to include all necessary schemas
+    search_path = 'django,orchestration,monitoring,warehouse'
     
     # Add schema search path to connection options
     if 'options' in DATABASES['default']['OPTIONS']:
