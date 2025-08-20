@@ -271,9 +271,9 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
             
             logger.info(f"Completed fetching {records_fetched:,} records from {self.table_name}")
             
-            # Report metrics to enterprise monitoring
+            # Evaluate automation rules with operational context
             if self.automation_engine:
-                await self.automation_engine.report_metrics({
+                await self.automation_engine.evaluate_automation_rules({
                     'operation': 'fetch_data',
                     'table': self.table_name,
                     'records_fetched': records_fetched,
@@ -626,9 +626,9 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
         try:
             results = await self._bulk_save_records(validated_data)
             
-            # Report metrics to enterprise monitoring following CRM sync guide pattern
+            # Evaluate automation rules with operational context
             if self.automation_engine:
-                await self.automation_engine.report_metrics({
+                await self.automation_engine.evaluate_automation_rules({
                     'operation': 'save_data',
                     'table': self.table_name,
                     'records_processed': len(validated_data),
@@ -706,7 +706,7 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
         # Get the table name from the model
         table_name = self.model_class._meta.db_table
         # Build field lists (excluding auto-generated fields)
-        fields = ['estimate_id', 'company_id', 'lead_results_raw', 'created_at', 'updated_at']
+        fields = ['estimate_id', 'company_id', 'lead_results_raw', 'sync_created_at', 'sync_updated_at']
         
         # Add normalized fields that might be present
         optional_fields = ['appointment_result', 'both_homeowners_present', 'one_year_price', 
@@ -732,7 +732,7 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
         VALUES %s
         ON CONFLICT (estimate_id) 
         DO UPDATE SET {conflict_updates}
-        WHERE EXCLUDED.updated_at >= {table_name}.updated_at
+        WHERE EXCLUDED.sync_updated_at >= {table_name}.sync_updated_at
         """
         
         # Remove duplicates within the batch to prevent PostgreSQL conflict error
@@ -747,8 +747,8 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
                 
             # If we haven't seen this estimate_id or this record is more recent
             if (estimate_id not in unique_records or 
-                (record.get('updated_at') and unique_records[estimate_id].get('updated_at') and
-                 record['updated_at'] > unique_records[estimate_id]['updated_at'])):
+                (record.get('sync_updated_at') and unique_records[estimate_id].get('sync_updated_at') and
+                 record['sync_updated_at'] > unique_records[estimate_id]['sync_updated_at'])):
                 
                 if estimate_id in unique_records:
                     duplicate_count += 1
@@ -760,7 +760,7 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
                 logger.debug(f"Skipping older duplicate for estimate_id {estimate_id}")
         
         if duplicate_count > 0:
-            logger.info(f"Removed {duplicate_count} duplicate records from batch (kept most recent by updated_at)")
+            logger.info(f"Removed {duplicate_count} duplicate records from batch (kept most recent by sync_updated_at)")
         
         # Prepare data tuples from deduplicated records
         deduplicated_records = list(unique_records.values())

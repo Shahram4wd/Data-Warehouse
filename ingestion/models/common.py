@@ -13,7 +13,7 @@ class SyncTracker(models.Model):
     last_synced_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = 'orchestration.sync_tracker'
+        db_table = 'sync_tracker'
         managed = True
         app_label = 'ingestion'
         db_table_comment = 'Tracks the last synchronization time for various data sources'
@@ -58,7 +58,7 @@ class SyncHistory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        db_table = 'orchestration.sync_history'
+        db_table = 'sync_history'
         managed = True
         app_label = 'ingestion'
         db_table_comment = 'Universal sync history for all CRM operations'
@@ -127,7 +127,7 @@ class SyncConfiguration(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'orchestration.sync_configuration'
+        db_table = 'sync_configuration'
         managed = True
         app_label = 'ingestion'
         db_table_comment = 'Dynamic sync configuration'

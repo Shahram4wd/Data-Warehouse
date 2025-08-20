@@ -57,8 +57,8 @@ class SalesProLeadResultSyncEngine(SalesProBaseSyncEngine):
                     'estimate_id': record[0] or '',
                     'company_id': record[1] or '' if len(record) > 1 else '',
                     'lead_results': record[2] or '' if len(record) > 2 else '',
-                    'created_at': record[3] if len(record) > 3 else None,
-                    'updated_at': record[4] if len(record) > 4 else None,
+                    'sync_created_at': record[3] if len(record) > 3 else None,
+                    'sync_updated_at': record[4] if len(record) > 4 else None,
                 }
                 record = record_dict
             
@@ -71,15 +71,22 @@ class SalesProLeadResultSyncEngine(SalesProBaseSyncEngine):
                 for warning in validation_warnings:
                     logger.warning(f"Lead result validation: {warning}")
             
-            # Parse datetime fields
-            if transformed.get('created_at'):
-                transformed['created_at'] = self._parse_datetime(transformed['created_at'])
-            if transformed.get('updated_at'):
-                transformed['updated_at'] = self._parse_datetime(transformed['updated_at'])
+            # Parse datetime fields - remove them if null to use model defaults
+            if transformed.get('sync_created_at'):
+                transformed['sync_created_at'] = self._parse_datetime(transformed['sync_created_at'])
+            else:
+                # Remove null timestamp fields to let Django use model defaults
+                transformed.pop('sync_created_at', None)
+                
+            if transformed.get('sync_updated_at'):
+                transformed['sync_updated_at'] = self._parse_datetime(transformed['sync_updated_at'])
+            else:
+                # Remove null timestamp fields to let Django use model defaults
+                transformed.pop('sync_updated_at', None)
             
             # Log transformation results
             estimate_id = transformed.get('estimate_id')
-            updated_at = transformed.get('updated_at')
+            updated_at = transformed.get('sync_updated_at')
             return transformed
             
         except Exception as e:

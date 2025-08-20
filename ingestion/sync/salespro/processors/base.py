@@ -289,6 +289,14 @@ class SalesProBaseProcessor(BaseDataProcessor):
             # LeadResult records use estimate_id as primary key
             if not record.get('estimate_id'):
                 raise ValidationException("LeadResult record missing required 'estimate_id' field")
+        elif self.model_class.__name__ == 'SalesPro_Estimate':
+            # Estimate records use estimate_id as primary key
+            if not record.get('estimate_id'):
+                raise ValidationException("Estimate record missing required 'estimate_id' field")
+        elif self.model_class.__name__ == 'SalesPro_Customer':
+            # Customer records use customer_id as primary key
+            if not record.get('customer_id'):
+                raise ValidationException("Customer record missing required 'customer_id' field")
         else:
             # Customer/entity records need customer_id or id
             if not record.get('customer_id') and not record.get('id'):
@@ -318,6 +326,20 @@ class SalesProBaseProcessor(BaseDataProcessor):
             
         # Skip detailed completeness checks for LeadResult records (they have different validation requirements)
         if self.model_class.__name__ == 'SalesPro_LeadResult':
+            return warnings
+            
+        # Skip email/phone validation for Estimate records (they don't have contact fields)
+        if self.model_class.__name__ == 'SalesPro_Estimate':
+            # Only validate estimate-specific fields
+            if not record.get('estimate_id'):
+                warnings.append("Estimate missing estimate_id")
+            return warnings
+            
+        # Skip email/phone validation for Customer records (they don't have contact fields)
+        if self.model_class.__name__ == 'SalesPro_Customer':
+            # Only validate customer-specific fields
+            if not record.get('customer_id'):
+                warnings.append("Customer missing customer_id")
             return warnings
         
         # Check for minimum required information for customer/entity records
