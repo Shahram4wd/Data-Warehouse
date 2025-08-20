@@ -49,6 +49,11 @@ class Command(BaseCommand):
             help="Skip marketing leads sync"
         )
         parser.add_argument(
+            "--skip-marketing-spends",
+            action="store_true", 
+            help="Skip marketing spends sync"
+        )
+        parser.add_argument(
             "--test-connections",
             action="store_true",
             help="Test all Google Sheets API connections only"
@@ -93,7 +98,8 @@ class Command(BaseCommand):
             
             # Available sheet sync commands
             sheet_commands = [
-                ('Marketing Leads', 'sync_gsheet_marketing_leads', options.get('skip_marketing_leads', False))
+                ('Marketing Leads', 'sync_gsheet_marketing_leads', options.get('skip_marketing_leads', False)),
+                ('Marketing Spends', 'sync_gsheet_marketing_spends', options.get('skip_marketing_spends', False))
             ]
             
             for sheet_name, command_name, skip in sheet_commands:

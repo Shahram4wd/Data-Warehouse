@@ -329,7 +329,10 @@ class Hubspot_Appointment(models.Model):
     archived = models.BooleanField(default=False)
     
     class Meta:
-        db_table = 'ingestion_hubspot_appointment'
+        db_table = 'hubspot_appointment'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Hubspot Appointment data stored in ingestion schema'
         verbose_name = 'HubSpot Appointment'
         verbose_name_plural = 'HubSpot Appointments'
         ordering = ['-hs_appointment_start', '-hs_createdate']
@@ -372,7 +375,10 @@ class Hubspot_AppointmentContactAssociation(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'ingestion_hubspot_appointment_contact_assoc'
+        db_table = 'hubspot_appointment_contact_assoc'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Hubspot Appointment Contact Association data stored in ingestion schema'
         unique_together = ('appointment_id', 'contact_id')
 
     def __str__(self):
@@ -385,7 +391,10 @@ class Hubspot_ContactDivisionAssociation(models.Model):
     sync_created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'ingestion_hubspot_contact_division_assoc'
+        db_table = 'hubspot_contact_division_assoc'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Hubspot Contact Division Association data stored in ingestion schema'
         unique_together = ('contact_id', 'division_id')
 
     def __str__(self):
@@ -452,7 +461,10 @@ class Hubspot_Division(models.Model):
     archived = models.BooleanField(default=False)
     
     class Meta:
-        db_table = 'ingestion_hubspot_division'
+        db_table = 'hubspot_division'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Hubspot Division data stored in ingestion schema'
         verbose_name = 'HubSpot Division'
         verbose_name_plural = 'HubSpot Divisions'
     
@@ -473,7 +485,10 @@ class Hubspot_ZipCode(models.Model):
     archived = models.BooleanField(default=False)
     
     class Meta:
-        db_table = 'ingestion_hubspot_zipcode'
+        db_table = 'hubspot_zipcode'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Hubspot ZipCode data stored in ingestion schema'
         verbose_name = 'HubSpot ZipCode'
         verbose_name_plural = 'HubSpot ZipCodes'
     
@@ -504,7 +519,10 @@ class Hubspot_GeniusUser(models.Model):
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_hubspot_geniususer'
+        db_table = 'hubspot_geniususer'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Hubspot Genius User data stored in ingestion schema'
         verbose_name = 'HubSpot Genius User'
         verbose_name_plural = 'HubSpot Genius Users'
 

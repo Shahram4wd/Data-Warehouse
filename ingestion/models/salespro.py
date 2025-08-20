@@ -17,7 +17,10 @@ class SalesPro_Office(models.Model):
     last_edit_date = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        db_table = 'ingestion_salespro_office'
+        db_table = 'salespro_office'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesPro Office data stored in ingestion schema'
         verbose_name = 'SalesPro Office'
         verbose_name_plural = 'SalesPro Offices'
         indexes = [
@@ -70,7 +73,10 @@ class SalesPro_User(models.Model):
     deactivated_date = models.DateTimeField(blank=True, null=True)
 
     class Meta:
-        db_table = 'ingestion_salespro_user'
+        db_table = 'salespro_user'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesPro User data stored in ingestion schema'
         verbose_name = 'SalesPro User'
         verbose_name_plural = 'SalesPro Users'
         indexes = [
@@ -98,7 +104,10 @@ class SalesPro_CreditApplication(models.Model):
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_salespro_credit_application'
+        db_table = 'salespro_credit_application'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesPro Credit Application data stored in ingestion schema'
         verbose_name = 'Credit Application'
         verbose_name_plural = 'Credit Applications'
 
@@ -119,7 +128,10 @@ class SalesPro_Customer(models.Model):
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_salespro_customer'
+        db_table = 'salespro_customer'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesPro Customer data stored in ingestion schema'
         verbose_name = 'Customer'
         verbose_name_plural = 'Customers'
 
@@ -156,7 +168,10 @@ class SalesPro_Estimate(models.Model):
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_salespro_estimate'
+        db_table = 'salespro_estimate'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesPro Estimate data stored in ingestion schema'
         verbose_name = 'Estimate'
         verbose_name_plural = 'Estimates'
 
@@ -185,7 +200,10 @@ class SalesPro_LeadResult(models.Model):
     lead_results_raw = models.TextField(blank=True, null=True, help_text="Original JSON data for reference")
 
     class Meta:
-        db_table = 'ingestion_salespro_lead_result'
+        db_table = 'salespro_lead_result'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesPro Lead Result data stored in ingestion schema'
         verbose_name = 'Lead Result'
         verbose_name_plural = 'Lead Results'
         # No unique_together needed since estimate_id is primary key
@@ -208,7 +226,10 @@ class SalesPro_Payment(models.Model):
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'ingestion_salespro_payment'
+        db_table = 'salespro_payment'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesPro Payment data stored in ingestion schema'
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'
 
@@ -233,7 +254,10 @@ class SalesPro_UserActivity(models.Model):
     original_row_num = models.BigIntegerField(blank=True, null=True)
 
     class Meta:
-        db_table = 'ingestion_salespro_user_activity'
+        db_table = 'salespro_user_activity'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesPro User Activity data stored in ingestion schema'
         verbose_name = 'User Activity'
         verbose_name_plural = 'User Activities'
         # Use combination of sync_created_at, user_id, and activity_note as unique constraint
