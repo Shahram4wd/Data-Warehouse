@@ -195,4 +195,4 @@ class Command(BaseSalesProSyncCommand):
     
     def get_sync_name(self) -> str:
         """Get the sync operation name"""
-        return "creditapplication"
+        return "creditapplications"

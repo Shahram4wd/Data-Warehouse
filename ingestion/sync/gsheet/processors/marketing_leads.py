@@ -37,7 +37,6 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
             
             # Timestamp
             # Map the sheet's `created_at` column directly to model `created_at`
-            # since we now use sync_created_at for internal tracking
             'created_at': 'created_at',
             
             # UTM Campaign Data
@@ -125,8 +124,8 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
             # Campaign Rename
             'google_ads_campaign_rename': 'google_ads_campaign_rename',
             
-            # Marketing Channel
-            'marketing_channel': 'marketing_channel',
+            # Marketing Channel - updated to match new model field name
+            'marketing_channel': 'channel',
         }
     
     def process_row_sync(self, row_data: Dict[str, Any]) -> Dict[str, Any]:
