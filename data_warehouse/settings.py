@@ -131,7 +131,7 @@ if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
         DATABASES['default']['OPTIONS'] = {}
 
     # Set search path to include all necessary schemas
-    search_path = 'django,orchestration,monitoring,ingestion,ingestion_bkp'
+    search_path = 'django,orchestration,monitoring,ingestion,report'
     
     # Add schema search path to connection options
     if 'options' in DATABASES['default']['OPTIONS']:
