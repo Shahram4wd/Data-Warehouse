@@ -561,6 +561,7 @@ class Genius_MarketSharpMarketingSourceMap(models.Model):
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'genius_marketsharp_marketing_source_map'
@@ -569,8 +570,6 @@ class Genius_MarketSharpMarketingSourceMap(models.Model):
         db_table_comment = 'Genius MarketSharpMarketingSourceMap data stored in ingestion schema'
         verbose_name = 'Genius MarketSharpMarketingSourceMap'
         verbose_name_plural = 'Genius MarketSharpMarketingSourceMaps'
-
-    sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"MarketSharp ID: {self.marketsharp_id}, Marketing Source ID: {self.marketing_source_id}"
@@ -678,6 +677,7 @@ class Genius_Job(models.Model):
     is_coc_pdf_attached = models.SmallIntegerField(default=0)
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'genius_job'
@@ -686,8 +686,6 @@ class Genius_Job(models.Model):
         db_table_comment = 'Genius Job data stored in ingestion schema'
         verbose_name = 'Genius Job'
         verbose_name_plural = 'Genius Jobs'
-
-    sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Job {self.id} for Prospect {self.prospect_id}"
@@ -717,6 +715,7 @@ class Genius_JobChangeOrder(models.Model):
     financing_note = models.CharField(max_length=255, null=True, blank=True)
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'genius_job_change_order'
@@ -725,8 +724,6 @@ class Genius_JobChangeOrder(models.Model):
         db_table_comment = 'Genius JobChangeOrder data stored in ingestion schema'
         verbose_name = 'Genius JobChangeOrder'
         verbose_name_plural = 'Genius JobChangeOrders'
-
-    sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"ChangeOrder {self.id} for Job {self.job_id}"
@@ -740,6 +737,7 @@ class Genius_JobChangeOrderItem(models.Model):
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'genius_job_change_order_item'
@@ -748,8 +746,6 @@ class Genius_JobChangeOrderItem(models.Model):
         db_table_comment = 'Genius JobChangeOrderItem data stored in ingestion schema'
         verbose_name = 'Genius JobChangeOrderItem'
         verbose_name_plural = 'Genius JobChangeOrderItems'
-
-    sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"CO Item {self.id} for ChangeOrder {self.change_order_id}"
@@ -760,6 +756,7 @@ class Genius_JobChangeOrderReason(models.Model):
     label = models.CharField(max_length=100, null=True, blank=True)
     description = models.CharField(max_length=255, null=True, blank=True)
     sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'genius_job_change_order_reason'
@@ -768,8 +765,6 @@ class Genius_JobChangeOrderReason(models.Model):
         db_table_comment = 'Genius JobChangeOrderReason data stored in ingestion schema'
         verbose_name = 'Genius JobChangeOrderReason'
         verbose_name_plural = 'Genius JobChangeOrderReasons'
-
-    sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.label or f"CO Reason {self.id}"
@@ -780,6 +775,7 @@ class Genius_JobChangeOrderStatus(models.Model):
     label = models.CharField(max_length=32)
     is_selectable = models.SmallIntegerField(default=1)
     sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'genius_job_change_order_status'
@@ -789,8 +785,6 @@ class Genius_JobChangeOrderStatus(models.Model):
         verbose_name = 'Genius JobChangeOrderStatus'
         verbose_name_plural = 'Genius JobChangeOrderStatuss'
 
-    sync_updated_at = models.DateTimeField(auto_now=True)
-
     def __str__(self):
         return self.label
 
@@ -799,6 +793,7 @@ class Genius_JobChangeOrderType(models.Model):
     id = models.AutoField(primary_key=True)
     label = models.CharField(max_length=32, null=True, blank=True)
     sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'genius_job_change_order_type'
@@ -807,8 +802,6 @@ class Genius_JobChangeOrderType(models.Model):
         db_table_comment = 'Genius JobChangeOrderType data stored in ingestion schema'
         verbose_name = 'Genius JobChangeOrderType'
         verbose_name_plural = 'Genius JobChangeOrderTypes'
-
-    sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.label or f"CO Type {self.id}"
@@ -819,6 +812,7 @@ class Genius_JobStatus(models.Model):
     label = models.CharField(max_length=50, null=True, blank=True)
     is_system = models.SmallIntegerField(default=0)
     sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'genius_job_status'
@@ -827,8 +821,6 @@ class Genius_JobStatus(models.Model):
         db_table_comment = 'Genius JobStatus data stored in ingestion schema'
         verbose_name = 'Genius JobStatus'
         verbose_name_plural = 'Genius JobStatuss'
-
-    sync_updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.label or f"Job Status {self.id}"
