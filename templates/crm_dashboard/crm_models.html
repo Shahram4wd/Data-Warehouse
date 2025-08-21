@@ -129,6 +129,7 @@
             </div>
             <div class="modal-body">
                 <form id="bulkSyncForm">
+                    {% csrf_token %}
                     <div class="mb-3">
                         <label class="form-label">Sync Parameters</label>
                         <div class="form-check">
@@ -173,6 +174,7 @@
             </div>
             <div class="modal-body">
                 <form id="syncForm">
+                    {% csrf_token %}
                     <input type="hidden" id="syncCrmName" value="{{ crm_source }}">
                     <input type="hidden" id="syncModelId">
                     <div class="mb-3">
@@ -487,8 +489,27 @@ function formatDate(dateStr) {
 }
 
 function getCsrfToken() {
+    // Try to get from form element first
     const el = document.querySelector('[name=csrfmiddlewaretoken]');
-    return el ? el.value : '';
+    if (el) return el.value;
+    
+    // Fallback to cookie method
+    return getCookie('csrftoken');
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 function showSuccess(message) {

@@ -131,7 +131,7 @@ if DATABASES['default']['ENGINE'] == 'django.db.backends.postgresql':
         DATABASES['default']['OPTIONS'] = {}
 
     # Set search path to include all necessary schemas
-    search_path = 'django,orchestration,monitoring,ingestion'
+    search_path = 'django,orchestration,monitoring,ingestion,ingestion_bkp'
     
     # Add schema search path to connection options
     if 'options' in DATABASES['default']['OPTIONS']:
@@ -160,6 +160,8 @@ CSRF_TRUSTED_ORIGINS = [
     'https://latenightcode.com',  # No trailing slash
     'https://www.latenightcode.com',  # Add www variant
     'http://localhost:8000',
+    'http://127.0.0.1:8000',  # Add 127.0.0.1 variant
+    'http://0.0.0.0:8000',    # Add docker variant
 ]
 
 # CORS settings if you're using django-cors-headers
@@ -168,6 +170,8 @@ CORS_ALLOWED_ORIGINS = [
     'https://latenightcode.com',
     'https://www.latenightcode.com',
     'http://localhost:8000',
+    'http://127.0.0.1:8000',  # Add 127.0.0.1 variant
+    'http://0.0.0.0:8000',    # Add docker variant
 ]
 
 # Celery Configuration
