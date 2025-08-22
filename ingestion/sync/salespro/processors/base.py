@@ -82,6 +82,10 @@ class SalesProBaseProcessor(BaseDataProcessor):
             'price': 'price',
             'local_customer_uuid': 'local_customer_uuid',
             'original_row_num': 'original_row_num',
+            
+            # Timestamp fields - map to model's sync fields
+            'created_at': 'sync_created_at',
+            'updated_at': 'sync_created_at',  # For user activities, map both to sync_created_at
         }
     
     def get_field_types(self) -> Dict[str, str]:

@@ -50,9 +50,25 @@ class GeniusBaseClient:
         timestamp_field_map = {
             'prospect': 'updated_at',
             'division': 'updated_at', 
+            'division_group': 'updated_at',
             'user_title': 'updated_at',
             'appointment': 'updated_at',
-            'user': 'updated_at'
+            'user': 'updated_at',
+            'job': 'updated_at',
+            'job_status': 'updated_at',
+            'lead': 'updated_at',
+            'quote': 'updated_at',
+            'job_change_order': 'updated_at',
+            'appointment_type': 'updated_at',
+            'appointment_outcome': 'updated_at',
+            'appointment_outcome_type': 'updated_at',
+            'marketing_source': 'updated_at',
+            'marketing_source_type': 'updated_at',
+            'prospect_source': 'updated_at',
+            'marketsharp_sources': 'updated_at',
+            'marketsharp_marketing_source_map': 'updated_at',
+            'marketsharp_contacts': 'updated_at',
+            'marketsharp_appointments': 'updated_at'
         }
         
         timestamp_field = timestamp_field_map.get(table_name, 'updated_at')

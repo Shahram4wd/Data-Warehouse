@@ -173,11 +173,11 @@ class Command(BaseCommand):
             last_sync = SyncHistory.objects.filter(
                 crm_source='genius',
                 sync_type='prospects',
-                status='completed'
-            ).order_by('-completed_at').first()
+                status='success'
+            ).order_by('-end_time').first()
             
             if last_sync:
-                return last_sync.completed_at
+                return last_sync.end_time
         except Exception as e:
             self.stdout.write(self.style.WARNING(f"Could not retrieve last sync timestamp: {e}"))
         
@@ -227,14 +227,14 @@ class Command(BaseCommand):
             crm_source='genius',
             sync_type='prospects',
             status='running',
-            started_at=timezone.now(),
+            start_time=timezone.now(),
             records_processed=0
         )
     
-    def _complete_sync_record(self, sync_record, records_processed, status='completed'):
+    def _complete_sync_record(self, sync_record, records_processed, status='success'):
         """Complete the sync record."""
         sync_record.records_processed = records_processed
-        sync_record.completed_at = timezone.now()
+        sync_record.end_time = timezone.now()
         sync_record.status = status
         sync_record.save()
 

@@ -1,0 +1,285 @@
+"""
+Genius CRM validation rules and utilities
+"""
+import logging
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+from decimal import Decimal, InvalidOperation
+
+logger = logging.getLogger(__name__)
+
+
+class GeniusValidator:
+    """Genius CRM-specific validation rules"""
+    
+    @staticmethod
+    def validate_id_field(value: Any) -> Optional[int]:
+        """Validate and convert ID fields"""
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            logger.warning(f"Invalid ID value: {value}")
+            return None
+    
+    @staticmethod
+    def validate_string_field(value: Any, max_length: int = None, required: bool = False) -> Optional[str]:
+        """Validate and clean string fields"""
+        if value is None:
+            return None if not required else ""
+        
+        str_value = str(value).strip()
+        
+        if not str_value and required:
+            raise ValueError("Required string field cannot be empty")
+        
+        if max_length and len(str_value) > max_length:
+            logger.warning(f"String too long ({len(str_value)}), truncating to {max_length}")
+            str_value = str_value[:max_length]
+        
+        return str_value if str_value else None
+    
+    @staticmethod
+    def validate_decimal_field(value: Any, max_digits: int = None, decimal_places: int = None) -> Optional[Decimal]:
+        """Validate and convert decimal fields"""
+        if value is None:
+            return None
+        
+        try:
+            decimal_value = Decimal(str(value))
+            
+            if max_digits and len(str(decimal_value).replace('.', '').replace('-', '')) > max_digits:
+                raise ValueError(f"Decimal has too many digits: {decimal_value}")
+            
+            if decimal_places is not None:
+                # Round to specified decimal places
+                decimal_value = decimal_value.quantize(Decimal('0.1') ** decimal_places)
+            
+            return decimal_value
+        except (InvalidOperation, ValueError, TypeError) as e:
+            logger.warning(f"Invalid decimal value: {value}, error: {e}")
+            return None
+    
+    @staticmethod
+    def validate_boolean_field(value: Any) -> bool:
+        """Validate and convert boolean fields"""
+        if value is None:
+            return False
+        
+        if isinstance(value, bool):
+            return value
+        
+        if isinstance(value, (int, float)):
+            return bool(value)
+        
+        if isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes', 'on', 'y')
+        
+        return bool(value)
+    
+    @staticmethod
+    def validate_datetime_field(value: Any) -> Optional[datetime]:
+        """Validate and convert datetime fields"""
+        if value is None:
+            return None
+        
+        if isinstance(value, datetime):
+            return value
+        
+        if isinstance(value, str):
+            try:
+                # Try common datetime formats
+                for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%Y-%m-%d %H:%M:%S.%f']:
+                    try:
+                        return datetime.strptime(value, fmt)
+                    except ValueError:
+                        continue
+            except Exception:
+                pass
+        
+        logger.warning(f"Invalid datetime value: {value}")
+        return None
+    
+    @staticmethod
+    def validate_phone_field(value: Any) -> Optional[str]:
+        """Validate and clean phone number fields"""
+        if value is None:
+            return None
+        
+        phone = str(value).strip()
+        if not phone:
+            return None
+        
+        # Remove common formatting
+        phone = ''.join(filter(str.isdigit, phone))
+        
+        # Basic US phone number validation
+        if len(phone) == 10:
+            return f"({phone[:3]}) {phone[3:6]}-{phone[6:]}"
+        elif len(phone) == 11 and phone.startswith('1'):
+            return f"({phone[1:4]}) {phone[4:7]}-{phone[7:]}"
+        
+        # Return original if it doesn't fit standard US format
+        return str(value).strip()
+    
+    @staticmethod
+    def validate_email_field(value: Any) -> Optional[str]:
+        """Validate and clean email fields"""
+        if value is None:
+            return None
+        
+        email = str(value).strip().lower()
+        if not email:
+            return None
+        
+        # Basic email validation
+        if '@' in email and '.' in email:
+            return email
+        
+        logger.warning(f"Invalid email format: {email}")
+        return None
+
+
+class GeniusFieldValidator:
+    """Field-specific validators for common Genius entities"""
+    
+    @staticmethod
+    def validate_division_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate division record"""
+        validated = {}
+        
+        validated['genius_id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['name'] = GeniusValidator.validate_string_field(record.get('name'), max_length=255, required=True)
+        validated['code'] = GeniusValidator.validate_string_field(record.get('code'), max_length=50)
+        validated['active'] = GeniusValidator.validate_boolean_field(record.get('active'))
+        validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        
+        # Division-specific validations
+        if record.get('division_group_id'):
+            validated['division_group_id'] = GeniusValidator.validate_id_field(record.get('division_group_id'))
+        
+        return validated
+    
+    @staticmethod
+    def validate_prospect_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate prospect record"""
+        validated = {}
+        
+        validated['genius_id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['first_name'] = GeniusValidator.validate_string_field(record.get('first_name'), max_length=100)
+        validated['last_name'] = GeniusValidator.validate_string_field(record.get('last_name'), max_length=100)
+        validated['email'] = GeniusValidator.validate_email_field(record.get('email'))
+        validated['phone'] = GeniusValidator.validate_phone_field(record.get('phone'))
+        validated['address'] = GeniusValidator.validate_string_field(record.get('address'), max_length=500)
+        validated['city'] = GeniusValidator.validate_string_field(record.get('city'), max_length=100)
+        validated['state'] = GeniusValidator.validate_string_field(record.get('state'), max_length=50)
+        validated['zip_code'] = GeniusValidator.validate_string_field(record.get('zip_code'), max_length=20)
+        validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        
+        return validated
+    
+    @staticmethod
+    def validate_appointment_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate appointment record"""
+        validated = {}
+        
+        validated['genius_id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['prospect_id'] = GeniusValidator.validate_id_field(record.get('prospect_id'))
+        validated['user_id'] = GeniusValidator.validate_id_field(record.get('user_id'))
+        validated['appointment_type_id'] = GeniusValidator.validate_id_field(record.get('appointment_type_id'))
+        validated['scheduled_date'] = GeniusValidator.validate_datetime_field(record.get('scheduled_date'))
+        validated['duration'] = GeniusValidator.validate_id_field(record.get('duration'))  # in minutes
+        validated['notes'] = GeniusValidator.validate_string_field(record.get('notes'), max_length=2000)
+        validated['status'] = GeniusValidator.validate_string_field(record.get('status'), max_length=50)
+        validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        
+        return validated
+    
+    @staticmethod
+    def validate_user_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate user record"""
+        validated = {}
+        
+        validated['genius_id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['first_name'] = GeniusValidator.validate_string_field(record.get('first_name'), max_length=100)
+        validated['last_name'] = GeniusValidator.validate_string_field(record.get('last_name'), max_length=100)
+        validated['email'] = GeniusValidator.validate_email_field(record.get('email'))
+        validated['username'] = GeniusValidator.validate_string_field(record.get('username'), max_length=100)
+        validated['active'] = GeniusValidator.validate_boolean_field(record.get('active'))
+        validated['user_title_id'] = GeniusValidator.validate_id_field(record.get('user_title_id'))
+        validated['division_id'] = GeniusValidator.validate_id_field(record.get('division_id'))
+        validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        
+        return validated
+    
+    @staticmethod
+    def validate_job_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate job record"""
+        validated = {}
+        
+        validated['genius_id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['prospect_id'] = GeniusValidator.validate_id_field(record.get('prospect_id'))
+        validated['division_id'] = GeniusValidator.validate_id_field(record.get('division_id'))
+        validated['job_number'] = GeniusValidator.validate_string_field(record.get('job_number'), max_length=100)
+        validated['job_status_id'] = GeniusValidator.validate_id_field(record.get('job_status_id'))
+        validated['contract_amount'] = GeniusValidator.validate_decimal_field(record.get('contract_amount'), max_digits=10, decimal_places=2)
+        validated['start_date'] = GeniusValidator.validate_datetime_field(record.get('start_date'))
+        validated['completion_date'] = GeniusValidator.validate_datetime_field(record.get('completion_date'))
+        validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        
+        return validated
+
+
+class GeniusRecordValidator:
+    """High-level record validation with business logic"""
+    
+    @staticmethod
+    def validate_required_relationships(record_type: str, record: Dict[str, Any]) -> List[str]:
+        """Validate required foreign key relationships"""
+        errors = []
+        
+        if record_type == 'appointment':
+            if not record.get('prospect_id'):
+                errors.append("Appointment must have a prospect_id")
+            if not record.get('user_id'):
+                errors.append("Appointment must have a user_id")
+        
+        elif record_type == 'job':
+            if not record.get('prospect_id'):
+                errors.append("Job must have a prospect_id")
+            if not record.get('division_id'):
+                errors.append("Job must have a division_id")
+        
+        elif record_type == 'user':
+            if not record.get('division_id'):
+                errors.append("User must have a division_id")
+        
+        return errors
+    
+    @staticmethod
+    def validate_business_rules(record_type: str, record: Dict[str, Any]) -> List[str]:
+        """Validate business-specific rules"""
+        errors = []
+        
+        if record_type == 'appointment':
+            if record.get('scheduled_date') and record['scheduled_date'] < datetime.now():
+                logger.warning(f"Appointment {record.get('genius_id')} is scheduled in the past")
+        
+        elif record_type == 'job':
+            start_date = record.get('start_date')
+            completion_date = record.get('completion_date')
+            
+            if start_date and completion_date and start_date > completion_date:
+                errors.append("Job start_date cannot be after completion_date")
+            
+            contract_amount = record.get('contract_amount')
+            if contract_amount and contract_amount < 0:
+                errors.append("Job contract_amount cannot be negative")
+        
+        return errors

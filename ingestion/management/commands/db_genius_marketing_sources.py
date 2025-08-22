@@ -35,14 +35,29 @@ class Command(BaseCommand):
 
             # Process records in batches
             for offset in tqdm(range(0, total_records, BATCH_SIZE), desc="Processing batches"):
-                cursor.execute(f"""
-                    SELECT id, type_id, label, description, start_date, end_date, add_user_id, add_date,
-                           is_active, is_allow_lead_modification
-                    FROM {table_name}
-                    LIMIT {BATCH_SIZE} OFFSET {offset}
-                """)
-                rows = cursor.fetchall()
-                self._process_batch(rows)
+                # Try to get updated_at from source, fall back without it if it doesn't exist
+                try:
+                    cursor.execute(f"""
+                        SELECT id, type_id, label, description, start_date, end_date, add_user_id, add_date,
+                               is_active, is_allow_lead_modification, updated_at
+                        FROM {table_name}
+                        LIMIT {BATCH_SIZE} OFFSET {offset}
+                    """)
+                    rows = cursor.fetchall()
+                    has_updated_at = True
+                except Exception as e:
+                    # Fallback to original query without updated_at
+                    self.stdout.write(self.style.WARNING(f"Source table doesn't have updated_at field, using fallback query: {e}"))
+                    cursor.execute(f"""
+                        SELECT id, type_id, label, description, start_date, end_date, add_user_id, add_date,
+                               is_active, is_allow_lead_modification
+                        FROM {table_name}
+                        LIMIT {BATCH_SIZE} OFFSET {offset}
+                    """)
+                    rows = cursor.fetchall()
+                    has_updated_at = False
+                
+                self._process_batch(rows, has_updated_at)
 
             self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
 
@@ -53,20 +68,31 @@ class Command(BaseCommand):
                 cursor.close()
                 connection.close()
 
-    def _process_batch(self, rows):
+    def _process_batch(self, rows, has_updated_at=False):
         """Process a single batch of records."""
         to_create = []
         to_update = []
         existing_records = Genius_MarketingSource.objects.in_bulk([row[0] for row in rows])  # Assuming the first column is the primary key
 
         for row in rows:
-            (
-                record_id, type_id, label, description, start_date, end_date, add_user_id, add_date,
-                is_active, is_allow_lead_modification
-            ) = row
+            if has_updated_at:
+                (
+                    record_id, type_id, label, description, start_date, end_date, add_user_id, add_date,
+                    is_active, is_allow_lead_modification, updated_at
+                ) = row
+            else:
+                (
+                    record_id, type_id, label, description, start_date, end_date, add_user_id, add_date,
+                    is_active, is_allow_lead_modification
+                ) = row
+                updated_at = None
 
+            # Convert datetime fields to timezone-aware
             if add_date:
-                add_date = timezone.make_aware(add_date, dt_timezone.utc)  # Use datetime.timezone.utc
+                add_date = self._safe_datetime_convert(add_date)
+            
+            # Handle updated_at field
+            updated_at = self._safe_datetime_convert(updated_at)
 
             if record_id in existing_records:
                 record_instance = existing_records[record_id]
@@ -79,6 +105,7 @@ class Command(BaseCommand):
                 record_instance.add_date = add_date
                 record_instance.is_active = is_active
                 record_instance.is_allow_lead_modification = is_allow_lead_modification
+                record_instance.updated_at = updated_at
                 to_update.append(record_instance)
             else:
                 to_create.append(Genius_MarketingSource(
@@ -91,7 +118,8 @@ class Command(BaseCommand):
                     add_user_id=add_user_id,
                     add_date=add_date,
                     is_active=is_active,
-                    is_allow_lead_modification=is_allow_lead_modification
+                    is_allow_lead_modification=is_allow_lead_modification,
+                    updated_at=updated_at
                 ))
 
         # Bulk create and update
@@ -102,7 +130,38 @@ class Command(BaseCommand):
                 to_update,
                 [
                     'type_id', 'label', 'description', 'start_date', 'end_date', 'add_user_id',
-                    'add_date', 'is_active', 'is_allow_lead_modification'
+                    'add_date', 'is_active', 'is_allow_lead_modification', 'updated_at'
                 ],
                 batch_size=BATCH_SIZE
             )
+
+    def _safe_datetime_convert(self, value, default=None):
+        """Safely convert value to timezone-aware datetime."""
+        if value is None:
+            return timezone.now() if default is None else default
+        
+        try:
+            from datetime import datetime
+            
+            # If it's already a datetime object
+            if hasattr(value, 'year'):
+                # Check if it's naive (no timezone info) and make it aware
+                if timezone.is_naive(value):
+                    return timezone.make_aware(value)
+                return value
+            
+            # Try to convert string to datetime
+            if isinstance(value, str):
+                try:
+                    # Parse ISO format datetime
+                    dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                    if timezone.is_naive(dt):
+                        return timezone.make_aware(dt)
+                    return dt
+                except ValueError:
+                    pass
+            
+            # If conversion fails, return current time
+            return timezone.now()
+        except (ValueError, TypeError, AttributeError):
+            return timezone.now()

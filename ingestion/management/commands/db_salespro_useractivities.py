@@ -182,8 +182,8 @@ class SalesProUserActivitySyncEngine(SalesProBaseSyncEngine):
                     transformed = self.processor.transform_record(validated_record)
                     
                     # Ensure required fields are present for activity records
-                    if not transformed.get('created_at'):
-                        transformed['created_at'] = self._parse_datetime(record.get('created_at'))
+                    if not transformed.get('sync_created_at'):
+                        transformed['sync_created_at'] = self._parse_datetime(record.get('created_at'))
                     
                     # Activity-specific fields that might not be in base mappings
                     transformed.update({
@@ -201,7 +201,7 @@ class SalesProUserActivitySyncEngine(SalesProBaseSyncEngine):
                     })
                     
                     # Validate that we have the minimum required fields for uniqueness
-                    if not all([transformed.get('created_at'), transformed.get('user_id'), transformed.get('activity_note')]):
+                    if not all([transformed.get('sync_created_at'), transformed.get('user_id'), transformed.get('activity_note')]):
                         logger.warning(f"Skipping record missing required unique fields: {record}")
                         return None
                     
@@ -213,7 +213,7 @@ class SalesProUserActivitySyncEngine(SalesProBaseSyncEngine):
                     
                     # Basic transformation without framework validation
                     transformed = {
-                        'created_at': self._parse_datetime(record.get('created_at')),
+                        'sync_created_at': self._parse_datetime(record.get('created_at')),
                         'user_id': record.get('user_id') or '',
                         'company_id': record.get('company_id') or '',
                         'company_name': record.get('company_name') or '',
@@ -228,7 +228,7 @@ class SalesProUserActivitySyncEngine(SalesProBaseSyncEngine):
                     }
                     
                     # Validate minimum required fields
-                    if not all([transformed.get('created_at'), transformed.get('user_id'), transformed.get('activity_note')]):
+                    if not all([transformed.get('sync_created_at'), transformed.get('user_id'), transformed.get('activity_note')]):
                         logger.warning(f"Skipping record missing required unique fields: {record}")
                         return None
                     

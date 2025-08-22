@@ -103,15 +103,27 @@ class Command(BaseCommand):
           "invalid_address","is_valid_email","is_high_potential","is_mobile_lead","is_dnc","is_dummy",
           "lead_central_estimate_date","do_not_call_before","is_estimate_confirmed","estimate_confirmed_by",
           "estimate_confirmed_on","added_by_latitude","added_by_longitude","is_carpentry_followup","carpentry_followup_notes",
-          "marketing_source","prospect_id","added_by_supervisor","salesrabbit_lead_id","third_party_source_id"
+          "marketing_source","prospect_id","added_by_supervisor","salesrabbit_lead_id","third_party_source_id",
+          "updated_at","sync_created_at","sync_updated_at"  # Add required timestamp fields
         ]
+        
+        # Add current timestamp to each row for the new fields
+        from django.utils import timezone
+        current_time = timezone.now()
+        rows_with_timestamps = []
+        for row in rows:
+            # Convert row tuple to list and add timestamp fields
+            row_list = list(row)
+            row_list.extend([current_time, current_time, current_time])  # updated_at, sync_created_at, sync_updated_at
+            rows_with_timestamps.append(tuple(row_list))
+        
         placeholders = ",".join(["%s"] * len(cols))
         # Use Postgres ON CONFLICT syntax for upsert
         update_clause = ",".join(f"{c}=EXCLUDED.{c}" for c in cols if c!="lead_id")
 
         # Use execute_values for faster bulk upsert
         sql = f"""
-            INSERT INTO ingestion_genius_lead ({','.join(cols)})
+            INSERT INTO genius_lead ({','.join(cols)})
             VALUES %s
             ON CONFLICT (lead_id) DO UPDATE SET {update_clause}
         """
@@ -119,4 +131,4 @@ class Command(BaseCommand):
         # Perform upsert inside a transaction for speed
         with transaction.atomic(), connections['default'].cursor() as dest:
             # Use actual chunk size for page_size
-            execute_values(dest, sql, rows, template=values_template, page_size=len(rows))
+            execute_values(dest, sql, rows_with_timestamps, template=values_template, page_size=len(rows_with_timestamps))

@@ -39,4 +39,4 @@ def validate_timestamp_column(table_name: str) -> str:
     if table_name in updated_at_tables:
         return 'updated_at'
     else:
-        return 'created_at'
+        return 'sync_created_at'

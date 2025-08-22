@@ -48,7 +48,21 @@ This ensures all data is replaced with the latest from the CSV source."""
             csv_content = client.fetch_csv()
         except Exception as e:
             self.stderr.write(f"Failed to fetch CSV: {e}")
-            return
+            
+            # Check existing zipcode data in database
+            try:
+                from ingestion.models.hubspot import Hubspot_ZipCode
+                existing_count = Hubspot_ZipCode.objects.count()
+                if existing_count > 0:
+                    self.stdout.write(f"✓ GitHub data unavailable, but database contains {existing_count:,} existing zipcodes")
+                    self.stdout.write("ℹ️  Zipcode sync skipped - existing data is being preserved")
+                    return
+                else:
+                    self.stderr.write("⚠️  No existing zipcode data found and GitHub source unavailable")
+                    return
+            except Exception as db_error:
+                self.stderr.write(f"Error checking existing zipcode data: {db_error}")
+                return
 
         # Step 2: Parse and validate CSV
         processor = HubSpotZipCodeProcessor()

@@ -31,12 +31,36 @@ class HubSpotZipCodeClient:
         )
 
     def fetch_csv(self):
+        # Check if we have a valid GitHub token
+        if not self.github_token:
+            raise Exception("No GitHub token available. Set ZIPCODES_GITHUB_TOKEN or GITHUB_TOKEN environment variable.")
+        
         url = f"https://api.github.com/repos/{self.owner}/{self.repo}/contents/{self.file_path}?ref={self.branch}"
         headers = {
             "Authorization": f"token {self.github_token}",
             "Accept": "application/vnd.github.v3.raw"
         }
+        
+        # First, try to access the repository with authentication
         response = requests.get(url, headers=headers)
+        
+        # Handle authentication errors gracefully
+        if response.status_code == 401:
+            # Try without authentication in case the repo is public
+            headers_no_auth = {"Accept": "application/vnd.github.v3.raw"}
+            response = requests.get(url, headers=headers_no_auth)
+            
+            if response.status_code == 401:
+                raise Exception(f"GitHub authentication failed - token may be expired. Status: {response.status_code}")
+            elif response.status_code == 404:
+                # Try raw GitHub URL as fallback
+                raw_url = f"https://raw.githubusercontent.com/{self.owner}/{self.repo}/{self.branch}/{self.file_path}"
+                response = requests.get(raw_url)
+                
+                if response.status_code != 200:
+                    raise Exception(f"Repository not found or private. Cannot access zipcode data from GitHub. Status: {response.status_code}")
+        
         if response.status_code != 200:
             raise Exception(f"Failed to fetch CSV: {response.status_code} {response.text}")
+        
         return response.text

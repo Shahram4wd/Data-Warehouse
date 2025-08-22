@@ -31,13 +31,27 @@ class Command(BaseCommand):
 
             # Process records in batches
             for offset in tqdm(range(0, total_records, BATCH_SIZE), desc="Processing batches"):
-                cursor.execute(f"""
-                    SELECT marketsharp_id, marketing_source_id
-                    FROM {table_name}
-                    LIMIT {BATCH_SIZE} OFFSET {offset}
-                """)
-                rows = cursor.fetchall()
-                self._process_batch(rows)
+                # Try to get timestamps from source, fall back to 2-field query if they don't exist
+                try:
+                    cursor.execute(f"""
+                        SELECT marketsharp_id, marketing_source_id, created_at, updated_at
+                        FROM {table_name}
+                        LIMIT {BATCH_SIZE} OFFSET {offset}
+                    """)
+                    rows = cursor.fetchall()
+                    has_timestamps = True
+                except Exception as e:
+                    # Fallback to original query without timestamps
+                    self.stdout.write(self.style.WARNING(f"Source table doesn't have timestamp fields, using fallback query: {e}"))
+                    cursor.execute(f"""
+                        SELECT marketsharp_id, marketing_source_id
+                        FROM {table_name}
+                        LIMIT {BATCH_SIZE} OFFSET {offset}
+                    """)
+                    rows = cursor.fetchall()
+                    has_timestamps = False
+                
+                self._process_batch(rows, has_timestamps)
 
             self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
 
@@ -54,22 +68,28 @@ class Command(BaseCommand):
                 cursor.close()
                 connection.close()
 
-    def _process_batch(self, rows):
+    def _process_batch(self, rows, has_timestamps=False):
         """Process a batch of MarketSharp source map records."""
         to_create = []
         to_update = []
         existing_records = Genius_MarketSharpMarketingSourceMap.objects.in_bulk([row[0] for row in rows], field_name='marketsharp_id')
+        
+        expected_columns = 4 if has_timestamps else 2
 
         for row in rows:
             try:
                 # Validate row length first
-                if len(row) != 2:  # Expected number of columns
-                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 2. Skipping record."))
+                if len(row) != expected_columns:
+                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected {expected_columns}. Skipping record."))
                     continue
 
                 # Extract fields from row with debugging
                 try:
-                    marketsharp_id, marketing_source_id = row
+                    if has_timestamps:
+                        marketsharp_id, marketing_source_id, created_at, updated_at = row
+                    else:
+                        marketsharp_id, marketing_source_id = row
+                        created_at = updated_at = None
                 except ValueError as e:
                     self.stdout.write(self.style.ERROR(f"Error unpacking row for marketsharp_id {row[0] if row else 'unknown'}: {e}"))
                     self.stdout.write(self.style.ERROR(f"Row data: {row}"))
@@ -81,7 +101,9 @@ class Command(BaseCommand):
                 # Process fields with validation
                 processed_data = {
                     'marketsharp_id': self._safe_string_convert(marketsharp_id),
-                    'marketing_source_id': self._safe_int_convert(marketing_source_id, -1, field_name="marketing_source_id", original_row=row)
+                    'marketing_source_id': self._safe_int_convert(marketing_source_id, -1, field_name="marketing_source_id", original_row=row),
+                    'created_at': self._safe_datetime_convert(created_at),
+                    'updated_at': self._safe_datetime_convert(updated_at)
                 }
 
                 # Create or update the record
@@ -103,13 +125,17 @@ class Command(BaseCommand):
         """Update an existing record with new values."""
         record.marketsharp_id = processed_data['marketsharp_id']
         record.marketing_source_id = processed_data['marketing_source_id']
+        record.created_at = processed_data['created_at']
+        record.updated_at = processed_data['updated_at']
         return record
 
     def _create_record(self, processed_data):
         """Create a new MarketSharp source map record."""
         return Genius_MarketSharpMarketingSourceMap(
             marketsharp_id=processed_data['marketsharp_id'],
-            marketing_source_id=processed_data['marketing_source_id']
+            marketing_source_id=processed_data['marketing_source_id'],
+            created_at=processed_data['created_at'],
+            updated_at=processed_data['updated_at']
         )
 
     def _save_records(self, to_create, to_update):
@@ -122,7 +148,7 @@ class Command(BaseCommand):
             if to_update:
                 Genius_MarketSharpMarketingSourceMap.objects.bulk_update(
                     to_update,
-                    ['marketsharp_id', 'marketing_source_id'],
+                    ['marketing_source_id', 'created_at', 'updated_at'],  # Removed primary key 'marketsharp_id'
                     batch_size=BATCH_SIZE
                 )
                 self.stdout.write(f"Updated {len(to_update)} records")
@@ -164,3 +190,36 @@ class Command(BaseCommand):
             ))
             self.corrupted_count += 1
             return default
+
+    def _safe_datetime_convert(self, value, default=None):
+        """Safely convert value to timezone-aware datetime."""
+        if value is None:
+            return timezone.now() if default is None else default
+        
+        try:
+            from datetime import datetime
+            
+            # If it's already a datetime object
+            if hasattr(value, 'year'):
+                # Check if it's naive (no timezone info) and make it aware
+                if timezone.is_naive(value):
+                    return timezone.make_aware(value)
+                return value
+            
+            # Try to convert string to datetime
+            if isinstance(value, str):
+                try:
+                    # Parse ISO format datetime
+                    dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                    if timezone.is_naive(dt):
+                        return timezone.make_aware(dt)
+                    return dt
+                except ValueError:
+                    pass
+            
+            # If conversion fails, return current time
+            return timezone.now()
+        except (ValueError, TypeError, AttributeError):
+            self.stdout.write(self.style.WARNING(f"Invalid datetime value: {value}, using current time"))
+            self.corrupted_count += 1
+            return timezone.now()

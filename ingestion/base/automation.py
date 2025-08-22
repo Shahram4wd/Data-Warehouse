@@ -856,6 +856,38 @@ class SelfHealingSystem:
         
         logger.info(f"Automation engine for {self.source} cleaned up successfully")
 
+    async def handle_error(self, error, context):
+        """Handle errors by evaluating automation rules and taking appropriate action
+        
+        Args:
+            error: The error that occurred
+            context: Dictionary containing error context information
+        """
+        try:
+            # Create error context for automation rules
+            error_context = {
+                'error_type': type(error).__name__,
+                'error_message': str(error),
+                'source': self.source,
+                **context
+            }
+            
+            # Log the error
+            logger.error(f"Automation engine handling error for {self.source}: {error}")
+            logger.debug(f"Error context: {error_context}")
+            
+            # Evaluate automation rules for this error
+            actions = await self.evaluate_automation_rules(error_context)
+            
+            if actions:
+                logger.info(f"Triggered {len(actions)} automation actions for error handling")
+                for action in actions:
+                    logger.info(f"Action: {action.rule_name} ({action.action_type}) - {action.message}")
+            
+        except Exception as automation_error:
+            # Don't let automation errors break the main process
+            logger.warning(f"Error in automation error handling: {automation_error}")
+
     async def report_metrics(self, time_window_hours: int = 24, include_detailed: bool = False) -> Dict[str, Any]:
         """Report comprehensive automation metrics following import refactoring guidelines
         

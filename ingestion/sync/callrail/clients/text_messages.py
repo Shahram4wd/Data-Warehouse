@@ -48,6 +48,8 @@ class TextMessagesClient(CallRailBaseClient):
         message_params = {**default_params, **params}
         
         # Iterate through each account
+        text_messages_available = False
+        
         for account in accounts:
             account_id = account.get('id')
             if not account_id:
@@ -59,5 +61,22 @@ class TextMessagesClient(CallRailBaseClient):
             if since_date:
                 logger.info(f"Delta sync since: {since_date}")
             
-            async for batch in self.fetch_paginated_data(endpoint, since_date, **message_params):
-                yield batch
+            try:
+                async for batch in self.fetch_paginated_data(endpoint, since_date, **message_params):
+                    if batch:
+                        text_messages_available = True
+                    yield batch
+            except Exception as e:
+                error_str = str(e)
+                # Handle 404 errors gracefully - text messages feature may not be available
+                if "HTTP 404" in error_str or "not found" in error_str.lower():
+                    logger.info(f"Text messages feature not available for account {account_id}")
+                    continue
+                else:
+                    logger.error(f"Failed to fetch text messages for account {account_id}: {e}")
+                    # Continue with next account instead of failing completely
+                    continue
+        
+        # Log overall availability status
+        if not text_messages_available:
+            logger.info("Text messages feature appears to be unavailable for all accounts")

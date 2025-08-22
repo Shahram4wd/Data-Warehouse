@@ -118,6 +118,10 @@ class GeniusUserDataProcessor:
                         else:
                             transformed[target_field] = value
         
+        # Ensure required fields are set for database constraints
+        if 'updated_at' not in transformed or transformed.get('updated_at') is None:
+            transformed['updated_at'] = timezone.now()
+        
         return transformed
     
     def validate_field(self, field_name: str, value: Any, field_type: str, context: Dict = None) -> Any:
@@ -138,6 +142,9 @@ class GeniusUserDataProcessor:
             elif field_type == 'email':
                 return str(value).strip() if value else None
             elif field_type == 'string':
+                # Special handling for time_zone_name to prevent null constraint violations
+                if field_name == 'time_zone_name':
+                    return self._safe_string_convert(value, 'EST')
                 return str(value).strip() if value else None
             else:
                 return value
@@ -148,7 +155,7 @@ class GeniusUserDataProcessor:
     def _parse_datetime(self, value):
         """Helper function to safely parse and make datetime timezone-aware."""
         if value is None:
-            return None
+            return timezone.now()
         
         if isinstance(value, datetime):
             return timezone.make_aware(value, dt_timezone.utc) if timezone.is_naive(value) else value
@@ -164,6 +171,14 @@ class GeniusUserDataProcessor:
             return value.date()
             
         return value
+    
+    def _safe_string_convert(self, value, default='Unknown'):
+        """Safely convert value to string with default fallback"""
+        if value is None:
+            return default
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        return default
     
     def preload_divisions(self) -> Dict[int, Any]:
         """Preload divisions for lookup following architecture pattern"""
@@ -300,6 +315,35 @@ class Command(BaseCommand):
         # Save records to database
         self._save_records(to_create, to_update)
     
+    def _safe_datetime_convert(self, dt_str):
+        """Safely convert datetime string to timezone-aware datetime"""
+        if not dt_str:
+            return timezone.now()
+        
+        try:
+            # Handle string datetime
+            if isinstance(dt_str, str):
+                naive_dt = datetime.strptime(dt_str, '%Y-%m-%d %H:%M:%S')
+            # Handle datetime object
+            elif isinstance(dt_str, datetime):
+                naive_dt = dt_str
+            else:
+                return timezone.now()
+                
+            # Convert naive datetime to timezone-aware
+            return timezone.make_aware(naive_dt, timezone.get_current_timezone())
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Invalid datetime format: {dt_str}, using current time. Error: {e}")
+            return timezone.now()
+    
+    def _safe_string_convert(self, value, default='Unknown'):
+        """Safely convert value to string with default fallback"""
+        if value is None:
+            return default
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        return default
+    
     def _update_record(self, record, transformed_data: Dict[str, Any], division) -> Genius_UserData:
         """Update an existing user record using transformed data"""
         # Update fields that exist in the model using transformed data
@@ -324,6 +368,7 @@ class Command(BaseCommand):
         record.inactive_reason_id = transformed_data.get('inactive_reason_id')
         record.inactive_reason_other = transformed_data.get('inactive_reason_other')
         record.primary_user_id = transformed_data.get('primary_user_id')  # New field from JOIN
+        record.updated_at = transformed_data.get('updated_at', timezone.now())  # Ensure updated_at is set
         
         return record
     
@@ -351,7 +396,8 @@ class Command(BaseCommand):
             inactive_on=transformed_data.get('inactive_on'),
             inactive_reason_id=transformed_data.get('inactive_reason_id'),
             inactive_reason_other=transformed_data.get('inactive_reason_other'),
-            primary_user_id=transformed_data.get('primary_user_id')  # New field from JOIN
+            primary_user_id=transformed_data.get('primary_user_id'),  # New field from JOIN
+            updated_at=transformed_data.get('updated_at', timezone.now())  # Ensure updated_at is set
         )
     
     def _save_records(self, to_create: List[Genius_UserData], to_update: List[Genius_UserData]):
@@ -374,7 +420,7 @@ class Command(BaseCommand):
                     'birth_date', 'gender_id', 'marital_status_id', 'time_zone_name',
                     'hired_on', 'add_datetime', 'add_user_id', 'start_date',
                     'is_inactive', 'inactive_on', 'inactive_reason_id', 'inactive_reason_other',
-                    'primary_user_id'  # New field from JOIN
+                    'primary_user_id', 'updated_at'  # Include updated_at field
                 ]
                 
                 Genius_UserData.objects.bulk_update(to_update, fields_to_update, batch_size=BATCH_SIZE)

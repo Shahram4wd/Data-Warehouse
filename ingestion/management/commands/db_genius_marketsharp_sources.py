@@ -68,13 +68,27 @@ class Command(BaseCommand):
             
             # Process records in batches starting from the calculated offset
             for offset in tqdm(range(start_offset, total_records, BATCH_SIZE), desc="Processing batches"):
-                cursor.execute(f"""
-                    SELECT id, marketsharp_id, source_name, inactive
-                    FROM {table_name}
-                    LIMIT {BATCH_SIZE} OFFSET {offset}
-                """)
-                rows = cursor.fetchall()
-                self._process_batch(rows)
+                # Try to get timestamps from source, fall back to 4-field query if they don't exist
+                try:
+                    cursor.execute(f"""
+                        SELECT id, marketsharp_id, source_name, inactive, created_at, updated_at
+                        FROM {table_name}
+                        LIMIT {BATCH_SIZE} OFFSET {offset}
+                    """)
+                    rows = cursor.fetchall()
+                    has_timestamps = True
+                except Exception as e:
+                    # Fallback to original query without timestamps
+                    self.stdout.write(self.style.WARNING(f"Source table doesn't have timestamp fields, using fallback query: {e}"))
+                    cursor.execute(f"""
+                        SELECT id, marketsharp_id, source_name, inactive
+                        FROM {table_name}
+                        LIMIT {BATCH_SIZE} OFFSET {offset}
+                    """)
+                    rows = cursor.fetchall()
+                    has_timestamps = False
+                
+                self._process_batch(rows, has_timestamps)
                 
             self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
             
@@ -91,22 +105,28 @@ class Command(BaseCommand):
                 cursor.close()
                 connection.close()
     
-    def _process_batch(self, rows):
+    def _process_batch(self, rows, has_timestamps=False):
         """Process a batch of MarketSharp source records."""
         to_create = []
         to_update = []
         existing_records = Genius_MarketSharpSource.objects.in_bulk([row[0] for row in rows])
+        
+        expected_columns = 6 if has_timestamps else 4
 
         for row in rows:
             try:
                 # Validate row length first
-                if len(row) != 4:  # Expected number of columns
-                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 4. Skipping record."))
+                if len(row) != expected_columns:
+                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected {expected_columns}. Skipping record."))
                     continue
                 
                 # Extract fields from row with debugging
                 try:
-                    record_id, marketsharp_id, source_name, inactive = row
+                    if has_timestamps:
+                        record_id, marketsharp_id, source_name, inactive, created_at, updated_at = row
+                    else:
+                        record_id, marketsharp_id, source_name, inactive = row
+                        created_at = updated_at = None
                 except ValueError as e:
                     self.stdout.write(self.style.ERROR(f"Error unpacking row for record_id {row[0] if row else 'unknown'}: {e}"))
                     self.stdout.write(self.style.ERROR(f"Row data: {row}"))
@@ -119,7 +139,9 @@ class Command(BaseCommand):
                 processed_data = {
                     'marketsharp_id': self._safe_string_convert(marketsharp_id),
                     'source_name': self._safe_string_convert(source_name),
-                    'inactive': self._safe_int_convert(inactive, 0, field_name="inactive", original_row=row)
+                    'inactive': self._safe_int_convert(inactive, 0, field_name="inactive", original_row=row),
+                    'created_at': self._safe_datetime_convert(created_at),
+                    'updated_at': self._safe_datetime_convert(updated_at)
                 }
                 
                 # Create or update the record
@@ -173,12 +195,47 @@ class Command(BaseCommand):
             self.corrupted_count += 1
             return default
 
+    def _safe_datetime_convert(self, value, default=None):
+        """Safely convert value to timezone-aware datetime."""
+        if value is None:
+            return timezone.now() if default is None else default
+        
+        try:
+            from datetime import datetime
+            
+            # If it's already a datetime object
+            if hasattr(value, 'year'):
+                # Check if it's naive (no timezone info) and make it aware
+                if timezone.is_naive(value):
+                    return timezone.make_aware(value)
+                return value
+            
+            # Try to convert string to datetime
+            if isinstance(value, str):
+                try:
+                    # Parse ISO format datetime
+                    dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                    if timezone.is_naive(dt):
+                        return timezone.make_aware(dt)
+                    return dt
+                except ValueError:
+                    pass
+            
+            # If conversion fails, return current time
+            return timezone.now()
+        except (ValueError, TypeError, AttributeError):
+            self.stdout.write(self.style.WARNING(f"Invalid datetime value: {value}, using current time"))
+            self.corrupted_count += 1
+            return timezone.now()
+
     def _update_record(self, record, processed_data):
         """Update an existing record with new values."""
         record.marketsharp_id = processed_data['marketsharp_id']
         record.source_name = processed_data['source_name']
         record.inactive = processed_data['inactive']
-        
+        record.created_at = processed_data['created_at']
+        record.updated_at = processed_data['updated_at']
+
         return record
     
     def _create_record(self, record_id, processed_data):
@@ -187,7 +244,9 @@ class Command(BaseCommand):
             id=record_id,
             marketsharp_id=processed_data['marketsharp_id'],
             source_name=processed_data['source_name'],
-            inactive=processed_data['inactive']
+            inactive=processed_data['inactive'],
+            created_at=processed_data['created_at'],
+            updated_at=processed_data['updated_at'],
         )
     
     def _save_records(self, to_create, to_update):
@@ -200,7 +259,7 @@ class Command(BaseCommand):
             if to_update:
                 Genius_MarketSharpSource.objects.bulk_update(
                     to_update,
-                    ['marketsharp_id', 'source_name', 'inactive'],
+                    ['marketsharp_id', 'source_name', 'inactive', 'updated_at'],
                     batch_size=BATCH_SIZE
                 )
                 self.stdout.write(f"Updated {len(to_update)} records")
