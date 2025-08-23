@@ -82,6 +82,9 @@ from .alerts import AlertModel, AlertRule
 # Import Google Sheets models
 from .gsheet import GoogleSheetMarketingLead, GoogleSheetMarketingSpend
 
+# Import Five9 models
+from .five9 import Five9Contact
+
 # Import all models to maintain backwards compatibility
 # This allows existing code to continue using: from ingestion.models import X
 __all__ = [
@@ -134,4 +137,7 @@ __all__ = [
     
     # Google Sheets models
     'GoogleSheetMarketingLead', 'GoogleSheetMarketingSpend',
+    
+    # Five9 models
+    'Five9Contact',
 ]
