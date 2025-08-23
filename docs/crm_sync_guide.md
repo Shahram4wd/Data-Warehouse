@@ -248,14 +248,14 @@ class BaseSyncEngine:
         
         # Map table names to their timestamp fields
         timestamp_field_map = {
-            'contacts': 'updated_at',
-            'deals': 'updated_at', 
-            'activities': 'created_at',  # Activities don't get updated
-            'user_logs': 'created_at',   # Log entries don't get updated
+            'contacts': 'sync_updated_at',
+            'deals': 'sync_updated_at', 
+            'activities': 'sync_created_at',  # Activities don't get updated
+            'user_logs': 'sync_created_at',   # Log entries don't get updated
         }
         
         # Get appropriate timestamp field for this table
-        timestamp_field = timestamp_field_map.get(table_name, 'updated_at')
+        timestamp_field = timestamp_field_map.get(table_name, 'sync_updated_at')
         
         # Build query with proper field
         query = f"""
@@ -280,7 +280,7 @@ class BaseSyncEngine:
 
 - [ ] Convert `--since` string input to `datetime` object immediately
 - [ ] Ensure `get_last_sync_timestamp()` returns `datetime` or `None`
-- [ ] Map table names to correct timestamp fields (`created_at` vs `updated_at`)
+- [ ] Map table names to correct timestamp fields (`sync_created_at` vs `sync_updated_at`)
 - [ ] Use consistent datetime formatting for SQL queries (`%Y-%m-%d %H:%M:%S`)
 - [ ] Handle timezone considerations (recommend UTC)
 - [ ] Validate date input format and provide clear error messages
@@ -308,26 +308,26 @@ Different entity types require different timestamp fields for accurate increment
 def get_timestamp_field(entity_type: str) -> str:
     """Map entity types to appropriate timestamp fields"""
     
-    # Entities that get updated (use updated_at)
+    # Entities that get updated (use sync_updated_at)
     updatable_entities = {
         'contacts', 'companies', 'deals', 'tickets', 
         'customers', 'estimates', 'credit_applications',
         'payments', 'lead_results'
     }
     
-    # Log/activity entities (use created_at - they don't get updated)
+    # Log/activity entities (use sync_created_at - they don't get updated)
     activity_entities = {
         'activities', 'user_activities', 'call_logs',
         'email_events', 'meeting_events', 'task_logs'
     }
     
     if entity_type in updatable_entities:
-        return 'updated_at'  # Track modifications
+        return 'sync_updated_at'  # Track modifications
     elif entity_type in activity_entities:
-        return 'created_at'  # Track when logged
+        return 'sync_created_at'  # Track when logged
     else:
-        # Default fallback (prefer updated_at if available)
-        return 'updated_at'
+        # Default fallback (prefer sync_updated_at if available)
+        return 'sync_updated_at'
 ```
 
 **Implementation Pattern:**
@@ -343,8 +343,8 @@ async def build_incremental_filter(self, entity_type: str, since_date: datetime)
     if self.source_type == 'api':
         # Different CRMs use different field names
         api_field_map = {
-            'updated_at': 'hs_lastmodifieddate',  # Example for one CRM
-            'created_at': 'hs_createdate'
+            'sync_updated_at': 'hs_lastmodifieddate',  # Example for one CRM
+            'sync_created_at': 'hs_createdate'
         }
         api_field = api_field_map.get(timestamp_field, timestamp_field)
         return f"{api_field} >= {since_str}"

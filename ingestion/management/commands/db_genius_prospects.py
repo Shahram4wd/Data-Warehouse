@@ -353,6 +353,14 @@ class Command(BaseCommand):
 
                 # The hubspot_contact_id is already resolved by the SQL JOIN
                 # No additional lookup needed since the JOIN handles the mapping
+                
+                # Validate hubspot_contact_id - must be a valid integer
+                if hubspot_contact_id is not None:
+                    try:
+                        hubspot_contact_id = int(hubspot_contact_id)
+                    except (ValueError, TypeError):
+                        self.stdout.write(self.style.WARNING(f"⚠️  Record {record_id}: Invalid HubSpot Contact ID '{hubspot_contact_id}' - not a valid integer. Setting to None."))
+                        hubspot_contact_id = None
 
                 # Increment processed count
                 self.processed_count += 1

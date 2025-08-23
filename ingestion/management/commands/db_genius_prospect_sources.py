@@ -57,7 +57,7 @@ class Command(BaseCommand):
             # Process records in batches starting from the specified page
             for offset in tqdm(range(start_offset, total_records, BATCH_SIZE), desc=f"Processing from page {start_page}"):
                 cursor.execute(f"""
-                    SELECT id, prospect_id, marketing_source_id, source_date, notes, add_user_id, add_date
+                    SELECT id, prospect_id, marketing_source_id, source_date, notes, add_user_id, add_date, updated_at
                     FROM {table_name}
                     LIMIT {BATCH_SIZE} OFFSET {offset}
                 """)
@@ -84,7 +84,7 @@ class Command(BaseCommand):
 
         for row in rows:
             (
-                record_id, prospect_id, marketing_source_id, source_date, notes, add_user_id, add_date
+                record_id, prospect_id, marketing_source_id, source_date, notes, add_user_id, add_date, updated_at
             ) = row
 
             prospect = prospects.get(prospect_id)
@@ -109,6 +109,8 @@ class Command(BaseCommand):
                 add_date = timezone.make_aware(add_date, dt_timezone.utc)
             if source_date:
                 source_date = timezone.make_aware(source_date, dt_timezone.utc)
+            if updated_at:
+                updated_at = timezone.make_aware(updated_at, dt_timezone.utc)
 
             if record_id in existing_records:
                 record_instance = existing_records[record_id]
@@ -118,6 +120,7 @@ class Command(BaseCommand):
                 record_instance.notes = notes
                 record_instance.add_user_id = add_user_id
                 record_instance.add_date = add_date
+                record_instance.updated_at = updated_at
                 to_update.append(record_instance)
             else:
                 to_create.append(Genius_ProspectSource(
@@ -127,7 +130,8 @@ class Command(BaseCommand):
                     source_date=source_date,
                     notes=notes,
                     add_user_id=add_user_id,
-                    add_date=add_date
+                    add_date=add_date,
+                    updated_at=updated_at
                 ))
 
         # Bulk create and update
@@ -136,7 +140,7 @@ class Command(BaseCommand):
         if to_update:
             Genius_ProspectSource.objects.bulk_update(
                 to_update,
-                ['prospect', 'marketing_source', 'source_date', 'notes', 'add_user_id', 'add_date'],
+                ['prospect', 'marketing_source', 'source_date', 'notes', 'add_user_id', 'add_date', 'updated_at'],
                 batch_size=BATCH_SIZE
             )
         

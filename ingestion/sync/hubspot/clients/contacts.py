@@ -216,7 +216,7 @@ class HubSpotContactsClient(HubSpotBaseClient):
                 payload = {
                     "filterGroups": [{
                         "filters": [{
-                            "propertyName": "hs_lastmodifieddate",  # Use hs_lastmodifieddate for custom objects
+                            "propertyName": "lastmodifieddate",  # Use lastmodifieddate for contacts
                             "operator": "GTE",  # Use GTE instead of GT
                             "value": last_sync_str
                         }]

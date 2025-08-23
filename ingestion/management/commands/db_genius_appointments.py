@@ -163,7 +163,7 @@ class Command(BaseCommand):
                            a.address1, a.address2, a.city, a.state, a.zip, a.email, a.notes, a.add_user_id, a.add_date, 
                            a.assign_date, a.confirm_user_id, a.confirm_date, a.confirm_with, a.spouses_present, 
                            a.is_complete, a.complete_outcome_id, a.complete_user_id, a.complete_date, a.marketsharp_id, 
-                           a.marketsharp_appt_type, a.leap_estimate_id, a.third_party_source_id, tps.third_party_id AS hubspot_appointment_id
+                           a.marketsharp_appt_type, a.leap_estimate_id, a.updated_at, a.third_party_source_id, tps.third_party_id AS hubspot_appointment_id
                     FROM {table_name} AS a
                     LEFT JOIN third_party_source AS tps 
                       ON tps.id = a.third_party_source_id
@@ -287,7 +287,7 @@ class Command(BaseCommand):
         conditions = []
         
         if since_date:
-            # Use updated_at for appointments (they can be modified)
+            # Use updated_at for appointments (consistent with prospects command)
             since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
             conditions.append(f"a.updated_at > '{since_str}'")
         
@@ -362,8 +362,8 @@ class Command(BaseCommand):
         for row in rows:
             try:
                 # Validate row length first
-                if len(row) != 31:  # Updated to 31 columns (added third_party_source_id)
-                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 31. Skipping record."))
+                if len(row) != 32:  # Updated to 32 columns (added updated_at)
+                    self.stdout.write(self.style.WARNING(f"Row has {len(row)} columns, expected 32. Skipping record."))
                     continue
                 
                 # Extract fields from row with debugging
@@ -373,7 +373,7 @@ class Command(BaseCommand):
                         address1, address2, city, state, zip, email, notes, add_user_id, add_date,
                         assign_date, confirm_user_id, confirm_date, confirm_with, spouses_present, 
                         is_complete, complete_outcome_id, complete_user_id, complete_date,
-                        marketsharp_id, marketsharp_appt_type, leap_estimate_id, third_party_source_id, 
+                        marketsharp_id, marketsharp_appt_type, leap_estimate_id, updated_at, third_party_source_id, 
                         hubspot_appointment_id
                     ) = row
                 except ValueError as e:
@@ -414,7 +414,7 @@ class Command(BaseCommand):
                 # Process fields that need special handling
                 processed_data = self._process_field_values(
                     date, time, duration, add_date, assign_date, confirm_date, complete_date,
-                    spouses_present, is_complete, original_row=row
+                    updated_at, spouses_present, is_complete, original_row=row
                 )
                 
                 # Create or update the record
@@ -459,7 +459,7 @@ class Command(BaseCommand):
                         self.stdout.write(f"  ... and {len(to_update) - 5} more records")
     
     def _process_field_values(self, date_val, time_val, duration_val, add_date, assign_date, 
-                             confirm_date, complete_date, spouses_present, is_complete, original_row=None):
+                             confirm_date, complete_date, updated_at, spouses_present, is_complete, original_row=None):
         """Process and convert field values to appropriate types."""
         # Process date and time fields
         if isinstance(date_val, datetime):
@@ -477,6 +477,7 @@ class Command(BaseCommand):
         assign_date = self._parse_datetime(assign_date)
         confirm_date = self._parse_datetime(confirm_date)
         complete_date = self._parse_datetime(complete_date)
+        updated_at = self._parse_datetime(updated_at)
         
         # Process boolean fields as integers with validation
         spouses_present = self._safe_int_convert(spouses_present, 0, field_name="spouses_present", original_row=original_row)
@@ -489,7 +490,9 @@ class Command(BaseCommand):
             'add_date': add_date,
             'assign_date': assign_date,
             'confirm_date': confirm_date,
-            'complete_date': complete_date,            'spouses_present': spouses_present,
+            'complete_date': complete_date,
+            'updated_at': updated_at,
+            'spouses_present': spouses_present,
             'is_complete': is_complete
         }
 
@@ -561,6 +564,9 @@ class Command(BaseCommand):
         record.spouses_present = processed_data['spouses_present']
         record.is_complete = processed_data['is_complete']
         
+        # Set updated_at from source database
+        record.updated_at = processed_data['updated_at']
+        
         # Set other fields with validation
         record.user_id = self._safe_int_convert(user_id, is_bigint=True, field_name="user_id", original_row=original_row)
         record.address1 = address1
@@ -617,7 +623,8 @@ class Command(BaseCommand):
             marketsharp_id=marketsharp_id,
             marketsharp_appt_type=marketsharp_appt_type,
             leap_estimate_id=self._safe_string_convert(leap_estimate_id),
-            hubspot_appointment_id=self._safe_int_convert(hubspot_id, is_bigint=True, field_name="hubspot_appointment_id", original_row=original_row)
+            hubspot_appointment_id=self._safe_int_convert(hubspot_id, is_bigint=True, field_name="hubspot_appointment_id", original_row=original_row),
+            updated_at=processed_data['updated_at']
         )
     
     def _save_records(self, to_create, to_update):
@@ -635,7 +642,7 @@ class Command(BaseCommand):
                         'add_date', 'assign_date', 'confirm_user_id', 'confirm_date', 'confirm_with',
                         'spouses_present', 'is_complete', 'complete_outcome', 'complete_user_id',
                         'complete_date', 'marketsharp_id', 'marketsharp_appt_type', 'leap_estimate_id',
-                        'hubspot_appointment_id'
+                        'hubspot_appointment_id', 'updated_at'
                     ],
                     batch_size=BATCH_SIZE
                 )

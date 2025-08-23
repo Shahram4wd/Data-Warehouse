@@ -170,7 +170,7 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
                     "primary_source", "secondary_source",
                     
                     # Metadata fields
-                    "archived", "updated_at"
+                    "archived"
                 ],
                 unique_fields=["id"]
             )

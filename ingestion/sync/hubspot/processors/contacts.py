@@ -147,8 +147,21 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
                 transformed[field] = self._parse_decimal(transformed[field])
         
         # Transform integer fields
-        integer_fields = ['lead_year_built']
+        integer_fields = ['lead_year_built', 'lead_cwp_client', 'lead_express_consent_source', 'lead_job_type', 
+                         'lead_rating', 'lead_source', 'lead_status', 'lead_substatus', 'lead_type1', 'lead_type2', 
+                         'lead_type4', 'lead_with_dm']
+        
+        # Transform big integer fields
+        big_integer_fields = ['lead_added_by', 'lead_agent_id', 'lead_call_screen_viewed_by', 'lead_contact',
+                             'lead_copied_from_id', 'lead_dead_by', 'lead_division', 'lead_estimate_confirmed_by',
+                             'lead_express_consent_set_by', 'lead_express_consent_upload_file_id', 'lead_id',
+                             'lead_prospect_id', 'lead_salesrabbit_lead_id_new']
+        
         for field in integer_fields:
+            if field in transformed:
+                transformed[field] = self._parse_integer(transformed[field])
+                
+        for field in big_integer_fields:
             if field in transformed:
                 transformed[field] = self._parse_integer(transformed[field])
         
