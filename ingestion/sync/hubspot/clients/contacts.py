@@ -210,6 +210,9 @@ class HubSpotContactsClient(HubSpotBaseClient):
         try:
             if last_sync:
                 # Use search endpoint for incremental sync
+                # Note: HubSpot search API has a 10,000 result limit across all pages
+                # For large incremental syncs, we should consider using the regular endpoint
+                # and filtering locally, but for now we use search for precision
                 endpoint = f"{self.base_endpoint}/search"
                 last_sync_str = last_sync.strftime('%Y-%m-%dT%H:%M:%SZ')
                 
@@ -229,6 +232,18 @@ class HubSpotContactsClient(HubSpotBaseClient):
                     payload["after"] = page_token
                 
                 response_data = await self.make_request("POST", endpoint, json=payload)
+                
+                # Check if we're hitting the 10,000 limit
+                results = response_data.get("results", [])
+                paging = response_data.get("paging", {})
+                next_page = paging.get("next", {}).get("after")
+                
+                # If this is the first page and we have a full batch, 
+                # and there's more data, warn about potential 10k limit
+                if not page_token and len(results) == limit and next_page:
+                    logger.warning(f"HubSpot search endpoint may hit 10,000 result limit for incremental sync since {last_sync_str}. "
+                                 f"Consider using full sync for large data sets.")
+                
             else:
                 # Use regular endpoint for full sync
                 endpoint = self.base_endpoint
@@ -251,5 +266,4 @@ class HubSpotContactsClient(HubSpotBaseClient):
             
         except Exception as e:
             logger.error(f"Error fetching contacts page: {e}")
-            return [], None
             return [], None

@@ -109,6 +109,26 @@ class Hubspot_Contact(models.Model):  # Updated table name
     primary_source = models.CharField(max_length=255, null=True, blank=True)
     secondary_source = models.CharField(max_length=255, null=True, blank=True)
     
+    class Meta:
+        db_table = 'hubspot_contact'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Hubspot Contact data stored in ingestion schema'
+        verbose_name = 'HubSpot Contact'
+        verbose_name_plural = 'HubSpot Contacts'
+        ordering = ['-lastmodifieddate', '-createdate']
+        indexes = [
+            models.Index(fields=['email']),
+            models.Index(fields=['phone']),
+            models.Index(fields=['lastmodifieddate']),
+            models.Index(fields=['createdate']),
+            models.Index(fields=['division']),
+            models.Index(fields=['marketsharp_id']),
+            models.Index(fields=['lead_prospect_id']),
+            models.Index(fields=['lead_status']),
+            models.Index(fields=['lead_division']),
+        ]
+    
     def __str__(self):
         return f"{self.firstname} {self.lastname} ({self.email})"
 
