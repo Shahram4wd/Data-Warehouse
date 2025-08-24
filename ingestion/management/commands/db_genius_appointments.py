@@ -125,7 +125,12 @@ class Command(BaseCommand):
             where_clause = self._build_where_clause(sync_strategy['since_date'], end_date)
             
             # Get total records and process in batches
-            count_query = f"SELECT COUNT(*) FROM {table_name}{where_clause}"
+            count_query = f"""
+                SELECT COUNT(*) 
+                FROM appointment a
+                LEFT JOIN third_party_source tps ON a.third_party_source_id = tps.id
+                {where_clause}
+            """
             cursor.execute(count_query)
             total_records = cursor.fetchone()[0]
             
@@ -287,13 +292,13 @@ class Command(BaseCommand):
         conditions = []
         
         if since_date:
-            # Use updated_at for appointments (consistent with prospects command)
+            # Use add_date for appointments since updated_at might not be available in WHERE clause
             since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
-            conditions.append(f"a.updated_at > '{since_str}'")
+            conditions.append(f"a.add_date > '{since_str}'")
         
         if end_date:
             end_str = end_date.strftime('%Y-%m-%d %H:%M:%S') 
-            conditions.append(f"a.updated_at <= '{end_str}'")
+            conditions.append(f"a.add_date <= '{end_str}'")
         
         if conditions:
             return ' WHERE ' + ' AND '.join(conditions)
