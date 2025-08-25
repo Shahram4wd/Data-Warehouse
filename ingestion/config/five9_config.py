@@ -120,14 +120,98 @@ class Five9FieldMapper:
     
     def get_django_field_name(self, five9_field_name: str) -> str:
         """Convert Five9 field name to Django model field name"""
-        # Handle special characters and spaces in field names
-        django_name = five9_field_name.replace(' ', '_').replace('-', '_')
+        # Mapping table for exact field name conversions
+        field_name_mapping = {
+            # Standard fields - lowercase
+            'number1': 'number1',
+            'number2': 'number2', 
+            'number3': 'number3',
+            'first_name': 'first_name',
+            'last_name': 'last_name',
+            'company': 'company',
+            'street': 'street',
+            'city': 'city',
+            'state': 'state',
+            'zip': 'zip',
+            'email': 'email',
+            
+            # System fields with mixed case
+            'contactID': 'contactID',
+            'contactid': 'contactID',  # Handle both variants
+            'sys_created_date': 'sys_created_date',
+            'sys_last_agent': 'sys_last_agent',
+            'sys_last_disposition': 'sys_last_disposition', 
+            'sys_last_disposition_time': 'sys_last_disposition_time',
+            'last_campaign': 'last_campaign',
+            'attempts': 'attempts',
+            'last_list': 'last_list',
+            
+            # UUID fields
+            'f65d759a-2250-4b2d-89a9-60796f624f72': 'f65d759a_2250_4b2d_89a9_60796f624f72',
+            '4f347541-7c4d-4812-9190-e8dea6c0eb49': 'field_4f347541_7c4d_4812_9190_e8dea6c0eb49', 
+            '80cf8462-cc10-41b8-a68a-5898cdba1e11': 'field_80cf8462_cc10_41b8_a68a_5898cdba1e11',
+            
+            # Custom fields with underscores and CamelCase
+            'New Contact Field': 'New_Contact_Field',
+            'new_contact_field': 'New_Contact_Field',
+            'lead_source': 'lead_source',
+            'DialAttempts': 'DialAttempts',
+            'dialattempts': 'DialAttempts',
+            'XCounter': 'XCounter', 
+            'xcounter': 'XCounter',
+            'F9_list': 'F9_list',
+            'f9_list': 'F9_list', 
+            'DoNotDial': 'DoNotDial',
+            'donotdial': 'DoNotDial',
+            'ggg': 'ggg',
+            'lead_prioritization': 'lead_prioritization',
+            'metal_count': 'metal_count',
+            
+            # Agent disposition fields
+            'Last Agent Disposition': 'Last_Agent_Disposition',
+            'last_agent_disposition': 'Last_Agent_Disposition',
+            'Last Agent Disposition Date-Time': 'Last_Agent_Disposition_Date_Time', 
+            'last_agent_disposition_date_time': 'Last_Agent_Disposition_Date_Time',
+            
+            # Business fields
+            'Market': 'Market',
+            'market': 'Market',
+            'Secondary Lead Source': 'Secondary_Lead_Source',
+            'secondary_lead_source': 'Secondary_Lead_Source',
+            'HubSpot_ContactID': 'HubSpot_ContactID',
+            'hubspot_contactid': 'HubSpot_ContactID',
+            'Result': 'Result',
+            'result': 'Result',
+            'Product': 'Product',
+            'product': 'Product',
+            'Appointment Date and Time': 'Appointment_Date_and_Time',
+            'appointment_date_and_time': 'Appointment_Date_and_Time',
+            'Carrier': 'Carrier',
+            'carrier': 'Carrier',
+            'TFUID': 'TFUID',
+            'tfuid': 'TFUID',
+            'Lead Status': 'Lead_Status',
+            'lead_status': 'Lead_Status',
+            'PC Work Finished': 'PC_Work_Finished',
+            'pc_work_finished': 'PC_Work_Finished', 
+            'Total Job Amount': 'Total_Job_Amount',
+            'total_job_amount': 'Total_Job_Amount',
+            'Position': 'Position',
+            'position': 'Position',
+            'Appointment Date': 'Appointment_Date',
+            'appointment_date': 'Appointment_Date',
+        }
         
-        # Handle fields that start with numbers or special chars
+        # Return mapped name if found, otherwise convert to Django field format
+        if five9_field_name in field_name_mapping:
+            return field_name_mapping[five9_field_name]
+        
+        # Default conversion for unmapped fields
+        django_name = five9_field_name.replace(' ', '_').replace('-', '_')
         if django_name[0].isdigit():
             django_name = f"field_{django_name}"
         
-        return django_name.lower()
+        return django_name
     
     def get_system_fields(self) -> List[str]:
         """Get list of system field names"""

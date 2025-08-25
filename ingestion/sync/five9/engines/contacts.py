@@ -96,22 +96,43 @@ class ContactsSyncEngine(BaseSyncEngine):
         updated_count = 0
         skipped_count = 0
         
+        # Get valid Django model field names
+        valid_fields = set(field.name for field in Five9Contact._meta.get_fields())
+        
         with transaction.atomic():
             for contact_data in contacts_data:
                 try:
+                    # Filter contact_data to only include valid model fields
+                    filtered_data = {
+                        k: v for k, v in contact_data.items() 
+                        if k in valid_fields
+                    }
+                    
+                    # Ensure we have required fields for composite key lookup
+                    number1 = filtered_data.get('number1')
+                    list_name = filtered_data.get('list_name')
+                    
+                    if not number1 or not list_name:
+                        logger.warning(f"Contact missing required fields (number1: {number1}, list_name: {list_name})")
+                        skipped_count += 1
+                        continue
+                    
+                    # Use number1 + list_name as composite primary key
                     contact, created = Five9Contact.objects.update_or_create(
-                        contactID=contact_data.get('contactID'),
-                        list_name=contact_data.get('list_name'),
-                        defaults=contact_data
+                        number1=number1,
+                        list_name=list_name,
+                        defaults=filtered_data
                     )
                     
                     if created:
                         created_count += 1
+                        logger.debug(f"Created contact: {number1} ({list_name})")
                     else:
                         updated_count += 1
+                        logger.debug(f"Updated contact: {number1} ({list_name})")
                         
                 except Exception as e:
-                    logger.warning(f"Failed to save contact {contact_data.get('contactID')}: {e}")
+                    logger.warning(f"Failed to save contact {contact_data.get('number1')}: {e}")
                     skipped_count += 1
         
         return {

@@ -22,6 +22,27 @@ class ContactsProcessor(BaseFive9Processor):
         super().__init__()
         self.field_mapper = field_mapper
         self.validation_rules = VALIDATION_RULES
+        # Create field mapping dictionary for faster lookups
+        self.field_mapping = self._create_field_mapping()
+        # Create field types mapping
+        self.field_types = self._create_field_types_mapping()
+    
+    def _create_field_mapping(self) -> Dict[str, str]:
+        """Create field mapping dictionary from field mapper"""
+        mapping = {}
+        for field_name in self.field_mapper.field_definitions.keys():
+            django_field_name = self.field_mapper.get_django_field_name(field_name)
+            mapping[field_name] = django_field_name
+        return mapping
+    
+    def _create_field_types_mapping(self) -> Dict[str, str]:
+        """Create field types mapping from field mapper"""
+        types = {}
+        for field_name, field_def in self.field_mapper.field_definitions.items():
+            django_field_name = self.field_mapper.get_django_field_name(field_name)
+            field_type = field_def.get('type', 'STRING')
+            types[django_field_name] = field_type
+        return types
     
     def process_contact_record(self, raw_record: Dict[str, Any], list_name: str) -> Dict[str, Any]:
         """
@@ -220,3 +241,31 @@ class ContactsProcessor(BaseFive9Processor):
         
         logger.info(f"Removed {len(records) - len(deduplicated)} duplicates")
         return deduplicated
+
+    def validate_contact_batch(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Validate a batch of contact records and return valid ones
+        
+        Args:
+            records: List of processed contact records
+            
+        Returns:
+            List of valid contact records
+        """
+        logger.info(f"Validating batch of {len(records)} contact records")
+        
+        if not records:
+            logger.warning("Empty batch provided for validation")
+            return []
+        
+        valid_records = []
+        for i, record in enumerate(records):
+            if self._validate_contact_record(record):
+                valid_records.append(record)
+            else:
+                logger.warning(f"Record {i+1} in batch failed validation, skipping")
+        
+        validation_ratio = len(valid_records) / len(records) if records else 0
+        logger.info(f"Batch validation: {len(valid_records)}/{len(records)} records valid ({validation_ratio:.2%})")
+        
+        return valid_records

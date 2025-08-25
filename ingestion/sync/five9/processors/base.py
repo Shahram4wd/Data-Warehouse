@@ -9,6 +9,7 @@ import logging
 from django.utils.dateparse import parse_datetime, parse_date
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -100,12 +101,15 @@ class BaseFive9Processor:
             return email_str  # Return as-is, let Django handle validation
     
     def _process_datetime(self, value: Any) -> Optional[datetime]:
-        """Process datetime field"""
+        """Process datetime field and make it timezone-aware"""
         if not value:
             return None
         
         # Handle various datetime formats from Five9
         if isinstance(value, datetime):
+            # Make timezone-aware if naive
+            if value.tzinfo is None:
+                return timezone.make_aware(value)
             return value
         
         datetime_str = str(value).strip()
@@ -123,19 +127,26 @@ class BaseFive9Processor:
         
         for fmt in datetime_formats:
             try:
-                return datetime.strptime(datetime_str, fmt)
+                dt = datetime.strptime(datetime_str, fmt)
+                # Make timezone-aware
+                return timezone.make_aware(dt)
             except ValueError:
                 continue
         
         # Try Django's built-in parser
         parsed_dt = parse_datetime(datetime_str)
         if parsed_dt:
+            # Make timezone-aware if naive
+            if parsed_dt.tzinfo is None:
+                return timezone.make_aware(parsed_dt)
             return parsed_dt
         
         # Try parsing as date and convert to datetime
         parsed_date = parse_date(datetime_str)
         if parsed_date:
-            return datetime.combine(parsed_date, datetime.min.time())
+            dt = datetime.combine(parsed_date, datetime.min.time())
+            # Make timezone-aware
+            return timezone.make_aware(dt)
         
         logger.warning(f"Could not parse datetime: {datetime_str}")
         return None

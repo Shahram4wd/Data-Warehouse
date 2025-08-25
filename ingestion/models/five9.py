@@ -73,10 +73,16 @@ class Five9Contact(models.Model):
     sync_updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'five9_contacts'
-        # Unique constraint: contactID + list_name allows same contact in multiple lists
-        unique_together = [['contactID', 'list_name']]
+        db_table = 'five9_contact'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Five9 Contact data stored in ingestion schema'
+        verbose_name = 'Five9 Contact'
+        verbose_name_plural = 'Five9 Contacts'
+        # Composite primary key: number1 + list_name (phone number can appear in multiple lists)
+        unique_together = [['number1', 'list_name']]
         indexes = [
+            models.Index(fields=['number1']),
             models.Index(fields=['contactID']),
             models.Index(fields=['list_name']),
             models.Index(fields=['sys_last_disposition_time']),
