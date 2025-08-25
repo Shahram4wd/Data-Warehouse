@@ -35,9 +35,9 @@ class Five9Config:
     SHIFT_START_HOUR = 8
     TIMEZONE_OFFSET_HOURS = -7
     
-    # Sync Configuration
-    DEFAULT_BATCH_SIZE = 100
-    MAX_BATCH_SIZE = 1000
+    # Sync Configuration - Optimized for better performance
+    DEFAULT_BATCH_SIZE = 500  # Increased from 100 for better performance
+    MAX_BATCH_SIZE = 2000     # Increased from 1000 for bulk operations
     DEFAULT_RETRY_ATTEMPTS = 3
     RETRY_BACKOFF_SECONDS = 5
     

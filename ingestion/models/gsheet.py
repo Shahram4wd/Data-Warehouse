@@ -18,7 +18,7 @@ class GoogleSheetMarketingLead(models.Model):
     sheet_row_number = models.PositiveIntegerField(primary_key=True)
     
     # System timestamps
-    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
     
     # Sheet metadata
@@ -201,7 +201,7 @@ class GoogleSheetMarketingSpend(models.Model):
     sheet_row_number = models.PositiveIntegerField(primary_key=True)
     
     # System timestamps
-    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
     
     # Sheet metadata

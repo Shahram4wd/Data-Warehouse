@@ -426,6 +426,8 @@ class MarketingLeadsSyncEngine(BaseGoogleSheetsSyncEngine):
                                         for field, value in validated_data.items():
                                             if field != 'id':  # Don't update primary key
                                                 setattr(obj, field, value)
+                                        # Explicitly set sync_updated_at since bulk_update bypasses auto_now
+                                        obj.sync_updated_at = timezone.now()
                                         update_objects.append(obj)
                                     else:
                                         batch_stats['failed'] += 1

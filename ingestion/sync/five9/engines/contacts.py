@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional, AsyncGenerator
 from datetime import datetime, timedelta
 import logging
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from asgiref.sync import sync_to_async
 
@@ -38,32 +39,55 @@ class ContactsSyncEngine(BaseSyncEngine):
             raise Exception("Failed to connect to Five9 API")
     
     async def fetch_data(self, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
-        """Fetch contact data from Five9 in batches"""
+        """Fetch contact data from Five9 list by list and process immediately"""
         try:
-            # Get all contact lists
-            lists_info = await sync_to_async(self.client.get_contact_lists)()
+            # Get contact lists first
+            logger.info("Fetching Five9 contact lists...")
+            contact_lists = await sync_to_async(self.client.get_contact_lists_dict)()
             
-            for list_info in lists_info:
-                list_name = list_info.get('name', '')
-                logger.info(f"Fetching contacts from list: {list_name}")
-                
-                # Fetch contacts from this list
-                result = await sync_to_async(self.client.get_contact_records)(
-                    list_name=list_name,
-                    max_records=kwargs.get('max_records_per_list', Five9Config.MAX_BATCH_SIZE)
-                )
-                
-                contacts, _ = result if result else (None, None)
-                
-                if contacts:
+            if not contact_lists:
+                logger.warning("No contact lists found")
+                return
+            
+            max_records_per_list = kwargs.get('max_records_per_list', Five9Config.MAX_BATCH_SIZE)
+            logger.info(f"Processing {len(contact_lists)} contact lists")
+            
+            # Process each list individually to avoid memory overload
+            for i, (list_name, record_count) in enumerate(contact_lists.items(), 1):
+                try:
+                    # Skip empty lists
+                    if record_count == 0:
+                        logger.debug(f"Skipping empty list: {list_name}")
+                        continue
+                    
+                    # Limit records per list if specified
+                    actual_records_to_fetch = min(record_count, max_records_per_list) if max_records_per_list > 0 else record_count
+                    
+                    logger.info(f"Processing list {i}/{len(contact_lists)}: {list_name} ({actual_records_to_fetch} records)")
+                    
+                    # Fetch contacts for this specific list
+                    list_contacts = await sync_to_async(self.client.get_contact_records_from_list)(list_name)
+                    
+                    if not list_contacts:
+                        logger.warning(f"No contacts found in list: {list_name}")
+                        continue
+                    
                     # Add list_name to each contact
-                    for contact in contacts:
+                    for contact in list_contacts:
                         contact['list_name'] = list_name
                     
-                    # Yield contacts in batches
-                    for i in range(0, len(contacts), self.batch_size):
-                        batch = contacts[i:i + self.batch_size]
+                    # Yield contacts from this list in batches immediately
+                    batch_size = min(self.batch_size, 500)
+                    logger.info(f"Successfully retrieved {len(list_contacts)} records from {list_name}")
+                    
+                    for j in range(0, len(list_contacts), batch_size):
+                        batch = list_contacts[j:j + batch_size]
+                        logger.debug(f"Yielding batch from {list_name}: {len(batch)} contacts")
                         yield batch
+                        
+                except Exception as e:
+                    logger.error(f"Error processing list {list_name}: {e}")
+                    continue
                         
         except Exception as e:
             logger.error(f"Error fetching Five9 contact data: {e}")
@@ -91,7 +115,10 @@ class ContactsSyncEngine(BaseSyncEngine):
         return await sync_to_async(self._save_contacts_batch)(validated_data)
     
     def _save_contacts_batch(self, contacts_data: List[Dict]) -> Dict[str, int]:
-        """Save contacts batch to database (sync method)"""
+        """Save contacts batch to database using efficient bulk operations"""
+        if not contacts_data:
+            return {'created': 0, 'updated': 0, 'skipped': 0}
+        
         created_count = 0
         updated_count = 0
         skipped_count = 0
@@ -99,7 +126,13 @@ class ContactsSyncEngine(BaseSyncEngine):
         # Get valid Django model field names
         valid_fields = set(field.name for field in Five9Contact._meta.get_fields())
         
+        logger.info(f"Processing batch of {len(contacts_data)} contacts for bulk save")
+        
         with transaction.atomic():
+            # Filter and prepare contact data
+            valid_contacts = []
+            contact_keys = []
+            
             for contact_data in contacts_data:
                 try:
                     # Filter contact_data to only include valid model fields
@@ -108,7 +141,7 @@ class ContactsSyncEngine(BaseSyncEngine):
                         if k in valid_fields
                     }
                     
-                    # Ensure we have required fields for composite key lookup
+                    # Ensure we have required fields
                     number1 = filtered_data.get('number1')
                     list_name = filtered_data.get('list_name')
                     
@@ -117,24 +150,77 @@ class ContactsSyncEngine(BaseSyncEngine):
                         skipped_count += 1
                         continue
                     
-                    # Use number1 + list_name as composite primary key
-                    contact, created = Five9Contact.objects.update_or_create(
-                        number1=number1,
-                        list_name=list_name,
-                        defaults=filtered_data
-                    )
-                    
-                    if created:
-                        created_count += 1
-                        logger.debug(f"Created contact: {number1} ({list_name})")
-                    else:
-                        updated_count += 1
-                        logger.debug(f"Updated contact: {number1} ({list_name})")
+                    valid_contacts.append(filtered_data)
+                    contact_keys.append((number1, list_name))
                         
                 except Exception as e:
-                    logger.warning(f"Failed to save contact {contact_data.get('number1')}: {e}")
+                    logger.warning(f"Failed to process contact {contact_data.get('number1')}: {e}")
                     skipped_count += 1
+            
+            if not valid_contacts:
+                return {'created': 0, 'updated': 0, 'skipped': skipped_count}
+            
+            # EFFICIENT APPROACH: Use bulk create with proper conflict resolution
+            # Get all existing contacts in one query to avoid conflicts
+            existing_contacts = {}
+            existing_qs = Five9Contact.objects.filter(
+                Q(*[
+                    Q(number1=key[0], list_name=key[1]) 
+                    for key in contact_keys
+                ])
+            ).values('number1', 'list_name', 'id')
+            
+            for contact in existing_qs:
+                key = (contact['number1'], contact['list_name'])
+                existing_contacts[key] = contact['id']
+            
+            # Separate into create and update batches
+            contacts_to_create = []
+            contacts_to_update = []
+            
+            for contact_data in valid_contacts:
+                key = (contact_data['number1'], contact_data['list_name'])
+                if key in existing_contacts:
+                    contact_data['id'] = existing_contacts[key]
+                    contacts_to_update.append(contact_data)
+                else:
+                    contacts_to_create.append(contact_data)
+            
+            # Bulk create new contacts
+            if contacts_to_create:
+                try:
+                    new_contacts = [Five9Contact(**data) for data in contacts_to_create]
+                    Five9Contact.objects.bulk_create(new_contacts, batch_size=500, ignore_conflicts=True)
+                    created_count = len(new_contacts)
+                    logger.info(f"Bulk created {created_count} new contacts")
+                except Exception as create_error:
+                    logger.error(f"Error in bulk_create: {create_error}")
+                    created_count = 0
+            
+            # Bulk update existing contacts
+            if contacts_to_update:
+                try:
+                    update_fields = [f for f in valid_fields if f not in ['id', 'number1', 'list_name']]
+                    contacts_to_bulk_update = []
+                    
+                    for contact_data in contacts_to_update:
+                        contact = Five9Contact(id=contact_data.pop('id'))
+                        for field, value in contact_data.items():
+                            if field in update_fields:
+                                setattr(contact, field, value)
+                        contacts_to_bulk_update.append(contact)
+                    
+                    Five9Contact.objects.bulk_update(contacts_to_bulk_update, update_fields, batch_size=500)
+                    updated_count = len(contacts_to_bulk_update)
+                    logger.info(f"Bulk updated {updated_count} existing contacts")
+                    
+                except Exception as update_error:
+                    logger.error(f"Error in bulk_update: {update_error}")
+                    updated_count = 0
+            else:
+                updated_count = 0
         
+        logger.info(f"Batch save completed: {created_count} created, {updated_count} updated, {skipped_count} skipped")
         return {
             'created': created_count, 
             'updated': updated_count, 

@@ -98,7 +98,7 @@ class ContactsProcessor(BaseFive9Processor):
     
     def process_contact_batch(self, raw_records: List[Dict[str, Any]], list_name: str) -> List[Dict[str, Any]]:
         """
-        Process a batch of Five9 contact records
+        Process a batch of Five9 contact records efficiently
         
         Args:
             raw_records: List of raw contact records from Five9 API
@@ -107,26 +107,64 @@ class ContactsProcessor(BaseFive9Processor):
         Returns:
             List of processed records ready for Django models
         """
+        if not raw_records:
+            return []
+        
         logger.info(f"Processing batch of {len(raw_records)} contact records from {list_name}")
         
         processed_records = []
         errors = 0
         
+        # Pre-compile validation rules and field mappings for better performance
+        field_mapping = self.field_mapping
+        field_types = self.field_types
+        
         for i, raw_record in enumerate(raw_records):
             try:
-                processed_record = self.process_contact_record(raw_record, list_name)
+                processed_record = self._process_contact_record_optimized(raw_record, list_name, field_mapping, field_types)
                 
-                # Basic validation
-                if self._validate_contact_record(processed_record):
+                # Quick validation
+                if processed_record.get('number1') and processed_record.get('list_name'):
                     processed_records.append(processed_record)
                 else:
-                    logger.warning(f"Record {i+1} failed validation, skipping")
+                    logger.warning(f"Record {i+1} missing required fields, skipping")
                     errors += 1
                     
             except Exception as e:
                 logger.error(f"Error processing record {i+1}: {e}")
                 errors += 1
                 continue
+        
+        logger.info(f"Processed {len(processed_records)} records successfully, {errors} errors")
+        return processed_records
+    
+    def _process_contact_record_optimized(self, raw_record: Dict[str, Any], list_name: str, field_mapping: Dict, field_types: Dict) -> Dict[str, Any]:
+        """Optimized version of process_contact_record for batch processing"""
+        processed = {}
+        
+        # Set list_name first
+        processed['list_name'] = list_name
+        
+        # Process all fields efficiently using base class methods
+        for field_name, value in raw_record.items():
+            if field_name == 'list_name':
+                continue  # Already set
+            
+            # Get Django field name
+            django_field_name = field_mapping.get(field_name, field_name.lower())
+            
+            # Transform value based on field type using base class method
+            if value is not None and value != '':
+                field_type = field_types.get(django_field_name, 'STRING')
+                processed_value = self.process_field(field_name, value, field_type)
+                if processed_value is not None:
+                    processed[django_field_name] = processed_value
+        
+        # Ensure required fields are present
+        if 'number1' not in processed or not processed['number1']:
+            processed['number1'] = raw_record.get('number1') or raw_record.get('phone') or ''
+        
+        return processed
         
         logger.info(f"Successfully processed {len(processed_records)} records, {errors} errors")
         return processed_records

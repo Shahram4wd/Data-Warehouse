@@ -36,6 +36,14 @@ class ContactsClient(BaseFive9Client):
             logger.error(f"Error getting contact lists: {e}")
             return []
     
+    def get_contact_lists_dict(self) -> Dict[str, int]:
+        """Get all available contact lists as a dictionary mapping name to size"""
+        lists = self.get_contact_lists()
+        return {
+            contact_list.get('name', 'Unknown'): contact_list.get('size', 0)
+            for contact_list in lists
+        }
+    
     def get_contact_records(self, list_name: Optional[str] = None, max_records: int = 100) -> Tuple[Optional[List[Dict]], Optional[str]]:
         """
         Get actual contact records using getContactRecords method
@@ -228,3 +236,16 @@ class ContactsClient(BaseFive9Client):
         
         logger.info(f"Successfully retrieved records from {len(all_records)} lists")
         return all_records
+
+    def get_contact_records_from_list(self, list_name: str) -> List[Dict]:
+        """
+        Get contact records from a specific list
+        
+        Args:
+            list_name: Name of the contact list
+            
+        Returns:
+            List of contact records
+        """
+        records, _ = self.get_contact_records(list_name, max_records=0)  # 0 means no limit
+        return records or []

@@ -45,8 +45,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--max-records-per-list',
             type=int,
-            default=1000,
-            help='Maximum records to retrieve per list (default: 1000)'
+            default=2000,  # Increased for better bulk processing
+            help='Maximum records to retrieve per list (default: 2000)'
         )
         
         parser.add_argument(
