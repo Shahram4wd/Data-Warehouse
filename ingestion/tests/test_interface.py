@@ -197,6 +197,93 @@ class CRMTestInterface:
             estimated_duration="60+ min",
             description="⚠️  FULL SYNC TEST - Will process ALL CallRail records! Use with extreme caution!"
         ),
+        
+        # HUBSPOT TESTS (10 Commands)
+        # ============================================================================================
+        
+        # UNIT TESTS - HubSpot  
+        "unit_hubspot_flag_validation": TestConfiguration(
+            name="HubSpot Flag Validation Tests",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that all HubSpot commands have standardized flags (--dry-run, --full, --debug, etc.)"
+        ),
+        
+        "unit_hubspot_help_text": TestConfiguration(
+            name="HubSpot Help Text Consistency",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that HubSpot help text is consistent and mentions correct CRM names"
+        ),
+        
+        "unit_hubspot_command_discovery": TestConfiguration(
+            name="HubSpot Command Discovery",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that all HubSpot commands can be imported and instantiated"
+        ),
+        
+        # INTEGRATION TESTS - HubSpot (Controlled Real Data)
+        "integration_hubspot_contacts_limited": TestConfiguration(
+            name="HubSpot Contacts Limited Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=25,
+            uses_real_api=True,
+            estimated_duration="2-4 min",
+            description="Tests HubSpot contacts sync with real API but limited to 25 records max"
+        ),
+        
+        "integration_hubspot_deals_sample": TestConfiguration(
+            name="HubSpot Deals Sample Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=15,
+            uses_real_api=True,
+            estimated_duration="3-5 min",
+            description="Tests HubSpot deals sync with real API but limited to 15 records max"
+        ),
+        
+        "integration_hubspot_appointments_controlled": TestConfiguration(
+            name="HubSpot Appointments Controlled Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.CONTROLLED,
+            max_records=None,
+            date_range_days=7,
+            uses_real_api=True,
+            estimated_duration="3-6 min",
+            description="Tests HubSpot appointments sync with real API for last 7 days only"
+        ),
+        
+        "integration_hubspot_all_limited": TestConfiguration(
+            name="HubSpot All Commands Limited Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=10,
+            uses_real_api=True,
+            estimated_duration="15-25 min",
+            description="Tests HubSpot orchestration command (sync_hubspot_all) with limited data"
+        ),
+        
+        # E2E TESTS - HubSpot (Production-like, Use with Extreme Caution)
+        "e2e_hubspot_full_sync": TestConfiguration(
+            name="HubSpot Full Sync Test",
+            test_type=TestType.E2E,
+            data_usage=DataUsage.FULL,
+            max_records=None,
+            uses_real_api=True,
+            estimated_duration="120+ min",
+            description="⚠️  FULL SYNC TEST - Will process ALL HubSpot records! Use with EXTREME caution!"
+        ),
     }
     
     @classmethod

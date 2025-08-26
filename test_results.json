@@ -58,5 +58,35 @@
     "end_time": "2025-08-26T05:28:23.450884",
     "status": "success",
     "result": "Test completed successfully"
+  },
+  {
+    "test_name": "unit_hubspot_flag_validation",
+    "data_usage": "MOCKED",
+    "start_time": "2025-08-26T05:37:34.203269",
+    "config": {
+      "name": "HubSpot Flag Validation Tests",
+      "type": "unit",
+      "uses_real_api": false,
+      "max_records": 0,
+      "estimated_duration": "< 30 sec"
+    },
+    "end_time": "2025-08-26T05:37:34.203431",
+    "status": "success",
+    "result": "Test completed successfully"
+  },
+  {
+    "test_name": "integration_hubspot_contacts_limited",
+    "data_usage": "SAMPLE",
+    "start_time": "2025-08-26T05:37:46.769174",
+    "config": {
+      "name": "HubSpot Contacts Limited Test",
+      "type": "integration",
+      "uses_real_api": true,
+      "max_records": 25,
+      "estimated_duration": "2-4 min"
+    },
+    "end_time": "2025-08-26T05:37:46.769309",
+    "status": "success",
+    "result": "Test completed successfully"
   }
 ]
