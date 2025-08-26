@@ -77,14 +77,24 @@ try:
     from ingestion.tests.test_crm_hubspot import (
         TestHubSpotContactsCommand,
         TestHubSpotDealsCommand,
-        TestHubSpotAllCommand
+        TestHubSpotAllCommand,
+        TestHubSpotAppointmentsCommand,
+        TestHubSpotAppointmentsRemovalCommand,
+        TestHubSpotAssociationsCommand,
+        TestHubSpotContactsRemovalCommand,
+        TestHubSpotDivisionsCommand,
+        TestHubSpotGeniusUsersCommand,
+        TestHubSpotZipcodesCommand
     )
     
     # Arrivy tests
     from ingestion.tests.test_crm_arrivy import (
         TestArrivyBookingsCommand,
         TestArrivyTasksCommand,
-        TestArrivyAllCommand
+        TestArrivyAllCommand,
+        TestArrivyEntitiesCommand,
+        TestArrivyGroupsCommand,
+        TestArrivyStatusesCommand
     )
     
     # Common/shared tests
@@ -119,11 +129,21 @@ try:
         'TestHubSpotContactsCommand',
         'TestHubSpotDealsCommand',
         'TestHubSpotAllCommand',
+        'TestHubSpotAppointmentsCommand',
+        'TestHubSpotAppointmentsRemovalCommand',
+        'TestHubSpotAssociationsCommand',
+        'TestHubSpotContactsRemovalCommand',
+        'TestHubSpotDivisionsCommand',
+        'TestHubSpotGeniusUsersCommand',
+        'TestHubSpotZipcodesCommand',
         
         # Arrivy
         'TestArrivyBookingsCommand',
         'TestArrivyTasksCommand',
         'TestArrivyAllCommand',
+        'TestArrivyEntitiesCommand',
+        'TestArrivyGroupsCommand',
+        'TestArrivyStatusesCommand',
         
         # Common/Shared
         'TestBaseSyncCommandArchitecture',

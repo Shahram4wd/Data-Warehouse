@@ -11,7 +11,7 @@ from django.test import TestCase
 from django.core.management import call_command
 from django.conf import settings
 from ingestion.models import SyncHistory, SyncConfiguration
-from reports.models import AutomationReportSchedule
+# from reports.models import AutomationReportSchedule  # TODO: Add when model is implemented
 
 
 class CRMCommandTestBase(TestCase):

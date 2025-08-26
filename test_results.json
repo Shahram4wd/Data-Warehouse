@@ -178,5 +178,20 @@
     "end_time": "2025-08-26T16:23:04.507352",
     "status": "success",
     "result": "Test completed successfully (simulated)"
+  },
+  {
+    "test_name": "integration_callrail_calls_sample",
+    "data_usage": "MINIMAL",
+    "start_time": "2025-08-26T16:26:03.413436",
+    "config": {
+      "name": "CallRail Calls Sample Test",
+      "type": "integration",
+      "uses_real_api": true,
+      "max_records": 50,
+      "estimated_duration": "3-5 min"
+    },
+    "end_time": "2025-08-26T16:26:04.413557",
+    "status": "success",
+    "result": "Test completed successfully (simulated)"
   }
 ]

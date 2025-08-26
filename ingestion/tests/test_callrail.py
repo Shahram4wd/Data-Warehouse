@@ -466,3 +466,486 @@ class TestCallRailSyncHistoryValidation(CallRailTestBase):
         self.assertEqual(webhook_pattern['expected_duration_range'], (5, 120))
         self.assertEqual(webhook_pattern['acceptable_failure_rate'], 0.15)
         self.assertIn('webhook_url', webhook_pattern['required_log_fields'])
+
+
+class TestCallRailCompaniesAdvanced(CallRailTestBase, APITestMixin, FlagTestMixin):
+    """Advanced testing for CallRail companies sync command"""
+    
+    command_name = 'sync_callrail_companies'
+    
+    def create_callrail_company_data(self, count=50):
+        """Create mock CallRail company data"""
+        companies = []
+        for i in range(count):
+            companies.append({
+                "id": f"company_{i+1}",
+                "name": f"Company {i+1}",
+                "status": ["active", "inactive", "trial"][i % 3],
+                "created_at": (timezone.now() - timedelta(days=i*10)).isoformat(),
+                "updated_at": (timezone.now() - timedelta(days=i)).isoformat(),
+                "time_zone": "America/New_York",
+                "country": "US",
+                "script_url": f"https://cdn.callrail.com/companies/{i+1}/script.js",
+                "callscore_enabled": i % 2 == 0,
+                "keyword_spotting_enabled": i % 3 == 0,
+                "callscribe_enabled": i % 4 == 0,
+                "conversation_intelligence_enabled": i % 5 == 0,
+                "swap_exclude_jquery": False,
+                "swap_ppc_override": True,
+                "swap_landing_override": i % 2 == 0,
+                "swap_cookie_duration": 30,
+                "callscore_enabled": True
+            })
+        return companies
+    
+    @patch('ingestion.management.commands.sync_callrail_companies.requests.get')
+    def test_company_settings_sync(self, mock_get):
+        """Test synchronization of company settings and configurations"""
+        companies = self.create_callrail_company_data(25)
+        
+        mock_response = MockHTTPResponses.create_success_response({
+            'companies': companies,
+            'total_records': 25
+        })
+        mock_get.return_value = mock_response
+        
+        # Execute with settings sync
+        self.run_command_with_options(
+            include_settings=True,
+            include_features=True
+        )
+        
+        self.assert_api_called_with(mock_get, 'callrail.com/v3/companies')
+        self.assert_sync_success(25)
+    
+    @patch('ingestion.management.commands.sync_callrail_companies.requests.get')
+    def test_company_feature_flags_processing(self, mock_get):
+        """Test processing of company feature flags"""
+        companies_with_features = []
+        for i in range(30):
+            companies_with_features.append({
+                "id": f"feature_company_{i+1}",
+                "name": f"Feature Company {i+1}",
+                "features": {
+                    "call_recording": i % 2 == 0,
+                    "call_transcription": i % 3 == 0,
+                    "conversation_intelligence": i % 4 == 0,
+                    "keyword_spotting": i % 5 == 0,
+                    "callscore": i % 6 == 0,
+                    "form_capture": i % 7 == 0,
+                    "chat_widget": i % 8 == 0
+                },
+                "limits": {
+                    "monthly_calls": 1000 + i * 100,
+                    "phone_numbers": 10 + i,
+                    "users": 5 + (i // 5),
+                    "integrations": 3
+                }
+            })
+        
+        mock_response = MockHTTPResponses.create_success_response({
+            'companies': companies_with_features,
+            'total_records': 30
+        })
+        mock_get.return_value = mock_response
+        
+        # Execute with feature processing
+        self.run_command_with_options(
+            process_features=True,
+            sync_limits=True
+        )
+        
+        self.assert_sync_success(30)
+
+
+class TestCallRailTagsAdvanced(CallRailTestBase, APITestMixin, BatchProcessingTestMixin):
+    """Advanced testing for CallRail tags sync command"""
+    
+    command_name = 'sync_callrail_tags'
+    
+    def create_callrail_tag_data(self, count=40):
+        """Create mock CallRail tag data"""
+        tags = []
+        tag_colors = ["red", "blue", "green", "yellow", "purple", "orange", "pink", "gray"]
+        for i in range(count):
+            tags.append({
+                "id": f"tag_{i+1}",
+                "name": f"Tag {i+1}",
+                "tag_level": ["account", "company"][i % 2],
+                "color": tag_colors[i % len(tag_colors)],
+                "created_at": (timezone.now() - timedelta(days=i*5)).isoformat(),
+                "updated_at": (timezone.now() - timedelta(days=i)).isoformat(),
+                "company_id": f"company_{(i % 10) + 1}",
+                "status": "active",
+                "usage_count": 50 + i * 5,
+                "auto_tag_rules": [
+                    {
+                        "condition": "caller_id_matches",
+                        "value": f"+1555{i:04d}*",
+                        "action": "add_tag"
+                    }
+                ] if i % 5 == 0 else []
+            })
+        return tags
+    
+    @patch('ingestion.management.commands.sync_callrail_tags.requests.get')
+    def test_tag_hierarchy_and_rules(self, mock_get):
+        """Test tag hierarchy and auto-tagging rules"""
+        tags = self.create_callrail_tag_data(35)
+        
+        mock_response = MockHTTPResponses.create_success_response({
+            'tags': tags,
+            'total_records': 35
+        })
+        mock_get.return_value = mock_response
+        
+        # Execute with rule processing
+        self.run_command_with_options(
+            process_rules=True,
+            sync_hierarchy=True
+        )
+        
+        self.assert_sync_success(35)
+    
+    @patch('ingestion.management.commands.sync_callrail_tags.requests.get')
+    def test_tag_usage_analytics(self, mock_get):
+        """Test tag usage analytics and reporting"""
+        analytics_tags = []
+        for i in range(20):
+            analytics_tags.append({
+                "id": f"analytics_tag_{i+1}",
+                "name": f"Analytics Tag {i+1}",
+                "usage_stats": {
+                    "total_applications": 100 + i * 10,
+                    "last_30_days": 25 + i * 2,
+                    "last_7_days": 8 + i,
+                    "trending": ["up", "down", "stable"][i % 3]
+                },
+                "performance_metrics": {
+                    "conversion_rate": 0.15 + (i * 0.01),
+                    "average_call_duration": 180 + i * 10,
+                    "lead_quality_score": 7.5 + (i * 0.1)
+                }
+            })
+        
+        mock_response = MockHTTPResponses.create_success_response({
+            'tags': analytics_tags,
+            'total_records': 20
+        })
+        mock_get.return_value = mock_response
+        
+        # Execute with analytics
+        self.run_command_with_options(
+            include_analytics=True,
+            calculate_metrics=True
+        )
+        
+        self.assert_sync_success(20)
+
+
+class TestCallRailTrackersAdvanced(CallRailTestBase, APITestMixin, PerformanceTestMixin):
+    """Advanced testing for CallRail trackers sync command"""
+    
+    command_name = 'sync_callrail_trackers'
+    
+    def create_callrail_tracker_data(self, count=60):
+        """Create mock CallRail tracker data"""
+        trackers = []
+        for i in range(count):
+            trackers.append({
+                "id": f"tracker_{i+1}",
+                "name": f"Tracker {i+1}",
+                "type": ["source", "search", "session", "visitor"][i % 4],
+                "tracking_number": f"+1555800{i+1:04d}",
+                "formatted_tracking_number": f"(555) 800-{i+1:04d}",
+                "company_id": f"company_{(i % 5) + 1}",
+                "status": ["active", "paused", "disabled"][i % 3],
+                "created_at": (timezone.now() - timedelta(days=i*3)).isoformat(),
+                "updated_at": (timezone.now() - timedelta(days=i)).isoformat(),
+                "source": {
+                    "name": ["Google Ads", "Facebook", "Bing", "Direct", "Email"][i % 5],
+                    "referrer": f"https://example{i}.com",
+                    "medium": ["cpc", "organic", "social", "email", "direct"][i % 5],
+                    "campaign": f"Campaign {(i % 10) + 1}"
+                },
+                "destination_number": f"+1555900{((i % 20) + 1):04d}",
+                "whisper_message": f"Tracker {i+1} call" if i % 3 == 0 else None,
+                "record_calls": i % 2 == 0,
+                "transcribe_calls": i % 4 == 0,
+                "sms_enabled": i % 5 == 0,
+                "call_flow": [
+                    {
+                        "step": 1,
+                        "action": "ring",
+                        "destination": f"+1555900{((i % 20) + 1):04d}",
+                        "timeout": 30
+                    },
+                    {
+                        "step": 2,
+                        "action": "voicemail",
+                        "message": f"Voicemail for tracker {i+1}"
+                    }
+                ]
+            })
+        return trackers
+    
+    @patch('ingestion.management.commands.sync_callrail_trackers.requests.get')
+    def test_tracker_configuration_sync(self, mock_get):
+        """Test synchronization of tracker configurations"""
+        trackers = self.create_callrail_tracker_data(45)
+        
+        mock_response = MockHTTPResponses.create_success_response({
+            'trackers': trackers,
+            'total_records': 45
+        })
+        mock_get.return_value = mock_response
+        
+        # Execute with configuration sync
+        self.run_command_with_options(
+            include_configurations=True,
+            sync_call_flows=True
+        )
+        
+        self.assert_sync_success(45)
+    
+    @patch('ingestion.management.commands.sync_callrail_trackers.requests.get')
+    def test_tracker_routing_rules(self, mock_get):
+        """Test tracker call routing rules processing"""
+        routing_trackers = []
+        for i in range(25):
+            routing_trackers.append({
+                "id": f"routing_tracker_{i+1}",
+                "name": f"Routing Tracker {i+1}",
+                "routing_rules": [
+                    {
+                        "condition": "business_hours",
+                        "destination": f"+1555700{i+1:04d}",
+                        "priority": 1
+                    },
+                    {
+                        "condition": "after_hours", 
+                        "destination": "voicemail",
+                        "priority": 2
+                    },
+                    {
+                        "condition": "geographic_location",
+                        "value": ["NY", "CA", "TX"][i % 3],
+                        "destination": f"+1555701{i+1:04d}",
+                        "priority": 3
+                    }
+                ],
+                "business_hours": {
+                    "monday": {"start": "09:00", "end": "17:00"},
+                    "tuesday": {"start": "09:00", "end": "17:00"},
+                    "wednesday": {"start": "09:00", "end": "17:00"},
+                    "thursday": {"start": "09:00", "end": "17:00"},
+                    "friday": {"start": "09:00", "end": "17:00"},
+                    "saturday": {"start": "10:00", "end": "14:00"},
+                    "sunday": {"closed": True}
+                }
+            })
+        
+        mock_response = MockHTTPResponses.create_success_response({
+            'trackers': routing_trackers,
+            'total_records': 25
+        })
+        mock_get.return_value = mock_response
+        
+        # Execute with routing rules
+        self.run_command_with_options(
+            process_routing_rules=True,
+            validate_business_hours=True
+        )
+        
+        self.assert_sync_success(25)
+
+
+class TestCallRailUsersAdvanced(CallRailTestBase, APITestMixin, FlagTestMixin):
+    """Advanced testing for CallRail users sync command"""
+    
+    command_name = 'sync_callrail_users'
+    
+    def create_callrail_user_data(self, count=30):
+        """Create mock CallRail user data"""
+        users = []
+        roles = ["admin", "user", "read_only", "agent", "manager"]
+        for i in range(count):
+            users.append({
+                "id": f"user_{i+1}",
+                "email": f"user{i+1}@example.com",
+                "first_name": f"FirstName{i+1}",
+                "last_name": f"LastName{i+1}",
+                "role": roles[i % len(roles)],
+                "company_id": f"company_{(i % 8) + 1}",
+                "status": ["active", "inactive", "pending"][i % 3],
+                "created_at": (timezone.now() - timedelta(days=i*7)).isoformat(),
+                "last_login": (timezone.now() - timedelta(days=i)).isoformat(),
+                "phone_number": f"+1555100{i+1:04d}",
+                "time_zone": ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"][i % 4],
+                "permissions": {
+                    "manage_users": roles[i % len(roles)] in ["admin", "manager"],
+                    "view_calls": True,
+                    "manage_trackers": roles[i % len(roles)] in ["admin", "manager"],
+                    "view_reports": True,
+                    "manage_integrations": roles[i % len(roles)] == "admin",
+                    "export_data": roles[i % len(roles)] in ["admin", "manager", "user"]
+                },
+                "notification_settings": {
+                    "email_notifications": i % 2 == 0,
+                    "sms_notifications": i % 3 == 0,
+                    "call_notifications": i % 4 == 0,
+                    "form_notifications": i % 5 == 0
+                }
+            })
+        return users
+    
+    @patch('ingestion.management.commands.sync_callrail_users.requests.get')
+    def test_user_permissions_sync(self, mock_get):
+        """Test synchronization of user permissions and roles"""
+        users = self.create_callrail_user_data(25)
+        
+        mock_response = MockHTTPResponses.create_success_response({
+            'users': users,
+            'total_records': 25
+        })
+        mock_get.return_value = mock_response
+        
+        # Execute with permissions sync
+        self.run_command_with_options(
+            sync_permissions=True,
+            validate_roles=True
+        )
+        
+        self.assert_sync_success(25)
+    
+    @patch('ingestion.management.commands.sync_callrail_users.requests.get')
+    def test_user_activity_tracking(self, mock_get):
+        """Test user activity and login tracking"""
+        activity_users = []
+        for i in range(20):
+            activity_users.append({
+                "id": f"activity_user_{i+1}",
+                "email": f"activity{i+1}@example.com",
+                "activity_log": [
+                    {
+                        "action": "login",
+                        "timestamp": (timezone.now() - timedelta(hours=i*2)).isoformat(),
+                        "ip_address": f"192.168.1.{i+1}",
+                        "user_agent": "Mozilla/5.0 (compatible)"
+                    },
+                    {
+                        "action": "view_calls",
+                        "timestamp": (timezone.now() - timedelta(hours=i*2-1)).isoformat(),
+                        "resource": "calls_dashboard"
+                    },
+                    {
+                        "action": "export_data",
+                        "timestamp": (timezone.now() - timedelta(hours=i*2-2)).isoformat(),
+                        "resource": "call_logs",
+                        "export_type": "csv"
+                    }
+                ],
+                "session_duration": 3600 + i * 300,  # 1 hour + increments
+                "last_activity": (timezone.now() - timedelta(minutes=i*10)).isoformat()
+            })
+        
+        mock_response = MockHTTPResponses.create_success_response({
+            'users': activity_users,
+            'total_records': 20
+        })
+        mock_get.return_value = mock_response
+        
+        # Execute with activity tracking
+        self.run_command_with_options(
+            track_activity=True,
+            sync_sessions=True
+        )
+        
+        self.assert_sync_success(20)
+
+
+class TestCallRailAllAdvanced(CallRailTestBase, APITestMixin, PerformanceTestMixin):
+    """Advanced testing for CallRail all sync command (orchestrates all syncs)"""
+    
+    command_name = 'sync_callrail_all'
+    
+    @patch('ingestion.management.commands.sync_callrail_all.call_command')
+    def test_orchestrated_sync_execution(self, mock_call_command):
+        """Test orchestrated execution of all CallRail sync commands"""
+        # Mock successful execution of all sub-commands
+        mock_call_command.return_value = None
+        
+        # Execute the all command
+        self.run_command_with_options(
+            parallel_execution=True,
+            max_workers=3
+        )
+        
+        # Verify all sub-commands were called
+        expected_commands = [
+            'sync_callrail_accounts',
+            'sync_callrail_companies', 
+            'sync_callrail_users',
+            'sync_callrail_trackers',
+            'sync_callrail_calls',
+            'sync_callrail_text_messages',
+            'sync_callrail_form_submissions',
+            'sync_callrail_tags'
+        ]
+        
+        self.assertEqual(mock_call_command.call_count, len(expected_commands))
+        
+        # Verify each command was called
+        called_commands = [call[0][0] for call in mock_call_command.call_args_list]
+        for cmd in expected_commands:
+            self.assertIn(cmd, called_commands)
+    
+    @patch('ingestion.management.commands.sync_callrail_all.call_command')
+    def test_error_handling_in_orchestration(self, mock_call_command):
+        """Test error handling during orchestrated sync"""
+        # Setup command failures
+        def side_effect(command, *args, **kwargs):
+            if command == 'sync_callrail_calls':
+                raise Exception("CallRail API rate limit exceeded")
+            elif command == 'sync_callrail_trackers':
+                raise Exception("Invalid tracker configuration")
+            return None
+        
+        mock_call_command.side_effect = side_effect
+        
+        # Execute with error tolerance
+        self.run_command_with_options(
+            continue_on_error=True,
+            retry_failed=True,
+            max_retries=2
+        )
+        
+        # Should attempt all commands despite failures
+        self.assertGreaterEqual(mock_call_command.call_count, 8)
+    
+    @patch('ingestion.management.commands.sync_callrail_all.call_command')
+    def test_dependency_aware_execution(self, mock_call_command):
+        """Test dependency-aware execution order"""
+        execution_order = []
+        
+        def track_execution(command, *args, **kwargs):
+            execution_order.append(command)
+            return None
+            
+        mock_call_command.side_effect = track_execution
+        
+        # Execute with dependency ordering
+        self.run_command_with_options(
+            respect_dependencies=True,
+            sequential_execution=True
+        )
+        
+        # Verify accounts and companies are synced before dependent entities
+        accounts_idx = execution_order.index('sync_callrail_accounts')
+        companies_idx = execution_order.index('sync_callrail_companies')
+        users_idx = execution_order.index('sync_callrail_users')
+        trackers_idx = execution_order.index('sync_callrail_trackers')
+        
+        # Accounts should come before users and trackers
+        self.assertLess(accounts_idx, users_idx)
+        self.assertLess(companies_idx, trackers_idx)
