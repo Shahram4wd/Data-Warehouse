@@ -418,6 +418,83 @@ class CRMTestInterface:
             estimated_duration="45+ min",
             description="⚠️  FULL SYNC TEST - Will process ALL MarketSharp endpoints! Use with caution!"
         ),
+        
+        # SALESRABBIT TESTS (3 Commands)
+        # ============================================================================================
+        
+        # UNIT TESTS - SalesRabbit
+        "unit_salesrabbit_flag_validation": TestConfiguration(
+            name="SalesRabbit Flag Validation Tests",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that SalesRabbit commands have consistent flags (--dry-run, --full, --debug, etc.)"
+        ),
+        
+        "unit_salesrabbit_help_text": TestConfiguration(
+            name="SalesRabbit Help Text Consistency",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that SalesRabbit help text is consistent and mentions correct CRM names"
+        ),
+        
+        "unit_salesrabbit_command_discovery": TestConfiguration(
+            name="SalesRabbit Command Discovery",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that all SalesRabbit commands can be imported and instantiated"
+        ),
+        
+        # INTEGRATION TESTS - SalesRabbit (Controlled Real Data)
+        "integration_salesrabbit_leads_limited": TestConfiguration(
+            name="SalesRabbit Leads Limited Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=30,
+            uses_real_api=True,
+            estimated_duration="3-6 min",
+            description="Tests SalesRabbit leads sync with real API but limited to 30 records max"
+        ),
+        
+        "integration_salesrabbit_leads_controlled": TestConfiguration(
+            name="SalesRabbit Leads Controlled Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.CONTROLLED,
+            max_records=None,
+            date_range_days=7,
+            uses_real_api=True,
+            estimated_duration="4-8 min",
+            description="Tests SalesRabbit leads sync with real API for last 7 days only"
+        ),
+        
+        "integration_salesrabbit_all_limited": TestConfiguration(
+            name="SalesRabbit All Commands Limited Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=15,
+            uses_real_api=True,
+            estimated_duration="8-15 min",
+            description="Tests SalesRabbit orchestration command (sync_salesrabbit_all) with limited data"
+        ),
+        
+        # E2E TESTS - SalesRabbit (Production-like, Use with Extreme Caution)
+        "e2e_salesrabbit_full_sync": TestConfiguration(
+            name="SalesRabbit Full Sync Test",
+            test_type=TestType.E2E,
+            data_usage=DataUsage.FULL,
+            max_records=None,
+            uses_real_api=True,
+            estimated_duration="60+ min",
+            description="⚠️  FULL SYNC TEST - Will process ALL SalesRabbit records! Use with caution!"
+        ),
     }
     
     @classmethod

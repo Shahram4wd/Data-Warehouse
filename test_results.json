@@ -133,5 +133,35 @@
     "end_time": "2025-08-26T05:53:23.805134",
     "status": "success",
     "result": "Test completed successfully"
+  },
+  {
+    "test_name": "unit_salesrabbit_flag_validation",
+    "data_usage": "MOCKED",
+    "start_time": "2025-08-26T06:03:57.043555",
+    "config": {
+      "name": "SalesRabbit Flag Validation Tests",
+      "type": "unit",
+      "uses_real_api": false,
+      "max_records": 0,
+      "estimated_duration": "< 30 sec"
+    },
+    "end_time": "2025-08-26T06:03:57.043668",
+    "status": "success",
+    "result": "Test completed successfully"
+  },
+  {
+    "test_name": "integration_salesrabbit_leads_limited",
+    "data_usage": "SAMPLE",
+    "start_time": "2025-08-26T06:04:14.417866",
+    "config": {
+      "name": "SalesRabbit Leads Limited Test",
+      "type": "integration",
+      "uses_real_api": true,
+      "max_records": 30,
+      "estimated_duration": "3-6 min"
+    },
+    "end_time": "2025-08-26T06:04:14.417966",
+    "status": "success",
+    "result": "Test completed successfully"
   }
 ]

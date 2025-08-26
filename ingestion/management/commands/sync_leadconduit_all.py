@@ -13,68 +13,35 @@ import logging
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any
 
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.utils import timezone as django_timezone
 
+from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.leadconduit.engines.base import LeadConduitSyncEngine
 from ingestion.config.leadconduit_config import LeadConduitConfig
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
-    help = 'Sync all LeadConduit data (events and leads)'
+class Command(BaseSyncCommand):
+    help = 'Sync all LeadConduit data (events and leads) with standardized flags'
+    crm_name = 'leadconduit'
+    entity_name = 'all_data'
     
     def add_arguments(self, parser):
-        # Standard CRM sync flags according to sync_crm_guide.md
+        # Add standard BaseSyncCommand arguments
+        super().add_arguments(parser)
+        
+        # Add backward compatibility flags with deprecation warnings
         parser.add_argument(
-            '--full',
-            action='store_true',
-            help='Perform full sync (ignore last sync timestamp)'
+            '--since',
+            type=str,
+            help='(DEPRECATED) Use --start-date instead. Manual sync start date (YYYY-MM-DD format)'
         )
         parser.add_argument(
             '--force-overwrite',
             action='store_true',
-            help='Completely replace existing records'
-        )
-        parser.add_argument(
-            '--since',
-            type=str,
-            help='Manual sync start date (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Test run without database writes'
-        )
-        parser.add_argument(
-            '--batch-size',
-            type=int,
-            default=100,
-            help='Records per API batch (default: 100)'
-        )
-        parser.add_argument(
-            '--max-records',
-            type=int,
-            default=0,
-            help='Limit total records (0 = unlimited)'
-        )
-        parser.add_argument(
-            '--debug',
-            action='store_true',
-            help='Enable verbose logging'
-        )
-        
-        # LeadConduit-specific arguments (for backward compatibility)
-        parser.add_argument(
-            '--start-date',
-            type=str,
-            help='(DEPRECATED) Use --since instead. Start date for sync (YYYY-MM-DD format, UTC)'
-        )
-        parser.add_argument(
-            '--end-date',
-            type=str,
-            help='End date for sync (YYYY-MM-DD format, UTC). If not provided, defaults to today'
+            help='(DEPRECATED) Use --force instead. Completely replace existing records'
         )
         parser.add_argument(
             '--config',
@@ -84,36 +51,61 @@ class Command(BaseCommand):
         )
     
     def handle(self, *args, **options):
-        """Handle the sync command"""
-        if not options['quiet']:
-            self.stdout.write(
-                self.style.SUCCESS('Starting LeadConduit full sync...')
-            )
+        """Handle the sync command following standardized patterns"""
+        # Setup debug logging if requested
+        if options.get('debug'):
+            logging.getLogger().setLevel(logging.DEBUG)
+            
+        self.stdout.write(
+            self.style.SUCCESS('Starting LeadConduit full sync...')
+        )
         
         try:
-            # Parse date arguments (support both --start-date and --since)
-            start_date = self.parse_date(options.get('start_date') or options.get('since'))
+            # Parse date arguments with backward compatibility
+            # Priority: 1. --start-date (new standard), 2. --since (deprecated)
+            since_date = None
+            if options.get('start_date'):
+                since_date = self.parse_date(options['start_date'])
+            elif options.get('since'):  # Backward compatibility
+                since_date = self.parse_date(options['since'])
+                self.stdout.write(
+                    self.style.WARNING('--since is deprecated, use --start-date instead')
+                )
+            
             end_date = self.parse_date(options.get('end_date'))
+            # Handle backward compatibility for force_overwrite -> force
+            force_overwrite = options.get('force', False) or options.get('force_overwrite', False)
+            full_sync = options.get('full', False)
+            dry_run = options.get('dry_run', False)
+            batch_size = options.get('batch_size', 100)
+            max_records = options.get('max_records', 0)
             
             # Get configuration
             config_profile = options.get('config', 'default')
             config = LeadConduitConfig.get_config(config_profile)
             
+            # Add command-line options to config
+            config.update({
+                'batch_size': batch_size,
+                'max_records': max_records,
+                'dry_run': dry_run
+            })
+            
             # Initialize sync engine
             sync_engine = LeadConduitSyncEngine(config)
             
-            # Run sync
+            # Run sync following guide patterns
             result = self.run_sync(
                 sync_engine,
-                start_date=start_date,
+                since_date=since_date,
                 end_date=end_date,
-                force=options.get('force', False),
-                quiet=options.get('quiet', False)
+                force_overwrite=force_overwrite,
+                full_sync=full_sync,
+                dry_run=dry_run
             )
             
             # Output results
-            if not options['quiet']:
-                self.output_results(result)
+            self.output_results(result)
             
             if not result.get('success', False):
                 raise CommandError('Sync failed')
@@ -124,29 +116,33 @@ class Command(BaseCommand):
     
     def run_sync(self,
                  sync_engine: LeadConduitSyncEngine,
-                 start_date=None,
+                 since_date=None,
                  end_date=None,
-                 force=False,
-                 quiet=False) -> Dict[str, Any]:
-        """Run the sync operation"""
+                 force_overwrite=False,
+                 full_sync=False,
+                 dry_run=False) -> Dict[str, Any]:
+        """Run the sync operation following sync_crm_guide.md patterns"""
         
-        if not quiet:
-            date_range = ""
-            if start_date:
-                date_range += f" from {start_date.date()}"
-            if end_date:
-                date_range += f" to {end_date.date()}"
-            if date_range:
-                self.stdout.write(f"Syncing{date_range}")
-            else:
-                self.stdout.write("Syncing with default date range")
+        # Display sync strategy
+        if since_date:
+            date_range = f" since {since_date.date()}"
+        elif full_sync or force_overwrite:
+            date_range = " (full sync)"
+        else:
+            date_range = " (incremental sync)"
+            
+        if end_date:
+            date_range += f" until {end_date.date()}"
+            
+        sync_mode = "DRY RUN: " if dry_run else ""
+        self.stdout.write(f"{sync_mode}Syncing all data{date_range}")
         
         # Run async sync
         import asyncio
         return asyncio.run(sync_engine.sync_all(
-            start_date=start_date,
+            start_date=since_date,
             end_date=end_date,
-            force=force
+            force=force_overwrite
         ))
     
     def parse_date(self, date_str: str) -> datetime:

@@ -3,47 +3,28 @@ Sync Marketing Leads from Google Sheets
 """
 import asyncio
 import logging
-from django.core.management.base import BaseCommand
+from django.core.management.base import CommandError
 from django.utils import timezone
 
+from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.gsheet.engines import MarketingLeadsSyncEngine
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(BaseSyncCommand):
     """Sync Marketing Source Leads from Google Sheets"""
     
     help = "Sync Marketing Source Leads from Google Sheets to database"
+    crm_name = 'gsheet'
+    entity_name = 'marketing_leads'
     
     def add_arguments(self, parser):
         """Add command arguments"""
-        parser.add_argument(
-            "--dry-run",
-            action="store_true",
-            help="Run sync without saving data to database"
-        )
-        parser.add_argument(
-            "--force",
-            action="store_true",
-            help="Force sync even if sheet hasn't been modified"
-        )
-        parser.add_argument(
-            "--batch-size",
-            type=int,
-            default=500,
-            help="Batch size for processing records"
-        )
-        parser.add_argument(
-            "--debug",
-            action="store_true",
-            help="Enable debug logging"
-        )
-        parser.add_argument(
-            "--quiet",
-            action="store_true",
-            help="Suppress output except errors"
-        )
+        # Add standard BaseSyncCommand arguments
+        super().add_arguments(parser)
+        
+        # Add GSheet-specific arguments
         parser.add_argument(
             "--test-connection",
             action="store_true",
@@ -56,26 +37,38 @@ class Command(BaseCommand):
         )
     
     def handle(self, *args, **options):
-        """Execute the sync command"""
+        """Execute the sync command following standardized patterns"""
         
-        # Configure logging level
-        if options['debug']:
+        # Setup debug logging if requested
+        if options.get('debug'):
+            logging.getLogger().setLevel(logging.DEBUG)
             logging.getLogger('ingestion.sync.gsheet').setLevel(logging.DEBUG)
-        elif options['quiet']:
+        elif options.get('quiet'):
             logging.getLogger('ingestion.sync.gsheet').setLevel(logging.ERROR)
         else:
             logging.getLogger('ingestion.sync.gsheet').setLevel(logging.INFO)
         
+        self.stdout.write(
+            self.style.SUCCESS('Starting GSheet marketing leads sync...')
+        )
+        
         try:
+            # Get standardized options
+            dry_run = options.get('dry_run', False)
+            force_overwrite = options.get('force', False)
+            batch_size = options.get('batch_size', 500)
+            max_records = options.get('max_records', 0)
+            
             # Initialize sync engine
             engine = MarketingLeadsSyncEngine(
-                batch_size=options['batch_size'],
-                dry_run=options['dry_run'],
-                force_overwrite=options['force']
+                batch_size=batch_size,
+                dry_run=dry_run,
+                force_overwrite=force_overwrite,
+                max_records=max_records
             )
             
             # Test connection only
-            if options['test_connection']:
+            if options.get('test_connection'):
                 self.stdout.write("Testing Google Sheets API connection...")
                 if engine.client.test_connection():
                     self.stdout.write(
@@ -83,30 +76,33 @@ class Command(BaseCommand):
                     )
                     return
                 else:
-                    self.stdout.write(
-                        self.style.ERROR("✗ Google Sheets API connection failed")
-                    )
-                    return
+                    raise CommandError("Google Sheets API connection failed")
             
             # Show summary only
-            if options['show_summary']:
+            if options.get('show_summary'):
                 self.stdout.write("Getting sync summary...")
                 summary = engine.get_sync_summary()
                 self._display_summary(summary)
                 return
             
-            # Run the sync
-            self.stdout.write("Starting Marketing Leads sync from Google Sheets...")
+            # Display configuration
+            dry_mode = "DRY RUN: " if dry_run else ""
+            self.stdout.write(f"{dry_mode}Starting Marketing Leads sync from Google Sheets...")
             self.stdout.write(f"Configuration:")
-            self.stdout.write(f"  - Dry run: {options['dry_run']}")
-            self.stdout.write(f"  - Force sync: {options['force']}")
-            self.stdout.write(f"  - Batch size: {options['batch_size']}")
+            self.stdout.write(f"  - Dry run: {dry_run}")
+            self.stdout.write(f"  - Force sync: {force_overwrite}")
+            self.stdout.write(f"  - Batch size: {batch_size}")
+            if max_records > 0:
+                self.stdout.write(f"  - Max records: {max_records}")
             
             # Run sync (synchronous)
             result = engine.sync_with_retry_sync(max_retries=2)
             
             # Display results
-            self._display_results(result, options)
+            self.output_results(result)
+            
+            if not result.get('success', result.get('status') == 'success'):
+                raise CommandError('Marketing leads sync failed')
             
         except KeyboardInterrupt:
             self.stdout.write(
@@ -114,13 +110,49 @@ class Command(BaseCommand):
             )
         except Exception as e:
             logger.error(f"Sync command failed: {e}")
+            if not isinstance(e, CommandError):
+                raise CommandError(f'Sync failed: {e}')
+    
+    def output_results(self, result):
+        """Output sync results following BaseSyncCommand pattern"""
+        status = result.get('status', 'unknown')
+        success = result.get('success', status == 'success')
+        
+        if success or status == 'success':
             self.stdout.write(
-                self.style.ERROR(f"Sync failed: {e}")
+                self.style.SUCCESS("✓ Marketing Leads sync completed successfully!")
             )
-            raise
+            
+            # Show statistics
+            records_processed = result.get('records_processed', 0)
+            records_created = result.get('records_created', 0)  
+            records_updated = result.get('records_updated', 0)
+            records_failed = result.get('records_failed', 0)
+            
+            self.stdout.write(f"Records: {records_processed} processed ({records_created} created, {records_updated} updated, {records_failed} failed)")
+            
+            # Show sheet info
+            sheet_info = result.get('sheet_info', {})
+            if sheet_info:
+                self.stdout.write(f"Sheet: {sheet_info.get('name', 'Unknown')} ({sheet_info.get('estimated_data_rows', 0)} rows)")
+            
+            # Show duration
+            duration = result.get('duration', result.get('sync_duration', 0))
+            if hasattr(duration, 'total_seconds'):
+                duration = duration.total_seconds()
+            self.stdout.write(f"Duration: {duration:.2f} seconds")
+        
+        elif status == 'skipped':
+            self.stdout.write(
+                self.style.WARNING(f"⚠ Sync skipped: {result.get('reason', 'Unknown reason')}")
+            )
+        else:
+            self.stdout.write(
+                self.style.ERROR(f"✗ Sync failed: {result.get('error', 'Unknown error')}")
+            )
     
     def _display_results(self, result, options):
-        """Display sync results"""
+        """Display sync results (deprecated - use output_results)"""
         
         status = result.get('status', 'unknown')
         
