@@ -109,6 +109,94 @@ class CRMTestInterface:
             estimated_duration="30+ min",
             description="⚠️  FULL SYNC TEST - Will process ALL records! Use with caution!"
         ),
+        
+        # ========================================
+        # CALLRAIL TESTS (9 Commands)
+        # ========================================
+        
+        # UNIT TESTS - CallRail
+        "unit_callrail_flag_validation": TestConfiguration(
+            name="CallRail Flag Validation Tests",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that all CallRail commands have standardized flags (--dry-run, --full, --quiet, etc.)"
+        ),
+        
+        "unit_callrail_help_text": TestConfiguration(
+            name="CallRail Help Text Consistency",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that CallRail help text is consistent and mentions correct CRM names"
+        ),
+        
+        "unit_callrail_command_discovery": TestConfiguration(
+            name="CallRail Command Discovery",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that all CallRail commands can be imported and instantiated"
+        ),
+        
+        # INTEGRATION TESTS - CallRail (Controlled Real Data)
+        "integration_callrail_accounts_limited": TestConfiguration(
+            name="CallRail Accounts Limited Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=10,
+            uses_real_api=True,
+            estimated_duration="1-2 min",
+            description="Tests CallRail accounts sync with real API but limited to 10 records max"
+        ),
+        
+        "integration_callrail_calls_sample": TestConfiguration(
+            name="CallRail Calls Sample Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=50,
+            uses_real_api=True,
+            estimated_duration="3-5 min",
+            description="Tests CallRail calls sync with real API but limited to 50 records max"
+        ),
+        
+        "integration_callrail_companies_controlled": TestConfiguration(
+            name="CallRail Companies Controlled Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.CONTROLLED,
+            max_records=None,
+            date_range_days=7,
+            uses_real_api=True,
+            estimated_duration="2-4 min",
+            description="Tests CallRail companies sync with real API for last 7 days only"
+        ),
+        
+        "integration_callrail_all_limited": TestConfiguration(
+            name="CallRail All Commands Limited Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=20,
+            uses_real_api=True,
+            estimated_duration="8-12 min",
+            description="Tests CallRail orchestration command (sync_callrail_all) with limited data"
+        ),
+        
+        # E2E TESTS - CallRail (Production-like, Use with Extreme Caution)
+        "e2e_callrail_full_sync": TestConfiguration(
+            name="CallRail Full Sync Test",
+            test_type=TestType.E2E,
+            data_usage=DataUsage.FULL,
+            max_records=None,
+            uses_real_api=True,
+            estimated_duration="60+ min",
+            description="⚠️  FULL SYNC TEST - Will process ALL CallRail records! Use with extreme caution!"
+        ),
     }
     
     @classmethod

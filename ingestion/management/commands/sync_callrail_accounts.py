@@ -4,57 +4,24 @@ Management command to sync CallRail accounts
 import logging
 import asyncio
 import os
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.conf import settings
 from django.utils import timezone
+from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.callrail.engines.accounts import AccountsSyncEngine
 from ingestion.models.common import SyncHistory
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
-    help = 'Sync CallRail accounts data'
+class Command(BaseSyncCommand):
+    help = 'Sync CallRail accounts data with standardized flags'
 
     def add_arguments(self, parser):
-        # Standard CRM sync flags according to sync_crm_guide.md
-        parser.add_argument(
-            '--full',
-            action='store_true',
-            help='Perform full sync (ignore last sync timestamp)'
-        )
-        parser.add_argument(
-            '--force-overwrite',
-            action='store_true',
-            help='Completely replace existing records'
-        )
-        parser.add_argument(
-            '--since',
-            type=str,
-            help='Manual sync start date (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Test run without database writes'
-        )
-        parser.add_argument(
-            '--batch-size',
-            type=int,
-            default=100,
-            help='Records per API batch (default: 100)'
-        )
-        parser.add_argument(
-            '--max-records',
-            type=int,
-            default=0,
-            help='Limit total records (0 = unlimited)'
-        )
-        parser.add_argument(
-            '--debug',
-            action='store_true',
-            help='Enable verbose logging'
-        )
+        # Add standardized flags from BaseSyncCommand
+        super().add_arguments(parser)
+        
+        # No additional CallRail-specific flags needed for accounts
 
     def handle(self, *args, **options):
         """Handle the command execution"""

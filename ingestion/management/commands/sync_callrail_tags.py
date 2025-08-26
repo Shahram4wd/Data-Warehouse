@@ -4,45 +4,18 @@ Management command to sync CallRail tags
 import logging
 import asyncio
 import os
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.conf import settings
+from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.callrail.engines.tags import TagsSyncEngine
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(BaseSyncCommand):
     help = 'Sync CallRail tags data'
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--full',
-            action='store_true', 
-            help='Perform full sync (ignore last sync timestamp)'
-        )
-        parser.add_argument(
-            '--since',
-            type=str,
-            help='Sync data since date (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Run in dry-run mode (no database writes)'
-        )
-        parser.add_argument(
-            '--batch-size',
-            type=int,
-            default=100,
-            help='Batch size for API requests'
-        )
-        parser.add_argument(
-            '--max-records',
-            type=int,
-            default=0,
-            help='Maximum records to sync (0 = unlimited)'
-        )
-
+    crm_name = 'CallRail'
+    entity_name = 'tags'
     def handle(self, *args, **options):
         """Handle the command execution"""
         try:
@@ -54,9 +27,7 @@ class Command(BaseCommand):
             # Parse command line options
             dry_run = options['dry_run']
             full_sync = options['full']
-            since = options.get('since')
-            batch_size = options['batch_size']
-            max_records = options['max_records']
+            since_date = options.get('start_date')
             
             self.stdout.write(
                 self.style.SUCCESS('Starting CallRail tags sync')
@@ -66,21 +37,18 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING('Running in DRY-RUN mode'))
             
             # Parse since date if provided
-            since_date = None
-            if since:
+            if since_date:
                 from datetime import datetime
                 try:
-                    since_date = datetime.strptime(since, '%Y-%m-%d')
+                    since_date = datetime.strptime(since_date, '%Y-%m-%d')
                 except ValueError:
-                    raise CommandError(f'Invalid date format: {since}. Use YYYY-MM-DD format.')
+                    raise CommandError(f'Invalid date format: {since_date}. Use YYYY-MM-DD format.')
             
             # Run the sync
             result = asyncio.run(self._run_sync(
                 dry_run=dry_run,
                 full_sync=full_sync,
-                since_date=since_date,
-                batch_size=batch_size,
-                max_records=max_records
+                since_date=since_date
             ))
             
             # Display results

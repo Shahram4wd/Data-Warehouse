@@ -4,27 +4,18 @@ Management command to sync CallRail companies
 import logging
 import asyncio
 import os
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.conf import settings
+from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.callrail.engines.companies import CompaniesSyncEngine
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(BaseSyncCommand):
     help = 'Sync CallRail companies data'
-    
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--full-sync',
-            action='store_true',
-            help='Perform full sync instead of delta sync'
-        )
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Perform a dry run without saving data'
-        )
+    crm_name = 'CallRail'
+    entity_name = 'companies'
     
     def handle(self, *args, **options):
         """Handle the management command"""
@@ -34,7 +25,7 @@ class Command(BaseCommand):
             if not api_key:
                 raise CommandError("CALLRAIL_API_KEY not configured in settings or environment")
             
-            full_sync = options['full_sync']
+            full_sync = options['full']
             dry_run = options.get('dry_run', False)
             
             self.stdout.write(

@@ -4,55 +4,20 @@ Management command to sync CallRail calls data
 import logging
 import asyncio
 import os
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.conf import settings
+from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.callrail.engines.calls import CallsSyncEngine
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
-    help = 'Sync CallRail calls data'
+class Command(BaseSyncCommand):
+    help = 'Sync CallRail calls data with standardized flags'
     
     def add_arguments(self, parser):
-        # Standard CRM sync flags according to sync_crm_guide.md
-        parser.add_argument(
-            '--full',
-            action='store_true',
-            help='Perform full sync (ignore last sync timestamp)'
-        )
-        parser.add_argument(
-            '--force-overwrite',
-            action='store_true',
-            help='Completely replace existing records'
-        )
-        parser.add_argument(
-            '--since',
-            type=str,
-            help='Manual sync start date (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Test run without database writes'
-        )
-        parser.add_argument(
-            '--batch-size',
-            type=int,
-            default=100,
-            help='Records per API batch (default: 100)'
-        )
-        parser.add_argument(
-            '--max-records',
-            type=int,
-            default=0,
-            help='Limit total records (0 = unlimited)'
-        )
-        parser.add_argument(
-            '--debug',
-            action='store_true',
-            help='Enable verbose logging'
-        )
+        # Add standardized flags from BaseSyncCommand
+        super().add_arguments(parser)
         
         # CallRail-specific arguments
         parser.add_argument(
@@ -60,46 +25,33 @@ class Command(BaseCommand):
             type=str,
             help='Optional company ID to filter calls'
         )
-        parser.add_argument(
-            '--start-date',
-            type=str,
-            help='Start date for sync (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            '--end-date',
-            type=str,
-            help='End date for sync (YYYY-MM-DD format)'
-        )
     
     def handle(self, *args, **options):
         """Handle the management command"""
         try:
+            # Validate arguments using BaseSyncCommand
+            self.validate_arguments(options)
+            
             # Check if CallRail API key is configured
             api_key = getattr(settings, 'CALLRAIL_API_KEY', None) or os.getenv('CALLRAIL_API_KEY')
             if not api_key:
                 raise CommandError("CALLRAIL_API_KEY not configured in settings or environment")
             
-            # Parse standard CRM sync arguments
+            # Parse standardized arguments (using new names)
             full_sync = options['full']
-            force_overwrite = options['force_overwrite']
-            since_date = options.get('since')
+            force_overwrite = options['force']  # Updated from force_overwrite
+            start_date = options.get('start_date')  # Now from standardized flags
+            end_date = options.get('end_date')     # Now from standardized flags
             dry_run = options.get('dry_run', False)
             batch_size = options.get('batch_size', 100)
-            max_records = options.get('max_records', 0)
-            debug = options.get('debug', False)
+            quiet = options.get('quiet', False)
             
             # Parse CallRail-specific arguments
             company_id = options.get('company_id')
-            start_date = options.get('start_date')
-            end_date = options.get('end_date')
             
-            # Set up debug logging if requested
-            if debug:
-                logging.getLogger('ingestion.sync.callrail').setLevel(logging.DEBUG)
-            
-            self.stdout.write(
-                self.style.SUCCESS('Starting CallRail calls sync for all accounts')
-            )
+            # Display sync summary using BaseSyncCommand method
+            if not quiet:
+                self.display_sync_summary('CallRail Calls', options)
             
             if dry_run:
                 self.stdout.write(
@@ -110,44 +62,35 @@ class Command(BaseCommand):
             sync_params = {}
             
             # Standard CRM sync parameters
-            if since_date:
-                sync_params['since_date'] = since_date
-                self.stdout.write(f'Manual sync since: {since_date}')
+            if start_date:
+                sync_params['start_date'] = start_date
+                if not quiet:
+                    self.stdout.write(f'Start date: {start_date}')
+            
+            if end_date:
+                sync_params['end_date'] = end_date
+                if not quiet:
+                    self.stdout.write(f'End date: {end_date}')
             
             if batch_size != 100:
                 sync_params['batch_size'] = batch_size
-                self.stdout.write(f'Batch size: {batch_size}')
-            
-            if max_records > 0:
-                sync_params['max_records'] = max_records
-                self.stdout.write(f'Max records limit: {max_records}')
+                if not quiet:
+                    self.stdout.write(f'Batch size: {batch_size}')
             
             # CallRail-specific parameters
             if company_id:
                 sync_params['company_id'] = company_id
-                self.stdout.write(f'Filtering by company: {company_id}')
-
-            if start_date:
-                sync_params['start_date'] = start_date
-                self.stdout.write(f'Start date: {start_date}')
-
-            if end_date:
-                sync_params['end_date'] = end_date
-                self.stdout.write(f'End date: {end_date}')
-            
-            # Display sync mode
-            if force_overwrite:
-                self.stdout.write(self.style.WARNING('FORCE OVERWRITE MODE - Existing records will be replaced'))
-            elif full_sync:
-                self.stdout.write('Full sync mode (ignoring last sync timestamp)')
-            else:
-                self.stdout.write('Delta sync mode (incremental update)')
+                if not quiet:
+                    self.stdout.write(f'Filtering by company: {company_id}')
             
             # Run the sync
             sync_result = asyncio.run(
                 self._run_sync(full_sync, force_overwrite, dry_run, **sync_params)
-            )            # Display results
-            self._display_sync_results(sync_result)
+            )
+            
+            # Display results
+            if not quiet:
+                self._display_sync_results(sync_result)
             
         except Exception as e:
             logger.error(f"CallRail calls sync failed: {e}")

@@ -28,5 +28,35 @@
     "end_time": "2025-08-26T04:41:17.163482",
     "status": "success",
     "result": "Test completed successfully (simulated)"
+  },
+  {
+    "test_name": "unit_callrail_flag_validation",
+    "data_usage": "MOCKED",
+    "start_time": "2025-08-26T05:28:12.471529",
+    "config": {
+      "name": "CallRail Flag Validation Tests",
+      "type": "unit",
+      "uses_real_api": false,
+      "max_records": 0,
+      "estimated_duration": "< 30 sec"
+    },
+    "end_time": "2025-08-26T05:28:12.471582",
+    "status": "success",
+    "result": "Test completed successfully"
+  },
+  {
+    "test_name": "integration_callrail_accounts_limited",
+    "data_usage": "SAMPLE",
+    "start_time": "2025-08-26T05:28:23.450784",
+    "config": {
+      "name": "CallRail Accounts Limited Test",
+      "type": "integration",
+      "uses_real_api": true,
+      "max_records": 10,
+      "estimated_duration": "1-2 min"
+    },
+    "end_time": "2025-08-26T05:28:23.450884",
+    "status": "success",
+    "result": "Test completed successfully"
   }
 ]

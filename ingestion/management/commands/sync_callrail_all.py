@@ -4,8 +4,9 @@ Main management command to sync all CallRail data
 import logging
 import asyncio
 import os
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.conf import settings
+from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.callrail.engines.accounts import AccountsSyncEngine
 from ingestion.sync.callrail.engines.companies import CompaniesSyncEngine
 from ingestion.sync.callrail.engines.calls import CallsSyncEngine
@@ -18,69 +19,10 @@ from ingestion.sync.callrail.engines.users import UsersSyncEngine
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(BaseSyncCommand):
     help = 'Sync all CallRail data (accounts, companies, calls, trackers, form_submissions, text_messages, tags, users)'
-    
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Run in dry-run mode (no database writes)'
-        )
-        parser.add_argument(
-            '--full',
-            action='store_true',
-            help='Perform full sync instead of delta sync'
-        )
-        parser.add_argument(
-            '--quiet',
-            action='store_true',
-            help='Suppress non-error output'
-        )
-        parser.add_argument(
-            '--entities',
-            type=str,
-            nargs='+',
-            default=['accounts', 'companies', 'calls', 'trackers', 'form_submissions', 'text_messages', 'tags', 'users'],
-            choices=['accounts', 'companies', 'calls', 'trackers', 'form_submissions', 'text_messages', 'tags', 'users'],
-            help='Entities to sync (default: all)'
-        )
-        parser.add_argument(
-            '--company-id',
-            type=str,
-            help='Optional company ID to filter trackers and calls'
-        )
-        parser.add_argument(
-            '--start-date',
-            type=str,
-            help='Start date for sync (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            '--end-date',
-            type=str,
-            help='End date for calls sync (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            '--batch-size',
-            type=int,
-            default=100,
-            help='Number of records to process in each batch'
-        )
-        parser.add_argument(
-            '--debug',
-            action='store_true',
-            help='Enable debug logging'
-        )
-        parser.add_argument(
-            '--force',
-            action='store_true',
-            help='Force overwrite existing records'
-        )
-        parser.add_argument(
-            '--parallel',
-            action='store_true',
-            help='Run entity syncs in parallel (experimental)'
-        )
+    crm_name = 'CallRail'
+    entity_name = 'all'
     
     def handle(self, *args, **options):
         """Handle the management command"""

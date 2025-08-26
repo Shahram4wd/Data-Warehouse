@@ -4,55 +4,18 @@ Management command to sync CallRail trackers data
 import logging
 import asyncio
 import os
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from django.conf import settings
+from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.callrail.engines.trackers import TrackersSyncEngine
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(BaseSyncCommand):
     help = 'Sync CallRail trackers data'
-    
-    def add_arguments(self, parser):
-        # Standard CRM sync flags according to sync_crm_guide.md
-        parser.add_argument(
-            '--full',
-            action='store_true',
-            help='Perform full sync (ignore last sync timestamp)'
-        )
-        parser.add_argument(
-            '--force-overwrite',
-            action='store_true',
-            help='Completely replace existing records'
-        )
-        parser.add_argument(
-            '--since',
-            type=str,
-            help='Manual sync start date (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Test run without database writes'
-        )
-        parser.add_argument(
-            '--batch-size',
-            type=int,
-            default=100,
-            help='Records per API batch (default: 100)'
-        )
-        parser.add_argument(
-            '--max-records',
-            type=int,
-            default=0,
-            help='Limit total records (0 = unlimited)'
-        )
-        parser.add_argument(
-            '--company-id',
-            type=str,
-            help='Optional company ID to filter trackers'
-        )
+    crm_name = 'CallRail'
+    entity_name = 'trackers'
     
     def handle(self, *args, **options):
         """Handle the management command"""
@@ -65,7 +28,7 @@ class Command(BaseCommand):
             company_id = options.get('company_id')
             full_sync = options.get('full', False)
             force_overwrite = options.get('force_overwrite', False)
-            since_date = options.get('since')
+            since_date_date = options.get('start_date')
             dry_run = options.get('dry_run', False)
             batch_size = options.get('batch_size', 100)
             max_records = options.get('max_records', 0)
@@ -91,7 +54,7 @@ class Command(BaseCommand):
             sync_result = asyncio.run(
                 self._run_sync(
                     company_id, full_sync, force_overwrite, 
-                    since_date, dry_run, batch_size, max_records
+                    since_date_date, dry_run, batch_size, max_records
                 )
             )
             
@@ -104,7 +67,7 @@ class Command(BaseCommand):
     
     async def _run_sync(
         self, company_id, full_sync, force_overwrite, 
-        since_date, dry_run, batch_size, max_records
+        since_date_date, dry_run, batch_size, max_records
     ):
         """Run the actual sync process"""
         trackers_engine = TrackersSyncEngine()
@@ -120,8 +83,8 @@ class Command(BaseCommand):
         if company_id:
             sync_params['company_id'] = company_id
         
-        if since_date:
-            sync_params['since_date'] = since_date
+        if since_date_date:
+            sync_params['since_date_date'] = since_date_date
         
         if dry_run:
             self.stdout.write("Dry run mode not fully implemented yet")
