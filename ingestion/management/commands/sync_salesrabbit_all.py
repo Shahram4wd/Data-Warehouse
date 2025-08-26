@@ -28,7 +28,12 @@ data integrity and relationships."""
         parser.add_argument(
             "--debug",
             action="store_true",
-            help="Show debug output"
+            help="Enable verbose logging, detailed output, and test mode"
+        )
+        parser.add_argument(
+            "--skip-validation",
+            action="store_true",
+            help="Skip data validation steps"
         )
         parser.add_argument(
             "--dry-run",
@@ -48,14 +53,19 @@ data integrity and relationships."""
             help="Maximum number of records to process per entity (0 for unlimited)"
         )
         parser.add_argument(
-            "--since",
+            "--start-date",
             type=str,
             help="Sync records modified after this date (YYYY-MM-DD format)"
         )
         parser.add_argument(
-            "--force-overwrite",
+            "--force",
             action="store_true",
             help="Force overwrite all existing records, ignoring timestamps and sync history"
+        )
+        parser.add_argument(
+            "--quiet",
+            action="store_true",
+            help="Suppress non-error output"
         )
         parser.add_argument(
             "--skip-leads",

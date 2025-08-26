@@ -53,7 +53,7 @@ class TestSalesRabbitLeadsAdvanced(SalesRabbitTestBase):
         option_strings = parser._option_string_actions
         
         # SalesRabbit-specific advanced flags
-        advanced_flags = ['--since', '--force-overwrite', '--max-records']
+        advanced_flags = ['--start-date', '--force', '--max-records']
         for flag in advanced_flags:
             self.assertIn(flag, option_strings, f"Missing advanced flag: {flag}")
             
@@ -216,7 +216,7 @@ class TestSalesRabbitPerformanceFeatures(SalesRabbitTestBase):
         option_strings = parser._option_string_actions
         
         # Should support force-overwrite for data integrity scenarios
-        self.assertIn('--force-overwrite', option_strings)
+        self.assertIn('--force', option_strings)
         
     def test_since_parameter_capabilities(self):
         """Test since parameter for incremental sync capabilities"""
@@ -225,8 +225,8 @@ class TestSalesRabbitPerformanceFeatures(SalesRabbitTestBase):
         command.add_arguments(parser)
         option_strings = parser._option_string_actions
         
-        # Should support --since for incremental processing
-        self.assertIn('--since', option_strings)
+        # Should support --start-date for incremental processing
+        self.assertIn('--start-date', option_strings)
 
 
 class TestSalesRabbitErrorHandling(SalesRabbitTestBase):

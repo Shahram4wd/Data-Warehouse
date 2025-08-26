@@ -37,9 +37,9 @@ class TestHubSpotContactsCommand(TestCase):
         
         argument_calls = [call[0][0] for call in parser.add_argument.call_args_list]
         
-        # Verify HubSpot's flag system (similar to BaseSyncCommand but with HubSpot naming)
-        expected_flags = ['--full', '--debug', '--dry-run', '--batch-size', 
-                         '--max-records', '--since', '--force-overwrite']
+        # Verify HubSpot's flag system uses consolidated flags
+        expected_flags = ['--full', '--debug', '--skip-validation', '--dry-run', '--batch-size', 
+                         '--max-records', '--start-date', '--force']
         
         for flag in expected_flags:
             self.assertIn(flag, argument_calls, f"HubSpot flag {flag} not found")
@@ -111,7 +111,7 @@ class TestHubSpotDealsCommand(TestCase):
         argument_calls = [call[0][0] for call in parser.add_argument.call_args_list]
         
         # Verify same flag system as contacts (consistent HubSpot architecture)
-        hubspot_flags = ['--full', '--debug', '--dry-run', '--batch-size', '--max-records', '--since', '--force-overwrite']
+        hubspot_flags = ['--full', '--debug', '--skip-validation', '--dry-run', '--batch-size', '--max-records', '--start-date', '--force']
         
         for flag in hubspot_flags:
             self.assertIn(flag, argument_calls, f"Consistent HubSpot flag {flag} not found in deals command")
@@ -187,7 +187,7 @@ class TestHubSpotAppointmentsCommand(TestCase):
         self.command.add_arguments(parser)
         
         argument_calls = [call[0][0] for call in parser.add_argument.call_args_list]
-        hubspot_flags = ['--force-overwrite', '--batch-size', '--max-records', '--since']
+        hubspot_flags = ['--force', '--batch-size', '--max-records', '--start-date']
         
         for flag in hubspot_flags:
             self.assertIn(flag, argument_calls, f"HubSpot architecture flag {flag} missing")
@@ -262,7 +262,7 @@ class TestHubSpotAssociationsCommand(TestCase):
         
         argument_calls = [call[0][0] for call in parser.add_argument.call_args_list]
         self.assertIn('--batch-size', argument_calls)
-        self.assertIn('--force-overwrite', argument_calls)
+        self.assertIn('--force', argument_calls)
 
 
 class TestHubSpotContactsRemovalCommand(TestCase):
@@ -391,7 +391,7 @@ class TestHubSpotGeniusUsersCommand(TestCase):
         self.command.add_arguments(parser)
         
         argument_calls = [call[0][0] for call in parser.add_argument.call_args_list]
-        advanced_flags = ['--max-records', '--since', '--force-overwrite']
+        advanced_flags = ['--max-records', '--start-date', '--force']
         
         for flag in advanced_flags:
             self.assertIn(flag, argument_calls, f"Advanced flag {flag} missing")
@@ -448,7 +448,7 @@ class TestHubSpotZipcodesCommand(TestCase):
         self.command.add_arguments(parser)
         
         argument_calls = [call[0][0] for call in parser.add_argument.call_args_list]
-        consistent_flags = ['--full', '--debug', '--dry-run', '--force-overwrite']
+        consistent_flags = ['--full', '--debug', '--skip-validation', '--dry-run', '--force']
         
         for flag in consistent_flags:
             self.assertIn(flag, argument_calls, f"Consistent HubSpot flag {flag} missing from zipcodes")

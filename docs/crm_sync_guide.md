@@ -367,10 +367,8 @@ async def build_incremental_filter(self, entity_type: str, start_date: datetime)
 
 | Flag | Type | Default | Description | Coverage |
 |------|------|---------|-------------|----------|
-| `--debug` | bool | False | Enable verbose logging and detailed output | ✅ All 8 CRM systems |
-| `--test` | bool | False | Enable test mode (development/staging) | ✅ All 8 CRM systems |
+| `--debug` | bool | False | Enable verbose logging, detailed output, and test mode | ✅ All 8 CRM systems |
 | `--full` | bool | False | Perform full sync (ignore last sync timestamp) | ✅ All 8 CRM systems |
-| `--verbose` | bool | False | Enhanced output verbosity | ✅ All 8 CRM systems |
 | `--skip-validation` | bool | False | Skip data validation steps | ✅ All 8 CRM systems |
 | `--dry-run` | bool | False | Test run without database writes | ✅ All 8 CRM systems |
 | `--batch-size` | int | 100 | Records per API batch | ✅ All 8 CRM systems |
@@ -381,7 +379,7 @@ async def build_incremental_filter(self, entity_type: str, start_date: datetime)
 ### System-Specific Flag Extensions
 
 #### HubSpot Advanced Flags
-**✅ FULLY IMPLEMENTED**: HubSpot commands support additional advanced features:
+**✅ FULLY IMPLEMENTED**: HubSpot commands support all universal flags:
 
 | Flag | Type | Default | Description | Commands |
 |------|------|---------|-------------|----------|
@@ -419,14 +417,16 @@ The following flags are **deprecated** and should be replaced:
 |----------------|-------------|---------|
 | `--force-overwrite` | `--force` | Simplified naming convention |
 | `--since` | `--start-date` | Clearer parameter naming |
+| `--test` | `--debug` | Consolidated redundant debugging flags |
+| `--verbose` | `--debug` | Consolidated redundant debugging flags |
 
 **Migration Guide:**
 ```bash
 # ❌ OLD (Deprecated)
-python manage.py sync_hubspot_contacts --since=2025-01-01 --force-overwrite
+python manage.py sync_hubspot_contacts --since=2025-01-01 --force-overwrite --test --verbose
 
 # ✅ NEW (Current Standard)
-python manage.py sync_hubspot_contacts --start-date=2025-01-01 --force
+python manage.py sync_hubspot_contacts --start-date=2025-01-01 --force --debug
 ```
 
 ### Universal Usage Examples
@@ -445,11 +445,11 @@ python manage.py sync_hubspot_contacts --full --debug
 python manage.py sync_salesrabbit_users --full --debug
 
 # Dry-run testing (safe testing mode)
-python manage.py sync_callrail_calls --dry-run --verbose
+python manage.py sync_callrail_calls --dry-run --debug
 python manage.py sync_arrivy_tasks --dry-run --debug
 
-# Test mode with validation skipping
-python manage.py sync_hubspot_deals --test --skip-validation
+# Debug mode with validation skipping
+python manage.py sync_hubspot_deals --debug --skip-validation
 
 # Batch processing with record limits (ALL CRM systems)
 python manage.py sync_hubspot_contacts --batch-size=50 --max-records=1000
@@ -462,7 +462,7 @@ python manage.py sync_arrivy_bookings --start-date=2025-01-01 --force
 
 # Complete data replacement (ALL CRM systems)
 python manage.py sync_hubspot_contacts --full --force --debug
-python manage.py sync_salesrabbit_leads --full --force --verbose
+python manage.py sync_salesrabbit_leads --full --force --debug
 ```
 
 ### System-Specific Advanced Usage
@@ -471,7 +471,7 @@ python manage.py sync_salesrabbit_leads --full --force --verbose
 ```bash
 # All universal flags work with HubSpot
 python manage.py sync_hubspot_contacts --batch-size=50 --max-records=1000 --debug
-python manage.py sync_hubspot_deals --start-date=2025-01-01 --force --verbose
+python manage.py sync_hubspot_deals --start-date=2025-01-01 --force --debug
 python manage.py sync_hubspot_contacts --full --force --batch-size=200
 ```
 
@@ -479,7 +479,7 @@ python manage.py sync_hubspot_contacts --full --force --batch-size=200
 ```bash
 # Page-by-page processing with universal flags
 python manage.py sync_salesrabbit_users --batch-size=25 --max-records=250 --debug
-python manage.py sync_salesrabbit_leads --batch-size=100 --max-records=2000 --verbose
+python manage.py sync_salesrabbit_leads --batch-size=100 --max-records=2000 --debug
 python manage.py sync_salesrabbit_users --start-date=2025-01-01 --force
 ```
 
@@ -488,14 +488,14 @@ python manage.py sync_salesrabbit_users --start-date=2025-01-01 --force
 # High-performance concurrent processing with universal flags
 python manage.py sync_arrivy_bookings --high-performance --concurrent-pages=4 --batch-size=100
 python manage.py sync_arrivy_tasks --task-status=active --high-performance --max-records=1000 --debug
-python manage.py sync_arrivy_all --high-performance --concurrent-pages=8 --verbose --force
+python manage.py sync_arrivy_all --high-performance --concurrent-pages=8 --debug --force
 ```
 
 #### CallRail - Universal Flag Support  
 ```bash
 # CallRail with all universal flags
 python manage.py sync_callrail_calls --batch-size=200 --max-records=5000 --debug
-python manage.py sync_callrail_companies --start-date=2025-01-01 --force --verbose
+python manage.py sync_callrail_companies --start-date=2025-01-01 --force --debug
 python manage.py sync_callrail_all --full --batch-size=150 --dry-run
 ```
 
@@ -505,11 +505,11 @@ python manage.py sync_callrail_all --full --batch-size=150 --dry-run
 
 # Limited testing with dry-run (ALL CRM systems)
 python manage.py sync_hubspot_contacts --max-records=50 --dry-run --debug
-python manage.py sync_salesrabbit_users --max-records=100 --dry-run --verbose
+python manage.py sync_salesrabbit_users --max-records=100 --dry-run --debug
 python manage.py sync_callrail_calls --max-records=25 --dry-run --batch-size=10
 
 # Performance testing with batching (ALL CRM systems)  
-python manage.py sync_salesrabbit_users --batch-size=10 --max-records=100 --verbose
+python manage.py sync_salesrabbit_users --batch-size=10 --max-records=100 --debug
 python manage.py sync_arrivy_bookings --batch-size=50 --max-records=200 --debug
 
 # High-performance testing
@@ -522,12 +522,12 @@ If you're using deprecated flags, update your commands:
 
 ```bash
 # ❌ OLD (Deprecated - DO NOT USE)
-python manage.py sync_hubspot_contacts --since=2025-01-01 --force-overwrite
-python manage.py sync_callrail_calls --since=2024-12-01 --force-overwrite --batch-size=100
+python manage.py sync_hubspot_contacts --since=2025-01-01 --force-overwrite --test --verbose
+python manage.py sync_callrail_calls --since=2024-12-01 --force-overwrite --batch-size=100 --verbose
 
 # ✅ NEW (Current Standard - USE THESE)
-python manage.py sync_hubspot_contacts --start-date=2025-01-01 --force
-python manage.py sync_callrail_calls --start-date=2024-12-01 --force --batch-size=100
+python manage.py sync_hubspot_contacts --start-date=2025-01-01 --force --debug
+python manage.py sync_callrail_calls --start-date=2024-12-01 --force --batch-size=100 --debug
 
 # ✅ Additional universal flags now available for ALL systems
 python manage.py sync_hubspot_contacts --start-date=2025-01-01 --force --batch-size=50 --max-records=1000
@@ -565,7 +565,7 @@ The following CRM systems are **100% complete** with full testing coverage and p
 ### 🚀 **Architecture Achievements**
 
 #### **Standardization Complete**
-- ✅ **Universal Flag Support**: All 8 systems support the 6 standard flags
+- ✅ **Universal Flag Support**: All 7 systems support the 8 standard flags (excluding MarketSharp)
 - ✅ **Consistent Patterns**: All systems follow BaseSyncCommand inheritance
 - ✅ **SyncHistory Integration**: Mandatory tracking across all systems
 - ✅ **Error Handling**: Standardized error handling and recovery
@@ -632,8 +632,8 @@ class TestCRMSyncCommand(TestCase):
     def test_universal_flags(self):
         """Test that all CRM commands support standard flags"""
         UNIVERSAL_FLAGS = [
-            '--debug', '--test', '--full', '--verbose', 
-            '--skip-validation', '--dry-run'
+            '--debug', '--full', '--skip-validation', '--dry-run',
+            '--batch-size', '--max-records', '--force', '--start-date'
         ]
         
         for flag in UNIVERSAL_FLAGS:

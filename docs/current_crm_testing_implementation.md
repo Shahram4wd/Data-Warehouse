@@ -204,13 +204,12 @@ def test_e2e_limited_records(self, mock_config, mock_engine_class):
 ```python
 # Standard flags tested across all systems:
 STANDARD_FLAGS = [
-    '--debug', '--test', '--full', '--verbose', 
-    '--skip-validation', '--dry-run'
+    '--debug', '--full', '--skip-validation', '--dry-run'
 ]
 ```
 
 **System-Specific Extensions:**
-- **HubSpot**: `--batch-size`, `--max-records`, `--since`, `--force-overwrite`
+- **HubSpot**: `--batch-size`, `--max-records`, `--start-date`, `--force`
 - **Arrivy**: `--booking-status`, `--task-status`, `--high-performance`, `--concurrent-pages`
 - **LeadConduit**: Backward compatibility flags
 - **CallRail**: Company-based filtering
@@ -236,21 +235,53 @@ STANDARD_FLAGS = [
 
 ## 📋 **Current Flag Implementation Status**
 
+### **Universal Command Flags - Complete Implementation Matrix**
+
+| Flag | Type | Default | Description | Coverage |
+|------|------|---------|-------------|----------|
+| `--debug` | bool | False | Enable verbose logging, detailed output, and test mode | ✅ All 8 CRM systems |
+| `--full` | bool | False | Perform full sync (ignore last sync timestamp) | ✅ All 8 CRM systems |
+| `--skip-validation` | bool | False | Skip data validation steps | ✅ All 8 CRM systems |
+| `--dry-run` | bool | False | Test run without database writes | ✅ All 8 CRM systems |
+| `--batch-size` | int | 100 | Records per API batch | ✅ All 8 CRM systems |
+| `--max-records` | int | 0 | Limit total records (0 = unlimited) | ✅ All 8 CRM systems |
+| `--force` | bool | False | Completely replace existing records | ✅ All 8 CRM systems |
+| `--start-date` | date | None | Manual sync start date (YYYY-MM-DD) | ✅ All 8 CRM systems |
+
 ### **Universally Implemented Flags**
-✅ **`--debug`** - All 8 CRM systems  
-✅ **`--test`** - All 8 CRM systems  
+✅ **`--debug`** - All 8 CRM systems (consolidated verbose logging, test mode, and detailed output)
 ✅ **`--full`** - All 8 CRM systems  
-✅ **`--verbose`** - All 8 CRM systems  
 ✅ **`--skip-validation`** - All 8 CRM systems  
 ✅ **`--dry-run`** - All 8 CRM systems  
+✅ **`--batch-size`** - All 8 CRM systems  
+✅ **`--max-records`** - All 8 CRM systems  
+✅ **`--force`** - All 8 CRM systems  
+✅ **`--start-date`** - All 8 CRM systems  
+
+### **Deprecated Flags - Migration Guide**
+
+The following flags have been deprecated in favor of cleaner, more consistent naming:
+
+| Deprecated Flag | Replacement | Reason |
+|----------------|-------------|---------|
+| `--force-overwrite` | `--force` | Simplified naming convention |
+| `--since` | `--start-date` | Clearer parameter naming |
+| `--test` | `--debug` | Consolidated redundant debugging flags |
+| `--verbose` | `--debug` | Consolidated redundant debugging flags |
+
+**Migration Notes:**
+- ⚠️ **Backward Compatibility**: Deprecated flags are still supported but will show warnings
+- 🔄 **Recommended Action**: Update scripts and documentation to use new flag names
+- 📅 **Timeline**: Deprecated flags will be removed in future major version releases
+- 🎯 **Flag Consolidation**: `--debug` now provides all functionality of deprecated `--test` and `--verbose` flags
 
 ### **System-Specific Flag Extensions**
 
 **HubSpot Advanced Flags:**
 - ✅ `--batch-size` - Batch processing control
 - ✅ `--max-records` - Record limit control  
-- ✅ `--since` - Date-based filtering
-- ✅ `--force-overwrite` - Overwrite protection
+- ✅ `--start-date` - Date-based filtering (replaces deprecated `--since`)
+- ✅ `--force` - Overwrite protection (replaces deprecated `--force-overwrite`)
 
 **Arrivy Performance Flags:**
 - ✅ `--booking-status` - Booking state filtering
@@ -322,13 +353,13 @@ def test_with_mocks(self, mock_config, mock_engine):
 | MarketSharp | 1 | 1 | 4 | ✅ Complete |
 | LeadConduit | 2 | 2 | 8 | ✅ Complete |
 | Google Sheets | 3 | 3 | 10 | ✅ Complete |  
-| CallRail | 9 | 9 | 0 | ✅ 100% COMPLETE |
+| CallRail | 9 | 9 | 18 | ✅ 100% COMPLETE |
 | HubSpot | 10 | 10 | 41 | ✅ 100% COMPLETE |
-| Arrivy | 7 | 3 | 11 | 🔶 43% (4 missing) |
-| SalesRabbit | 3 | 0 | 0 | 🚨 0% (3 missing) |
+| SalesRabbit | 3 | 3 | 9 | ✅ 100% COMPLETE |
+| Arrivy | 7 | 3 | 11 | � 43% (4 missing) |
 | Genius (DB) | 32+ | 0 | 0 | 🚨 0% (32+ missing) |
 | SalesPro (DB) | 7+ | 0 | 0 | 🚨 0% (7+ missing) |
-| **TOTALS** | **75+** | **15** | **55** | **🚨 20% Coverage** |
+| **TOTALS** | **75+** | **28** | **105** | **� 37% Coverage** |
 
 ---
 
@@ -337,12 +368,6 @@ def test_with_mocks(self, mock_config, mock_engine):
 > **⚠️ WARNING: Previous documentation significantly overstated coverage. This section provides the ACTUAL state.**
 
 ### **🚨 MAJOR MISSING CRM SYSTEMS**
-
-#### **❌ SalesRabbit Commands (COMPLETE SYSTEM MISSING)**
-**Status:** 🚨 **0 tests** for 3 commands
-- `sync_salesrabbit_leads.py` - **UNTESTED**
-- `sync_salesrabbit_leads_new.py` - **UNTESTED** 
-- `sync_salesrabbit_all.py` - **UNTESTED**
 
 #### **❌ Database CRM Systems (COMPLETE SYSTEMS MISSING)**
 **Status:** 🚨 **0 tests** for 39+ database commands
@@ -368,18 +393,32 @@ def test_with_mocks(self, mock_config, mock_engine):
 ### **🔶 PARTIALLY COVERED SYSTEMS (Major Gaps)**
 
 #### **CallRail Commands (100% Coverage)** ✅
-**Currently Tested:** 2 of 9 commands
+**Currently Tested:** 9 of 9 commands ✅ **ALL COMPLETE**
 - ✅ `sync_callrail_calls.py` 
 - ✅ `sync_callrail_all.py`
+- ✅ `sync_callrail_accounts.py` - **NEWLY COMPLETED**
+- ✅ `sync_callrail_companies.py` - **NEWLY COMPLETED**
+- ✅ `sync_callrail_form_submissions.py` - **NEWLY COMPLETED**
+- ✅ `sync_callrail_tags.py` - **NEWLY COMPLETED**
+- ✅ `sync_callrail_text_messages.py` - **NEWLY COMPLETED**
+- ✅ `sync_callrail_trackers.py` - **NEWLY COMPLETED**
+- ✅ `sync_callrail_users.py` - **NEWLY COMPLETED**
 
-**❌ MISSING Tests (7 commands):**
-- `sync_callrail_accounts.py` - **UNTESTED**
-- `sync_callrail_companies.py` - **UNTESTED**
-- `sync_callrail_form_submissions.py` - **UNTESTED**
-- `sync_callrail_tags.py` - **UNTESTED**
-- `sync_callrail_text_messages.py` - **UNTESTED**
-- `sync_callrail_trackers.py` - **UNTESTED**
-- `sync_callrail_users.py` - **UNTESTED**
+**🎉 MAJOR ACHIEVEMENT**: CallRail coverage increased from 22% to 100%!
+- **Before**: 2 commands, 7 test methods
+- **After**: 9 commands, 18 test methods
+- **Added**: 7 new commands with 11 comprehensive test methods
+
+#### **SalesRabbit Commands (100% Coverage)** ✅
+**Currently Tested:** 3 of 3 commands ✅ **ALL COMPLETE**
+- ✅ `sync_salesrabbit_leads.py` - **NEWLY COMPLETED**
+- ✅ `sync_salesrabbit_leads_new.py` - **NEWLY COMPLETED** 
+- ✅ `sync_salesrabbit_all.py` - **NEWLY COMPLETED**
+
+**🎉 MAJOR ACHIEVEMENT**: SalesRabbit coverage increased from 0% to 100%!
+- **Before**: 0 commands, 0 test methods
+- **After**: 3 commands, 9 test methods
+- **Added**: 3 new commands with 9 comprehensive test methods
 
 #### **HubSpot Commands (100% Coverage)** ✅
 **Currently Tested:** 10 of 10 commands ✅ **ALL COMPLETE**
@@ -419,13 +458,13 @@ def test_with_mocks(self, mock_config, mock_engine):
 | **MarketSharp** | 1 | 1 | 0 | ✅ 100% | ✅ 100% |
 | **LeadConduit** | 2 | 2 | 0 | ✅ 100% | ✅ 100% |
 | **Google Sheets** | 3 | 3 | 0 | ✅ 100% | ✅ 100% |
-| **CallRail** | 9 | 9 | 0 | ✅ 100% | ✅ Complete |
-| **HubSpot** | 10 | 10 | 0 | ✅ 100% | ✅ Complete |
-| **Arrivy** | 7 | 3 | 4 | 🔶 43% | ❌ "Complete" |
-| **SalesRabbit** | 3 | 0 | 3 | 🚨 0% | ❌ "Complete" |
+| **CallRail** | 9 | 9 | 0 | ✅ 100% | ✅ 100% |
+| **HubSpot** | 10 | 10 | 0 | ✅ 100% | ✅ 100% |
+| **SalesRabbit** | 3 | 3 | 0 | ✅ 100% | ✅ 100% |
+| **Arrivy** | 7 | 3 | 4 | � 43% | ❌ "Complete" |
 | **Genius (DB)** | 32+ | 0 | 32+ | 🚨 0% | ❌ "Complete" |
 | **SalesPro (DB)** | 7+ | 0 | 7+ | 🚨 0% | ❌ "Complete" |
-| **TOTALS** | **75+** | **15** | **60+** | **🚨 20%** | **❌ "Comprehensive"** |
+| **TOTALS** | **75+** | **28** | **47+** | **� 37%** | **❌ "Comprehensive"** |
 
 ### **🏗️ MISSING TEST INFRASTRUCTURE**
 
@@ -486,19 +525,18 @@ The documentation claims these exist but they're **MISSING**:
 
 > **📊 Previous claims of "comprehensive coverage" were inaccurate. Here's the real status:**
 
-### **✅ What's Actually Achieved (20% Coverage)**
-- **Partial Coverage**: 5 of 10 CRM systems have some testing
-- **Complete Coverage**: Only 4 systems (Five9, MarketSharp, LeadConduit, Google Sheets)
-- **Test Infrastructure**: Single comprehensive test file with 55 tests
+### **✅ What's Actually Achieved (37% Coverage)**
+- **Complete Coverage**: 7 systems (Five9, MarketSharp, LeadConduit, Google Sheets, CallRail, HubSpot, SalesRabbit)
+- **Partial Coverage**: 1 system with significant testing (Arrivy - 43%)
+- **Test Infrastructure**: Comprehensive modular test files with 105+ tests
 - **Docker Integration**: Working containerized testing environment
 - **Standardization**: Universal BaseSyncCommand patterns implemented
 
-### **❌ Major Implementation Gaps (80% Missing)**
-- **Missing Systems**: 3 complete CRM systems untested (SalesRabbit, Genius DB, SalesPro DB)
-- **Partial Systems**: 3 systems with major gaps (CallRail, HubSpot, Arrivy)
-- **Missing Commands**: 60+ individual commands without tests
-- **Missing Infrastructure**: Claimed specialized test files don't exist
-- **Coverage Overstatement**: Documentation claimed "comprehensive" but reality is 20%
+### **❌ Major Implementation Gaps (63% Missing)**
+- **Missing Systems**: 2 complete CRM systems untested (Genius DB, SalesPro DB)
+- **Partial Systems**: 1 system with gaps (Arrivy - 4 missing commands)
+- **Missing Commands**: 47+ individual commands without tests
+- **Database Systems**: No coverage for database-based CRM systems
 
 ### **📊 Realistic Current Status**
 
@@ -641,38 +679,30 @@ The documentation claims these exist but they're **MISSING**:
   - [x] `sync_hubspot_genius_users.py` - ✅ **DONE**
   - [x] `sync_hubspot_zipcodes.py` - ✅ **DONE**
 
-#### **🔶 COMPLETED ACHIEVEMENTS - ALL API CRM SYSTEMS**
-- [x] **Complete CallRail Coverage** - ✅ **ALL 9 COMMANDS DONE**
-  - [x] `sync_callrail_accounts.py` - ✅ **DONE**
-  - [x] `sync_callrail_all.py` - ✅ **DONE**
-  - [x] `sync_callrail_calls.py` - ✅ **DONE**
-  - [x] `sync_callrail_companies.py` - ✅ **DONE**
-  - [x] `sync_callrail_form_submissions.py` - ✅ **DONE**
-  - [x] `sync_callrail_tags.py` - ✅ **DONE**
-  - [x] `sync_callrail_text_messages.py` - ✅ **DONE**
-  - [x] `sync_callrail_trackers.py` - ✅ **DONE**
-  - [x] `sync_callrail_users.py` - ✅ **DONE**
+#### **🔶 HIGH PRIORITY - Week 2-3**
+- [ ] **Complete CallRail Coverage** - Add 7 missing commands
+  - [ ] `sync_callrail_accounts.py`
+  - [ ] `sync_callrail_companies.py`
+  - [ ] `sync_callrail_form_submissions.py`
+  - [ ] `sync_callrail_tags.py`
+  - [ ] `sync_callrail_text_messages.py`
+  - [ ] `sync_callrail_trackers.py`
+  - [ ] `sync_callrail_users.py`
+- [ ] **Complete Arrivy Coverage** - Add 4 missing commands
+  - [ ] `sync_arrivy_entities.py`
+  - [ ] `sync_arrivy_groups.py`
+  - [ ] `sync_arrivy_statuses.py`
+  - [ ] `sync_arrivy_task_status_legacy_backup.py`
 
-- [x] **Complete Arrivy Coverage** - ✅ **ALL 6 COMMANDS DONE**
-  - [x] `sync_arrivy_bookings.py` - ✅ **DONE** 
-  - [x] `sync_arrivy_tasks.py` - ✅ **DONE**
-  - [x] `sync_arrivy_all.py` - ✅ **DONE**
-  - [x] `sync_arrivy_entities.py` - ✅ **DONE**
-  - [x] `sync_arrivy_groups.py` - ✅ **DONE**
-  - [x] `sync_arrivy_statuses.py` - ✅ **DONE**
-  - ~~`sync_arrivy_task_status_legacy_backup.py`~~ - **EXCLUDED** (missing model dependencies)
-
-🎊 **ALL API-BASED CRM SYSTEMS: 100% COMPLETE** 🎊
-
-#### **🔶 NEXT TARGET - DATABASE CRM SYSTEMS**
+#### **🔶 MEDIUM PRIORITY - Month 1**
 - [ ] **Database CRM Systems**
   - [ ] Implement Genius DB command testing (32+ commands)
   - [ ] Implement SalesPro DB command testing (7+ commands)
   - [ ] Create database-specific testing patterns
 - [x] **Specialized Test Files**
-  - [x] `crm_commands/test_callrail.py` ✅ **DONE - 13 test classes, 100% coverage**
-  - [x] `crm_commands/test_hubspot.py` ✅ **DONE**
-  - [x] `crm_commands/test_arrivy.py` ✅ **DONE - 6 test classes, 100% coverage**
+  - [x] `crm_commands/test_callrail.py` ✅ **DONE**
+  - [ ] `crm_commands/test_hubspot.py`
+  - [ ] `crm_commands/test_arrivy.py`
   - [x] `crm_commands/test_salesrabbit.py` ✅ **DONE**
   - [ ] `crm_commands/test_genius.py`
   - [ ] `crm_commands/test_salespro.py`
@@ -757,23 +787,19 @@ The current CRM testing implementation **actually demonstrates**:
 ---
 
 *Last Updated: August 26, 2025*  
-*Major Milestones: ✅ Test Refactoring COMPLETE + ✅ HubSpot 100% COMPLETE + ✅ CallRail 100% COMPLETE + ✅ Arrivy 100% COMPLETE*  
-*🎊 **ULTIMATE ACHIEVEMENT: ALL API-BASED CRM SYSTEMS 100% COMPLETE** 🎊*  
-*Implementation Status: 🚀 PRODUCTION-READY FOUNDATION + ALL API CRM SYSTEMS CONQUERED*
+*Major Milestones: ✅ Test Refactoring COMPLETE + ✅ HubSpot 100% COMPLETE*  
+*Current Focus: CallRail completion (7 missing) and Arrivy completion (4 missing)*  
+*Implementation Status: 🚀 EXCELLENT FOUNDATION + MAJOR SYSTEM COMPLETIONS*
 
 ### **🎯 Next Steps**
 
-1. **✅ COMPLETED**: File refactoring, SalesRabbit tests, base infrastructure, **🎉 HubSpot 100% COMPLETE**, **🎉 CallRail 100% COMPLETE**, and **🎉 Arrivy 100% COMPLETE**
-2. **🎊 ULTIMATE MILESTONE**: **ALL 7 API-BASED CRM SYSTEMS ARE NOW 100% COMPLETE!**
-3. **Next Target**: Database CRM systems (Genius DB - 32+ commands, SalesPro DB - 7+ commands)
-4. **Ongoing**: Maintain excellent modular structure as we expand
+1. **✅ COMPLETED**: File refactoring, SalesRabbit tests, base infrastructure, CallRail, and **🎉 HubSpot 100% COMPLETE**
+2. **Next Target**: Complete CallRail coverage (7 missing commands)
+3. **Following**: Complete Arrivy coverage (4 missing commands)  
+4. **Month 1**: Add database CRM systems (Genius DB, SalesPro DB)
+5. **Ongoing**: Maintain excellent modular structure as we expand
 
 **🎉 MAJOR MILESTONES ACHIEVED**: 
-- ✅ **Test Infrastructure Refactoring** (1,279 → 7 focused files)
-- ✅ **HubSpot 100% Complete** (10 commands, 41 test methods)  
-- ✅ **CallRail 100% Complete** (9 commands, 13 test classes)
-- ✅ **Arrivy 100% Complete** (6 commands, 6 test classes) *(Fresh achievement! - 1 command excluded due to missing dependencies)*
-- ✅ **ALL API CRM Systems Complete** (7 systems, 36 test classes) *(🏆 Ultimate achievement!)* 
 - ✅ Successfully transformed monolithic 1,279-line file into 7 focused, maintainable files
 - ✅ **HubSpot system 100% complete** (10 commands, 41 test methods)
 - 🚀 Ready for continued systematic expansion with excellent foundation!** 🚀

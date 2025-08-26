@@ -37,9 +37,7 @@ class TestArrivyBookingsCommand(TestCase):
         
         # Check standard flags
         self.assertIn('--debug', option_strings)
-        self.assertIn('--test', option_strings)
         self.assertIn('--full', option_strings)
-        self.assertIn('--verbose', option_strings)
         self.assertIn('--skip-validation', option_strings)
         self.assertIn('--dry-run', option_strings)
         
@@ -85,9 +83,7 @@ class TestArrivyTasksCommand(TestCase):
         
         # Check standard flags
         self.assertIn('--debug', option_strings)
-        self.assertIn('--test', option_strings)
         self.assertIn('--full', option_strings)
-        self.assertIn('--verbose', option_strings)
         self.assertIn('--skip-validation', option_strings)
         self.assertIn('--dry-run', option_strings)
         
@@ -135,9 +131,7 @@ class TestArrivyAllCommand(TestCase):
         
         # Check standard flags
         self.assertIn('--debug', option_strings)
-        self.assertIn('--test', option_strings)
         self.assertIn('--full', option_strings)
-        self.assertIn('--verbose', option_strings)
         self.assertIn('--skip-validation', option_strings)
         self.assertIn('--dry-run', option_strings)
         

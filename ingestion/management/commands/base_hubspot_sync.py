@@ -47,7 +47,12 @@ class BaseHubSpotSyncCommand(BaseCommand):
         parser.add_argument(
             "--debug",
             action="store_true",
-            help="Show debug output"
+            help="Enable verbose logging, detailed output, and test mode"
+        )
+        parser.add_argument(
+            "--skip-validation",
+            action="store_true",
+            help="Skip data validation steps"
         )
         parser.add_argument(
             "--dry-run",
@@ -67,14 +72,24 @@ class BaseHubSpotSyncCommand(BaseCommand):
             help="Maximum number of records to process (0 for unlimited)"
         )
         parser.add_argument(
-            "--since",
+            "--start-date",
             type=str,
             help="Sync records modified after this date (YYYY-MM-DD format)"
         )
         parser.add_argument(
-            "--force-overwrite",
+            "--force",
             action="store_true",
             help="Force overwrite all existing records, ignoring timestamps and sync history"
+        )
+        parser.add_argument(
+            "--quiet",
+            action="store_true",
+            help="Suppress non-error output"
+        )
+        parser.add_argument(
+            "--no-progress",
+            action="store_true",
+            help="Disable progress bar display"
         )
 
     def handle(self, *args, **options):
@@ -92,9 +107,9 @@ class BaseHubSpotSyncCommand(BaseCommand):
         
         # Run the sync
         try:
-            if options.get('force_overwrite'):
+            if options.get('force'):
                 self.stdout.write(self.style.WARNING(
-                    f"⚠️  FORCE OVERWRITE MODE: Starting {self.get_sync_name()} sync with complete record replacement..."
+                    f"⚠️  FORCE MODE: Starting {self.get_sync_name()} sync with complete record replacement..."
                 ))
                 self.stdout.write(self.style.WARNING(
                     "This will overwrite ALL existing records, ignoring timestamps and sync history."
@@ -131,7 +146,7 @@ class BaseHubSpotSyncCommand(BaseCommand):
             'max_records': options.get('max_records', 0),
             'endpoint': self.get_sync_name(),
             'show_progress': not options.get('no_progress', False),
-            'force_overwrite': options.get('force_overwrite', False)
+            'force_overwrite': options.get('force', False)
         }
         
         if options.get('debug'):
@@ -144,15 +159,15 @@ class BaseHubSpotSyncCommand(BaseCommand):
     
     def get_last_sync_time(self, **options) -> Optional[datetime]:
         """Determine the last sync time"""
-        # Priority: 1) --since parameter, 2) database last sync, 3) full sync
-        if options.get('since'):
+        # Priority: 1) --start-date parameter, 2) database last sync, 3) full sync
+        if options.get('start_date'):
             try:
-                last_sync = datetime.strptime(options['since'], "%Y-%m-%d")
+                last_sync = datetime.strptime(options['start_date'], "%Y-%m-%d")
                 last_sync = timezone.make_aware(last_sync)
-                self.stdout.write(f"Using provided since date: {options['since']}")
+                self.stdout.write(f"Using provided start date: {options['start_date']}")
                 return last_sync
             except ValueError:
-                raise CommandError(f"Invalid date format for --since. Use YYYY-MM-DD format.")
+                raise CommandError(f"Invalid date format for --start-date. Use YYYY-MM-DD format.")
         
         if options.get('full'):
             self.stdout.write("Performing full sync")
@@ -181,21 +196,21 @@ class BaseHubSpotSyncCommand(BaseCommand):
     
     async def get_last_sync_time_async(self, **options) -> Optional[datetime]:
         """Determine the last sync time (async version)"""
-        # Priority: 1) --since parameter (even with force-overwrite), 2) --force-overwrite (None), 3) --full flag, 4) database last sync
-        if options.get('since'):
+        # Priority: 1) --start-date parameter (even with force), 2) --force (None), 3) --full flag, 4) database last sync
+        if options.get('start_date'):
             try:
-                last_sync = datetime.strptime(options['since'], "%Y-%m-%d")
+                last_sync = datetime.strptime(options['start_date'], "%Y-%m-%d")
                 last_sync = timezone.make_aware(last_sync)
-                if options.get('force_overwrite'):
-                    self.stdout.write(f"Force overwrite mode with date filter - fetching records modified since {options['since']}")
+                if options.get('force'):
+                    self.stdout.write(f"Force mode with date filter - fetching records modified since {options['start_date']}")
                 else:
-                    self.stdout.write(f"Using provided since date: {options['since']}")
+                    self.stdout.write(f"Using provided start date: {options['start_date']}")
                 return last_sync
             except ValueError:
-                raise CommandError(f"Invalid date format for --since. Use YYYY-MM-DD format.")
+                raise CommandError(f"Invalid date format for --start-date. Use YYYY-MM-DD format.")
                 
-        if options.get('force_overwrite'):
-            self.stdout.write("Force overwrite mode - fetching ALL records and ignoring local timestamps")
+        if options.get('force'):
+            self.stdout.write("Force mode - fetching ALL records and ignoring local timestamps")
             return None
         
         if options.get('full'):
@@ -232,7 +247,7 @@ class BaseHubSpotSyncCommand(BaseCommand):
         if history.status == 'success':
             if hasattr(self.sync_engine, 'force_overwrite') and self.sync_engine.force_overwrite:
                 self.stdout.write(self.style.SUCCESS(
-                    f"✓ {self.get_sync_name().title()} FORCE OVERWRITE completed successfully"
+                    f"✓ {self.get_sync_name().title()} FORCE MODE completed successfully"
                 ))
                 self.stdout.write(self.style.WARNING(
                     "All records were completely replaced with HubSpot data"

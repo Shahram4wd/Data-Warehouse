@@ -29,7 +29,7 @@ class BaseSyncCommand(BaseCommand, ABC):
         """
         Add standard CRM sync arguments following crm_sync_guide.md
         
-        Standard Flags (All CRM Syncs) - UPDATED TO STANDARDS:
+        Standard Flags (All CRM Syncs) - SIMPLIFIED AND STANDARDIZED:
         - --full: Perform full sync (ignore last sync timestamp)
         - --force: Force overwrite existing records (standardized from --force-overwrite)
         - --start-date: Manual sync start date (YYYY-MM-DD) - replaces deprecated --since
@@ -37,8 +37,9 @@ class BaseSyncCommand(BaseCommand, ABC):
         - --dry-run: Test run without database writes
         - --batch-size: Records per API batch
         - --max-records: Limit total records (0 = unlimited)
-        - --debug: Enable verbose logging
-        - --quiet: Suppress non-error output (NEW STANDARD FLAG)
+        - --debug: Enable verbose logging, detailed output, and test mode (consolidated)
+        - --skip-validation: Skip data validation steps
+        - --quiet: Suppress non-error output
         """
         # Core sync strategy flags
         parser.add_argument(
@@ -90,7 +91,13 @@ class BaseSyncCommand(BaseCommand, ABC):
         parser.add_argument(
             '--debug',
             action='store_true',
-            help='Enable verbose logging'
+            help='Enable verbose logging, detailed output, and test mode'
+        )
+        
+        parser.add_argument(
+            '--skip-validation',
+            action='store_true',
+            help='Skip data validation steps'
         )
         
         parser.add_argument(

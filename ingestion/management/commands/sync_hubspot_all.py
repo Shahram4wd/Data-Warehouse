@@ -25,7 +25,12 @@ class Command(BaseCommand):
         parser.add_argument(
             "--debug",
             action="store_true",
-            help="Show debug output"
+            help="Enable verbose logging, detailed output, and test mode"
+        )
+        parser.add_argument(
+            "--skip-validation",
+            action="store_true",
+            help="Skip data validation steps"
         )
         parser.add_argument(
             "--dry-run",
@@ -39,14 +44,30 @@ class Command(BaseCommand):
             help="Batch size for all sync operations"
         )
         parser.add_argument(
+            "--max-records",
+            type=int,
+            default=0,
+            help="Maximum number of records to process (0 for unlimited)"
+        )
+        parser.add_argument(
+            "--start-date",
+            type=str,
+            help="Sync records modified after this date (YYYY-MM-DD format)"
+        )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            help="Force overwrite all existing records for all sync operations, ignoring timestamps"
+        )
+        parser.add_argument(
+            "--quiet",
+            action="store_true",
+            help="Suppress non-error output"
+        )
+        parser.add_argument(
             "--skip-associations",
             action="store_true",
             help="Skip association syncs"
-        )
-        parser.add_argument(
-            "--force-overwrite",
-            action="store_true",
-            help="Force overwrite all existing records for all sync operations, ignoring timestamps"
         )
     
     def handle(self, *args, **options):
@@ -84,8 +105,8 @@ class Command(BaseCommand):
             common_args.append('--debug')
         if options.get('dry_run'):
             common_args.append('--dry-run')
-        if options.get('force_overwrite'):
-            common_args.append('--force-overwrite')
+        if options.get('force'):
+            common_args.append('--force')
         if options.get('batch_size'):
             common_args.extend(['--batch-size', str(options['batch_size'])])
         
