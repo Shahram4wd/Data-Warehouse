@@ -1,47 +1,32 @@
 """
-Five9 Contacts Sync Management Comm        parser.add_argument(
-            '--max-records',
-            type=int,
-            default=Five9Config.MAX_BATCH_SIZE,
-            help=f'Maximum records to retrieve per list (default: {Five9Config.MAX_BATCH_SIZE})'
-        )ynchronizes contact records from Five9 to the data warehouse
+Five9 Contacts Sync Management Command
+
+Synchronizes contact records from Five9 to the data warehouse
 """
 import logging
 from typing import Any, Dict
-from django.core.management.base import BaseCommand, CommandParser
+from django.core.management.base import CommandParser
 from django.utils import timezone
+from ingestion.base.commands import BaseSyncCommand
 from ingestion.sync.five9.engines.contacts import ContactsSyncEngine
 from ingestion.config.five9_config import Five9Config
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(BaseSyncCommand):
     """Management command for syncing Five9 contacts"""
     
     help = 'Sync contact records from Five9'
+    crm_name = 'Five9'
+    entity_name = 'contacts'
     
     def add_arguments(self, parser: CommandParser):
         """Add command arguments"""
-        parser.add_argument(
-            '--full',
-            action='store_true',
-            help='Perform full sync instead of delta sync'
-        )
+        # Add base sync arguments (--full, --force, --start-date, etc.)
+        super().add_arguments(parser)
         
-        parser.add_argument(
-            '--dry-run',
-            action='store_true',
-            help='Run sync without saving data to database'
-        )
-        
-        parser.add_argument(
-            '--batch-size',
-            type=int,
-            default=Five9Config.DEFAULT_BATCH_SIZE,
-            help=f'Number of records to process in each batch (default: {Five9Config.DEFAULT_BATCH_SIZE})'
-        )
-        
+        # Add Five9-specific arguments
         parser.add_argument(
             '--max-records-per-list',
             type=int,
@@ -50,27 +35,15 @@ class Command(BaseCommand):
         )
         
         parser.add_argument(
-            '--since',
-            type=str,
-            help='Sync records modified since this datetime (YYYY-MM-DD HH:MM:SS)'
-        )
-        
-        parser.add_argument(
             '--list-name',
             type=str,
             help='Sync only the specified contact list'
-        )
-        
-        parser.add_argument(
-            '--verbose',
-            action='store_true',
-            help='Enable verbose logging output'
         )
     
     def handle(self, *args, **options):
         """Execute the sync command"""
         # Setup logging
-        if options['verbose']:
+        if options['debug']:
             logging.getLogger('ingestion.sync.five9').setLevel(logging.DEBUG)
             logging.getLogger().setLevel(logging.DEBUG)
         
@@ -79,24 +52,24 @@ class Command(BaseCommand):
         )
         
         # Validate arguments
-        if options['since'] and options['full']:
+        if options['start_date'] and options['full']:
             self.stdout.write(
-                self.style.ERROR('Cannot use --since with --full. Use one or the other.')
+                self.style.ERROR('Cannot use --start-date with --full. Use one or the other.')
             )
             return
         
         # Parse since datetime if provided
         since_datetime = None
-        if options['since']:
+        if options['start_date']:
             try:
-                since_datetime = timezone.datetime.fromisoformat(options['since'])
+                since_datetime = timezone.datetime.fromisoformat(options['start_date'])
                 if timezone.is_naive(since_datetime):
                     since_datetime = timezone.make_aware(since_datetime)
             except ValueError:
                 self.stdout.write(
                     self.style.ERROR(
-                        f"Invalid datetime format: {options['since']}. "
-                        "Use YYYY-MM-DD HH:MM:SS"
+                        f"Invalid datetime format: {options['start_date']}. "
+                        "Use YYYY-MM-DD format"
                     )
                 )
                 return

@@ -284,6 +284,140 @@ class CRMTestInterface:
             estimated_duration="120+ min",
             description="⚠️  FULL SYNC TEST - Will process ALL HubSpot records! Use with EXTREME caution!"
         ),
+        
+        # FIVE9 TESTS (1 Command)
+        # ============================================================================================
+        
+        # UNIT TESTS - Five9
+        "unit_five9_flag_validation": TestConfiguration(
+            name="Five9 Flag Validation Tests",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that Five9 command has standardized flags (--dry-run, --full, --debug, etc.)"
+        ),
+        
+        "unit_five9_help_text": TestConfiguration(
+            name="Five9 Help Text Consistency",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that Five9 help text is consistent and mentions correct CRM names"
+        ),
+        
+        "unit_five9_command_discovery": TestConfiguration(
+            name="Five9 Command Discovery",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that Five9 command can be imported and instantiated"
+        ),
+        
+        # INTEGRATION TESTS - Five9 (Controlled Real Data)
+        "integration_five9_contacts_limited": TestConfiguration(
+            name="Five9 Contacts Limited Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=25,
+            uses_real_api=True,
+            estimated_duration="2-5 min",
+            description="Tests Five9 contacts sync with real API but limited to 25 records max"
+        ),
+        
+        "integration_five9_contacts_controlled": TestConfiguration(
+            name="Five9 Contacts Controlled Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.CONTROLLED,
+            max_records=None,
+            date_range_days=7,
+            uses_real_api=True,
+            estimated_duration="3-6 min",
+            description="Tests Five9 contacts sync with real API for last 7 days only"
+        ),
+        
+        # E2E TESTS - Five9 (Production-like, Use with Extreme Caution)
+        "e2e_five9_full_sync": TestConfiguration(
+            name="Five9 Full Sync Test",
+            test_type=TestType.E2E,
+            data_usage=DataUsage.FULL,
+            max_records=None,
+            uses_real_api=True,
+            estimated_duration="30+ min",
+            description="⚠️  FULL SYNC TEST - Will process ALL Five9 records! Use with caution!"
+        ),
+        
+        # MARKETSHARP TESTS (1 Command)
+        # ============================================================================================
+        
+        # UNIT TESTS - MarketSharp
+        "unit_marketsharp_flag_validation": TestConfiguration(
+            name="MarketSharp Flag Validation Tests",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that MarketSharp command has standardized flags (--dry-run, --full, --debug, etc.)"
+        ),
+        
+        "unit_marketsharp_help_text": TestConfiguration(
+            name="MarketSharp Help Text Consistency",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that MarketSharp help text is consistent and mentions correct CRM names"
+        ),
+        
+        "unit_marketsharp_command_discovery": TestConfiguration(
+            name="MarketSharp Command Discovery",
+            test_type=TestType.UNIT,
+            data_usage=DataUsage.MOCKED,
+            max_records=0,
+            uses_real_api=False,
+            estimated_duration="< 30 sec",
+            description="Tests that MarketSharp command can be imported and instantiated"
+        ),
+        
+        # INTEGRATION TESTS - MarketSharp (Controlled Real Data)
+        "integration_marketsharp_leads_limited": TestConfiguration(
+            name="MarketSharp Leads Limited Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.LIMITED,
+            max_records=50,
+            uses_real_api=True,
+            estimated_duration="3-6 min",
+            description="Tests MarketSharp leads endpoint sync with real API but limited to 50 records max"
+        ),
+        
+        "integration_marketsharp_contacts_controlled": TestConfiguration(
+            name="MarketSharp Contacts Controlled Test",
+            test_type=TestType.INTEGRATION,
+            data_usage=DataUsage.CONTROLLED,
+            max_records=None,
+            date_range_days=7,
+            uses_real_api=True,
+            estimated_duration="4-8 min",
+            description="Tests MarketSharp contacts endpoint sync with real API for last 7 days only"
+        ),
+        
+        # E2E TESTS - MarketSharp (Production-like, Use with Extreme Caution)
+        "e2e_marketsharp_full_sync": TestConfiguration(
+            name="MarketSharp Full Sync Test",
+            test_type=TestType.E2E,
+            data_usage=DataUsage.FULL,
+            max_records=None,
+            uses_real_api=True,
+            estimated_duration="45+ min",
+            description="⚠️  FULL SYNC TEST - Will process ALL MarketSharp endpoints! Use with caution!"
+        ),
     }
     
     @classmethod
