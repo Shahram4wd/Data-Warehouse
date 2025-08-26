@@ -66,7 +66,11 @@ class SalesRabbitBaseClient(BaseAPIClient):
         # Use context manager for proper session handling
         async with self as client:
             while True:
-                current_params = {**params, 'page': page, 'limit': page_size}
+                # Different endpoints use different pagination parameters
+                if '/users' in endpoint:
+                    current_params = {**params, 'currentPage': page, 'limit': page_size}
+                else:
+                    current_params = {**params, 'page': page, 'limit': page_size}
                 
                 try:
                     response = await client.make_request('GET', endpoint, params=current_params)
@@ -75,7 +79,7 @@ class SalesRabbitBaseClient(BaseAPIClient):
                     if isinstance(response, list):
                         data = response
                     elif isinstance(response, dict):
-                        data = response.get('data', response.get('leads', []))
+                        data = response.get('data', response.get('leads', response.get('users', [])))
                     else:
                         data = []
                     
@@ -108,12 +112,17 @@ class SalesRabbitBaseClient(BaseAPIClient):
         
         all_data = []
         page = 1
-        page_size = params.get('limit', 1000)
+        # Use the limit from params directly for true pagination testing
+        page_size = params.get('limit', 100)
         
         # Use context manager for proper session handling
         async with self as client:
             while len(all_data) < max_records:
-                current_params = {**params, 'page': page, 'limit': page_size}
+                # Different endpoints use different pagination parameters
+                if '/users' in endpoint:
+                    current_params = {**params, 'currentPage': page, 'limit': page_size}
+                else:
+                    current_params = {**params, 'page': page, 'limit': page_size}
                 
                 try:
                     response = await client.make_request('GET', endpoint, params=current_params)
@@ -122,7 +131,7 @@ class SalesRabbitBaseClient(BaseAPIClient):
                     if isinstance(response, list):
                         data = response
                     elif isinstance(response, dict):
-                        data = response.get('data', response.get('leads', []))
+                        data = response.get('data', response.get('leads', response.get('users', [])))
                     else:
                         data = []
                     
@@ -179,7 +188,7 @@ class SalesRabbitBaseClient(BaseAPIClient):
                     if isinstance(response, list):
                         data = response
                     elif isinstance(response, dict):
-                        data = response.get('data', response.get('leads', []))
+                        data = response.get('data', response.get('leads', response.get('users', [])))
                     else:
                         data = []
                     
@@ -228,7 +237,7 @@ class SalesRabbitBaseClient(BaseAPIClient):
                     if isinstance(response, list):
                         data = response
                     elif isinstance(response, dict):
-                        data = response.get('data', response.get('leads', []))
+                        data = response.get('data', response.get('leads', response.get('users', [])))
                     else:
                         data = []
                     

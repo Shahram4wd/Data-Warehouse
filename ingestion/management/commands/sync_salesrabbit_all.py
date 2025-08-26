@@ -62,6 +62,11 @@ data integrity and relationships."""
             action="store_true",
             help="Skip syncing leads"
         )
+        parser.add_argument(
+            "--skip-users",
+            action="store_true",
+            help="Skip syncing users"
+        )
 
     def handle(self, *args, **options):
         """Main command handler"""
@@ -102,9 +107,21 @@ data integrity and relationships."""
                 sync_results['leads'] = f'FAILED: {str(e)}'
                 self.stdout.write(self.style.ERROR(f"✗ Leads sync failed: {str(e)}"))
         
+        # 2. Sync Users (representatives/staff)
+        if not options.get('skip_users'):
+            self.stdout.write("\n" + "="*60)
+            self.stdout.write("👥 SYNCING SALESRABBIT USERS")
+            self.stdout.write("="*60)
+            try:
+                call_command('sync_salesrabbit_users', *common_args, **common_kwargs)
+                sync_results['users'] = 'SUCCESS'
+                self.stdout.write(self.style.SUCCESS("✓ Users sync completed"))
+            except Exception as e:
+                sync_results['users'] = f'FAILED: {str(e)}'
+                self.stdout.write(self.style.ERROR(f"✗ Users sync failed: {str(e)}"))
+        
         # Future entities can be added here:
         # - Campaigns
-        # - Users/Representatives
         # - Custom fields
         # - Activity logs
         

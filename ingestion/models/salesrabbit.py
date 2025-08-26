@@ -88,3 +88,84 @@ class SalesRabbit_Lead(models.Model):
         """Return formatted full address"""
         parts = [self.street1, self.city, self.state, self.zip]
         return ", ".join(part for part in parts if part)
+
+
+class SalesRabbit_User(models.Model):
+    """Model representing a SalesRabbit user/representative"""
+    id = models.BigIntegerField(primary_key=True)
+    
+    # Personal information
+    first_name = models.CharField(max_length=255, null=True, blank=True)
+    last_name = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    
+    # Employment status
+    active = models.BooleanField(default=True)
+    hire_date = models.DateField(null=True, blank=True)
+    
+    # Organization structure
+    business_unit = models.CharField(max_length=255, null=True, blank=True)
+    department = models.CharField(max_length=255, null=True, blank=True)
+    role = models.CharField(max_length=255, null=True, blank=True)
+    office = models.CharField(max_length=255, null=True, blank=True)
+    team = models.CharField(max_length=255, null=True, blank=True)
+    region = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Organization IDs
+    org_id = models.BigIntegerField(null=True, blank=True)
+    supervisor_id = models.BigIntegerField(null=True, blank=True)
+    recruiter_id = models.BigIntegerField(null=True, blank=True)
+    
+    # CMS Integration
+    cms_id = models.BigIntegerField(null=True, blank=True)
+    lead_rep_cms_id = models.BigIntegerField(null=True, blank=True)
+    
+    # Profile information
+    photo_url = models.URLField(null=True, blank=True)
+    
+    # External system integration
+    external_ids = models.JSONField(null=True, blank=True)  # Array of external IDs
+    
+    # Dates
+    date_created = models.DateTimeField(null=True, blank=True)
+    date_modified = models.DateTimeField(null=True, blank=True)
+    
+    # Raw data backup
+    data = models.JSONField()  # Raw user data from API
+    
+    # Sync tracking - STANDARDIZED to match other CRM models
+    sync_created_at = models.DateTimeField(auto_now_add=True)  # When record was first created in our DB
+    sync_updated_at = models.DateTimeField(auto_now=True)      # When record was last updated in our DB
+
+    class Meta:
+        db_table = 'salesrabbit_user'  # Move to ingestion schema
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesRabbit User/Representative data stored in ingestion schema'
+        verbose_name = "SalesRabbit User"
+        verbose_name_plural = "SalesRabbit Users"
+        indexes = [
+            models.Index(fields=['date_modified']),  # For delta sync
+            models.Index(fields=['email']),
+            models.Index(fields=['active']),
+            models.Index(fields=['org_id']),
+            models.Index(fields=['supervisor_id']),
+            models.Index(fields=['department']),
+            models.Index(fields=['role']),
+        ]
+
+    def __str__(self):
+        name = f"{self.first_name or ''} {self.last_name or ''}".strip()
+        return name or f"User {self.id}"
+    
+    @property
+    def full_name(self):
+        """Return full name"""
+        return f"{self.first_name or ''} {self.last_name or ''}".strip()
+    
+    @property
+    def organization_info(self):
+        """Return formatted organization information"""
+        parts = [self.department, self.office, self.region]
+        return " | ".join(part for part in parts if part)

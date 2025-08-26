@@ -43,7 +43,7 @@ from .salespro import (
 )
 
 # Import SalesRabbit models
-from .salesrabbit import SalesRabbit_Lead
+from .salesrabbit import SalesRabbit_Lead, SalesRabbit_User
 
 # Import LeadConduit models
 from .leadconduit import LeadConduit_Lead
@@ -123,7 +123,7 @@ __all__ = [
     'MarketSharp_ProductType', 'MarketSharp_Prospect',
     
     # SalesRabbit models
-    'SalesRabbit_Lead',
+    'SalesRabbit_Lead', 'SalesRabbit_User',
     
     # LeadConduit models
     'LeadConduit_Lead',
