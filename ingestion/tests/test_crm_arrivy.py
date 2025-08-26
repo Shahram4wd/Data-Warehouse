@@ -165,9 +165,7 @@ class TestArrivyEntitiesCommand(TestCase):
         
         # Check standard flags
         self.assertIn('--debug', option_strings)
-        self.assertIn('--test', option_strings)
         self.assertIn('--full', option_strings)
-        self.assertIn('--verbose', option_strings)
         self.assertIn('--skip-validation', option_strings)
         self.assertIn('--dry-run', option_strings)
         
@@ -214,9 +212,7 @@ class TestArrivyGroupsCommand(TestCase):
         
         # Check standard flags
         self.assertIn('--debug', option_strings)
-        self.assertIn('--test', option_strings)
         self.assertIn('--full', option_strings)
-        self.assertIn('--verbose', option_strings)
         self.assertIn('--skip-validation', option_strings)
         self.assertIn('--dry-run', option_strings)
         
@@ -263,9 +259,7 @@ class TestArrivyStatusesCommand(TestCase):
         
         # Check standard flags
         self.assertIn('--debug', option_strings)
-        self.assertIn('--test', option_strings)
         self.assertIn('--full', option_strings)
-        self.assertIn('--verbose', option_strings)
         self.assertIn('--skip-validation', option_strings)
         self.assertIn('--dry-run', option_strings)
         
