@@ -163,5 +163,20 @@
     "end_time": "2025-08-26T06:04:14.417966",
     "status": "success",
     "result": "Test completed successfully"
+  },
+  {
+    "test_name": "unit_salesrabbit_flag_validation",
+    "data_usage": "MOCKED",
+    "start_time": "2025-08-26T16:23:03.507094",
+    "config": {
+      "name": "SalesRabbit Flag Validation Tests",
+      "type": "unit",
+      "uses_real_api": false,
+      "max_records": 0,
+      "estimated_duration": "< 30 sec"
+    },
+    "end_time": "2025-08-26T16:23:04.507352",
+    "status": "success",
+    "result": "Test completed successfully (simulated)"
   }
 ]
