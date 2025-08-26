@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 class Command(BaseSyncCommand):
     help = 'Sync CallRail calls data with standardized flags'
+    crm_name = 'callrail'
+    entity_name = 'calls'
     
     def add_arguments(self, parser):
         # Add standardized flags from BaseSyncCommand
@@ -51,7 +53,9 @@ class Command(BaseSyncCommand):
             
             # Display sync summary using BaseSyncCommand method
             if not quiet:
-                self.display_sync_summary('CallRail Calls', options)
+                self.stdout.write(
+                    self.style.SUCCESS('Starting CallRail calls sync...')
+                )
             
             if dry_run:
                 self.stdout.write(
@@ -89,8 +93,10 @@ class Command(BaseSyncCommand):
             )
             
             # Display results
-            if not quiet:
-                self._display_sync_results(sync_result)
+            self.output_results(sync_result)
+            
+            if not sync_result.get('success', True):
+                raise CommandError('CallRail calls sync failed')
             
         except Exception as e:
             logger.error(f"CallRail calls sync failed: {e}")
@@ -110,6 +116,33 @@ class Command(BaseSyncCommand):
             force_overwrite=force_overwrite,
             **sync_params
         )
+    
+    def output_results(self, result):
+        """Output sync results following BaseSyncCommand pattern"""
+        success = result.get('success', True)
+        
+        if success:
+            self.stdout.write(
+                self.style.SUCCESS('✓ CallRail calls sync completed successfully!')
+            )
+        else:
+            self.stdout.write(
+                self.style.ERROR('✗ CallRail calls sync failed')
+            )
+        
+        # Show statistics
+        total_processed = result.get('total_processed', 0)
+        total_created = result.get('total_created', 0)
+        total_updated = result.get('total_updated', 0)
+        total_errors = result.get('total_errors', 0)
+        
+        self.stdout.write(f"Calls: {total_processed} processed ({total_created} created, {total_updated} updated, {total_errors} failed)")
+        
+        # Show duration
+        duration = result.get('duration', 0)
+        if hasattr(duration, 'total_seconds'):
+            duration = duration.total_seconds()
+        self.stdout.write(f"Duration: {duration:.2f} seconds")
     
     def _display_sync_results(self, sync_result):
         """Display sync results in a formatted way"""

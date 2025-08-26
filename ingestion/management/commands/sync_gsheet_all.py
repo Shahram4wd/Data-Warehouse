@@ -3,46 +3,28 @@ Sync All Google Sheets
 """
 import asyncio
 import logging
-from django.core.management.base import BaseCommand
+from django.core.management.base import CommandError
 from django.core.management import call_command
 from django.utils import timezone
+
+from ingestion.base.commands import BaseSyncCommand
 
 logger = logging.getLogger(__name__)
 
 
-class Command(BaseCommand):
+class Command(BaseSyncCommand):
     """Sync all configured Google Sheets"""
     
     help = "Sync all configured Google Sheets to database"
+    crm_name = 'gsheet'
+    entity_name = 'all'
     
     def add_arguments(self, parser):
         """Add command arguments"""
-        parser.add_argument(
-            "--dry-run",
-            action="store_true",
-            help="Run all syncs without saving data to database"
-        )
-        parser.add_argument(
-            "--force",
-            action="store_true",
-            help="Force sync all sheets even if not modified"
-        )
-        parser.add_argument(
-            "--batch-size",
-            type=int,
-            default=500,
-            help="Batch size for all sync operations"
-        )
-        parser.add_argument(
-            "--debug",
-            action="store_true",
-            help="Enable debug logging"
-        )
-        parser.add_argument(
-            "--quiet",
-            action="store_true",
-            help="Suppress output except errors"
-        )
+        # Add standard BaseSyncCommand arguments
+        super().add_arguments(parser)
+        
+        # Add GSheet-specific arguments for controlling which sheets to sync
         parser.add_argument(
             "--skip-marketing-leads",
             action="store_true",
@@ -65,33 +47,51 @@ class Command(BaseCommand):
         )
     
     def handle(self, *args, **options):
-        """Execute the sync command"""
+        """Execute the sync command following standardized patterns"""
         
-        # Configure logging level
-        if options['debug']:
+        # Setup debug logging if requested
+        if options.get('debug'):
+            logging.getLogger().setLevel(logging.DEBUG)
             logging.getLogger('ingestion.sync.gsheet').setLevel(logging.DEBUG)
-        elif options['quiet']:
+        elif options.get('quiet'):
             logging.getLogger('ingestion.sync.gsheet').setLevel(logging.ERROR)
         else:
             logging.getLogger('ingestion.sync.gsheet').setLevel(logging.INFO)
         
+        self.stdout.write(
+            self.style.SUCCESS('Starting GSheet all data sync...')
+        )
+        
+        
         try:
-            # Test connections only
-            if options['test_connections']:
-                self._test_all_connections(options)
+            # Get standardized options
+            dry_run = options.get('dry_run', False)
+            force_overwrite = options.get('force', False)
+            batch_size = options.get('batch_size', 500)
+            max_records = options.get('max_records', 0)
+            quiet = options.get('quiet', False)
+            debug = options.get('debug', False)
+            
+            # Handle special operations first
+            if options.get('test_connections'):
+                self.stdout.write("Testing all Google Sheets API connections...")
+                self._test_all_connections()
                 return
             
-            # Show summary only
-            if options['show_summary']:
-                self._show_all_summaries(options)
+            if options.get('show_summary'):
+                self.stdout.write("Getting sync summary for all sheets...")
+                self._show_all_summaries()
                 return
             
-            # Run all syncs
-            self.stdout.write("Starting Google Sheets sync for all configured sheets...")
+            # Display configuration
+            dry_mode = "DRY RUN: " if dry_run else ""
+            self.stdout.write(f"{dry_mode}Starting Google Sheets sync for all configured sheets...")
             self.stdout.write(f"Configuration:")
-            self.stdout.write(f"  - Dry run: {options['dry_run']}")
-            self.stdout.write(f"  - Force sync: {options['force']}")
-            self.stdout.write(f"  - Batch size: {options['batch_size']}")
+            self.stdout.write(f"  - Dry run: {dry_run}")
+            self.stdout.write(f"  - Force sync: {force_overwrite}")
+            self.stdout.write(f"  - Batch size: {batch_size}")
+            if max_records > 0:
+                self.stdout.write(f"  - Max records: {max_records}")
             
             results = {}
             total_start_time = timezone.now()
@@ -114,15 +114,19 @@ class Command(BaseCommand):
                 try:
                     start_time = timezone.now()
                     
-                    # Build command arguments
+                    # Build command arguments with standardized names
                     cmd_args = []
                     cmd_options = {
-                        'dry_run': options['dry_run'],
-                        'force': options['force'],
-                        'batch_size': options['batch_size'],
-                        'quiet': options['quiet'],
-                        'debug': options['debug']
+                        'dry_run': dry_run,
+                        'force': force_overwrite,
+                        'batch_size': batch_size,
+                        'quiet': quiet,
+                        'debug': debug
                     }
+                    
+                    # Add max_records if specified
+                    if max_records > 0:
+                        cmd_options['max_records'] = max_records
                     
                     # Run the sync command
                     call_command(command_name, *cmd_args, **cmd_options)
@@ -158,7 +162,7 @@ class Command(BaseCommand):
             
             # Display final summary
             total_duration = (timezone.now() - total_start_time).total_seconds()
-            self._display_final_summary(results, total_duration, options)
+            self.output_results({'success': True, 'results': results, 'duration': total_duration})
             
         except KeyboardInterrupt:
             self.stdout.write(
@@ -166,10 +170,60 @@ class Command(BaseCommand):
             )
         except Exception as e:
             logger.error(f"All sync command failed: {e}")
+            if not isinstance(e, CommandError):
+                raise CommandError(f'All sync failed: {e}')
+    
+    def output_results(self, result):
+        """Output sync results following BaseSyncCommand pattern"""
+        results = result.get('results', {})
+        total_duration = result.get('duration', 0)
+        
+        success_count = sum(1 for r in results.values() if r.get('status') == 'success')
+        failed_count = len(results) - success_count
+        
+        if failed_count == 0:
             self.stdout.write(
-                self.style.ERROR(f"All sync failed: {e}")
+                self.style.SUCCESS('✓ All Google Sheets sync completed successfully!')
             )
-            raise
+        else:
+            self.stdout.write(
+                self.style.WARNING(f'⚠ Google Sheets sync completed with {failed_count} failures')
+            )
+        
+        self.stdout.write(f"Sheets: {len(results)} total ({success_count} succeeded, {failed_count} failed)")
+        self.stdout.write(f"Duration: {total_duration:.2f} seconds")
+        
+        # Show individual results
+        for sheet_name, sheet_result in results.items():
+            status = sheet_result.get('status', 'unknown')
+            duration = sheet_result.get('duration', 0)
+            if status == 'success':
+                self.stdout.write(f"  ✓ {sheet_name}: {duration:.1f}s")
+            else:
+                error = sheet_result.get('error', 'Unknown error')
+                self.stdout.write(f"  ✗ {sheet_name}: {error}")
+    
+    def _test_all_connections(self):
+        """Test all Google Sheets API connections"""
+        # This would test connections for all configured sheets
+        self.stdout.write("Testing Marketing Leads connection...")
+        call_command('sync_gsheet_marketing_leads', '--test-connection')
+        
+        self.stdout.write("Testing Marketing Spends connection...")
+        call_command('sync_gsheet_marketing_spends', '--test-connection')
+        
+        self.stdout.write(self.style.SUCCESS("All connection tests completed"))
+    
+    def _show_all_summaries(self):
+        """Show summary for all Google Sheets"""
+        self.stdout.write("Marketing Leads Summary:")
+        call_command('sync_gsheet_marketing_leads', '--show-summary')
+        
+        self.stdout.write("\nMarketing Spends Summary:")
+        call_command('sync_gsheet_marketing_spends', '--show-summary')
+    
+    def _display_final_summary(self, results, total_duration, options):
+        """Display final summary (deprecated - use output_results)"""
     
     def _test_all_connections(self, options):
         """Test connections to all Google Sheets"""
