@@ -29,14 +29,16 @@ class BaseSyncCommand(BaseCommand, ABC):
         """
         Add standard CRM sync arguments following crm_sync_guide.md
         
-        Standard Flags (All CRM Syncs):
+        Standard Flags (All CRM Syncs) - UPDATED TO STANDARDS:
         - --full: Perform full sync (ignore last sync timestamp)
-        - --force-overwrite: Completely replace existing records
-        - --since: Manual sync start date (YYYY-MM-DD)
+        - --force: Force overwrite existing records (standardized from --force-overwrite)
+        - --start-date: Manual sync start date (YYYY-MM-DD) - replaces deprecated --since
+        - --end-date: Manual sync end date (YYYY-MM-DD)
         - --dry-run: Test run without database writes
         - --batch-size: Records per API batch
         - --max-records: Limit total records (0 = unlimited)
         - --debug: Enable verbose logging
+        - --quiet: Suppress non-error output (NEW STANDARD FLAG)
         """
         # Core sync strategy flags
         parser.add_argument(
@@ -46,15 +48,21 @@ class BaseSyncCommand(BaseCommand, ABC):
         )
         
         parser.add_argument(
-            '--force-overwrite',
+            '--force',
             action='store_true',
-            help='Completely replace existing records'
+            help='Force overwrite existing records'
         )
         
         parser.add_argument(
-            '--since',
+            '--start-date',
             type=str,
             help='Manual sync start date (YYYY-MM-DD format)'
+        )
+        
+        parser.add_argument(
+            '--end-date',
+            type=str,
+            help='Manual sync end date (YYYY-MM-DD format)'
         )
         
         # Execution control flags
@@ -78,11 +86,17 @@ class BaseSyncCommand(BaseCommand, ABC):
             help='Limit total records (0 = unlimited)'
         )
         
-        # Debugging and monitoring
+        # Debugging and output control
         parser.add_argument(
             '--debug',
             action='store_true',
             help='Enable verbose logging'
+        )
+        
+        parser.add_argument(
+            '--quiet',
+            action='store_true',
+            help='Suppress non-error output'
         )
         
         parser.add_argument(
@@ -101,12 +115,19 @@ class BaseSyncCommand(BaseCommand, ABC):
         Raises:
             CommandError: If validation fails
         """
-        # Validate date format for --since parameter
-        if options.get('since'):
+        # Validate date format for --start-date parameter (was --since)
+        if options.get('start_date'):
             try:
-                datetime.strptime(options['since'], '%Y-%m-%d')
+                datetime.strptime(options['start_date'], '%Y-%m-%d')
             except ValueError:
-                raise CommandError(f"Invalid date format: {options['since']}. Use YYYY-MM-DD")
+                raise CommandError(f"Invalid start-date format: {options['start_date']}. Use YYYY-MM-DD")
+                
+        # Validate date format for --end-date parameter
+        if options.get('end_date'):
+            try:
+                datetime.strptime(options['end_date'], '%Y-%m-%d')
+            except ValueError:
+                raise CommandError(f"Invalid end-date format: {options['end_date']}. Use YYYY-MM-DD")
         
         # Validate batch size
         batch_size = options.get('batch_size', 100)
@@ -119,13 +140,20 @@ class BaseSyncCommand(BaseCommand, ABC):
             raise CommandError(f"Max records must be non-negative, got: {max_records}")
         
         # Validate conflicting flags
-        if options.get('full') and options.get('since'):
-            raise CommandError("Cannot use --full and --since together")
+        if options.get('full') and options.get('start_date'):
+            raise CommandError("Cannot use --full and --start-date together")
         
-        if options.get('force_overwrite') and options.get('dry_run'):
+        # Validate date range consistency
+        if options.get('start_date') and options.get('end_date'):
+            start_date = datetime.strptime(options['start_date'], '%Y-%m-%d')
+            end_date = datetime.strptime(options['end_date'], '%Y-%m-%d')
+            if start_date >= end_date:
+                raise CommandError("--start-date must be before --end-date")
+        
+        if options.get('force') and options.get('dry_run'):
             self.stdout.write(
                 self.style.WARNING(
-                    "⚠️  --force-overwrite with --dry-run: No actual overwriting will occur"
+                    "⚠️  --force with --dry-run: No actual overwriting will occur"
                 )
             )
     
@@ -142,7 +170,7 @@ class BaseSyncCommand(BaseCommand, ABC):
             for logger_name in ['arrivy', 'hubspot', 'salesrabbit', 'salespro', 'callrail']:
                 logging.getLogger(logger_name).setLevel(logging.DEBUG)
     
-    def parse_date_parameter(self, date_str: str) -> datetime:
+    def parse_date_parameter(self, date_str: str, parameter_name: str = 'start-date') -> datetime:
         """
         Parse date string to timezone-aware datetime object
         
@@ -150,6 +178,7 @@ class BaseSyncCommand(BaseCommand, ABC):
         
         Args:
             date_str: Date string in YYYY-MM-DD format
+            parameter_name: Name of the parameter for error messages
             
         Returns:
             Timezone-aware datetime object
@@ -167,7 +196,7 @@ class BaseSyncCommand(BaseCommand, ABC):
             else:
                 raise ValueError(f"Invalid date format: {date_str}")
         except Exception as e:
-            raise CommandError(f"Error parsing date '{date_str}': {str(e)}")
+            raise CommandError(f"Error parsing {parameter_name} '{date_str}': {str(e)}")
     
     def handle_execution_error(self, error: Exception, entity_type: str):
         """
@@ -194,14 +223,18 @@ class BaseSyncCommand(BaseCommand, ABC):
         elif "timeout" in error_msg.lower():
             self.stdout.write("💡 Try reducing --batch-size or check API status")
     
-    def display_sync_summary(self, results: dict, entity_type: str):
+    def display_sync_summary(self, results: dict, entity_type: str, options: dict = None):
         """
         Display sync results in a consistent format
         
         Args:
             results: Sync results dictionary
             entity_type: Type of entity that was synced
+            options: Command options (for quiet flag)
         """
+        # Check if quiet mode is enabled
+        is_quiet = options and options.get('quiet', False)
+        
         if results.get('error'):
             self.stdout.write(
                 self.style.ERROR(f"❌ {entity_type.title()} sync failed: {results['error']}")
@@ -215,7 +248,7 @@ class BaseSyncCommand(BaseCommand, ABC):
             duration = results.get('duration_seconds', 0)
             rate = results.get('records_per_second', 0)
             
-            # Display main summary
+            # Display main summary (always shown, even in quiet mode)
             self.stdout.write(
                 self.style.SUCCESS(
                     f"✅ {entity_type.upper()} sync complete: "
@@ -225,7 +258,7 @@ class BaseSyncCommand(BaseCommand, ABC):
                 )
             )
             
-            # Display warnings for failures
+            # Display warnings for failures (always shown)
             if failed > 0:
                 self.stdout.write(
                     self.style.WARNING(
@@ -233,11 +266,12 @@ class BaseSyncCommand(BaseCommand, ABC):
                     )
                 )
             
-            # Display additional metrics if available
-            if 'api_calls' in results:
-                self.stdout.write(f"📊 API calls made: {results['api_calls']}")
-            if 'batches_processed' in results:
-                self.stdout.write(f"📦 Batches processed: {results['batches_processed']}")
+            # Display additional metrics only if not in quiet mode
+            if not is_quiet:
+                if 'api_calls' in results:
+                    self.stdout.write(f"📊 API calls made: {results['api_calls']}")
+                if 'batches_processed' in results:
+                    self.stdout.write(f"📦 Batches processed: {results['batches_processed']}")
     
     @abstractmethod
     def handle(self, *args, **options):

@@ -7,7 +7,7 @@ to avoid code duplication while providing a unified interface.
 Usage:
     python manage.py sync_arrivy_all --entity-type=entities
     python manage.py sync_arrivy_all --entity-type=tasks --full
-    python manage.py sync_arrivy_all --entity-type=groups --since=2025-01-01
+    python manage.py sync_arrivy_all --entity-type=groups --start-date=2025-01-01
     python manage.py sync_arrivy_all --entity-type=all --dry-run
 """
 
@@ -47,7 +47,7 @@ class Command(BaseCommand):
         )
         
         parser.add_argument(
-            '--since',
+            '--start-date',
             type=str,
             help='Sync data since specific date (YYYY-MM-DD)'
         )
@@ -78,13 +78,19 @@ class Command(BaseCommand):
             help='Enable debug logging'
         )
         
-        # Legacy compatibility arguments
         parser.add_argument(
-            '--start-date',
-            type=str,
-            help='Start date for task filtering (YYYY-MM-DD format, tasks only)'
+            '--quiet',
+            action='store_true',
+            help='Suppress non-essential output'
         )
         
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Force sync operation, bypass safety checks'
+        )
+        
+        # Legacy compatibility arguments
         parser.add_argument(
             '--end-date', 
             type=str,
@@ -203,8 +209,8 @@ class Command(BaseCommand):
             command_kwargs['full'] = True
         if options.get('force_overwrite'):
             command_kwargs['force_overwrite'] = True
-        if options.get('since'):
-            command_kwargs['since'] = options['since']
+        if options.get('start_date'):
+            command_kwargs['start_date'] = options['start_date']
         if options.get('dry_run'):
             command_kwargs['dry_run'] = True
         if options.get('batch_size', 100) != 100:
@@ -213,6 +219,10 @@ class Command(BaseCommand):
             command_kwargs['max_records'] = options['max_records']
         if options.get('debug'):
             command_kwargs['debug'] = True
+        if options.get('quiet'):
+            command_kwargs['quiet'] = True
+        if options.get('force'):
+            command_kwargs['force'] = True
         
         # Add entity-specific arguments
         if entity_type == 'tasks':

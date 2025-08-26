@@ -1,0 +1,273 @@
+{% extends "testing/base.html" %}
+
+{% block title %}Dashboard - CRM Test Interface{% endblock %}
+
+{% block page_title %}
+    <i class="bi bi-speedometer2"></i> Dashboard Overview
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-md-3">
+        <div class="card stats-card text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Total Tests</h5>
+                        <h2 class="mb-0">{{ total_tests }}</h2>
+                    </div>
+                    <i class="bi bi-list-check fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Success Rate</h5>
+                        <h2 class="mb-0">{{ test_stats.success_rate }}%</h2>
+                    </div>
+                    <i class="bi bi-check-circle fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Total Runs</h5>
+                        <h2 class="mb-0">{{ test_stats.total_runs }}</h2>
+                    </div>
+                    <i class="bi bi-play-circle fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Last Run</h5>
+                        <p class="mb-0 small">
+                            {% if test_stats.last_run %}
+                                {{ test_stats.last_run|slice:":16" }}
+                            {% else %}
+                                Never
+                            {% endif %}
+                        </p>
+                    </div>
+                    <i class="bi bi-clock fs-1"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightning"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'testing:run_test' %}" class="btn btn-success">
+                        <i class="bi bi-play-fill"></i> Run New Test
+                    </a>
+                    <a href="{% url 'testing:test_list' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-list-ul"></i> Browse All Tests
+                    </a>
+                    <a href="{% url 'testing:results' %}" class="btn btn-outline-info">
+                        <i class="bi bi-graph-up"></i> View Results
+                    </a>
+                    <a href="{% url 'testing:export_results' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-download"></i> Export Data
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Safety Guidelines -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-exclamation"></i> Safety Guidelines
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <span class="safety-indicator safety-safe"></span>
+                        <strong>Safe Tests</strong> - No real API calls
+                    </li>
+                    <li class="mb-2">
+                        <span class="safety-indicator safety-moderate"></span>
+                        <strong>Moderate Tests</strong> - Limited data
+                    </li>
+                    <li class="mb-2">
+                        <span class="safety-indicator safety-dangerous"></span>
+                        <strong>Dangerous Tests</strong> - Full sync (⚠️ Caution!)
+                    </li>
+                </ul>
+                <hr>
+                <small class="text-muted">
+                    Always start with MOCKED data usage for safety.
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Test Results -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history"></i> Recent Test Results
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_results %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Test Name</th>
+                                    <th>Data Usage</th>
+                                    <th>Start Time</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in recent_results %}
+                                <tr>
+                                    <td>
+                                        {% if result.status == 'success' %}
+                                            <span class="badge bg-success status-badge">
+                                                <i class="bi bi-check"></i> Success
+                                            </span>
+                                        {% elif result.status == 'failed' %}
+                                            <span class="badge bg-danger status-badge">
+                                                <i class="bi bi-x"></i> Failed
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning status-badge">
+                                                <i class="bi bi-exclamation"></i> Error
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'testing:test_detail' result.test_name %}" class="text-decoration-none">
+                                            {{ result.config.name|default:result.test_name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">{{ result.data_usage }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ result.start_time|slice:":19"|default:"-" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if result.end_time %}
+                                            <small class="text-muted">
+                                                <!-- Duration calculation would go here -->
+                                                {{ result.config.estimated_duration|default:"Unknown" }}
+                                            </small>
+                                        {% else %}
+                                            <small class="text-warning">Running...</small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <a href="{% url 'testing:results' %}" class="btn btn-outline-primary">
+                            View All Results <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox fs-1 text-muted"></i>
+                        <p class="text-muted mt-2">No test results yet</p>
+                        <a href="{% url 'testing:run_test' %}" class="btn btn-primary">
+                            Run Your First Test
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Status -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-info-circle"></i> System Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Most Run Test</h6>
+                        <p class="text-muted">
+                            {% if test_stats.most_run_test %}
+                                {{ test_stats.most_run_test }}
+                            {% else %}
+                                No tests run yet
+                            {% endif %}
+                        </p>
+                        
+                        <h6>Available Test Types</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-square"></i> Unit Tests - Fast validation</li>
+                            <li><i class="bi bi-link-45deg"></i> Integration Tests - Real API testing</li>
+                            <li><i class="bi bi-globe"></i> End-to-End Tests - Full workflow validation</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Data Usage Levels</h6>
+                        <ul class="list-unstyled">
+                            <li><span class="safety-indicator safety-safe"></span> MOCKED - No real data</li>
+                            <li><span class="safety-indicator safety-safe"></span> MINIMAL - 1-10 records</li>
+                            <li><span class="safety-indicator safety-moderate"></span> SAMPLE - 50-100 records</li>
+                            <li><span class="safety-indicator safety-moderate"></span> RECENT - Last 7 days</li>
+                            <li><span class="safety-indicator safety-dangerous"></span> FULL_SYNC - All records</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh dashboard every 30 seconds
+autoRefresh(30000);
+
+// Add real-time status updates if needed
+function updateDashboardStats() {
+    // This could fetch updated stats via AJAX
+    // For now, we'll rely on page refresh
+}
+</script>
+{% endblock %}

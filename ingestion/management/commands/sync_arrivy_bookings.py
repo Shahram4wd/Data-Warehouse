@@ -25,22 +25,10 @@ class Command(BaseSyncCommand):
     help = "Sync Arrivy bookings using enterprise CRM sync patterns"
     
     def add_arguments(self, parser):
-        # Add base sync arguments (--full, --force-overwrite, --since, --dry-run, --batch-size, etc.)
+        # Add base sync arguments (standardized flags from BaseSyncCommand)
         super().add_arguments(parser)
         
-        # Add booking-specific arguments
-        parser.add_argument(
-            '--start-date',
-            type=str,
-            help='Start date for booking filtering (YYYY-MM-DD format)'
-        )
-        
-        parser.add_argument(
-            '--end-date', 
-            type=str,
-            help='End date for booking filtering (YYYY-MM-DD format)'
-        )
-        
+        # Add booking-specific arguments (removed duplicate --start-date and --end-date)
         parser.add_argument(
             '--booking-status',
             type=str,

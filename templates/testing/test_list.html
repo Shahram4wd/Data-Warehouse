@@ -1,0 +1,365 @@
+{% extends "testing/base.html" %}
+
+{% block title %}Available Tests - CRM Test Interface{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'testing:dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Tests</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_title %}
+    <i class="bi bi-list-check"></i> Available Tests
+    <small class="text-muted">({{ tests_by_type.unit|length|add:tests_by_type.integration|length|add:tests_by_type.e2e|length }} total)</small>
+{% endblock %}
+
+{% block content %}
+<!-- Test Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="testFilter" class="form-control" placeholder="Filter tests by name or description...">
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="safetyFilter" id="all" value="all" checked>
+                            <label class="btn btn-outline-secondary" for="all">All Tests</label>
+                            
+                            <input type="radio" class="btn-check" name="safetyFilter" id="safe" value="safe">
+                            <label class="btn btn-outline-success" for="safe">Safe Only</label>
+                            
+                            <input type="radio" class="btn-check" name="safetyFilter" id="moderate" value="moderate">
+                            <label class="btn btn-outline-warning" for="moderate">Moderate</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Categories -->
+{% for test_type, tests in tests_by_type.items %}
+<div class="test-category mb-4" data-category="{{ test_type }}">
+    <h3 class="mb-3">
+        {% if test_type == 'unit' %}
+            <i class="bi bi-check-square text-success"></i> Unit Tests
+            <small class="text-muted">(Fast, No External Dependencies)</small>
+        {% elif test_type == 'integration' %}
+            <i class="bi bi-link-45deg text-warning"></i> Integration Tests  
+            <small class="text-muted">(Real API Calls, Controlled Data)</small>
+        {% else %}
+            <i class="bi bi-globe text-danger"></i> End-to-End Tests
+            <small class="text-muted">(Full Workflow, Production-like)</small>
+        {% endif %}
+    </h3>
+    
+    <div class="row">
+        {% for test in tests %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card test-card h-100" 
+                 data-safety="{{ test.safety_level }}" 
+                 data-name="{{ test.name|lower }}"
+                 data-description="{{ test.config.description|lower }}">
+                
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0">
+                        {{ test.safety_icon }} {{ test.config.name }}
+                    </h6>
+                    <span class="badge bg-{{ test.safety_color }}">
+                        {{ test.safety_level|title }}
+                    </span>
+                </div>
+                
+                <div class="card-body">
+                    <p class="card-text small text-muted">{{ test.config.description }}</p>
+                    
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <small class="text-muted">Duration</small>
+                            <div><strong>{{ test.config.estimated_duration }}</strong></div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">API Calls</small>
+                            <div>
+                                {% if test.config.uses_real_api %}
+                                    <i class="bi bi-wifi text-warning" title="Uses real API"></i>
+                                {% else %}
+                                    <i class="bi bi-shield-check text-success" title="Mocked only"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if test.config.max_records %}
+                    <div class="mt-2">
+                        <small class="text-info">
+                            <i class="bi bi-info-circle"></i> Max {{ test.config.max_records }} records
+                        </small>
+                    </div>
+                    {% endif %}
+                    
+                    {% if test.config.date_range_days %}
+                    <div class="mt-1">
+                        <small class="text-info">
+                            <i class="bi bi-calendar-range"></i> Last {{ test.config.date_range_days }} days
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer bg-light">
+                    <div class="row">
+                        <div class="col-8">
+                            <select class="form-select form-select-sm" id="dataUsage_{{ test.name }}">
+                                {% for level, description in data_usage_levels %}
+                                <option value="{{ level }}" 
+                                        {% if level == 'MOCKED' %}selected{% endif %}
+                                        {% if level == 'FULL_SYNC' %}class="text-danger"{% endif %}>
+                                    {{ level }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-4">
+                            <div class="btn-group w-100">
+                                <button class="btn btn-sm btn-primary run-test-btn" 
+                                        data-test="{{ test.name }}"
+                                        title="Run Test">
+                                    <i class="bi bi-play"></i>
+                                </button>
+                                <a href="{% url 'testing:test_detail' test.name %}" 
+                                   class="btn btn-sm btn-outline-info"
+                                   title="View Details">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
+
+<!-- No tests message -->
+<div id="no-tests-message" class="text-center py-5" style="display: none;">
+    <i class="bi bi-search fs-1 text-muted"></i>
+    <h4 class="text-muted mt-3">No tests match your filter</h4>
+    <p class="text-muted">Try adjusting your search or filter criteria</p>
+</div>
+
+<!-- Run Test Modal -->
+<div class="modal fade" id="runTestModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Run Test</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="test-info"></div>
+                <div id="safety-warning" class="danger-warning" style="display: none;">
+                    <h6><i class="bi bi-exclamation-triangle"></i> Safety Warning</h6>
+                    <p id="warning-message"></p>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="confirmDangerous">
+                        <label class="form-check-label" for="confirmDangerous">
+                            I understand the risks and want to proceed
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmRunTest">
+                    <i class="bi bi-play"></i> Run Test
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Execution Status Modal -->
+<div class="modal fade" id="testStatusModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test Execution</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Running...</span>
+                    </div>
+                    <p class="mt-2">Test is running...</p>
+                </div>
+                <div class="test-execution-log" id="execution-log">
+                    Starting test execution...
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Test filtering functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const testFilter = document.getElementById('testFilter');
+    const safetyFilters = document.querySelectorAll('input[name="safetyFilter"]');
+    const testCards = document.querySelectorAll('.test-card');
+    const noTestsMessage = document.getElementById('no-tests-message');
+    
+    function filterTests() {
+        const searchTerm = testFilter.value.toLowerCase();
+        const safetyLevel = document.querySelector('input[name="safetyFilter"]:checked').value;
+        let visibleCount = 0;
+        
+        testCards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            const description = card.getAttribute('data-description');
+            const safety = card.getAttribute('data-safety');
+            
+            const matchesSearch = name.includes(searchTerm) || description.includes(searchTerm);
+            const matchesSafety = safetyLevel === 'all' || safety === safetyLevel;
+            
+            if (matchesSearch && matchesSafety) {
+                card.parentElement.style.display = 'block';
+                visibleCount++;
+            } else {
+                card.parentElement.style.display = 'none';
+            }
+        });
+        
+        // Show/hide no results message
+        noTestsMessage.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+    
+    testFilter.addEventListener('input', filterTests);
+    safetyFilters.forEach(filter => {
+        filter.addEventListener('change', filterTests);
+    });
+});
+
+// Test execution functionality
+let currentTest = null;
+let currentDataUsage = null;
+
+document.querySelectorAll('.run-test-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const testName = this.getAttribute('data-test');
+        const dataUsageSelect = document.getElementById(`dataUsage_${testName}`);
+        const dataUsage = dataUsageSelect.value;
+        
+        currentTest = testName;
+        currentDataUsage = dataUsage;
+        
+        // Show test info in modal
+        document.getElementById('test-info').innerHTML = `
+            <h6>Test: ${testName}</h6>
+            <p>Data Usage: <strong>${dataUsage}</strong></p>
+        `;
+        
+        // Check if test is dangerous
+        const testCard = this.closest('.test-card');
+        const safetyLevel = testCard.getAttribute('data-safety');
+        const safetyWarning = document.getElementById('safety-warning');
+        
+        if (safetyLevel === 'dangerous' || dataUsage === 'FULL_SYNC') {
+            safetyWarning.style.display = 'block';
+            document.getElementById('warning-message').textContent = 
+                'This test may process large amounts of data and take significant time. Use with caution.';
+        } else {
+            safetyWarning.style.display = 'none';
+        }
+        
+        new bootstrap.Modal(document.getElementById('runTestModal')).show();
+    });
+});
+
+document.getElementById('confirmRunTest').addEventListener('click', function() {
+    const safetyWarning = document.getElementById('safety-warning');
+    const confirmCheckbox = document.getElementById('confirmDangerous');
+    
+    // Check if dangerous test requires confirmation
+    if (safetyWarning.style.display !== 'none' && !confirmCheckbox.checked) {
+        alert('Please confirm you understand the risks before proceeding.');
+        return;
+    }
+    
+    // Close run modal and show status modal
+    bootstrap.Modal.getInstance(document.getElementById('runTestModal')).hide();
+    
+    // Execute test
+    executeTest(currentTest, currentDataUsage);
+});
+
+function executeTest(testName, dataUsage) {
+    const statusModal = new bootstrap.Modal(document.getElementById('testStatusModal'));
+    const executionLog = document.getElementById('execution-log');
+    
+    statusModal.show();
+    
+    // Simulate test execution with AJAX
+    fetch('{% url "testing:run_test_ajax" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            test_name: testName,
+            data_usage: dataUsage
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            executionLog.innerHTML = `Test completed successfully!\n\nResult: ${data.result.result}\nDuration: ${data.result.config.estimated_duration}`;
+            // Redirect to results after a delay
+            setTimeout(() => {
+                window.location.href = '{% url "testing:results" %}';
+            }, 2000);
+        } else {
+            executionLog.innerHTML = `Test failed: ${data.error}`;
+        }
+    })
+    .catch(error => {
+        executionLog.innerHTML = `Error executing test: ${error}`;
+    });
+}
+
+// CSRF token helper
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

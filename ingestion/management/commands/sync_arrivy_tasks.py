@@ -25,22 +25,10 @@ class Command(BaseSyncCommand):
     help = "Sync Arrivy tasks/bookings using enterprise CRM sync patterns"
     
     def add_arguments(self, parser):
-        # Add base sync arguments (--full, --force-overwrite, --since, --dry-run, --batch-size, etc.)
+        # Add base sync arguments (standardized flags from BaseSyncCommand)
         super().add_arguments(parser)
         
-        # Add task-specific arguments
-        parser.add_argument(
-            '--start-date',
-            type=str,
-            help='Start date for task filtering (YYYY-MM-DD format)'
-        )
-        
-        parser.add_argument(
-            '--end-date', 
-            type=str,
-            help='End date for task filtering (YYYY-MM-DD format)'
-        )
-        
+        # Add task-specific arguments (removed duplicate --start-date and --end-date)
         parser.add_argument(
             '--task-status',
             type=str,
@@ -80,26 +68,26 @@ class Command(BaseSyncCommand):
             
             self.stdout.write("Starting Arrivy tasks sync...")
             
-            # Create sync engine with options
+            # Create sync engine with options (updated for standardized flags)
             engine = ArrivyTasksSyncEngine(
                 batch_size=options.get('batch_size', 100),
                 max_records=options.get('max_records', 0),
                 dry_run=options.get('dry_run', False),
-                force_overwrite=options.get('force_overwrite', False),
+                force=options.get('force', False),  # Updated from force_overwrite
                 debug=options.get('debug', False)
             )
             
-            # Prepare sync options
+            # Prepare sync options (updated for standardized flags)
             sync_options = {
                 'force_full': options.get('full', False),
-                'since_param': options.get('since'),
+                'start_date_param': options.get('start_date'),  # Updated from since
             }
             
             # Add date filters if provided
             if options.get('start_date'):
-                sync_options['start_date'] = self.parse_date_parameter(options['start_date'])
+                sync_options['start_date'] = self.parse_date_parameter(options['start_date'], 'start-date')
             if options.get('end_date'):
-                sync_options['end_date'] = self.parse_date_parameter(options['end_date'])
+                sync_options['end_date'] = self.parse_date_parameter(options['end_date'], 'end-date')
             
             # Add additional filters
             if options.get('task_status'):
@@ -120,8 +108,8 @@ class Command(BaseSyncCommand):
             # Execute sync
             results = asyncio.run(engine.execute_sync(**sync_options))
             
-            # Step 4: Display results using base class method
-            self.display_sync_summary(results, 'tasks')
+            # Step 4: Display results using base class method (updated for options parameter)
+            self.display_sync_summary(results, 'tasks', options)
             
         except Exception as e:
             # Step 5: Handle errors using base class method

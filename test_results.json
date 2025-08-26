@@ -1,0 +1,32 @@
+[
+  {
+    "test_name": "unit_flag_validation",
+    "data_usage": "MOCKED",
+    "start_time": "2025-08-26T04:35:30.937773",
+    "config": {
+      "name": "Flag Validation Tests",
+      "type": "unit",
+      "uses_real_api": false,
+      "max_records": 0,
+      "estimated_duration": "< 30 sec"
+    },
+    "end_time": "2025-08-26T04:35:31.938190",
+    "status": "success",
+    "result": "Test completed successfully (simulated)"
+  },
+  {
+    "test_name": "unit_command_discovery",
+    "data_usage": "MINIMAL",
+    "start_time": "2025-08-26T04:41:16.163092",
+    "config": {
+      "name": "Command Discovery",
+      "type": "unit",
+      "uses_real_api": false,
+      "max_records": 0,
+      "estimated_duration": "< 30 sec"
+    },
+    "end_time": "2025-08-26T04:41:17.163482",
+    "status": "success",
+    "result": "Test completed successfully (simulated)"
+  }
+]

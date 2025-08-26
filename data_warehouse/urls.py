@@ -41,4 +41,7 @@ urlpatterns = [
 
     # Reports module URLs
     path('reports/', include('reports.urls')),
+    
+    # CRM Test Dashboard URLs
+    path('testing/', include('ingestion.tests.urls')),
 ]

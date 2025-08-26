@@ -28,9 +28,14 @@ class Command(BaseCommand):
             help='Run in dry-run mode (no database writes)'
         )
         parser.add_argument(
-            '--full-sync',
+            '--full',
             action='store_true',
             help='Perform full sync instead of delta sync'
+        )
+        parser.add_argument(
+            '--quiet',
+            action='store_true',
+            help='Suppress non-error output'
         )
         parser.add_argument(
             '--entities',
@@ -56,6 +61,22 @@ class Command(BaseCommand):
             help='End date for calls sync (YYYY-MM-DD format)'
         )
         parser.add_argument(
+            '--batch-size',
+            type=int,
+            default=100,
+            help='Number of records to process in each batch'
+        )
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Enable debug logging'
+        )
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Force overwrite existing records'
+        )
+        parser.add_argument(
             '--parallel',
             action='store_true',
             help='Run entity syncs in parallel (experimental)'
@@ -69,12 +90,16 @@ class Command(BaseCommand):
             if not api_key:
                 raise CommandError("CALLRAIL_API_KEY not configured in settings or environment")
             
-            full_sync = options['full_sync']
+            full_sync = options['full']
             entities = options['entities']
             company_id = options.get('company_id')
             start_date = options.get('start_date')
             end_date = options.get('end_date')
             dry_run = options.get('dry_run', False)
+            quiet = options.get('quiet', False)
+            batch_size = options.get('batch_size', 100)
+            debug = options.get('debug', False)
+            force = options.get('force', False)
             parallel = options.get('parallel', False)
             
             self.stdout.write(

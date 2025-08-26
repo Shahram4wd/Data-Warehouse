@@ -1,0 +1,320 @@
+{% extends "testing/base.html" %}
+
+{% block title %}Test Results - CRM Test Interface{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'testing:dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Results</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_title %}
+    <i class="bi bi-graph-up"></i> Test Results
+    {% if stats.total > 0 %}
+        <small class="text-muted">({{ stats.total }} total runs)</small>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- Summary Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h2 class="mb-1">{{ stats.total }}</h2>
+                <p class="mb-0">Total Runs</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h2 class="mb-1">{{ stats.success }}</h2>
+                <p class="mb-0">Successful</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h2 class="mb-1">{{ stats.failed }}</h2>
+                <p class="mb-0">Failed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-dark">
+            <div class="card-body text-center">
+                <h2 class="mb-1">{{ stats.error }}</h2>
+                <p class="mb-0">Errors</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if stats.total > 0 %}
+    <!-- Success Rate Progress Bar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">Success Rate</h6>
+                    <div class="progress mb-2" style="height: 25px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ stats.success_percentage }}%">
+                            {{ stats.success_percentage }}%
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ stats.success }} successful out of {{ stats.total }} total runs</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results by Date -->
+    {% for date, results in results_by_date.items %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="bi bi-calendar3"></i> {{ date|date:"F d, Y" }}
+                <span class="badge bg-secondary ms-2">{{ results|length }} runs</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Status</th>
+                            <th>Test Name</th>
+                            <th>Data Usage</th>
+                            <th>Start Time</th>
+                            <th>Duration</th>
+                            <th>Result</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr>
+                            <td>
+                                {% if result.status == 'success' %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle"></i> Success
+                                    </span>
+                                {% elif result.status == 'failed' %}
+                                    <span class="badge bg-danger">
+                                        <i class="bi bi-x-circle"></i> Failed
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-exclamation-circle"></i> Error
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <strong>{{ result.config.name|default:result.test_name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ result.test_name }}</small>
+                            </td>
+                            <td>
+                                <span class="badge badge-outline-secondary">{{ result.data_usage }}</span>
+                            </td>
+                            <td>
+                                <small>{{ result.start_time|slice:":19"|default:"-" }}</small>
+                            </td>
+                            <td>
+                                {% if result.end_time and result.start_time %}
+                                    <!-- Calculate duration -->
+                                    <small class="text-muted">
+                                        {{ result.config.estimated_duration|default:"Unknown" }}
+                                    </small>
+                                {% else %}
+                                    <small class="text-warning">
+                                        <i class="bi bi-clock"></i> Running...
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if result.result %}
+                                    <span class="text-truncate d-inline-block" style="max-width: 200px;" 
+                                          title="{{ result.result }}">
+                                        {{ result.result }}
+                                    </span>
+                                {% else %}
+                                    <small class="text-muted">No result</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-info result-detail-btn" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#resultDetailModal"
+                                            data-test-name="{{ result.test_name|default:'Unknown' }}"
+                                            data-status="{{ result.status|default:'unknown' }}"
+                                            data-data-usage="{{ result.data_usage|default:'Unknown' }}"
+                                            data-start-time="{{ result.start_time|default:'N/A' }}"
+                                            data-end-time="{{ result.end_time|default:'N/A' }}"
+                                            data-result="{{ result.result|default:'No output available' }}"
+                                            data-config-name="{{ result.config.name|default:'Unknown Test' }}"
+                                            data-config-type="{{ result.config.type|default:'unknown' }}"
+                                            data-uses-real-api="{{ result.config.uses_real_api|default:False }}"
+                                            data-max-records="{{ result.config.max_records|default:'Unlimited' }}"
+                                            data-duration="{{ result.config.estimated_duration|default:'Unknown' }}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    {% if result.test_name %}
+                                    <a href="{% url 'testing:test_detail' result.test_name %}" 
+                                       class="btn btn-outline-secondary">
+                                        <i class="bi bi-info-circle"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Export and Actions -->
+    <div class="row mb-4">
+        <div class="col-12 text-center">
+            <div class="btn-group">
+                <a href="{% url 'testing:export_results' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-download"></i> Export Results (JSON)
+                </a>
+                <a href="{% url 'testing:run_test' %}" class="btn btn-success">
+                    <i class="bi bi-play"></i> Run New Test
+                </a>
+                <button class="btn btn-outline-danger" onclick="confirmClearResults()">
+                    <i class="bi bi-trash"></i> Clear Results
+                </button>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    <!-- No Results State -->
+    <div class="text-center py-5">
+        <i class="bi bi-inbox fs-1 text-muted"></i>
+        <h3 class="text-muted mt-3">No Test Results Yet</h3>
+        <p class="text-muted">Run your first test to see results here</p>
+        <a href="{% url 'testing:run_test' %}" class="btn btn-primary btn-lg">
+            <i class="bi bi-play-circle"></i> Run Your First Test
+        </a>
+    </div>
+{% endif %}
+
+<!-- Result Detail Modal -->
+<div class="modal fade" id="resultDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test Result Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="result-detail-content">
+                    <!-- Content populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Handle result detail modal
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.result-detail-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const result = {
+                test_name: this.getAttribute('data-test-name'),
+                status: this.getAttribute('data-status'),
+                data_usage: this.getAttribute('data-data-usage'),
+                start_time: this.getAttribute('data-start-time'),
+                end_time: this.getAttribute('data-end-time'),
+                result: this.getAttribute('data-result'),
+                config: {
+                    name: this.getAttribute('data-config-name'),
+                    type: this.getAttribute('data-config-type'),
+                    uses_real_api: this.getAttribute('data-uses-real-api') === 'True',
+                    max_records: this.getAttribute('data-max-records'),
+                    estimated_duration: this.getAttribute('data-duration')
+                }
+            };
+            showResultDetail(result);
+        });
+    });
+});
+
+function showResultDetail(result) {
+    const content = document.getElementById('result-detail-content');
+    
+    const statusClass = result.status === 'success' ? 'success' : 
+                       result.status === 'failed' ? 'danger' : 'warning';
+    
+    // Safe access with defaults
+    const testName = result.test_name || 'Unknown';
+    const displayName = (result.config && result.config.name) || 'Unknown Test';
+    const testType = (result.config && result.config.type) || 'unknown';
+    const dataUsage = result.data_usage || 'Unknown';
+    const usesRealApi = (result.config && result.config.uses_real_api) ? 'Yes' : 'No';
+    const maxRecords = (result.config && result.config.max_records) || 'Unlimited';
+    const status = result.status || 'Unknown';
+    const startTime = result.start_time || 'N/A';
+    const endTime = result.end_time || 'N/A';
+    const duration = (result.config && result.config.estimated_duration) || 'Unknown';
+    const resultOutput = result.result || 'No output available';
+    
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Test Information</h6>
+                <table class="table table-sm">
+                    <tr><th>Test Name:</th><td><code>${testName}</code></td></tr>
+                    <tr><th>Display Name:</th><td>${displayName}</td></tr>
+                    <tr><th>Type:</th><td><span class="badge bg-info">${testType}</span></td></tr>
+                    <tr><th>Data Usage:</th><td><span class="badge bg-secondary">${dataUsage}</span></td></tr>
+                    <tr><th>Uses Real API:</th><td>${usesRealApi}</td></tr>
+                    <tr><th>Max Records:</th><td>${maxRecords}</td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Execution Details</h6>
+                <table class="table table-sm">
+                    <tr><th>Status:</th><td><span class="badge bg-${statusClass}">${status}</span></td></tr>
+                    <tr><th>Start Time:</th><td>${startTime}</td></tr>
+                    <tr><th>End Time:</th><td>${endTime}</td></tr>
+                    <tr><th>Estimated Duration:</th><td>${duration}</td></tr>
+                </table>
+            </div>
+        </div>
+        
+        <h6>Result Output</h6>
+        <div class="test-execution-log">${resultOutput}</div>
+    `;
+}
+
+function confirmClearResults() {
+    if (confirm('Are you sure you want to clear all test results? This action cannot be undone.')) {
+        // This would make an AJAX call to clear results
+        alert('Clear results functionality not yet implemented');
+    }
+}
+
+// Auto-refresh results every 60 seconds
+autoRefresh(60000);
+</script>
+{% endblock %}

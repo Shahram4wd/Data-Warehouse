@@ -1,0 +1,188 @@
+{% extends "testing/base.html" %}
+
+{% block title %}Run Test - CRM Test Interface{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'testing:dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Run Test</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_title %}
+    <i class="bi bi-play-circle"></i> Run New Test
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-play"></i> Select and Execute Test
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="runTestForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="test_name" class="form-label">Select Test</label>
+                        <select name="test_name" id="test_name" class="form-select" required>
+                            <option value="">Choose a test...</option>
+                            {% for test in tests %}
+                            <option value="{{ test.name }}" 
+                                    data-safety="{{ test.safety_level }}"
+                                    data-description="{{ test.description }}"
+                                    data-duration="{{ test.estimated_duration }}">
+                                {{ test.safety_level|title }} - {{ test.display_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="data_usage" class="form-label">Data Usage Level</label>
+                        <select name="data_usage" id="data_usage" class="form-select" required>
+                            {% for value, description in data_usage_levels %}
+                            <option value="{{ value }}" 
+                                    {% if value == 'MOCKED' %}selected{% endif %}
+                                    {% if value == 'FULL_SYNC' %}class="text-danger"{% endif %}>
+                                {{ description }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div id="test-info-panel" class="alert alert-info" style="display: none;">
+                        <h6><i class="bi bi-info-circle"></i> Test Information</h6>
+                        <div id="test-description"></div>
+                        <div id="test-duration"></div>
+                    </div>
+                    
+                    <div id="danger-warning" class="alert alert-warning" style="display: none;">
+                        <h6><i class="bi bi-exclamation-triangle"></i> Safety Warning</h6>
+                        <p>This test configuration may process large amounts of data and take significant time.</p>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="confirm_dangerous" id="confirm_dangerous">
+                            <label class="form-check-label" for="confirm_dangerous">
+                                I understand the risks and want to proceed
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-play-fill"></i> Execute Test
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Safety Guide -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-exclamation"></i> Safety Guide
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Data Usage Levels:</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <span class="badge bg-success">MOCKED</span>
+                        <small class="d-block text-muted">No real API calls - completely safe</small>
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge bg-success">MINIMAL</span>
+                        <small class="d-block text-muted">1-10 records maximum - very safe</small>
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge bg-warning text-dark">SAMPLE</span>
+                        <small class="d-block text-muted">50-100 records maximum - controlled</small>
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge bg-warning text-dark">RECENT</span>
+                        <small class="d-block text-muted">Last 7 days only - time-limited</small>
+                    </li>
+                    <li class="mb-2">
+                        <span class="badge bg-danger">FULL_SYNC</span>
+                        <small class="d-block text-muted">ALL records - use with extreme caution!</small>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Quick Tips -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-lightbulb"></i> Quick Tips
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Always start with <strong>MOCKED</strong> data usage</li>
+                    <li>Use <strong>MINIMAL</strong> or <strong>SAMPLE</strong> for real API testing</li>
+                    <li>Only use <strong>FULL_SYNC</strong> when absolutely necessary</li>
+                    <li>Check the <a href="{% url 'testing:results' %}">results page</a> after execution</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const testSelect = document.getElementById('test_name');
+    const dataUsageSelect = document.getElementById('data_usage');
+    const testInfoPanel = document.getElementById('test-info-panel');
+    const dangerWarning = document.getElementById('danger-warning');
+    const testDescription = document.getElementById('test-description');
+    const testDuration = document.getElementById('test-duration');
+    
+    function updateTestInfo() {
+        const selectedOption = testSelect.options[testSelect.selectedIndex];
+        const dataUsage = dataUsageSelect.value;
+        
+        if (selectedOption.value) {
+            // Show test info
+            testInfoPanel.style.display = 'block';
+            testDescription.textContent = selectedOption.getAttribute('data-description');
+            testDuration.innerHTML = `<strong>Estimated Duration:</strong> ${selectedOption.getAttribute('data-duration')}`;
+            
+            // Check if dangerous
+            const safetyLevel = selectedOption.getAttribute('data-safety');
+            const isDangerous = safetyLevel === 'dangerous' || dataUsage === 'FULL_SYNC';
+            
+            dangerWarning.style.display = isDangerous ? 'block' : 'none';
+        } else {
+            testInfoPanel.style.display = 'none';
+            dangerWarning.style.display = 'none';
+        }
+    }
+    
+    testSelect.addEventListener('change', updateTestInfo);
+    dataUsageSelect.addEventListener('change', updateTestInfo);
+    
+    // Form validation
+    document.getElementById('runTestForm').addEventListener('submit', function(e) {
+        const dangerWarning = document.getElementById('danger-warning');
+        const confirmCheckbox = document.getElementById('confirm_dangerous');
+        
+        if (dangerWarning.style.display !== 'none' && !confirmCheckbox.checked) {
+            e.preventDefault();
+            alert('Please confirm you understand the risks before proceeding with this dangerous test.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

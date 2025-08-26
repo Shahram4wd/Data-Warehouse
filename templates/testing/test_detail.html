@@ -1,0 +1,300 @@
+{% extends "testing/base.html" %}
+
+{% block title %}{{ config.name }} - Test Details{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'testing:dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'testing:test_list' %}">Tests</a></li>
+        <li class="breadcrumb-item active">{{ config.name }}</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block page_title %}
+    <i class="bi bi-info-circle"></i> Test Details: {{ config.name }}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Test Configuration -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-gear"></i> Test Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th>Internal Name:</th>
+                                <td><code>{{ test_name }}</code></td>
+                            </tr>
+                            <tr>
+                                <th>Display Name:</th>
+                                <td>{{ config.name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Type:</th>
+                                <td>
+                                    <span class="badge bg-info">{{ config.test_type.value|title }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Data Usage:</th>
+                                <td>
+                                    <span class="badge bg-secondary">{{ config.data_usage.value }}</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th>Uses Real API:</th>
+                                <td>
+                                    {% if config.uses_real_api %}
+                                        <i class="bi bi-wifi text-warning"></i> Yes
+                                    {% else %}
+                                        <i class="bi bi-shield-check text-success"></i> No (Mocked)
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Max Records:</th>
+                                <td>{{ config.max_records|default:"Unlimited" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date Range:</th>
+                                <td>
+                                    {% if config.date_range_days %}
+                                        Last {{ config.date_range_days }} days
+                                    {% else %}
+                                        No limit
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Estimated Duration:</th>
+                                <td>{{ config.estimated_duration }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <hr>
+                <h6>Description</h6>
+                <p>{{ config.description }}</p>
+            </div>
+        </div>
+        
+        <!-- Test History -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-clock-history"></i> Execution History
+                    <span class="badge bg-light text-dark ms-2">{{ test_history|length }} runs</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if test_history %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Data Usage</th>
+                                    <th>Start Time</th>
+                                    <th>Duration</th>
+                                    <th>Result</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in test_history|slice:":10" %}
+                                <tr>
+                                    <td>
+                                        {% if result.status == 'success' %}
+                                            <span class="badge bg-success">Success</span>
+                                        {% elif result.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">Error</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ result.data_usage }}</td>
+                                    <td><small>{{ result.start_time|slice:":19" }}</small></td>
+                                    <td><small>{{ result.config.estimated_duration|default:"Unknown" }}</small></td>
+                                    <td>
+                                        <span class="text-truncate d-inline-block" style="max-width: 300px;" 
+                                              title="{{ result.result }}">
+                                            {{ result.result|default:"No result" }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if test_history|length > 10 %}
+                    <div class="text-center">
+                        <small class="text-muted">Showing last 10 runs of {{ test_history|length }} total</small>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox fs-2 text-muted"></i>
+                        <p class="text-muted mt-2">This test has not been run yet</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions Sidebar -->
+    <div class="col-md-4">
+        <!-- Safety Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-{{ safety_color }}">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-shield-exclamation"></i> Safety Level
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <span class="fs-1">{{ safety.reason|slice:":1" }}</span>
+                    <h6>{{ safety_level|title }}</h6>
+                </div>
+                
+                {% if safety.safe %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle"></i> {{ safety.reason }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i> {{ safety.reason }}
+                        {% if safety.warning %}
+                            <hr>
+                            <small>{{ safety.warning }}</small>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-play"></i> Run This Test
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'testing:run_test' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="test_name" value="{{ test_name }}">
+                    
+                    <div class="mb-3">
+                        <label for="data_usage" class="form-label">Data Usage Level</label>
+                        <select name="data_usage" id="data_usage" class="form-select">
+                            <option value="MOCKED">MOCKED - No real API calls</option>
+                            <option value="MINIMAL">MINIMAL - 1-10 records</option>
+                            <option value="SAMPLE">SAMPLE - 50-100 records</option>
+                            <option value="RECENT">RECENT - Last 7 days</option>
+                            <option value="FULL_SYNC" class="text-danger">FULL_SYNC - All records ⚠️</option>
+                        </select>
+                    </div>
+                    
+                    <div id="danger-warning" class="alert alert-warning" style="display: none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="confirm_dangerous" id="confirm_dangerous">
+                            <label class="form-check-label" for="confirm_dangerous">
+                                I understand the risks
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-play-fill"></i> Execute Test
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Navigation Links -->
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="bi bi-link"></i> Quick Links
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'testing:test_list' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-list"></i> All Tests
+                    </a>
+                    <a href="{% url 'testing:results' %}" class="btn btn-outline-info">
+                        <i class="bi bi-graph-up"></i> View Results
+                    </a>
+                    <a href="{% url 'testing:dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Test Summary Modal -->
+<div class="modal fade" id="testSummaryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Test Summary</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre>{{ summary }}</pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dataUsageSelect = document.getElementById('data_usage');
+    const dangerWarning = document.getElementById('danger-warning');
+    
+    function checkSafety() {
+        const value = dataUsageSelect.value;
+        const isDangerous = value === 'FULL_SYNC' || value === 'RECENT';
+        dangerWarning.style.display = isDangerous ? 'block' : 'none';
+    }
+    
+    dataUsageSelect.addEventListener('change', checkSafety);
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const dangerWarning = document.getElementById('danger-warning');
+        const confirmCheckbox = document.getElementById('confirm_dangerous');
+        
+        if (dangerWarning.style.display !== 'none' && !confirmCheckbox.checked) {
+            e.preventDefault();
+            alert('Please confirm you understand the risks before proceeding.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}
