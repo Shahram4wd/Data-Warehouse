@@ -23,48 +23,138 @@ class CRMDiscoveryService:
     
     def __init__(self):
         self.models_dir = os.path.join(os.path.dirname(__file__), '..', 'models')
-        self.crm_icon_mapping = {
-            'genius': '🧠',
-            'hubspot': '🟠', 
-            'callrail': '📞',
-            'arrivy': '🚗',
-            'salespro': '💼',
-            'salesrabbit': '🐰',
-            'leadconduit': '⚡',
-            'marketsharp': '📈',
-            'gsheet': '📊',
+        
+        # Define actual CRM systems with their metadata
+        self.crm_systems = {
+            'genius': {
+                'icon': '🧠',
+                'display_name': 'Genius CRM',
+                'description': 'Genius appointment and prospect management system'
+            },
+            'hubspot': {
+                'icon': '🟠', 
+                'display_name': 'HubSpot CRM',
+                'description': 'HubSpot customer relationship management platform'
+            },
+            'callrail': {
+                'icon': '📞',
+                'display_name': 'CallRail',
+                'description': 'Call tracking and analytics platform'
+            },
+            'arrivy': {
+                'icon': '🚗',
+                'display_name': 'Arrivy',
+                'description': 'Field service management platform'
+            },
+            'salespro': {
+                'icon': '💼',
+                'display_name': 'SalesPro',
+                'description': 'Sales management and customer tracking system'
+            },
+            'salesrabbit': {
+                'icon': '🐰',
+                'display_name': 'SalesRabbit',
+                'description': 'Door-to-door sales management platform'
+            },
+            'leadconduit': {
+                'icon': '⚡',
+                'display_name': 'LeadConduit',
+                'description': 'Lead management and routing platform'
+            },
+            'marketsharp': {
+                'icon': '📈',
+                'display_name': 'Market Sharp',
+                'description': 'Marketing automation and lead management'
+            },
+            'gsheet': {
+                'icon': '📊',
+                'display_name': 'Google Sheets',
+                'description': 'Google Sheets data integration'
+            },
+            'five9': {
+                'icon': '☎️',
+                'display_name': 'Five9',
+                'description': 'Cloud contact center platform'
+            },
         }
+        
+        # Files to exclude from CRM discovery (utility models, not actual CRMs)
+        self.excluded_files = {
+            '__init__.py',
+            'common.py',    # Common utility models
+            'alerts.py',    # Alert/notification models
+            'base.py',      # Base model classes
+            'utils.py',     # Utility functions
+            'helpers.py',   # Helper functions
+        }
+    
+    def get_unregistered_model_files(self) -> List[str]:
+        """
+        Get list of model files that exist but are not registered as CRM systems.
+        Useful for debugging or identifying new CRM systems to add.
+        """
+        try:
+            # Get all model files
+            all_model_files = [
+                f[:-3] for f in os.listdir(self.models_dir) 
+                if f.endswith('.py') and f not in self.excluded_files
+            ]
+            
+            # Filter out registered CRM systems
+            unregistered = [
+                model_file for model_file in all_model_files 
+                if model_file not in self.crm_systems
+            ]
+            
+            return sorted(unregistered)
+            
+        except Exception as e:
+            logger.error(f"Error scanning for unregistered model files: {e}")
+            return []
+    
+    def is_valid_crm_system(self, crm_source: str) -> bool:
+        """Check if a CRM source is registered as a valid CRM system"""
+        return crm_source in self.crm_systems
     
     def get_all_crm_sources(self) -> List[Dict]:
         """
         Scan ingestion/models/ directory for CRM model files and return
-        comprehensive information about each CRM source
+        comprehensive information about each CRM source.
+        Only includes files that are registered as actual CRM systems.
         """
         crm_sources = []
         
         try:
-            # Get all Python files in models directory (excluding __init__ and common)
+            # Get all Python files in models directory
             model_files = [
                 f[:-3] for f in os.listdir(self.models_dir) 
-                if f.endswith('.py') and f not in ['__init__.py', 'common.py']
+                if f.endswith('.py') and f not in self.excluded_files
             ]
             
-            for crm_source in model_files:
+            # Filter to only include registered CRM systems
+            valid_crm_files = [
+                crm_file for crm_file in model_files 
+                if crm_file in self.crm_systems
+            ]
+            
+            for crm_source in valid_crm_files:
                 try:
                     crm_info = self._get_crm_source_info(crm_source)
                     if crm_info:
                         crm_sources.append(crm_info)
                 except Exception as e:
                     logger.warning(f"Error processing CRM source {crm_source}: {e}")
-                    # Add basic info even if there's an error
-                    crm_sources.append({
-                        'name': crm_source,
-                        'display_name': crm_source.title(),
-                        'icon': self.crm_icon_mapping.get(crm_source, '📋'),
-                        'model_count': 0,
-                        'last_sync': None,
-                        'status': 'error',
-                        'total_records': 0,
+                    # Add basic info even if there's an error, but only for registered CRMs
+                    if crm_source in self.crm_systems:
+                        crm_metadata = self.crm_systems[crm_source]
+                        crm_sources.append({
+                            'name': crm_source,
+                            'display_name': crm_metadata['display_name'],
+                            'icon': crm_metadata['icon'],
+                            'model_count': 0,
+                            'last_sync': None,
+                            'status': 'error',
+                            'total_records': 0,
                         'error': str(e)
                     })
             
@@ -79,6 +169,14 @@ class CRMDiscoveryService:
     def _get_crm_source_info(self, crm_source: str) -> Optional[Dict]:
         """Get comprehensive information for a single CRM source"""
         try:
+            # Only process registered CRM systems
+            if crm_source not in self.crm_systems:
+                logger.warning(f"CRM source '{crm_source}' not in registered CRM systems")
+                return None
+                
+            # Get CRM metadata
+            crm_metadata = self.crm_systems[crm_source]
+            
             # Import the CRM module
             module_path = f'ingestion.models.{crm_source}'
             module = importlib.import_module(module_path)
@@ -94,8 +192,9 @@ class CRMDiscoveryService:
             
             return {
                 'name': crm_source,
-                'display_name': self._format_display_name(crm_source),
-                'icon': self.crm_icon_mapping.get(crm_source, '📋'),
+                'display_name': crm_metadata['display_name'],
+                'description': crm_metadata.get('description', ''),
+                'icon': crm_metadata['icon'],
                 'model_count': len(models_list),
                 'models': [model['name'] for model in models_list],
                 'last_sync': last_sync_info,
@@ -163,13 +262,48 @@ class CRMDiscoveryService:
     
     def _get_total_records(self, models_list: List[Dict]) -> int:
         """Calculate total records across all models for a CRM"""
+        from django.db import connection
+        
         total = 0
         for model_info in models_list:
             try:
-                total += model_info['model_class'].objects.count()
+                model_class = model_info['model_class']
+                table_name = model_class._meta.db_table
+                
+                # Check if table exists first
+                if self._table_exists(table_name):
+                    count = model_class.objects.count()
+                    total += count
+                else:
+                    logger.debug(f"Table {table_name} does not exist, skipping count for {model_info['name']}")
+                    
             except Exception as e:
-                logger.warning(f"Error counting records for {model_info['name']}: {e}")
+                logger.debug(f"Error counting records for {model_info['name']}: {e}")
+                continue
+                
         return total
+    
+    def _table_exists(self, table_name: str) -> bool:
+        """Check if a database table exists"""
+        try:
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT COUNT(*)
+                    FROM information_schema.tables 
+                    WHERE table_name = %s
+                """, [table_name])
+                result = cursor.fetchone()
+                return result[0] > 0
+        except Exception:
+            # Fallback: try a simple SELECT and see if it fails
+            try:
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute(f"SELECT 1 FROM {table_name} LIMIT 1")
+                return True
+            except Exception:
+                return False
     
     def _determine_crm_status(self, crm_source: str, last_sync_info: Optional[Dict]) -> str:
         """Determine overall CRM status based on recent sync history"""
@@ -215,21 +349,6 @@ class CRMDiscoveryService:
             return 'success'
         else:
             return 'unknown'
-    
-    def _format_display_name(self, crm_source: str) -> str:
-        """Format CRM source name for display"""
-        # Handle special cases
-        display_names = {
-            'hubspot': 'HubSpot',
-            'callrail': 'CallRail',
-            'salespro': 'SalesPro',
-            'salesrabbit': 'SalesRabbit',
-            'leadconduit': 'LeadConduit',
-            'marketsharp': 'MarketSharp',
-            'gsheet': 'Google Sheets'
-        }
-        
-        return display_names.get(crm_source, crm_source.title())
     
     def _format_time_ago(self, timestamp: datetime) -> str:
         """Format timestamp as 'time ago' string"""

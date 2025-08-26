@@ -18,10 +18,13 @@
 The dashboard is built on three core services:
 
 **CRMDiscoveryService** (`ingestion/services/crm_discovery.py`):
-- Automatically scans `ingestion/models/` for CRM model files
-- Introspects Django models and their relationships
-- Maps models to available management commands
-- Provides sync status and statistics
+- **Smart CRM Filtering**: Only displays registered CRM systems (excludes utility models like alerts.py)
+- **Centralized CRM Registry**: Maintains metadata for all supported CRM systems with icons and descriptions
+- **Auto-Discovery**: Automatically scans `ingestion/models/` for registered CRM model files
+- **Model Introspection**: Introspects Django models and their relationships within each CRM
+- **Management Command Mapping**: Maps models to available sync commands
+- **Sync Status Integration**: Provides real-time sync status and statistics
+- **Validation**: Includes methods to validate CRM systems and detect unregistered model files
 
 **SyncManagementService** (`ingestion/services/sync_management.py`):
 - Handles sync command execution via subprocess
@@ -66,20 +69,31 @@ class SyncHistory(models.Model):
     performance_metrics = models.JSONField(default=dict)
 ```
 
-### **✅ Auto-Discovered CRM Systems**
-From `ingestion/models/` directory:
+### **✅ Smart CRM System Registry**
+**Updated**: The dashboard now uses a **centralized CRM registry** that filters out non-CRM models:
 
-| CRM Source | Model File | Example Models |
-|------------|------------|---------------|
-| `genius` | `genius.py` | `GeniusAppointment`, `GeniusProspect`, `GeniusUser`, `GeniusLead`, `GeniusQuote` |
-| `hubspot` | `hubspot.py` | `HubspotContact`, `HubspotDeal`, `HubspotAppointment` |
-| `callrail` | `callrail.py` | `CallrailCall`, `CallrailAccount`, `CallrailCompany`, `CallrailTracker` |
-| `arrivy` | `arrivy.py` | `ArrivyEntity`, `ArrivyTask`, `ArrivyGroup` |
-| `leadconduit` | `leadconduit.py` | `LeadconduitLead` |
-| `marketsharp` | `marketsharp.py` | Market Sharp models |
-| `salespro` | `salespro.py` | `SalesproCustomer`, `SalesproEstimate`, `SalesproPayment`, `SalesproLeadresult` |
-| `salesrabbit` | `salesrabbit.py` | `SalesrabbitLead` |
-| `gsheet` | `gsheet.py` | Google Sheets models |
+| CRM Source | Icon | Display Name | Models | Status |
+|------------|------|--------------|--------|--------|
+| `genius` | 🧠 | Genius CRM | 25 | ✅ Active |
+| `hubspot` | 🟠 | HubSpot CRM | 8 | ✅ Active |
+| `callrail` | 📞 | CallRail | 8 | ✅ Active |
+| `arrivy` | 🚗 | Arrivy | 5 | ✅ Active |
+| `five9` | ☎️ | Five9 | 1 | ✅ Active |
+| `leadconduit` | ⚡ | LeadConduit | 1 | ✅ Active |
+| `marketsharp` | 📈 | Market Sharp | 23 | ✅ Active |
+| `salespro` | 💼 | SalesPro | 8 | ✅ Active |
+| `salesrabbit` | 🐰 | SalesRabbit | 3 | ✅ Active |
+| `gsheet` | 📊 | Google Sheets | 2 | ✅ Active |
+
+**Total: 10 CRM Systems with 84+ Models**
+
+**✅ Successfully Excluded**: `alerts.py`, `common.py`, `base.py`, `utils.py`, `helpers.py` (utility models, not CRM systems)
+
+**🔧 CRM Registration Process**:
+1. Add new CRM to `crm_systems` dictionary in `CRMDiscoveryService.__init__()`
+2. Provide display name, icon, and description
+3. CRM automatically appears in dashboard
+4. Use `get_unregistered_model_files()` to detect new model files
 
 ### **✅ Standardized Management Commands**
 **Note**: All commands now use **consolidated flags** after recent standardization:
