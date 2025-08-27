@@ -287,20 +287,15 @@ class CRMDiscoveryService:
         """Check if a database table exists"""
         try:
             from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT COUNT(*)
-                    FROM information_schema.tables 
-                    WHERE table_name = %s
-                """, [table_name])
-                result = cursor.fetchone()
-                return result[0] > 0
+            # Use Django's introspection to get table names
+            table_names = connection.introspection.table_names()
+            return table_name in table_names
         except Exception:
-            # Fallback: try a simple SELECT and see if it fails
+            # Fallback: try a simple query and see if it fails
             try:
                 from django.db import connection
                 with connection.cursor() as cursor:
-                    cursor.execute(f"SELECT 1 FROM {table_name} LIMIT 1")
+                    cursor.execute(f"SELECT 1 FROM {connection.ops.quote_name(table_name)} LIMIT 1")
                 return True
             except Exception:
                 return False
