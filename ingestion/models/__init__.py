@@ -36,8 +36,6 @@ from .salespro import (
     SalesPro_Customer,
     SalesPro_Estimate,
     SalesPro_LeadResult,
-    SalesPro_Payment,
-    SalesPro_UserActivity,
     SalesPro_Office,
     SalesPro_User,
 )
@@ -102,7 +100,7 @@ __all__ = [
     
     # SalesPro models
     'SalesPro_CreditApplication', 'SalesPro_Customer', 'SalesPro_Estimate', 'SalesPro_LeadResult',
-    'SalesPro_Payment', 'SalesPro_UserActivity', 'SalesPro_Office', 'SalesPro_User',
+    'SalesPro_Office', 'SalesPro_User',
     
     # HubSpot models
     'Hubspot_Contact', 'Hubspot_Deal', 'Hubspot_Appointment', 'Hubspot_Division',

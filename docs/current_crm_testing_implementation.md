@@ -383,12 +383,12 @@ def test_with_mocks(self, mock_config, mock_engine):
 - `db_genius_all.py` - **UNTESTED**
 - *...and 24+ more untested Genius commands*
 
-**SalesPro DB Commands (7+ commands):**
+**SalesPro DB Commands (5 commands):**
 - `db_salespro_customers.py` - **UNTESTED**
-- `db_salespro_payments.py` - **UNTESTED**
 - `db_salespro_estimates.py` - **UNTESTED**
+- `db_salespro_creditapplications.py` - **UNTESTED**
+- `db_salespro_leadresults.py` - **UNTESTED**
 - `db_salespro_all.py` - **UNTESTED**
-- *...and 3+ more untested SalesPro commands*
 
 ### **🔶 PARTIALLY COVERED SYSTEMS (Major Gaps)**
 

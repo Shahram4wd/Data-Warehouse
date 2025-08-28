@@ -13,8 +13,6 @@ from ingestion.management.commands.db_salespro_creditapplications import SalesPr
 from ingestion.management.commands.db_salespro_customers import SalesProCustomerSyncEngine
 from ingestion.management.commands.db_salespro_estimates import SalesProEstimateSyncEngine
 from ingestion.management.commands.db_salespro_leadresults import SalesProLeadResultSyncEngine
-from ingestion.management.commands.db_salespro_payments import SalesProPaymentSyncEngine
-from ingestion.management.commands.db_salespro_useractivities import SalesProUserActivitySyncEngine
 logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
@@ -27,9 +25,7 @@ class Command(BaseCommand):
         ('customers', SalesProCustomerSyncEngine),
         ('creditapplications', SalesProCreditApplicationSyncEngine),
         ('estimates', SalesProEstimateSyncEngine),
-        ('payments', SalesProPaymentSyncEngine),
         ('leadresults', SalesProLeadResultSyncEngine),
-        ('useractivities', SalesProUserActivitySyncEngine),
     ]
     
     def add_arguments(self, parser):

@@ -22,12 +22,14 @@ class TestFlagValidation:
         '--dry-run',      # Test mode without DB writes
         '--debug',        # Verbose logging
         '--batch-size',   # Records per batch
-    ]
-    
-    RECOMMENDED_FLAGS = [
         '--full',         # Full sync (not --full-sync)
         '--quiet',        # Suppress non-error output
         '--force',        # Overwrite existing
+    ]
+    
+    RECOMMENDED_FLAGS = [
+        '--start-date',      # Start date for sync
+        '--end-date',        # End date for sync
     ]
     
     def get_crm_commands(self):
