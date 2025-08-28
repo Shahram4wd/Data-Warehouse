@@ -1,134 +1,155 @@
-import os
-from django.core.management.base import BaseCommand
-from django.db import connections
-from ingestion.utils import get_mysql_connection
-from tqdm import tqdm
-from psycopg2.extras import execute_values  # type: ignore  # for fast bulk upsert
-from django.db import transaction  # type: ignore
+"""
+Django management command for syncing Genius leads using the new sync engine architecture.
+This command follows the CRM sync guide patterns for consistent data synchronization.
+"""
+import asyncio
+import logging
+from datetime import datetime
+from typing import Optional
 
-BATCH_SIZE = int(os.getenv("BATCH_SIZE", 2000))
-MYSQL_FETCH_SIZE = int(os.getenv("MYSQL_FETCH_SIZE", 5000))
+from django.core.management.base import BaseCommand
+from django.utils.dateparse import parse_datetime
+
+from ingestion.sync.genius.engines.leads import GeniusLeadsSyncEngine
+
+logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
-    help = "Download leads directly from the database and upsert into local Genius_Lead."
+    help = 'Sync Genius leads data using the standardized sync engine'
 
     def add_arguments(self, parser):
-        parser.add_argument("--table", type=str, default="lead")
-        parser.add_argument("--limit", type=int, default=None)
-        parser.add_argument("--added_on_after", type=str, default=None, help="Filter records with added_on after the given date (YYYY-MM-DD)")
+        """Add command arguments following CRM sync guide standards"""
+        
+        # Core sync options
+        parser.add_argument(
+            '--full',
+            action='store_true',
+            help='Force full sync instead of incremental (ignores last sync timestamp)'
+        )
+        
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Preview changes without actually updating the database'
+        )
+        
+        parser.add_argument(
+            '--since',
+            type=str,
+            help='Sync records modified since this timestamp (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)'
+        )
+        
+        parser.add_argument(
+            '--start-date',
+            type=str,
+            help='Start date for date range sync (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)'
+        )
+        
+        parser.add_argument(
+            '--end-date',
+            type=str,
+            help='End date for date range sync (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)'
+        )
+        
+        parser.add_argument(
+            '--max-records',
+            type=int,
+            help='Maximum number of records to process (for testing/debugging)'
+        )
+        
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Enable debug logging for detailed sync information'
+        )
+        
+        # Legacy argument support (deprecated)
+        parser.add_argument(
+            '--force-overwrite',
+            action='store_true',
+            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
+        )
+
+    def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
+        """Parse datetime string argument"""
+        if not date_str:
+            return None
+            
+        # Try parsing as datetime first, then as date
+        try:
+            parsed = parse_datetime(date_str)
+            if parsed:
+                return parsed
+                
+            # If no time component, try parsing as date and add time
+            from django.utils.dateparse import parse_date
+            date_obj = parse_date(date_str)
+            if date_obj:
+                return datetime.combine(date_obj, datetime.min.time())
+                
+            raise ValueError(f"Could not parse datetime: {date_str}")
+        except Exception as e:
+            raise ValueError(f"Invalid datetime format '{date_str}': {e}")
 
     def handle(self, *args, **options):
-        table_name = options["table"]
-        limit = options["limit"]
-        added_on_after = options["added_on_after"]
-
-        conn = get_mysql_connection()
-        src_cursor = conn.cursor()
+        """Main command handler"""
+        
+        # Set up logging
+        if options['debug']:
+            logging.getLogger().setLevel(logging.DEBUG)
+            self.stdout.write("🐛 DEBUG MODE - Verbose logging enabled")
+        
+        # Handle dry run
+        if options['dry_run']:
+            self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
+        
+        # Handle legacy arguments
+        if options.get('force_overwrite'):
+            self.stdout.write(
+                self.style.WARNING("⚠️  --force-overwrite is deprecated, use --full instead")
+            )
+            options['full'] = True
+        
+        # Parse datetime arguments
+        since = self.parse_datetime_arg(options.get('since'))
+        start_date = self.parse_datetime_arg(options.get('start_date'))
+        end_date = self.parse_datetime_arg(options.get('end_date'))
+        
+        # Validate date range
+        if start_date and end_date and start_date > end_date:
+            raise ValueError("Start date cannot be after end date")
+        
+        # Execute sync
         try:
-            # Build the base query
-            base_query = f"SELECT COUNT(*) FROM `{table_name}`"
-            if added_on_after:
-                base_query += f" WHERE added_on > '{added_on_after}'"
+            result = asyncio.run(self.execute_async_sync(
+                full=options.get('full', False),
+                since=since,
+                start_date=start_date,
+                end_date=end_date,
+                max_records=options.get('max_records'),
+                dry_run=options.get('dry_run', False),
+                debug=options.get('debug', False)
+            ))
+            
+            # Display results
+            stats = result['stats']
+            self.stdout.write("✅ Sync completed successfully:")
+            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
+            self.stdout.write(f"   ➕ Created: {stats['created']} records")
+            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
+            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
+            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            
+        except Exception as e:
+            logger.exception("Genius leads sync failed")
+            self.stdout.write(
+                self.style.ERROR(f"❌ Sync failed: {str(e)}")
+            )
+            raise
 
-            # Get total
-            src_cursor.execute(base_query)
-            total = src_cursor.fetchone()[0]
-            if limit:
-                total = min(total, limit)
+    async def execute_async_sync(self, **kwargs):
+        """Execute the async sync operation"""
+        engine = GeniusLeadsSyncEngine()
+        return await engine.execute_sync(**kwargs)
 
-            self.stdout.write(f"Processing {total:,} rows from `{table_name}`…")
-            processed = 0
-            with tqdm(total=total, unit="rows") as pbar:
-                while processed < total:
-                    chunk = min(MYSQL_FETCH_SIZE, total - processed)
-                    query = f"""
-                        SELECT 
-                          lead_id, contact, division,
-                          first_name, last_name, address1, address2, city, state, zip,
-                          cdyne_county, is_valid_address, email, phone1, type1, phone2, type2,
-                          phone3, type3, phone4, type4, source, source_notes, sourced_on,
-                          job_type, rating, year_built, is_year_built_verified, is_zillow, 
-                          is_express_consent, express_consent_set_by, express_consent_set_on,
-                          express_consent_source, express_consent_upload_file_id,
-                          is_express_consent_being_reviewed, express_consent_being_reviewed_by,
-                          notes, status, substatus, substatus_reason, alternate_id, added_by,
-                          added_on, viewed_on, is_estimate_set, estimate_set_by, estimate_set_on,
-                          dead_on, dead_by, dead_note, is_credit_request, credit_request_by,
-                          credit_request_on, credit_request_reason, credit_request_status,
-                          credit_request_update_on, credit_request_update_by, credit_request_note,
-                          lead_cost, import_source, call_screen_viewed_on, call_screen_viewed_by,
-                          copied_to_id, copied_to_on, copied_from_id, copied_from_on,
-                          cwp_client, cwp_referral, rc_paid_to, rc_paid_on, with_dm,
-                          voicemail_file, agent_id, agent_name, invalid_address,
-                          is_valid_email, is_high_potential, is_mobile_lead, is_dnc, is_dummy,
-                          lead_central_estimate_date, do_not_call_before, is_estimate_confirmed,
-                          estimate_confirmed_by, estimate_confirmed_on,
-                          added_by_latitude, added_by_longitude, is_carpentry_followup,
-                          carpentry_followup_notes, marketing_source, prospect_id,
-                          added_by_supervisor, salesrabbit_lead_id, third_party_source_id
-                        FROM `{table_name}`
-                    """
-                    if added_on_after:
-                        query += f" WHERE added_on > '{added_on_after}'"
-                    query += f" ORDER BY lead_id LIMIT {chunk} OFFSET {processed}"
-
-                    src_cursor.execute(query)
-                    rows = src_cursor.fetchall()
-                    if not rows:
-                        break
-
-                    self._upsert_chunk(rows)
-                    processed += len(rows)
-                    pbar.update(len(rows))
-
-            self.stdout.write(self.style.SUCCESS("Done!"))
-        finally:
-            src_cursor.close()
-            conn.close()
-
-    def _upsert_chunk(self, rows):
-        # These must match the SELECT above **in order**:
-        cols = [
-          "lead_id","contact","division","first_name","last_name","address1","address2","city","state","zip",
-          "cdyne_county","is_valid_address","email","phone1","type1","phone2","type2","phone3","type3","phone4","type4",
-          "source","source_notes","sourced_on","job_type","rating","year_built","is_year_built_verified","is_zillow",
-          "is_express_consent","express_consent_set_by","express_consent_set_on","express_consent_source",
-          "express_consent_upload_file_id","is_express_consent_being_reviewed","express_consent_being_reviewed_by",
-          "notes","status","substatus","substatus_reason","alternate_id","added_by","added_on","viewed_on",
-          "is_estimate_set","estimate_set_by","estimate_set_on","dead_on","dead_by","dead_note","is_credit_request",
-          "credit_request_by","credit_request_on","credit_request_reason","credit_request_status",
-          "credit_request_update_on","credit_request_update_by","credit_request_note","lead_cost","import_source",
-          "call_screen_viewed_on","call_screen_viewed_by","copied_to_id","copied_to_on","copied_from_id","copied_from_on",
-          "cwp_client","cwp_referral","rc_paid_to","rc_paid_on","with_dm","voicemail_file","agent_id","agent_name",
-          "invalid_address","is_valid_email","is_high_potential","is_mobile_lead","is_dnc","is_dummy",
-          "lead_central_estimate_date","do_not_call_before","is_estimate_confirmed","estimate_confirmed_by",
-          "estimate_confirmed_on","added_by_latitude","added_by_longitude","is_carpentry_followup","carpentry_followup_notes",
-          "marketing_source","prospect_id","added_by_supervisor","salesrabbit_lead_id","third_party_source_id",
-          "updated_at","sync_created_at","sync_updated_at"  # Add required timestamp fields
-        ]
-        
-        # Add current timestamp to each row for the new fields
-        from django.utils import timezone
-        current_time = timezone.now()
-        rows_with_timestamps = []
-        for row in rows:
-            # Convert row tuple to list and add timestamp fields
-            row_list = list(row)
-            row_list.extend([current_time, current_time, current_time])  # updated_at, sync_created_at, sync_updated_at
-            rows_with_timestamps.append(tuple(row_list))
-        
-        placeholders = ",".join(["%s"] * len(cols))
-        # Use Postgres ON CONFLICT syntax for upsert
-        update_clause = ",".join(f"{c}=EXCLUDED.{c}" for c in cols if c!="lead_id")
-
-        # Use execute_values for faster bulk upsert
-        sql = f"""
-            INSERT INTO genius_lead ({','.join(cols)})
-            VALUES %s
-            ON CONFLICT (lead_id) DO UPDATE SET {update_clause}
-        """
-        values_template = f"({','.join(['%s'] * len(cols))})"
-        # Perform upsert inside a transaction for speed
-        with transaction.atomic(), connections['default'].cursor() as dest:
-            # Use actual chunk size for page_size
-            execute_values(dest, sql, rows_with_timestamps, template=values_template, page_size=len(rows_with_timestamps))

@@ -1,18 +1,18 @@
-import os
+"""
+Updated db_genius_divisions command using new sync architecture
+"""
+import asyncio
+import logging
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from ingestion.models import Genius_Division, Genius_DivisionGroup
 from ingestion.models.common import SyncHistory
-from ingestion.utils import get_mysql_connection
-from tqdm import tqdm
-from datetime import timezone as dt_timezone
-from datetime import datetime, date, timedelta, time
-from typing import Optional
+from ingestion.sync.genius.engines.divisions import GeniusDivisionSyncEngine
 
-BATCH_SIZE = int(os.getenv("BATCH_SIZE", 500))
+logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
-    help = "Download divisions directly from the database and update the local database."
+    help = "Download divisions using new sync architecture with SyncHistory tracking."
     
     def add_arguments(self, parser):
         # Standard CRM sync flags according to sync_crm_guide.md
@@ -29,7 +29,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--since',
             type=str,
-            help='Manual sync start date (YYYY-MM-DD format)'
+            help='Manual sync start date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS format)'
         )
         parser.add_argument(
             '--dry-run',
@@ -47,187 +47,89 @@ class Command(BaseCommand):
             action='store_true',
             help='Enable verbose logging'
         )
-        
-        # Genius-specific arguments (backward compatibility)
-        parser.add_argument(
-            '--start-date',
-            type=str,
-            help='(DEPRECATED) Use --since instead. Start date for sync (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            '--end-date',
-            type=str,
-            help='End date for sync (YYYY-MM-DD format)'
-        )
-        parser.add_argument(
-            "--table",
-            type=str,
-            default="division",
-            help="The name of the table to download data from. Defaults to 'division'."
-        )
 
     def handle(self, *args, **options):
-        table_name = options["table"]
-        connection = None
-
-        try:
-            # Database connection
-            connection = get_mysql_connection()
-            cursor = connection.cursor()
-            
-            # Preload lookup data
-            division_groups = self._preload_division_groups()
-            
-            # Process records in batches
-            self._process_all_records(cursor, table_name, division_groups)
-            
-            self.stdout.write(self.style.SUCCESS(f"Data from table '{table_name}' successfully downloaded and updated."))
-            
-        except Exception as e:
-            self.stdout.write(self.style.ERROR(f"An error occurred: {e}"))
-        finally:
-            if connection:
-                cursor.close()
-                connection.close()
-    
-    def _preload_division_groups(self):
-        """Preload division groups for lookup."""
-        return {group.id: group for group in Genius_DivisionGroup.objects.all()}
-    
-    def _process_all_records(self, cursor, table_name, division_groups):
-        """Process all records in batches."""
-        # Get total record count
-        cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-        total_records = cursor.fetchone()[0]
-        self.stdout.write(self.style.SUCCESS(f"Total records in table '{table_name}': {total_records}"))
+        """Main command handler using async sync engine"""
         
-        # Process records in batches
-        for offset in tqdm(range(0, total_records, BATCH_SIZE), desc="Processing batches"):
-            self._process_batch_at_offset(cursor, table_name, offset, division_groups)
-    
-    def _process_batch_at_offset(self, cursor, table_name, offset, division_groups):
-        """Process a batch of records starting at the specified offset."""
-        # Get the batch of records including timestamp fields
-        cursor.execute(f"""
-            SELECT id, group_id, region_id, label, abbreviation, 
-                   is_utility, is_corp, is_omniscient, is_inactive,
-                   account_scheduler_id, created_at, updated_at
-            FROM {table_name}
-            LIMIT {BATCH_SIZE} OFFSET {offset}
-        """)
-        rows = cursor.fetchall()
+        # Set up logging level
+        if options['debug']:
+            logging.basicConfig(level=logging.DEBUG)
+            logger.setLevel(logging.DEBUG)
         
-        # Process the batch
-        self._process_batch(rows, division_groups)
-    
-    def _process_batch(self, rows, division_groups):
-        """Process a batch of division records."""
-        to_create = []
-        to_update = []
-        existing_records = Genius_Division.objects.in_bulk([row[0] for row in rows])
-
-        for row in rows:
-            try:
-                # Extract fields from row (now includes timestamp fields)
-                (
-                    record_id, group_id, region_id, label, abbreviation, 
-                    is_utility, is_corp, is_omniscient, is_inactive,
-                    account_scheduler_id, created_at, updated_at
-                ) = row
-
-                # Get division group
-                division_group = division_groups.get(group_id) if group_id else None
-                
-                # Convert timestamps to timezone-aware datetimes
-                if created_at:
-                    created_at = timezone.make_aware(created_at) if timezone.is_naive(created_at) else created_at
-                if updated_at:
-                    updated_at = timezone.make_aware(updated_at) if timezone.is_naive(updated_at) else updated_at
-                is_utility = int(is_utility) if is_utility is not None else 0
-                is_corp = int(is_corp) if is_corp is not None else 0
-                is_omniscient = int(is_omniscient) if is_omniscient is not None else 0
-                is_inactive = int(is_inactive) if is_inactive is not None else 0
-
-                # Create or update record
-                if record_id in existing_records:
-                    record = self._update_record(
-                        existing_records[record_id], 
-                        group_id, region_id, label, abbreviation,
-                        is_utility, is_corp, is_omniscient, is_inactive,
-                        account_scheduler_id, created_at, updated_at
-                    )
-                    to_update.append(record)
-                else:
-                    record = self._create_record(
-                        record_id, group_id, region_id, label, abbreviation,
-                        is_utility, is_corp, is_omniscient, is_inactive,
-                        account_scheduler_id, created_at, updated_at
-                    )
-                    to_create.append(record)
-                    
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Error processing record ID {row[0] if row else 'unknown'}: {e}"))
-
-        # Save records to database
-        self._save_records(to_create, to_update)
-    
-    def _update_record(self, record, group_id, region_id, label, abbreviation,
-                      is_utility, is_corp, is_omniscient, is_inactive,
-                      account_scheduler_id, created_at, updated_at):
-        """Update an existing division record."""
-        record.group_id = group_id
-        record.region_id = region_id
-        record.label = label
-        record.abbreviation = abbreviation
-        record.is_utility = is_utility
-        record.is_corp = is_corp
-        record.is_omniscient = is_omniscient
-        record.is_inactive = is_inactive
-        record.account_scheduler_id = account_scheduler_id
-        record.created_at = created_at
-        record.updated_at = updated_at
-        return record
-    
-    def _create_record(self, record_id, group_id, region_id, label, abbreviation,
-                      is_utility, is_corp, is_omniscient, is_inactive,
-                      account_scheduler_id, created_at, updated_at):
-        """Create a new division record."""
-        return Genius_Division(
-            id=record_id,
-            group_id=group_id,
-            region_id=region_id,
-            label=label,
-            abbreviation=abbreviation,
-            is_utility=is_utility,
-            is_corp=is_corp,
-            is_omniscient=is_omniscient,
-            is_inactive=is_inactive,
-            account_scheduler_id=account_scheduler_id,
-            created_at=created_at,
-            updated_at=updated_at
-        )
-    
-    def _save_records(self, to_create, to_update):
-        """Save records to database with error handling."""
+        # Run the async sync
         try:
-            if to_create:
-                Genius_Division.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
+            result = asyncio.run(self._run_sync(options))
             
-            if to_update:
-                Genius_Division.objects.bulk_update(
-                    to_update,
-                    [
-                        'group_id', 'region_id', 'label', 'abbreviation',
-                        'is_utility', 'is_corp', 'is_omniscient', 'is_inactive',
-                        'account_scheduler_id', 'created_at', 'updated_at'
-                    ],
-                    batch_size=BATCH_SIZE
+            # Display results
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Division sync completed successfully!\n"
+                    f"Processed: {result['total_processed']}\n"
+                    f"Created: {result['created']}\n" 
+                    f"Updated: {result['updated']}\n"
+                    f"Errors: {result['errors']}\n"
+                    f"Skipped: {result['skipped']}"
                 )
+            )
+            
+            if result['errors'] > 0:
+                self.stdout.write(
+                    self.style.WARNING(f"Completed with {result['errors']} errors. Check logs for details.")
+                )
+        
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"Error during bulk operations: {e}"))
-            # Fallback to individual saves
-            for record in to_create + to_update:
-                try:
-                    record.save()
-                except Exception as individual_error:
-                    self.stdout.write(self.style.ERROR(f"Error saving record {record.id}: {individual_error}"))
+            self.stdout.write(self.style.ERROR(f"Division sync failed: {str(e)}"))
+            logger.error(f"Division sync failed: {str(e)}", exc_info=True)
+            raise
+
+    async def _run_sync(self, options):
+        """Run the division sync with proper configuration"""
+        
+        # Create sync engine
+        sync_engine = GeniusDivisionSyncEngine()
+        
+        # Create SyncHistory record at start
+        sync_record = await sync_engine.create_sync_record(
+            configuration={
+                'command': 'db_genius_divisions_new',
+                'full': options.get('full', False),
+                'force_overwrite': options.get('force_overwrite', False),
+                'since': options.get('since'),
+                'dry_run': options.get('dry_run', False),
+                'max_records': options.get('max_records', 0)
+            }
+        )
+        
+        try:
+            # Determine sync strategy
+            sync_strategy = await sync_engine.determine_sync_strategy(
+                since_param=options.get('since'),
+                force_overwrite=options.get('force_overwrite', False),
+                full_sync=options.get('full', False)
+            )
+            
+            self.stdout.write(f"Using sync strategy: {sync_strategy['type']}")
+            if sync_strategy.get('since_date'):
+                self.stdout.write(f"Syncing since: {sync_strategy['since_date']}")
+            
+            # Execute the sync
+            result = await sync_engine.sync_divisions(
+                since_date=sync_strategy.get('since_date'),
+                force_overwrite=sync_strategy.get('force_overwrite', False),
+                dry_run=options.get('dry_run', False),
+                max_records=options.get('max_records', 0)
+            )
+            
+            # Complete sync record with success
+            await sync_engine.complete_sync_record(sync_record, result)
+            
+            return result
+            
+        except Exception as e:
+            # Complete sync record with error
+            await sync_engine.complete_sync_record(
+                sync_record, 
+                {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}, 
+                error_message=str(e)
+            )
+            raise

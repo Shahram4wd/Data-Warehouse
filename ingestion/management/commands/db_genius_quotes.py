@@ -1,164 +1,155 @@
-import os
-from django.core.management.base import BaseCommand
-from ingestion.models import Genius_Quote, Genius_Prospect, Genius_Appointment, Genius_Service
-from ingestion.utils import get_mysql_connection
-from tqdm import tqdm
-from decimal import Decimal
+"""
+Django management command for syncing Genius quotes using the new sync engine architecture.
+This command follows the CRM sync guide patterns for consistent data synchronization.
+"""
+import asyncio
+import logging
 from datetime import datetime
+from typing import Optional
 
-BATCH_SIZE = 500
+from django.core.management.base import BaseCommand
+from django.utils.dateparse import parse_datetime
+
+from ingestion.sync.genius.engines.quotes import GeniusQuotesSyncEngine
+
+logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
-    help = "Download quotes directly from the database and update the local database."
+    help = 'Sync Genius quotes data using the standardized sync engine'
 
     def add_arguments(self, parser):
+        """Add command arguments following CRM sync guide standards"""
+        
+        # Core sync options
         parser.add_argument(
-            "--table",
+            '--full',
+            action='store_true',
+            help='Force full sync instead of incremental (ignores last sync timestamp)'
+        )
+        
+        parser.add_argument(
+            '--dry-run',
+            action='store_true',
+            help='Preview changes without actually updating the database'
+        )
+        
+        parser.add_argument(
+            '--since',
             type=str,
-            default="quote",
-            help="The name of the table to download data from. Defaults to 'quote'."
+            help='Sync records modified since this timestamp (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)'
+        )
+        
+        parser.add_argument(
+            '--start-date',
+            type=str,
+            help='Start date for date range sync (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)'
+        )
+        
+        parser.add_argument(
+            '--end-date',
+            type=str,
+            help='End date for date range sync (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)'
+        )
+        
+        parser.add_argument(
+            '--max-records',
+            type=int,
+            help='Maximum number of records to process (for testing/debugging)'
+        )
+        
+        parser.add_argument(
+            '--debug',
+            action='store_true',
+            help='Enable debug logging for detailed sync information'
+        )
+        
+        # Legacy argument support (deprecated)
+        parser.add_argument(
+            '--force-overwrite',
+            action='store_true',
+            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
         )
 
-    def handle(self, *args, **options):
-        table_name = options["table"]
-
-        connection = None  # Initialize the connection variable
-        try:
-            # Use the utility function to get the database connection
-            connection = get_mysql_connection()
-            cursor = connection.cursor()
-
-            # Fetch data from the specified table
-            self.stdout.write(self.style.SUCCESS(f"Fetching data from table '{table_name}'..."))
-            cursor.execute(f"""
-                SELECT id, prospect_id, appointment_id, job_id, client_cid, service_id, 
-                       label, description, amount, expire_date, status_id, 
-                       contract_file_id, estimate_file_id, add_user_id, add_date 
-                FROM {table_name}
-            """)
-            rows = cursor.fetchall()
-
-            # Process rows
-            to_create = []
-            to_update = []
-            existing_records = Genius_Quote.objects.in_bulk([row[0] for row in rows])
-
-            # Get all referenced objects for validation
-            prospect_ids = set(row[1] for row in rows if row[1])
-            appointment_ids = set(row[2] for row in rows if row[2])
-            service_ids = set(row[5] for row in rows if row[5])
+    def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
+        """Parse datetime string argument"""
+        if not date_str:
+            return None
             
-            existing_prospects = set(Genius_Prospect.objects.filter(id__in=prospect_ids).values_list('id', flat=True))
-            existing_appointments = set(Genius_Appointment.objects.filter(id__in=appointment_ids).values_list('id', flat=True))
-            existing_services = set(Genius_Service.objects.filter(id__in=service_ids).values_list('id', flat=True))
-
-            skipped_count = 0
-            processed_count = 0
-
-            for row in tqdm(rows):
-                (quote_id, prospect_id, appointment_id, job_id, client_cid, service_id, 
-                 label, description, amount, expire_date, status_id, 
-                 contract_file_id, estimate_file_id, add_user_id, add_date) = row
+        # Try parsing as datetime first, then as date
+        try:
+            parsed = parse_datetime(date_str)
+            if parsed:
+                return parsed
                 
-                # Skip if required foreign keys don't exist
-                if prospect_id and prospect_id not in existing_prospects:
-                    skipped_count += 1
-                    self.stdout.write(self.style.WARNING(f"Skipping quote {quote_id}: Prospect {prospect_id} not found"))
-                    continue
-                    
-                if appointment_id and appointment_id not in existing_appointments:
-                    skipped_count += 1
-                    self.stdout.write(self.style.WARNING(f"Skipping quote {quote_id}: Appointment {appointment_id} not found"))
-                    continue
-                    
-                if service_id and service_id not in existing_services:
-                    skipped_count += 1
-                    self.stdout.write(self.style.WARNING(f"Skipping quote {quote_id}: Service {service_id} not found"))
-                    continue
-
-                processed_count += 1
+            # If no time component, try parsing as date and add time
+            from django.utils.dateparse import parse_date
+            date_obj = parse_date(date_str)
+            if date_obj:
+                return datetime.combine(date_obj, datetime.min.time())
                 
-                # Convert amount to Decimal
-                amount_decimal = Decimal(str(amount)) if amount is not None else Decimal('0.00')
-                
-                if quote_id in existing_records:
-                    # Update existing quote
-                    record_instance = existing_records[quote_id]
-                    record_instance.prospect_id = prospect_id
-                    record_instance.appointment_id = appointment_id
-                    record_instance.job_id = job_id
-                    record_instance.client_cid = client_cid
-                    record_instance.service_id = service_id
-                    record_instance.label = label
-                    record_instance.description = description
-                    record_instance.amount = amount_decimal
-                    record_instance.expire_date = expire_date
-                    record_instance.status_id = status_id or 1
-                    record_instance.contract_file_id = contract_file_id
-                    record_instance.estimate_file_id = estimate_file_id
-                    record_instance.add_user_id = add_user_id
-                    # Note: add_date is auto_now_add=True, so we don't update it
-                    to_update.append(record_instance)
-                else:
-                    # Create new quote
-                    to_create.append(Genius_Quote(
-                        id=quote_id,
-                        prospect_id=prospect_id,
-                        appointment_id=appointment_id,
-                        job_id=job_id,
-                        client_cid=client_cid,
-                        service_id=service_id,
-                        label=label,
-                        description=description,
-                        amount=amount_decimal,
-                        expire_date=expire_date,
-                        status_id=status_id or 1,
-                        contract_file_id=contract_file_id,
-                        estimate_file_id=estimate_file_id,
-                        add_user_id=add_user_id
-                        # add_date will be set automatically
-                    ))
-
-                if len(to_update) >= BATCH_SIZE or len(to_create) >= BATCH_SIZE:
-                    self._process_batches(to_create, to_update)
-
-            # Final batch processing
-            self._process_batches(to_create, to_update)
-
-            self.stdout.write(self.style.SUCCESS(
-                f"Data from table '{table_name}' successfully downloaded and updated. "
-                f"Processed: {processed_count}, Skipped: {skipped_count}"
-            ))
-
+            raise ValueError(f"Could not parse datetime: {date_str}")
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"An error occurred: {e}"))
-        finally:
-            if connection:  # Ensure the connection is closed only if it was established
-                cursor.close()
-                connection.close()
+            raise ValueError(f"Invalid datetime format '{date_str}': {e}")
 
-    def _process_batches(self, to_create, to_update):
-        """Helper method to process batches of records."""
-        if to_create:
-            try:
-                Genius_Quote.objects.bulk_create(to_create, batch_size=BATCH_SIZE)
-                created_count = len(to_create)
-                self.stdout.write(self.style.SUCCESS(f"Created {created_count} quote records"))
-                to_create.clear()
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Error creating quote records: {e}"))
-                to_create.clear()
+    def handle(self, *args, **options):
+        """Main command handler"""
         
-        if to_update:
-            try:
-                Genius_Quote.objects.bulk_update(to_update, [
-                    'prospect', 'appointment', 'job_id', 'client_cid', 'service',
-                    'label', 'description', 'amount', 'expire_date', 'status_id',
-                    'contract_file_id', 'estimate_file_id', 'add_user_id'
-                ], batch_size=BATCH_SIZE)
-                updated_count = len(to_update)
-                self.stdout.write(self.style.SUCCESS(f"Updated {updated_count} quote records"))
-                to_update.clear()
-            except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Error updating quote records: {e}"))
-                to_update.clear()
+        # Set up logging
+        if options['debug']:
+            logging.getLogger().setLevel(logging.DEBUG)
+            self.stdout.write("🐛 DEBUG MODE - Verbose logging enabled")
+        
+        # Handle dry run
+        if options['dry_run']:
+            self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
+        
+        # Handle legacy arguments
+        if options.get('force_overwrite'):
+            self.stdout.write(
+                self.style.WARNING("⚠️  --force-overwrite is deprecated, use --full instead")
+            )
+            options['full'] = True
+        
+        # Parse datetime arguments
+        since = self.parse_datetime_arg(options.get('since'))
+        start_date = self.parse_datetime_arg(options.get('start_date'))
+        end_date = self.parse_datetime_arg(options.get('end_date'))
+        
+        # Validate date range
+        if start_date and end_date and start_date > end_date:
+            raise ValueError("Start date cannot be after end date")
+        
+        # Execute sync
+        try:
+            result = asyncio.run(self.execute_async_sync(
+                full=options.get('full', False),
+                since=since,
+                start_date=start_date,
+                end_date=end_date,
+                max_records=options.get('max_records'),
+                dry_run=options.get('dry_run', False),
+                debug=options.get('debug', False)
+            ))
+            
+            # Display results
+            stats = result['stats']
+            self.stdout.write("✅ Sync completed successfully:")
+            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
+            self.stdout.write(f"   ➕ Created: {stats['created']} records")
+            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
+            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
+            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            
+        except Exception as e:
+            logger.exception("Genius quotes sync failed")
+            self.stdout.write(
+                self.style.ERROR(f"❌ Sync failed: {str(e)}")
+            )
+            raise
+
+    async def execute_async_sync(self, **kwargs):
+        """Execute the async sync operation"""
+        engine = GeniusQuotesSyncEngine()
+        return await engine.execute_sync(**kwargs)
+

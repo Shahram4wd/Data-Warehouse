@@ -10,10 +10,11 @@ Individual CRM systems have been moved to dedicated test files for better mainta
 ├── test_crm_marketsharp.py     - MarketSharp data sync tests  
 ├── test_crm_leadconduit.py     - LeadConduit leads & all data sync tests
 ├── test_crm_gsheet.py          - Google Sheets sync tests
-├── test_crm_hubspot.py         - HubSpot contacts, deals & all data sync tests
-├── test_crm_arrivy.py          - Arrivy bookings, tasks & all sync tests
-├── test_callrail.py            - CallRail advanced testing (9 commands)
-├── test_salesrabbit.py         - SalesRabbit advanced testing (3 commands)
+├── test_crm_hubspot.py         - HubSpot contacts, deals & all data sync tests (10 commands, 41 tests)
+├── test_crm_arrivy.py          - Arrivy bookings, tasks & all sync tests (6 commands, 24 tests)
+├── test_callrail.py            - CallRail advanced testing (9 commands, 40+ tests)
+├── test_crm_salespro_db.py     - SalesPro DB sync tests (5 commands, 20 tests) ⭐ NEW
+├── test_crm_genius_db.py       - Genius DB sync tests (5 commands, 20 tests) ⭐ NEW
 └── test_crm_sync_commands_common.py - Shared/common functionality tests
 
 🏗️ Infrastructure Files:
