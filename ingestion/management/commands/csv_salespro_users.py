@@ -137,6 +137,7 @@ class Command(BaseCommand):
             "identifier": (row.get("identifier") or None),
             "license_number": (row.get("licenseNumber") or None),
 
+            # SalesPro timestamps
             "created_at": parse_dt(row.get("createdAt")),
             "updated_at": parse_dt(row.get("updatedAt")),
             "last_login_date": parse_dt(row.get("lastLoginDate")),

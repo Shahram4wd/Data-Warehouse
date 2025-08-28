@@ -12,6 +12,9 @@ class SalesPro_Office(models.Model):
     can_search_all_estimates = models.BooleanField(default=False)
     last_edit_user = models.CharField(max_length=255, blank=True, null=True)
 
+    created_at = models.DateTimeField(blank=True, null=True, help_text="Original creation date from SalesPro")
+    updated_at = models.DateTimeField(blank=True, null=True, help_text="Original last update date from SalesPro")
+    
     sync_created_at = models.DateTimeField(default=timezone.now)
     sync_updated_at = models.DateTimeField(auto_now=True)
     last_edit_date = models.DateTimeField(blank=True, null=True)
@@ -66,11 +69,15 @@ class SalesPro_User(models.Model):
     identifier = models.CharField(max_length=255, blank=True, null=True)
     license_number = models.CharField(max_length=100, blank=True, null=True)
 
-    # Timestamps
-    sync_created_at = models.DateTimeField(default=timezone.now)
-    sync_updated_at = models.DateTimeField(auto_now=True)
+    # Timestamps from SalesPro
+    created_at = models.DateTimeField(blank=True, null=True, help_text="Original creation date from SalesPro")
+    updated_at = models.DateTimeField(blank=True, null=True, help_text="Original last update date from SalesPro")
     last_login_date = models.DateTimeField(blank=True, null=True)
     deactivated_date = models.DateTimeField(blank=True, null=True)
+    
+    # Sync tracking timestamps
+    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'salespro_user'
