@@ -11,7 +11,7 @@ class GeniusUsersClient(GeniusBaseClient):
     def __init__(self):
         super().__init__()
         self.table_name = "user_data"
-        self.timestamp_field = "add_datetime"
+        self.timestamp_field = "updated_at"  # Use updated_at for better delta update support
         
     def get_query(self, where_clause: str = "", limit: Optional[int] = None) -> str:
         """Build the complete query for user data"""
@@ -34,6 +34,7 @@ class GeniusUsersClient(GeniusBaseClient):
             start_date,
             add_user_id,
             add_datetime,
+            updated_at,
             is_inactive,
             inactive_on,
             inactive_reason_id,

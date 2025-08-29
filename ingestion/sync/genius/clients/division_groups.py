@@ -23,9 +23,9 @@ class GeniusDivisionGroupClient(GeniusBaseClient):
         query = """
         SELECT 
             dg.id,
-            dg.name,
-            dg.code,
-            dg.active,
+            dg.group_label as name,
+            dg.region as code,
+            dg.is_active as active,
             dg.created_at,
             dg.updated_at
         FROM division_group dg

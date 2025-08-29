@@ -110,16 +110,16 @@ class GeniusUsersSyncEngine(GeniusBaseSyncEngine):
         """Build WHERE clause based on sync parameters"""
         conditions = []
         
-        # Strategy-based filtering
+        # Strategy-based filtering - use updated_at for delta updates when available
         if sync_strategy == "incremental" and since:
-            conditions.append(f"add_datetime > '{since.strftime('%Y-%m-%d %H:%M:%S')}'")
+            conditions.append(f"updated_at > '{since.strftime('%Y-%m-%d %H:%M:%S')}'")
         elif sync_strategy == "manual_since" and since:
-            conditions.append(f"add_datetime >= '{since.strftime('%Y-%m-%d %H:%M:%S')}'")
+            conditions.append(f"updated_at >= '{since.strftime('%Y-%m-%d %H:%M:%S')}'")
         
-        # Date range filtering
+        # Date range filtering - also use updated_at for better delta support
         if start_date:
-            conditions.append(f"add_datetime >= '{start_date.strftime('%Y-%m-%d %H:%M:%S')}'")
+            conditions.append(f"updated_at >= '{start_date.strftime('%Y-%m-%d %H:%M:%S')}'")
         if end_date:
-            conditions.append(f"add_datetime <= '{end_date.strftime('%Y-%m-%d %H:%M:%S')}'")
+            conditions.append(f"updated_at <= '{end_date.strftime('%Y-%m-%d %H:%M:%S')}'")
         
         return " AND ".join(conditions) if conditions else ""

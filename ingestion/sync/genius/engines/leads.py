@@ -2,25 +2,47 @@
 Lead sync engine for Genius CRM
 """
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from datetime import datetime
 from asgiref.sync import sync_to_async
 from django.db import transaction
 
 from .base import GeniusBaseSyncEngine
 from ..clients.leads import GeniusLeadClient
 from ..processors.leads import GeniusLeadProcessor
-from ingestion.models import Genius_Lead, Genius_User, Genius_Division, Genius_Prospect
+from ingestion.models import Genius_Lead, Genius_UserData, Genius_Division, Genius_Prospect
 
 logger = logging.getLogger(__name__)
 
 
-class GeniusLeadSyncEngine(GeniusBaseSyncEngine):
+class GeniusLeadsSyncEngine(GeniusBaseSyncEngine):
     """Sync engine for Genius lead data"""
     
     def __init__(self):
         super().__init__('leads')
         self.client = GeniusLeadClient()
         self.processor = GeniusLeadProcessor(Genius_Lead)
+    
+    async def execute_sync(self, 
+                          full: bool = False,
+                          since: Optional[datetime] = None,
+                          start_date: Optional[datetime] = None,
+                          end_date: Optional[datetime] = None,
+                          max_records: Optional[int] = None,
+                          dry_run: bool = False,
+                          debug: bool = False) -> Dict[str, Any]:
+        """Execute the leads sync process - adapter for standard sync interface"""
+        
+        # Convert parameters to match existing method signature
+        since_date = since
+        force_overwrite = full
+        
+        return await self.sync_leads(
+            since_date=since_date, 
+            force_overwrite=force_overwrite,
+            dry_run=dry_run, 
+            max_records=max_records or 0
+        )
     
     async def sync_leads(self, since_date=None, force_overwrite=False, 
                         dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
@@ -84,7 +106,7 @@ class GeniusLeadSyncEngine(GeniusBaseSyncEngine):
         stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
         
         # Preload lookup data for FK validation
-        users = {u.genius_id: u for u in Genius_User.objects.all()}
+        users = {u.user_id: u for u in Genius_UserData.objects.all()}
         divisions = {d.genius_id: d for d in Genius_Division.objects.all()}
         prospects = {p.genius_id: p for p in Genius_Prospect.objects.all()}
         

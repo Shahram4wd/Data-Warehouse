@@ -2,25 +2,47 @@
 Quote sync engine for Genius CRM
 """
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from datetime import datetime
 from asgiref.sync import sync_to_async
 from django.db import transaction
 
 from .base import GeniusBaseSyncEngine
 from ..clients.quotes import GeniusQuoteClient
 from ..processors.quotes import GeniusQuoteProcessor
-from ingestion.models import Genius_Quote, Genius_Prospect, Genius_User, Genius_Division, Genius_Job
+from ingestion.models import Genius_Quote, Genius_Prospect, Genius_UserData, Genius_Division, Genius_Job
 
 logger = logging.getLogger(__name__)
 
 
-class GeniusQuoteSyncEngine(GeniusBaseSyncEngine):
+class GeniusQuotesSyncEngine(GeniusBaseSyncEngine):
     """Sync engine for Genius quote data"""
     
     def __init__(self):
         super().__init__('quotes')
         self.client = GeniusQuoteClient()
         self.processor = GeniusQuoteProcessor(Genius_Quote)
+    
+    async def execute_sync(self, 
+                          full: bool = False,
+                          since: Optional[datetime] = None,
+                          start_date: Optional[datetime] = None,
+                          end_date: Optional[datetime] = None,
+                          max_records: Optional[int] = None,
+                          dry_run: bool = False,
+                          debug: bool = False) -> Dict[str, Any]:
+        """Execute the quotes sync process - adapter for standard sync interface"""
+        
+        # Convert parameters to match existing method signature
+        since_date = since
+        force_overwrite = full
+        
+        return await self.sync_quotes(
+            since_date=since_date, 
+            force_overwrite=force_overwrite,
+            dry_run=dry_run, 
+            max_records=max_records or 0
+        )
     
     async def sync_quotes(self, since_date=None, force_overwrite=False, 
                          dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
@@ -45,7 +67,17 @@ class GeniusQuoteSyncEngine(GeniusBaseSyncEngine):
             
             if dry_run:
                 logger.info("DRY RUN: Would process quotes but making no changes")
-                return stats
+                return {
+                    'success': True,
+                    'sync_id': None,  # No sync record created in dry run
+                    'stats': {
+                        'processed': stats['total_processed'],
+                        'created': stats['created'],
+                        'updated': stats['updated'],
+                        'errors': stats['errors'],
+                        'skipped': stats['skipped']
+                    }
+                }
             
             # Process quotes in batches
             batch_size = 500
@@ -85,7 +117,7 @@ class GeniusQuoteSyncEngine(GeniusBaseSyncEngine):
         
         # Preload lookup data for FK validation
         prospects = {p.genius_id: p for p in Genius_Prospect.objects.all()}
-        users = {u.genius_id: u for u in Genius_User.objects.all()}
+        users = {u.user_id: u for u in Genius_UserData.objects.all()}
         divisions = {d.genius_id: d for d in Genius_Division.objects.all()}
         jobs = {j.genius_id: j for j in Genius_Job.objects.all()}
         
@@ -162,7 +194,17 @@ class GeniusQuoteSyncEngine(GeniusBaseSyncEngine):
                     logger.error(f"Error processing quote record: {e}")
                     logger.error(f"Record data: {raw_record}")
         
-        return stats
+        return {
+            'success': True,
+            'sync_id': None,  # Add sync record ID when implemented  
+            'stats': {
+                'processed': stats['total_processed'],
+                'created': stats['created'],
+                'updated': stats['updated'],
+                'errors': stats['errors'],
+                'skipped': stats['skipped']
+            }
+        }
     
     def _should_update_quote(self, existing: Genius_Quote, new_data: Dict[str, Any]) -> bool:
         """Check if quote should be updated based on data changes"""

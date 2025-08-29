@@ -39,7 +39,7 @@ class GeniusLeadClient(GeniusBaseClient):
             l.converted_to_prospect_id,
             l.created_at,
             l.updated_at
-        FROM lead l
+        FROM `lead` l
         """
         
         # Add WHERE clause for incremental sync

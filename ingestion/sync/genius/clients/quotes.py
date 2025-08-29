@@ -24,16 +24,16 @@ class GeniusQuoteClient(GeniusBaseClient):
         SELECT 
             q.id,
             q.prospect_id,
-            q.user_id,
-            q.division_id,
-            q.quote_number,
-            q.quote_date,
-            q.total_amount,
-            q.status,
-            q.notes,
-            q.valid_until,
-            q.converted_to_job_id,
-            q.created_at,
+            q.add_user_id as user_id,
+            q.appointment_id as division_id,
+            q.id as quote_number,
+            q.add_date as quote_date,
+            q.amount as total_amount,
+            q.status_id as status,
+            q.description as notes,
+            q.expire_date as valid_until,
+            q.job_id as converted_to_job_id,
+            q.add_date as created_at,
             q.updated_at
         FROM quote q
         """

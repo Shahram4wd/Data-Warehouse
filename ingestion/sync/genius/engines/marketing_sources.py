@@ -40,14 +40,23 @@ class GeniusMarketingSourcesSyncEngine(GeniusBaseSyncEngine):
         if dry_run:
             logger.info("Dry run mode - no actual sync performed")
         
-        sync_id = await self.create_sync_history_record(
-            entity_type=self.entity_type,
-            status='completed',
-            stats=stats
-        )
+        # Create sync record
+        configuration = {
+            'full': full,
+            'since': since.isoformat() if since else None,
+            'start_date': start_date.isoformat() if start_date else None,
+            'end_date': end_date.isoformat() if end_date else None,
+            'max_records': max_records,
+            'dry_run': dry_run
+        }
+        sync_record = await self.create_sync_record(configuration)
+        
+        # Complete sync record
+        await self.complete_sync_record(sync_record, stats)
         
         return {
             'stats': stats,
-            'sync_id': sync_id
+            'sync_id': sync_record.id,
+            'status': 'success'
         }
 

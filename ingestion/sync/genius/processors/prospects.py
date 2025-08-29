@@ -51,17 +51,18 @@ class GeniusProspectsProcessor(GeniusBaseProcessor):
         # Get division object for foreign key
         division_id = record.get('division_id')
         if division_id and division_id in self.divisions_cache:
-            record['division'] = self.divisions_cache[division_id]
+            # Store division object for logging/validation but don't pass to model
+            record['_division_obj'] = self.divisions_cache[division_id]
         else:
             logger.warning(f"Division ID {division_id} not found in cache for prospect {record.get('id')}")
-            record['division'] = None
+            record['_division_obj'] = None
         
         return record
     
     def validate_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate prospect record data"""
         # Ensure required fields
-        if not record_data.get('division'):
+        if not record_data.get('_division_obj'):
             logger.warning(f"Prospect {record_data.get('id')} missing division")
         
         if not record_data.get('updated_at'):
@@ -73,7 +74,7 @@ class GeniusProspectsProcessor(GeniusBaseProcessor):
         """Create Genius_Prospect model instance"""
         return Genius_Prospect(
             id=record_data['id'],
-            division=record_data['division'],
+            division_id=record_data['division_id'],
             user_id=record_data.get('user_id'),
             first_name=record_data.get('first_name'),
             last_name=record_data.get('last_name'),

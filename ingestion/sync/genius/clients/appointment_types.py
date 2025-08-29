@@ -23,15 +23,15 @@ class GeniusAppointmentTypeClient(GeniusBaseClient):
         query = """
         SELECT 
             at.id,
-            at.name,
-            at.code,
-            at.description,
-            at.duration_minutes,
-            at.color,
-            at.active,
-            at.sort_order,
-            at.created_at,
-            at.updated_at
+            at.label as name,
+            '' as code,
+            '' as description,
+            0 as duration_minutes,
+            '' as color,
+            at.is_active as active,
+            at.id as sort_order,
+            NOW() as created_at,
+            NOW() as updated_at
         FROM appointment_type at
         """
         
@@ -41,7 +41,7 @@ class GeniusAppointmentTypeClient(GeniusBaseClient):
             query += f" {where_clause}"
         
         # Add ordering and limit
-        query += " ORDER BY at.sort_order, at.id"
+        query += " ORDER BY at.id"
         if limit > 0:
             query += f" LIMIT {limit}"
         

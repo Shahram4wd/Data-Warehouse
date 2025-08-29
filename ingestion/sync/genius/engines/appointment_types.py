@@ -2,7 +2,8 @@
 Appointment Type sync engine for Genius CRM
 """
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from datetime import datetime
 from asgiref.sync import sync_to_async
 from django.db import transaction
 
@@ -14,13 +15,34 @@ from ingestion.models import Genius_AppointmentType
 logger = logging.getLogger(__name__)
 
 
-class GeniusAppointmentTypeSyncEngine(GeniusBaseSyncEngine):
+class GeniusAppointmentTypesSyncEngine(GeniusBaseSyncEngine):
     """Sync engine for Genius appointment type data"""
     
     def __init__(self):
         super().__init__('appointment_types')
         self.client = GeniusAppointmentTypeClient()
         self.processor = GeniusAppointmentTypeProcessor(Genius_AppointmentType)
+    
+    async def execute_sync(self, 
+                          full: bool = False,
+                          since: Optional[datetime] = None,
+                          start_date: Optional[datetime] = None,
+                          end_date: Optional[datetime] = None,
+                          max_records: Optional[int] = None,
+                          dry_run: bool = False,
+                          debug: bool = False) -> Dict[str, Any]:
+        """Execute the appointment types sync process - adapter for standard sync interface"""
+        
+        # Convert parameters to match existing method signature
+        since_date = since
+        force_overwrite = full
+        
+        return await self.sync_appointment_types(
+            since_date=since_date, 
+            force_overwrite=force_overwrite,
+            dry_run=dry_run, 
+            max_records=max_records or 0
+        )
     
     async def sync_appointment_types(self, since_date=None, force_overwrite=False, 
                                    dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
@@ -45,7 +67,17 @@ class GeniusAppointmentTypeSyncEngine(GeniusBaseSyncEngine):
             
             if dry_run:
                 logger.info("DRY RUN: Would process appointment types but making no changes")
-                return stats
+                return {
+                    'success': True,
+                    'sync_id': None,  # No sync record created in dry run
+                    'stats': {
+                        'processed': stats['total_processed'],
+                        'created': stats['created'],
+                        'updated': stats['updated'],
+                        'errors': stats['errors'],
+                        'skipped': stats['skipped']
+                    }
+                }
             
             # Process appointment types in batches (smaller batch for lookup tables)
             batch_size = 100
@@ -126,7 +158,17 @@ class GeniusAppointmentTypeSyncEngine(GeniusBaseSyncEngine):
                     logger.error(f"Error processing appointment type record: {e}")
                     logger.error(f"Record data: {raw_record}")
         
-        return stats
+        return {
+            'success': True,
+            'sync_id': None,  # Add sync record ID when implemented
+            'stats': {
+                'processed': stats['total_processed'],
+                'created': stats['created'],
+                'updated': stats['updated'],
+                'errors': stats['errors'],
+                'skipped': stats['skipped']
+            }
+        }
     
     def _should_update_appointment_type(self, existing: Genius_AppointmentType, new_data: Dict[str, Any]) -> bool:
         """Check if appointment type should be updated based on data changes"""

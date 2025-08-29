@@ -13,15 +13,34 @@ from ..processors.marketsharp_marketing_source_maps import GeniusMarketSharpMark
 logger = logging.getLogger(__name__)
 
 
-class GeniusMarketSharpMarketingSourceMapSyncEngine(GeniusBaseSyncEngine):
+class GeniusMarketsharpMarketingSourceMapsSyncEngine(GeniusBaseSyncEngine):
     """Sync engine for MarketSharp marketing source map data synchronization"""
     
     def __init__(self):
-        super().__init__()
+        super().__init__('marketsharp_marketing_source_maps')
         self.client = GeniusMarketSharpMarketingSourceMapClient()
         self.processor = GeniusMarketSharpMarketingSourceMapProcessor()
         self.entity_name = 'marketsharp_marketing_source_maps'
         self.batch_size = 500
+    
+    async def execute_sync(self, 
+                          full: bool = False,
+                          since: Optional[datetime] = None,
+                          start_date: Optional[datetime] = None,
+                          end_date: Optional[datetime] = None,
+                          max_records: Optional[int] = None,
+                          dry_run: bool = False,
+                          debug: bool = False) -> Dict[str, Any]:
+        """Execute the marketsharp marketing source maps sync process - adapter for standard sync interface"""
+        
+        # Convert parameters to match existing method signature
+        full_sync = full
+        limit = max_records or 0
+        
+        return await self.sync_marketsharp_marketing_source_maps(
+            full_sync=full_sync, 
+            limit=limit
+        )
     
     async def sync_marketsharp_marketing_source_maps(self, full_sync: bool = False, limit: int = 0) -> Dict[str, Any]:
         """
@@ -36,11 +55,16 @@ class GeniusMarketSharpMarketingSourceMapSyncEngine(GeniusBaseSyncEngine):
         """
         
         # Create sync record
-        sync_record = await self.create_sync_record(self.entity_name, full_sync)
+        config = {
+            'entity_name': self.entity_name,
+            'full_sync': full_sync,
+            'limit': limit
+        }
+        sync_record = await self.create_sync_record(config)
         
         try:
             # Get last sync timestamp
-            since_date = None if full_sync else await self.get_last_sync_timestamp(self.entity_name)
+            since_date = None if full_sync else await self.get_last_sync_timestamp()
             
             if since_date:
                 logger.info(f"Performing incremental sync for MarketSharp marketing source maps since: {since_date}")
@@ -61,7 +85,7 @@ class GeniusMarketSharpMarketingSourceMapSyncEngine(GeniusBaseSyncEngine):
                     'status': 'completed',
                     'message': 'No new records to sync'
                 }
-                await self.complete_sync_record(sync_record.id, summary)
+                await self.complete_sync_record(sync_record, summary)
                 return summary
             
             # Get field mapping
@@ -98,7 +122,7 @@ class GeniusMarketSharpMarketingSourceMapSyncEngine(GeniusBaseSyncEngine):
             logger.info(f"MarketSharp marketing source map sync completed: {summary}")
             
             # Complete sync record
-            await self.complete_sync_record(sync_record.id, summary)
+            await self.complete_sync_record(sync_record, summary)
             
             return summary
             
@@ -113,7 +137,7 @@ class GeniusMarketSharpMarketingSourceMapSyncEngine(GeniusBaseSyncEngine):
                 'status': 'failed',
                 'error_message': str(e)
             }
-            await self.complete_sync_record(sync_record.id, summary)
+            await self.complete_sync_record(sync_record, summary)
             raise
         
         finally:
