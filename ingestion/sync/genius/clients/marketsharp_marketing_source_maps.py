@@ -22,12 +22,8 @@ class GeniusMarketSharpMarketingSourceMapClient(GeniusBaseClient):
         # Base query with all required fields
         query = """
         SELECT 
-            mmsm.id,
-            mmsm.marketsharp_source_id,
+            mmsm.marketsharp_id,
             mmsm.marketing_source_id,
-            mmsm.prospect_source_id,
-            mmsm.priority,
-            mmsm.active,
             mmsm.created_at,
             mmsm.updated_at
         FROM marketsharp_marketing_source_map mmsm
@@ -39,7 +35,7 @@ class GeniusMarketSharpMarketingSourceMapClient(GeniusBaseClient):
             query += f" {where_clause}"
         
         # Add ordering and limit
-        query += " ORDER BY mmsm.priority, mmsm.id"
+        query += " ORDER BY mmsm.marketsharp_id"
         if limit > 0:
             query += f" LIMIT {limit}"
         
@@ -49,12 +45,8 @@ class GeniusMarketSharpMarketingSourceMapClient(GeniusBaseClient):
     def get_field_mapping(self) -> List[str]:
         """Get field mapping for transformation"""
         return [
-            'id',
-            'marketsharp_source_id',
+            'marketsharp_id',
             'marketing_source_id',
-            'prospect_source_id',
-            'priority',
-            'active',
             'created_at',
             'updated_at'
         ]

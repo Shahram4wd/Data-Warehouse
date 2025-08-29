@@ -1,27 +1,30 @@
 """
-Lead sync engine for Genius CRM
+Refactored Lead sync engine for Genius CRM - Enterprise Architecture Compliant
 """
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from asgiref.sync import sync_to_async
-from django.db import transaction
 
 from .base import GeniusBaseSyncEngine
 from ..clients.leads import GeniusLeadClient
-from ..processors.leads import GeniusLeadProcessor
-from ingestion.models import Genius_Lead, Genius_UserData, Genius_Division, Genius_Prospect
+from ..services.leads import GeniusLeadService
+from ..config.leads import GeniusLeadSyncConfig
 
 logger = logging.getLogger(__name__)
 
 
 class GeniusLeadsSyncEngine(GeniusBaseSyncEngine):
-    """Sync engine for Genius lead data"""
+    """
+    Lightweight sync engine for Genius lead data.
+    Focuses on orchestration, delegates business logic to service layer.
+    """
     
     def __init__(self):
         super().__init__('leads')
         self.client = GeniusLeadClient()
-        self.processor = GeniusLeadProcessor(Genius_Lead)
+        self.service = GeniusLeadService()
+        self.config = GeniusLeadSyncConfig()
     
     async def execute_sync(self, 
                           full: bool = False,
@@ -46,150 +49,141 @@ class GeniusLeadsSyncEngine(GeniusBaseSyncEngine):
     
     async def sync_leads(self, since_date=None, force_overwrite=False, 
                         dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
-        """Main sync method for leads"""
+        """
+        Main sync method for leads.
+        Orchestrates the sync process using service layer for business logic.
+        """
+        logger.info(f"Starting leads sync - since_date: {since_date}, "
+                   f"force_overwrite: {force_overwrite}, dry_run: {dry_run}, "
+                   f"max_records: {max_records}")
         
+        # Initialize stats
         stats = {
             'total_processed': 0,
             'created': 0,
             'updated': 0,
-            'errors': 0,
-            'skipped': 0
+            'skipped': 0,
+            'errors': 0
         }
         
+        # Configure chunk size
+        chunk_size = self.config.DEFAULT_CHUNK_SIZE
+        if max_records and max_records < chunk_size:
+            chunk_size = max_records
+        
         try:
-            # Get leads from source
-            raw_leads = await sync_to_async(self.client.get_leads)(
+            # Process data in chunks
+            await self._process_chunks(
                 since_date=since_date,
-                limit=max_records
+                chunk_size=chunk_size,
+                max_records=max_records,
+                force_overwrite=force_overwrite,
+                dry_run=dry_run,
+                stats=stats
             )
             
-            logger.info(f"Fetched {len(raw_leads)} leads from Genius")
-            
-            if dry_run:
-                logger.info("DRY RUN: Would process leads but making no changes")
-                return stats
-            
-            # Process leads in batches
-            batch_size = 500
-            field_mapping = self.client.get_field_mapping()
-            
-            for i in range(0, len(raw_leads), batch_size):
-                batch = raw_leads[i:i + batch_size]
-                batch_stats = await self._process_lead_batch(
-                    batch, field_mapping, force_overwrite
-                )
-                
-                # Update overall stats
-                for key in stats:
-                    stats[key] += batch_stats[key]
-                
-                logger.info(f"Processed batch {i//batch_size + 1}: "
-                          f"{batch_stats['created']} created, "
-                          f"{batch_stats['updated']} updated, "
-                          f"{batch_stats['errors']} errors")
-            
-            logger.info(f"Lead sync completed. Total stats: {stats}")
-            return stats
-            
         except Exception as e:
-            logger.error(f"Lead sync failed: {str(e)}")
+            logger.error(f"Error in sync_leads: {e}")
+            stats['errors'] += 1
             raise
         
-        finally:
-            self.client.disconnect()
-    
-    @sync_to_async
-    def _process_lead_batch(self, batch: List[tuple], field_mapping: List[str], 
-                           force_overwrite: bool = False) -> Dict[str, int]:
-        """Process a batch of lead records"""
-        
-        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
-        
-        # Preload lookup data for FK validation
-        users = {u.user_id: u for u in Genius_UserData.objects.all()}
-        divisions = {d.genius_id: d for d in Genius_Division.objects.all()}
-        prospects = {p.genius_id: p for p in Genius_Prospect.objects.all()}
-        
-        with transaction.atomic():
-            for raw_record in batch:
-                try:
-                    stats['total_processed'] += 1
-                    
-                    # Transform raw data to dict
-                    record_data = self.processor.transform_record(raw_record, field_mapping)
-                    
-                    # Validate record
-                    validated_data = self.processor.validate_record(record_data)
-                    
-                    # Skip if required data missing
-                    if not validated_data.get('genius_id'):
-                        logger.warning("Skipping lead with no ID")
-                        stats['skipped'] += 1
-                        continue
-                    
-                    # Validate FK relationships exist (optional for leads)
-                    if validated_data.get('user_id') and validated_data['user_id'] not in users:
-                        logger.warning(f"Lead {validated_data['genius_id']} references non-existent user {validated_data['user_id']}")
-                        validated_data['user_id'] = None  # Allow lead without user
-                    
-                    if validated_data.get('division_id') and validated_data['division_id'] not in divisions:
-                        logger.warning(f"Lead {validated_data['genius_id']} references non-existent division {validated_data['division_id']}")
-                        validated_data['division_id'] = None  # Allow lead without division
-                    
-                    # Get or create lead
-                    lead, created = Genius_Lead.objects.get_or_create(
-                        genius_id=validated_data['genius_id'],
-                        defaults=validated_data
-                    )
-                    
-                    if created:
-                        stats['created'] += 1
-                        logger.debug(f"Created lead {lead.genius_id}: {lead.first_name} {lead.last_name}")
-                    else:
-                        # Update if force_overwrite or data changed
-                        if force_overwrite or self._should_update_lead(lead, validated_data):
-                            for field, value in validated_data.items():
-                                if field != 'genius_id':  # Don't update primary key
-                                    setattr(lead, field, value)
-                            lead.save()
-                            stats['updated'] += 1
-                            logger.debug(f"Updated lead {lead.genius_id}: {lead.first_name} {lead.last_name}")
-                        else:
-                            stats['skipped'] += 1
-                    
-                    # Set relationships
-                    if validated_data.get('user_id') and validated_data['user_id'] in users:
-                        lead.user = users[validated_data['user_id']]
-                    
-                    if validated_data.get('division_id') and validated_data['division_id'] in divisions:
-                        lead.division = divisions[validated_data['division_id']]
-                    
-                    if validated_data.get('converted_to_prospect_id') and validated_data['converted_to_prospect_id'] in prospects:
-                        lead.converted_to_prospect = prospects[validated_data['converted_to_prospect_id']]
-                    
-                    lead.save()
-                    
-                except Exception as e:
-                    stats['errors'] += 1
-                    logger.error(f"Error processing lead record: {e}")
-                    logger.error(f"Record data: {raw_record}")
-        
+        logger.info(f"Sync completed - Stats: {stats}")
         return stats
     
-    def _should_update_lead(self, existing: Genius_Lead, new_data: Dict[str, Any]) -> bool:
-        """Check if lead should be updated based on data changes"""
+    async def _process_chunks(self, since_date, chunk_size, max_records, 
+                            force_overwrite, dry_run, stats):
+        """
+        Process data in chunks.
+        Lightweight orchestration method that delegates to service layer.
+        """
+        chunk_num = 0
+        total_processed = 0
         
-        # Always update if updated_at is newer
-        if (new_data.get('updated_at') and existing.updated_at and 
-            new_data['updated_at'] > existing.updated_at):
-            return True
+        # Use a sync function to iterate through chunks
+        def get_chunks():
+            nonlocal chunk_num
+            
+            for chunk in self.client.get_leads_chunked(
+                since_date=since_date, 
+                chunk_size=min(chunk_size, max_records) if max_records else chunk_size
+            ):
+                chunk_num += 1
+                
+                # Apply max_records limit if specified
+                if max_records and total_processed >= max_records:
+                    logger.info(f"Reached max_records limit of {max_records}, stopping")
+                    break
+                    
+                # Trim chunk if it would exceed max_records
+                if max_records and total_processed + len(chunk) > max_records:
+                    remaining = max_records - total_processed
+                    chunk = chunk[:remaining]
+                    logger.info(f"Trimming chunk to {len(chunk)} records to respect max_records limit")
+                
+                yield chunk_num, chunk
+                
+                # If we trimmed the chunk, we're done
+                if max_records and total_processed + len(chunk) >= max_records:
+                    break
         
-        # Check for actual data changes
-        fields_to_check = ['first_name', 'last_name', 'email', 'phone', 'address', 
-                          'city', 'state', 'zip_code', 'status', 'notes',
-                          'prospect_source_id', 'user_id', 'division_id', 'converted_to_prospect_id']
-        for field in fields_to_check:
-            if field in new_data and getattr(existing, field, None) != new_data[field]:
-                return True
+        # Process each chunk
+        for chunk_num, chunk in await sync_to_async(list)(get_chunks()):
+            logger.info(f"Processing chunk {chunk_num} with {len(chunk)} records")
+            
+            # Delegate chunk processing to service layer
+            batch_stats = await self._process_chunk_with_service(
+                chunk, force_overwrite, dry_run
+            )
+            
+            # Update overall stats
+            for key in stats:
+                stats[key] += batch_stats[key]
+            
+            total_processed += len(chunk)
+            
+            logger.info(f"Completed chunk {chunk_num}. "
+                       f"Batch stats: {batch_stats}. "
+                       f"Total processed: {total_processed}")
+    
+    async def _process_chunk_with_service(self, chunk, force_overwrite, dry_run):
+        """
+        Process a single chunk using the service layer.
+        Engine only handles coordination, service handles business logic.
+        """
+        stats = {
+            'total_processed': len(chunk),
+            'created': 0,
+            'updated': 0,
+            'skipped': 0,
+            'errors': 0
+        }
         
-        return False
+        if dry_run:
+            logger.info(f"DRY RUN: Would process {len(chunk)} records")
+            return stats
+        
+        try:
+            # Delegate validation and transformation to service
+            processed_data = await sync_to_async(
+                self.service.validate_and_transform_batch
+            )(chunk)
+            
+            if not processed_data:
+                logger.warning("No valid records to process in this chunk")
+                stats['skipped'] = len(chunk)
+                return stats
+            
+            # Delegate bulk operations to service
+            operation_stats = await sync_to_async(
+                self.service.bulk_upsert_records
+            )(processed_data, force_overwrite)
+            
+            # Merge operation stats into chunk stats
+            stats.update(operation_stats)
+            
+        except Exception as e:
+            logger.error(f"Error processing chunk: {e}")
+            stats['errors'] = len(chunk)
+            raise
+        
+        return stats

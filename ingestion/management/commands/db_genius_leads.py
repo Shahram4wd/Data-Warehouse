@@ -133,13 +133,24 @@ class Command(BaseCommand):
             ))
             
             # Display results
-            stats = result['stats']
+            if isinstance(result, dict) and 'stats' in result:
+                stats = result['stats']
+            else:
+                # Direct stats return from engine
+                stats = result
+                
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   📊 Processed: {stats.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {stats.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {stats.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {stats.get('errors', 0)} records")
+            self.stdout.write(f"   ⏭️ Skipped: {stats.get('skipped', 0)} records")
+            
+            # Handle sync_id if available
+            if isinstance(result, dict) and 'sync_id' in result:
+                self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            else:
+                self.stdout.write(f"   🆔 SyncHistory ID: None")
             
         except Exception as e:
             logger.exception("Genius leads sync failed")

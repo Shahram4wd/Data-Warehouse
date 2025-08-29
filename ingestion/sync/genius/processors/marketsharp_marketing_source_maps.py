@@ -44,41 +44,21 @@ class GeniusMarketSharpMarketingSourceMapProcessor:
         try:
             validated_record = {}
             
-            # Required ID field
-            if not self.validator.validate_id_field(record.get('id')):
-                logger.error(f"Invalid ID for MarketSharp marketing source map: {record.get('id')}")
+            # Required marketsharp_id field (varchar(128), should not be empty)
+            marketsharp_id = record.get('marketsharp_id')
+            if not marketsharp_id or str(marketsharp_id).strip() == '':
+                logger.error(f"Invalid marketsharp_id for MarketSharp marketing source map: {marketsharp_id}")
                 return None
-            validated_record['id'] = record['id']
+            validated_record['marketsharp_id'] = str(marketsharp_id).strip()
             
-            # Foreign key references (required)
-            if not self.validator.validate_id_field(record.get('marketsharp_source_id')):
-                logger.error(f"Invalid marketsharp_source_id for MarketSharp marketing source map: {record.get('marketsharp_source_id')}")
-                return None
-            validated_record['marketsharp_source_id'] = record['marketsharp_source_id']
-            
-            if not self.validator.validate_id_field(record.get('marketing_source_id')):
-                logger.error(f"Invalid marketing_source_id for MarketSharp marketing source map: {record.get('marketing_source_id')}")
-                return None
-            validated_record['marketing_source_id'] = record['marketing_source_id']
-            
-            # Optional foreign key reference
-            validated_record['prospect_source_id'] = record.get('prospect_source_id')
-            
-            # Priority (integer)
-            priority = record.get('priority')
-            if priority is not None:
-                validated_record['priority'] = int(priority)
+            # Marketing source ID (int, can be NULL based on schema)
+            marketing_source_id = record.get('marketing_source_id')
+            if marketing_source_id is not None:
+                validated_record['marketing_source_id'] = int(marketing_source_id)
             else:
-                validated_record['priority'] = 0  # Default priority
+                validated_record['marketing_source_id'] = None
             
-            # Active flag (boolean)
-            active = record.get('active')
-            if isinstance(active, (bool, int)):
-                validated_record['active'] = bool(active)
-            else:
-                validated_record['active'] = True  # Default to active
-            
-            # Timestamps
+            # Timestamps (can be NULL based on schema)
             validated_record['created_at'] = self._validate_datetime(record.get('created_at'))
             validated_record['updated_at'] = self._validate_datetime(record.get('updated_at'))
             
@@ -86,6 +66,7 @@ class GeniusMarketSharpMarketingSourceMapProcessor:
             
         except Exception as e:
             logger.error(f"Error validating MarketSharp marketing source map record: {e}")
+            logger.error(f"Problematic record: {record}")
             return None
     
     def _validate_datetime(self, value: Any) -> Optional[datetime]:

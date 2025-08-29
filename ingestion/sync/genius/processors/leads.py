@@ -22,7 +22,7 @@ class GeniusLeadProcessor(GeniusBaseProcessor):
         validated = {}
         
         # Validate each field using GeniusValidator
-        validated['genius_id'] = GeniusValidator.validate_id_field(record_data.get('id'))
+        validated['lead_id'] = GeniusValidator.validate_id_field(record_data.get('lead_id'))
         validated['first_name'] = GeniusValidator.validate_string_field(record_data.get('first_name'), max_length=100)
         validated['last_name'] = GeniusValidator.validate_string_field(record_data.get('last_name'), max_length=100)
         validated['email'] = GeniusValidator.validate_email_field(record_data.get('email'))
@@ -47,13 +47,13 @@ class GeniusLeadProcessor(GeniusBaseProcessor):
         if validated.get('updated_at'):
             validated['updated_at'] = self.convert_timezone_aware(validated['updated_at'])
         
-        # Ensure we have required fields
-        if not validated.get('genius_id'):
-            raise ValueError("Lead must have a genius_id")
+        # Ensure we have required fields - skip dummy/invalid records
+        if not validated.get('lead_id') or validated.get('lead_id') == 0:
+            return None  # Signal to skip this record
         
         # At least first name or last name is required
         if not validated.get('first_name') and not validated.get('last_name'):
-            logger.warning(f"Lead {validated.get('genius_id')} has no first or last name")
+            logger.warning(f"Lead {validated.get('lead_id')} has no first or last name")
         
         # Validate business rules
         business_errors = GeniusRecordValidator.validate_business_rules('lead', validated)
@@ -81,6 +81,6 @@ class GeniusLeadProcessor(GeniusBaseProcessor):
         
         # Ensure we have some contact info
         if not record.get('email') and not record.get('phone'):
-            logger.warning(f"Lead {record.get('id')} has no email or phone")
+            logger.warning(f"Lead {record.get('lead_id')} has no email or phone")
         
         return record
