@@ -58,7 +58,7 @@ class Genius_Division(models.Model):
 
 class Genius_UserData(models.Model):
     id = models.IntegerField(primary_key=True, db_column='user_id')
-    division = models.ForeignKey('Genius_Division', on_delete=models.PROTECT, null=False, related_name='users')
+    division_id = models.IntegerField(null=False, blank=False)
     title_id = models.SmallIntegerField(null=True, blank=True)
     manager_user_id = models.IntegerField(null=True, blank=True)
     first_name = models.CharField(max_length=100, null=True, blank=True)
@@ -98,7 +98,7 @@ class Genius_UserData(models.Model):
 
 class Genius_Prospect(models.Model):
     id = models.IntegerField(primary_key=True)
-    division = models.ForeignKey('Genius_Division', on_delete=models.PROTECT, null=False, related_name='prospects')
+    division_id = models.IntegerField(null=False, blank=False)
     first_name = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
     alt_first_name = models.CharField(max_length=100, null=True, blank=True)
@@ -139,8 +139,8 @@ class Genius_Prospect(models.Model):
 
 class Genius_ProspectSource(models.Model):
     id = models.AutoField(primary_key=True)
-    prospect = models.ForeignKey('Genius_Prospect', on_delete=models.CASCADE, related_name='sources')
-    marketing_source = models.ForeignKey('Genius_MarketingSource', on_delete=models.PROTECT, null=False, blank=True, related_name='prospect_sources')
+    prospect_id = models.IntegerField(null=False, blank=False)
+    marketing_source_id = models.IntegerField(null=False, blank=False)
     source_date = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     add_user_id = models.IntegerField()
@@ -202,6 +202,29 @@ class Genius_AppointmentOutcomeType(models.Model):
         return self.label or f"Appointment Outcome Type {self.id}"
 
 
+class Genius_UserAssociation(models.Model):
+    id = models.AutoField(primary_key=True)
+    definition_id = models.IntegerField(null=True, blank=True)
+    user_id = models.IntegerField(null=True, blank=True)
+    division_id = models.IntegerField(null=True, blank=True)
+    field_value = models.CharField(max_length=128, null=True, blank=True)
+    created_at = models.DateTimeField()
+    updated_at = models.DateTimeField()
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_user_association'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius User Association data stored in ingestion schema'
+        verbose_name = 'Genius User Association'
+        verbose_name_plural = 'Genius User Associations'
+
+    def __str__(self):
+        return f"User Association {self.id} - User: {self.user_id}, Division: {self.division_id}"
+
+
 class Genius_AppointmentOutcome(models.Model):
     id = models.AutoField(primary_key=True)
     type_id = models.PositiveSmallIntegerField(default=0)
@@ -225,11 +248,11 @@ class Genius_AppointmentOutcome(models.Model):
 
 
 class Genius_Appointment(models.Model):
-    id = models.BigIntegerField(primary_key=True)
-    prospect = models.ForeignKey('Genius_Prospect', on_delete=models.CASCADE, related_name='appointments')
-    prospect_source = models.ForeignKey('Genius_ProspectSource', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
-    user_id = models.BigIntegerField(null=True, blank=True)
-    type = models.ForeignKey('Genius_AppointmentType', on_delete=models.PROTECT, related_name='appointments')
+    id = models.IntegerField(primary_key=True)
+    prospect_id = models.IntegerField(null=False, blank=False)
+    prospect_source_id = models.IntegerField(null=True, blank=True)
+    user_id = models.IntegerField(null=True, blank=True)
+    type_id = models.IntegerField(null=False, blank=False)
     date = models.DateField(null=True, blank=True)
     time = models.TimeField(null=True, blank=True)
     duration = models.DurationField(null=True, blank=True)
@@ -240,16 +263,16 @@ class Genius_Appointment(models.Model):
     zip = models.CharField(max_length=20, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
-    add_user_id = models.BigIntegerField()
+    add_user_id = models.IntegerField()
     add_date = models.DateTimeField(null=False, blank=False, default=timezone.now)
     assign_date = models.DateTimeField(null=True, blank=True)
-    confirm_user_id = models.BigIntegerField(null=True, blank=True)
+    confirm_user_id = models.IntegerField(null=True, blank=True)
     confirm_date = models.DateTimeField(null=True, blank=True)
     confirm_with = models.CharField(max_length=100, null=True, blank=True)
     spouses_present = models.IntegerField(default=0)
     is_complete = models.IntegerField(default=0)
-    complete_outcome = models.ForeignKey('Genius_AppointmentOutcome', on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
-    complete_user_id = models.BigIntegerField(null=True, blank=True)
+    complete_outcome_id = models.IntegerField(null=True, blank=True)
+    complete_user_id = models.IntegerField(null=True, blank=True)
     complete_date = models.DateTimeField(null=True, blank=True)
     marketsharp_id = models.CharField(max_length=100, null=True, blank=True)
     marketsharp_appt_type = models.CharField(max_length=100, null=True, blank=True)
@@ -296,8 +319,8 @@ class Genius_Service(models.Model):
 
 
 class Genius_AppointmentService(models.Model):
-    appointment = models.ForeignKey('Genius_Appointment', on_delete=models.CASCADE)
-    service = models.ForeignKey('Genius_Service', on_delete=models.CASCADE)
+    appointment_id = models.IntegerField(null=False, blank=False)
+    service_id = models.SmallIntegerField(null=False, blank=False)
     created_at = models.DateTimeField()
     updated_at = models.DateTimeField()
     sync_created_at = models.DateTimeField(auto_now_add=True)
@@ -310,16 +333,16 @@ class Genius_AppointmentService(models.Model):
         db_table_comment = 'Genius AppointmentService data stored in ingestion schema'
         verbose_name = 'Genius AppointmentService'
         verbose_name_plural = 'Genius AppointmentServices'
-        unique_together = ('appointment', 'service')
+        unique_together = ('appointment_id', 'service_id')
 
 
 class Genius_Quote(models.Model):
     id = models.IntegerField(primary_key=True)
-    prospect = models.ForeignKey('Genius_Prospect', on_delete=models.CASCADE, related_name='quotes')
-    appointment = models.ForeignKey('Genius_Appointment', on_delete=models.CASCADE, related_name='quotes')
+    prospect_id = models.IntegerField(null=False, blank=False)
+    appointment_id = models.IntegerField(null=False, blank=False)
     job_id = models.IntegerField(null=True, blank=True)
     client_cid = models.IntegerField(null=True, blank=True)
-    service = models.ForeignKey('Genius_Service', on_delete=models.PROTECT, related_name='quotes')
+    service_id = models.SmallIntegerField(null=False, blank=False)
     label = models.CharField(max_length=255, null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -578,8 +601,8 @@ class Genius_MarketSharpMarketingSourceMap(models.Model):
 class Genius_Job(models.Model):
     id = models.AutoField(primary_key=True)
     client_cid = models.IntegerField(null=True, blank=True)
-    prospect = models.ForeignKey('Genius_Prospect', on_delete=models.PROTECT, related_name='jobs')
-    division = models.ForeignKey('Genius_Division', on_delete=models.PROTECT, related_name='jobs', db_column='division_id')
+    prospect_id = models.IntegerField(null=False, blank=False)
+    division_id = models.IntegerField(null=False, blank=False)
     user_id = models.IntegerField(null=True, blank=True)
     production_user_id = models.IntegerField(null=True, blank=True)
     project_coordinator_user_id = models.IntegerField(null=True, blank=True)
@@ -595,7 +618,7 @@ class Genius_Job(models.Model):
     prep_status_is_reset = models.SmallIntegerField(default=0)
     prep_status_notes = models.TextField(null=True, blank=True)
     prep_issue_id = models.CharField(max_length=32, null=True, blank=True)
-    service = models.ForeignKey('Genius_Service', on_delete=models.PROTECT, related_name='jobs')
+    service_id = models.SmallIntegerField(null=False, blank=False)
     is_lead_pb = models.SmallIntegerField(default=0)
     contract_number = models.CharField(max_length=50, null=True, blank=True)
     contract_date = models.DateField(null=True, blank=True)
@@ -693,7 +716,7 @@ class Genius_Job(models.Model):
 
 class Genius_JobChangeOrder(models.Model):
     id = models.AutoField(primary_key=True)
-    job = models.ForeignKey('Genius_Job', on_delete=models.PROTECT, related_name='change_orders')
+    job_id = models.IntegerField(null=False, blank=False)
     number = models.CharField(max_length=20)
     status_id = models.SmallIntegerField(default=1)
     type_id = models.SmallIntegerField(default=1)
@@ -731,7 +754,7 @@ class Genius_JobChangeOrder(models.Model):
 
 class Genius_JobChangeOrderItem(models.Model):
     id = models.AutoField(primary_key=True)
-    change_order = models.ForeignKey('Genius_JobChangeOrder', on_delete=models.CASCADE, related_name='items')
+    change_order_id = models.IntegerField(null=False, blank=False)
     description = models.CharField(max_length=256, null=True, blank=True)
     amount = models.DecimalField(max_digits=8, decimal_places=2)
     created_at = models.DateTimeField()

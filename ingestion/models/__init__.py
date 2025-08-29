@@ -7,6 +7,7 @@ from .genius import (
     Genius_Division,
     Genius_UserData,
     Genius_UserTitle,
+    Genius_UserAssociation,
     Genius_Prospect,
     Genius_ProspectSource,
     Genius_AppointmentType,
