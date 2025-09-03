@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Schedules for {{ source_key|title }}</h1>
+<p>
+  <a class="btn btn-primary" href="{% url 'ingestion:schedule_new' source_key %}">New schedule</a>
+  <a class="btn btn-outline-secondary" href="/ingestion/crm-dashboard/{{ source_key }}/">Back to {{ source_key|title }}</a>
+</p>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Mode</th>
+      <th>Recurrence</th>
+      <th>Enabled</th>
+      <th>Last run</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for s in schedules %}
+      <tr>
+        <td>{{ s.name }}</td>
+        <td>
+          <span class="badge {% if s.mode == 'full' %}bg-danger{% else %}bg-info{% endif %}">{{ s.mode|upper }}</span>
+        </td>
+        <td>
+          {% if s.recurrence_type == 'interval' %}
+            Every {{ s.every }} {{ s.period }}
+          {% else %}
+            {{ s.minute|default:'*' }} {{ s.hour|default:'*' }} {{ s.day_of_month|default:'*' }} {{ s.month_of_year|default:'*' }} {{ s.day_of_week|default:'*' }}
+          {% endif %}
+        </td>
+        <td>{{ s.enabled|yesno:'Yes,No' }}</td>
+        <td>{{ s.last_run.start_time|default:'—' }}</td>
+        <td>{{ s.last_run.status|default:'—' }}</td>
+        <td>
+          <a class="btn btn-sm btn-link" href="{% url 'ingestion:schedule_edit' source_key s.id %}">Edit</a>
+          <form method="post" action="{% url 'ingestion:schedule_toggle' source_key s.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-link" type="submit">Toggle</button>
+          </form>
+          <form method="post" action="{% url 'ingestion:schedule_run' source_key s.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-link" type="submit">Run now</button>
+          </form>
+          <form method="post" action="{% url 'ingestion:schedule_delete' source_key s.id %}" style="display:inline;" onsubmit="return confirm('Delete schedule?');">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-link text-danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="7">No schedules yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

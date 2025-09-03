@@ -4,6 +4,9 @@ from django.contrib.auth import views as auth_views
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from .views import GeniusUserSyncView
 
+# Register app namespace for namespaced URL reversing
+app_name = 'ingestion'
+
 # Import CRM dashboard views
 try:
     from ingestion.views.crm_dashboard.views import (
@@ -48,7 +51,9 @@ try:
 except ImportError:
     monitoring_available = False
 
-# Define CRM dashboard URLs
+"""CRM Dashboard URLs (defined here to avoid separate module).
+If the CRM views fail to import, expose an empty list to keep URLConf stable.
+"""
 crm_dashboard_urlpatterns = [
     # API endpoints (must come first to avoid conflicts with dynamic patterns)
     path('api/crms/', CRMListAPIView.as_view(), name='api_crm_list'),
@@ -63,20 +68,22 @@ crm_dashboard_urlpatterns = [
     path('api/sync/history/', SyncHistoryAPIView.as_view(), name='api_sync_history'),
     path('api/sync/validate/', ValidateParametersAPIView.as_view(), name='api_validate_parameters'),
     path('api/sync/schemas/', SyncSchemasAPIView.as_view(), name='api_sync_schemas'),
-    
+
     # Dashboard pages (dynamic patterns at the end)
     path('', CRMDashboardView.as_view(), name='crm_dashboard'),
     path('history/', SyncHistoryView.as_view(), name='sync_history'),
     path('<str:crm_source>/', CRMModelsView.as_view(), name='crm_models'),
     path('<str:crm_source>/<str:model_name>/', ModelDetailView.as_view(), name='model_detail'),
-]
+] if crm_dashboard_available else []
 
-# Define monitoring URLs directly here
+"""Monitoring URLs (defined here to avoid separate module).
+If the monitoring views fail to import, expose an empty list to keep URLConf stable.
+"""
 monitoring_urlpatterns = [
     # Dashboard views
     path('', DashboardView.as_view(), name='monitoring_dashboard'),
     path('dashboard/', DashboardView.as_view(), name='monitoring_dashboard_home'),
-    
+
     # API endpoints
     path('api/stats/', DashboardStatsView.as_view(), name='monitoring_api_stats'),
     path('api/alerts/', AlertView.as_view(), name='monitoring_api_alerts'),
@@ -104,8 +111,29 @@ urlpatterns = [
     # Monitoring endpoints (included directly)
     path('monitoring/', include((monitoring_urlpatterns, 'monitoring'), namespace='monitoring')),
 
-    # CRM Dashboard endpoints
+    # CRM Dashboard endpoints (local patterns; no external urls module)
     path('crm-dashboard/', include((crm_dashboard_urlpatterns, 'crm_dashboard'), namespace='crm_dashboard')),
+
+    # Scheduling endpoints (server-rendered)
+    # These power the schedule list/create/edit/toggle/delete/run-now UI
+    path('schedules/<str:source_key>/',
+        __import__('ingestion.views.schedules', fromlist=['list_schedules']).list_schedules,
+        name='schedules'),
+    path('schedules/<str:source_key>/new/',
+        __import__('ingestion.views.schedules', fromlist=['create_schedule']).create_schedule,
+        name='schedule_new'),
+    path('schedules/<str:source_key>/<int:pk>/edit/',
+        __import__('ingestion.views.schedules', fromlist=['edit_schedule']).edit_schedule,
+        name='schedule_edit'),
+    path('schedules/<str:source_key>/<int:pk>/delete/',
+        __import__('ingestion.views.schedules', fromlist=['delete_schedule']).delete_schedule,
+        name='schedule_delete'),
+    path('schedules/<str:source_key>/<int:pk>/toggle/',
+        __import__('ingestion.views.schedules', fromlist=['toggle_schedule']).toggle_schedule,
+        name='schedule_toggle'),
+    path('schedules/<str:source_key>/<int:pk>/run/',
+        __import__('ingestion.views.schedules', fromlist=['run_now']).run_now,
+        name='schedule_run'),
 
     # Redirect root URL to monitoring dashboard
     path('', RedirectView.as_view(url='/monitoring/', permanent=False), name='index'),

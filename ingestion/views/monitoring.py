@@ -15,10 +15,9 @@ from asgiref.sync import sync_to_async
 
 # Import available models
 try:
-    from ingestion.models import Hubspot_SyncHistory, SyncTracker
+    from ingestion.models import Hubspot_SyncHistory
 except ImportError:
     Hubspot_SyncHistory = None
-    SyncTracker = None
 
 # Try to import monitoring components
 try:

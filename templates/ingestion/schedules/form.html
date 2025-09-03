@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>{{ action|default:'Create' }} Schedule for {{ source_key|title }}</h1>
+<form method="post">
+  {% csrf_token %}
+  <div class="row">
+    <div class="col-md-6">
+      {{ form.non_field_errors }}
+      <div class="mb-3">{{ form.name.label_tag }} {{ form.name }}</div>
+      <div class="mb-3">{{ form.source_key.label_tag }} {{ form.source_key }}</div>
+      <div class="mb-3">{{ form.mode.label_tag }} {{ form.mode }}</div>
+      <div class="mb-3">{{ form.recurrence_type.label_tag }} {{ form.recurrence_type }}</div>
+      <div class="mb-3">{{ form.every.label_tag }} {{ form.every }}</div>
+      <div class="mb-3">{{ form.period.label_tag }} {{ form.period }}</div>
+      <div class="mb-3">{{ form.minute.label_tag }} {{ form.minute }}</div>
+      <div class="mb-3">{{ form.hour.label_tag }} {{ form.hour }}</div>
+      <div class="mb-3">{{ form.day_of_week.label_tag }} {{ form.day_of_week }}</div>
+      <div class="mb-3">{{ form.day_of_month.label_tag }} {{ form.day_of_month }}</div>
+      <div class="mb-3">{{ form.month_of_year.label_tag }} {{ form.month_of_year }}</div>
+      <div class="mb-3">{{ form.start_at.label_tag }} {{ form.start_at }}</div>
+      <div class="mb-3">{{ form.end_at.label_tag }} {{ form.end_at }}</div>
+      <div class="form-check mb-3">{{ form.enabled }} {{ form.enabled.label_tag }}</div>
+      <div class="mb-3">{{ form.options.label_tag }} {{ form.options }}</div>
+    </div>
+  </div>
+  <button class="btn btn-primary" type="submit">Save</button>
+  <a class="btn btn-secondary" href="{% url 'ingestion:schedules' source_key %}">Cancel</a>
+</form>
+{% endblock %}

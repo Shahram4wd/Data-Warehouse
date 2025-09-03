@@ -3,23 +3,7 @@ Common models shared across all CRM integrations
 """
 from django.db import models
 from django.utils import timezone
-
-class SyncTracker(models.Model):
-    """
-    Tracks the last synchronization time for various data sources.
-    Used by both Genius and Hubspot sync processes.
-    """
-    object_name = models.CharField(max_length=255, unique=True)
-    last_synced_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        db_table = 'sync_tracker'
-        managed = True
-        app_label = 'ingestion'
-        db_table_comment = 'Tracks the last synchronization time for various data sources'
-
-    def __str__(self):
-        return f"{self.object_name}: {self.last_synced_at}"
+from django_celery_beat.models import PeriodicTask
 
 class SyncHistory(models.Model):
     """Universal sync history for all CRM operations"""
@@ -58,9 +42,9 @@ class SyncHistory(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        db_table = 'sync_history'
+        # Use quoting hack so Django emits "orchestration"."sync_history" for PostgreSQL
+        db_table = '"orchestration"."sync_history"'
         managed = True
-        app_label = 'ingestion'
         db_table_comment = 'Universal sync history for all CRM operations'
         indexes = [
             models.Index(fields=['crm_source', 'sync_type']),
@@ -101,6 +85,65 @@ class SyncHistory(models.Model):
         
         return last_sync.end_time if last_sync else None
 
+class SyncSchedule(models.Model):
+    """Defines scheduled syncs (moved next to SyncHistory)."""
+
+    MODE_CHOICES = [("delta", "Delta"), ("full", "Full")]
+    RECURRENCE_CHOICES = [("interval", "Interval"), ("crontab", "Crontab")]
+
+    source_key = models.CharField(max_length=64, db_index=True)
+    name = models.CharField(max_length=128)
+    mode = models.CharField(max_length=16, choices=MODE_CHOICES)
+
+    recurrence_type = models.CharField(max_length=16, choices=RECURRENCE_CHOICES)
+    # Interval
+    every = models.PositiveIntegerField(null=True, blank=True)
+    period = models.CharField(max_length=16, null=True, blank=True, choices=[
+        ("minutes", "Minutes"), ("hours", "Hours"), ("days", "Days")
+    ])
+    # Crontab
+    minute = models.CharField(max_length=64, null=True, blank=True, default="0")
+    hour = models.CharField(max_length=64, null=True, blank=True, default="*")
+    day_of_week = models.CharField(max_length=64, null=True, blank=True, default="*")
+    day_of_month = models.CharField(max_length=64, null=True, blank=True, default="*")
+    month_of_year = models.CharField(max_length=64, null=True, blank=True, default="*")
+
+    start_at = models.DateTimeField(null=True, blank=True)
+    end_at = models.DateTimeField(null=True, blank=True)
+
+    enabled = models.BooleanField(default=True)
+    options = models.JSONField(default=dict, blank=True)
+
+    periodic_task = models.OneToOneField(PeriodicTask, null=True, blank=True, on_delete=models.SET_NULL)
+
+    created_by = models.ForeignKey('auth.User', null=True, blank=True, on_delete=models.SET_NULL, related_name="created_schedules")
+    updated_by = models.ForeignKey('auth.User', null=True, blank=True, on_delete=models.SET_NULL, related_name="updated_schedules")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # Use quoting hack so Django emits "orchestration"."sync_schedule" for PostgreSQL
+        db_table = '"orchestration"."sync_schedule"'
+        managed = True
+        indexes = [models.Index(fields=["source_key", "mode"])]
+        permissions = [("manage_schedules", "Can manage ingestion schedules")]
+
+    def __str__(self):
+        return f"{self.source_key}:{self.mode}:{self.name}"
+
+    def get_recent_runs(self, limit=5):
+        """Get recent SyncHistory records for this schedule."""
+        return SyncHistory.objects.filter(
+            crm_source=self.source_key,
+            sync_type=f"{self.mode}_scheduled",
+            configuration__schedule_id=self.id,
+        ).order_by('-start_time')[:limit]
+
+    def get_last_run(self):
+        """Get the most recent SyncHistory record for this schedule."""
+        recent_runs = self.get_recent_runs(limit=1)
+        return recent_runs.first() if recent_runs else None
+
 class SyncConfiguration(models.Model):
     """Dynamic sync configuration"""
     
@@ -129,7 +172,6 @@ class SyncConfiguration(models.Model):
     class Meta:
         db_table = 'sync_configuration'
         managed = True
-        app_label = 'ingestion'
         db_table_comment = 'Dynamic sync configuration'
         unique_together = ['crm_source', 'sync_type']
         verbose_name = 'Sync Configuration'
@@ -151,7 +193,6 @@ class APICredential(models.Model):
     class Meta:
         db_table = 'api_credentials'
         managed = True
-        app_label = 'ingestion'
         db_table_comment = 'Encrypted API credentials'
         verbose_name = 'API Credential'
         verbose_name_plural = 'API Credentials'

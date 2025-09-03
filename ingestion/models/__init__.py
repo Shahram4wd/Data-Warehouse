@@ -1,5 +1,5 @@
 # Import common models
-from .common import SyncTracker, SyncHistory, SyncConfiguration, APICredential
+from .common import SyncHistory, SyncConfiguration, APICredential, SyncSchedule
 
 # Import Genius models
 from .genius import (
@@ -87,8 +87,11 @@ from .five9 import Five9Contact
 # Import all models to maintain backwards compatibility
 # This allows existing code to continue using: from ingestion.models import X
 __all__ = [
+    # Schedule models
+    'SyncSchedule',
+    
     # Common models
-    'SyncTracker', 'SyncHistory', 'SyncConfiguration', 'APICredential',
+    'SyncHistory', 'SyncConfiguration', 'APICredential',
     
     # Genius models
     'Genius_DivisionGroup', 'Genius_Division', 'Genius_UserData', 'Genius_UserTitle',

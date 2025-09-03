@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.core.management import call_command
 from datetime import timedelta
 import logging
-from ingestion.genius.division_sync import sync_divisions
+
 
 logger = logging.getLogger(__name__)
 
@@ -183,3 +183,123 @@ def cleanup_old_data():
     # Add cleanup logic here
     logger.info("Cleanup task completed")
     return True
+
+@shared_task(bind=True, name="ingestion.run_ingestion")
+def run_ingestion(self, schedule_id: int):
+    """
+    Execute a scheduled ingestion task for a specific schedule.
+    
+    Args:
+        schedule_id: The ID of the IngestionSchedule to run
+    
+    Returns:
+        dict: Task execution result
+    """
+    from django.core.cache import cache
+    from ingestion.models import SyncSchedule
+    from ingestion.models.common import SyncHistory
+    from ingestion.services.ingestion_adapter import run_source_ingestion
+    
+    # Lock key to prevent overlapping runs for the same source and mode
+    def _lock_key(source_key: str, mode: str) -> str:
+        return f"ingestion-lock:{source_key}:{mode}"
+    
+    LOCK_TTL = 60 * 60  # 1 hour safety timeout
+    
+    try:
+        schedule = SyncSchedule.objects.select_related('periodic_task').get(pk=schedule_id)
+        key = _lock_key(schedule.source_key, schedule.mode)
+        
+        # Try to acquire lock
+        if not cache.add(key, "1", LOCK_TTL):
+            # Another task is already running for this source/mode combination
+            logger.warning(f"Skipped ingestion for {schedule.source_key}:{schedule.mode} due to overlap")
+            # Record a skipped run in SyncHistory
+            SyncHistory.objects.create(
+                crm_source=schedule.source_key,
+                sync_type=f"{schedule.mode}_scheduled",
+                start_time=timezone.now(),
+                end_time=timezone.now(),
+                status='failed',  # represent skip as failed/partial if needed
+                error_message='Skipped due to overlapping execution',
+                configuration={"schedule_id": schedule.id}
+            )
+            return {
+                'status': 'skipped_overlap',
+                'schedule_id': schedule_id,
+                'source_key': schedule.source_key,
+                'mode': schedule.mode,
+                'message': 'Skipped due to overlapping execution'
+            }
+        
+        # Create SyncHistory run record
+        started = timezone.now()
+        history = SyncHistory.objects.create(
+            crm_source=schedule.source_key,
+            sync_type=f"{schedule.mode}_scheduled",
+            start_time=started,
+            status='running',
+            configuration={"schedule_id": schedule.id, **(schedule.options or {})},
+        )
+        
+        try:
+            # Execute the actual ingestion
+            logger.info(f"Starting ingestion for {schedule.source_key}:{schedule.mode}")
+            run_source_ingestion(
+                source_key=schedule.source_key,
+                mode=schedule.mode,
+                **(schedule.options or {}),
+            )
+            
+            # Mark as successful in SyncHistory
+            history.status = 'success'
+            history.end_time = timezone.now()
+            # Optional: duration metrics
+            duration_ms = int((history.end_time - started).total_seconds() * 1000)
+            history.performance_metrics = {**(history.performance_metrics or {}), "duration_ms": duration_ms}
+            history.save(update_fields=['status', 'end_time', 'performance_metrics'])
+            logger.info(f"Successfully completed ingestion for {schedule.source_key}:{schedule.mode}")
+            
+            return {
+                'status': 'success',
+                'schedule_id': schedule_id,
+                'source_key': schedule.source_key,
+                'mode': schedule.mode,
+                'duration_ms': history.performance_metrics.get('duration_ms') if history.performance_metrics else None,
+                'message': 'Ingestion completed successfully'
+            }
+            
+        except Exception as e:
+            # Mark as failed
+            error_msg = str(e)
+            history.status = 'failed'
+            history.error_message = error_msg
+            history.end_time = timezone.now()
+            # Optional: capture traceback size safely omitted here
+            duration_ms = int((history.end_time - started).total_seconds() * 1000)
+            history.performance_metrics = {**(history.performance_metrics or {}), "duration_ms": duration_ms}
+            history.save(update_fields=['status', 'error_message', 'end_time', 'performance_metrics'])
+            logger.error(f"Failed ingestion for {schedule.source_key}:{schedule.mode}: {error_msg}", exc_info=True)
+            
+            # Re-raise to mark task as failed
+            raise
+            
+        finally:
+            # Always release the lock
+            cache.delete(key)
+            
+    except SyncSchedule.DoesNotExist:
+        logger.error(f"SyncSchedule with ID {schedule_id} does not exist")
+        return {
+            'status': 'error',
+            'schedule_id': schedule_id,
+            'message': 'Schedule does not exist'
+        }
+    except Exception as e:
+        logger.error(f"Unexpected error in run_ingestion task: {e}", exc_info=True)
+        return {
+            'status': 'error',
+            'schedule_id': schedule_id,
+            'error': str(e),
+            'message': 'Unexpected error occurred'
+        }

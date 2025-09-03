@@ -33,9 +33,12 @@ urlpatterns = [
     # Dashboard redirect to explorer
     path('dashboard/', RedirectView.as_view(url='/explorer/', permanent=False), name='dashboard'),
     
-    # Monitoring URLs (direct access)
-    path('monitoring/', RedirectView.as_view(url='/ingestion/monitoring/', permanent=False), name='monitoring'),
+    # Monitoring URLs (register namespace)
+    path('ingestion/monitoring/', include(('ingestion.urls_monitoring', 'monitoring'), namespace='monitoring')),
     
+    # CRM Dashboard URLs (register top-level namespace 'crm_dashboard')
+    path('ingestion/crm-dashboard/', include(('ingestion.urls_crm_dashboard', 'crm_dashboard'), namespace='crm_dashboard')),
+
     # Ingestion module URLs
     path('ingestion/', include('ingestion.urls')),
 
