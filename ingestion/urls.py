@@ -13,7 +13,8 @@ try:
         CRMDashboardView,
         CRMModelsView,
         ModelDetailView,
-        SyncHistoryView
+        SyncHistoryView,
+        AllSchedulesView
     )
     from ingestion.views.crm_dashboard.api_views import (
         CRMListAPIView,
@@ -27,7 +28,10 @@ try:
         SyncHistoryAPIView,
         AvailableCommandsAPIView,
         ValidateParametersAPIView,
-        SyncSchemasAPIView
+        SyncSchemasAPIView,
+        ModelScheduleAPIView,
+        ScheduleDetailAPIView,
+        AllSchedulesAPIView
     )
     crm_dashboard_available = True
 except ImportError:
@@ -69,9 +73,15 @@ crm_dashboard_urlpatterns = [
     path('api/sync/validate/', ValidateParametersAPIView.as_view(), name='api_validate_parameters'),
     path('api/sync/schemas/', SyncSchemasAPIView.as_view(), name='api_sync_schemas'),
 
+    # Schedule management API endpoints
+    path('api/schedules/', AllSchedulesAPIView.as_view(), name='api_all_schedules'),
+    path('api/schedules/<int:schedule_id>/', ScheduleDetailAPIView.as_view(), name='api_schedule_detail'),
+    path('api/crms/<str:crm_source>/models/<str:model_name>/schedules/', ModelScheduleAPIView.as_view(), name='api_model_schedules'),
+
     # Dashboard pages (dynamic patterns at the end)
     path('', CRMDashboardView.as_view(), name='crm_dashboard'),
     path('history/', SyncHistoryView.as_view(), name='sync_history'),
+    path('schedules/', AllSchedulesView.as_view(), name='all_schedules'),
     path('<str:crm_source>/', CRMModelsView.as_view(), name='crm_models'),
     path('<str:crm_source>/<str:model_name>/', ModelDetailView.as_view(), name='model_detail'),
 ] if crm_dashboard_available else []

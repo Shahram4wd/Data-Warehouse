@@ -137,6 +137,9 @@
                     <a class="nav-link" href="#automation" data-tab="automation">
                         <i class="fas fa-cogs"></i> Automation
                     </a>
+                    <a class="nav-link" href="#scheduling" data-tab="scheduling">
+                        <i class="fas fa-calendar-alt"></i> Scheduling
+                    </a>
                     <a class="nav-link" href="#alerts" data-tab="alerts">
                         <i class="fas fa-bell"></i> Alerts
                     </a>
@@ -288,6 +291,90 @@
                                 <h5>Pending Approvals</h5>
                                 <div id="pendingApprovals">
                                     <!-- Pending approvals will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Scheduling Tab -->
+                <div id="scheduling-tab" class="tab-content">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="chart-container">
+                                <h5>Schedule Management</h5>
+                                <div class="mb-3">
+                                    <p class="text-muted">Manage ingestion schedules for different data sources</p>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card border-primary">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-rocket fa-2x text-primary mb-2"></i>
+                                                <h6 class="card-title">Genius CRM</h6>
+                                                <a href="/ingestion/schedules/genius/" class="btn btn-primary btn-sm">
+                                                    <i class="fas fa-calendar-alt"></i> Manage Schedules
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card border-warning">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-phone fa-2x text-warning mb-2"></i>
+                                                <h6 class="card-title">CallRail</h6>
+                                                <a href="/ingestion/schedules/callrail/" class="btn btn-warning btn-sm">
+                                                    <i class="fas fa-calendar-alt"></i> Manage Schedules
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card border-info">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-hubspot fa-2x text-info mb-2"></i>
+                                                <h6 class="card-title">HubSpot</h6>
+                                                <a href="/ingestion/schedules/hubspot/" class="btn btn-info btn-sm">
+                                                    <i class="fas fa-calendar-alt"></i> Manage Schedules
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card border-success">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-car fa-2x text-success mb-2"></i>
+                                                <h6 class="card-title">Arrivy</h6>
+                                                <a href="/ingestion/schedules/arrivy/" class="btn btn-success btn-sm">
+                                                    <i class="fas fa-calendar-alt"></i> Manage Schedules
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card border-secondary">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-chart-line fa-2x text-secondary mb-2"></i>
+                                                <h6 class="card-title">Google Sheets</h6>
+                                                <a href="/ingestion/schedules/gsheet/" class="btn btn-secondary btn-sm">
+                                                    <i class="fas fa-calendar-alt"></i> Manage Schedules
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <div class="card border-dark">
+                                            <div class="card-body text-center">
+                                                <i class="fas fa-headset fa-2x text-dark mb-2"></i>
+                                                <h6 class="card-title">Five9</h6>
+                                                <a href="/ingestion/schedules/five9/" class="btn btn-dark btn-sm">
+                                                    <i class="fas fa-calendar-alt"></i> Manage Schedules
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

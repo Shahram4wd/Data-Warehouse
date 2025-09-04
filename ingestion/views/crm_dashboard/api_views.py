@@ -13,7 +13,8 @@ from django.core.exceptions import ValidationError
 from ingestion.services.crm_discovery import CRMDiscoveryService
 from ingestion.services.sync_management import SyncManagementService
 from ingestion.services.data_access import DataAccessService
-from ingestion.models.common import SyncHistory
+from ingestion.models.common import SyncHistory, SyncSchedule
+from ingestion.forms import IngestionScheduleForm
 import json
 import logging
 
@@ -521,4 +522,235 @@ class SyncSchemasAPIView(BaseAPIView):
             
         except Exception as e:
             logger.error(f"Error getting sync schemas: {e}")
+            return self.error_response(str(e), 500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ModelScheduleAPIView(BaseAPIView):
+    """API endpoint for managing schedules for a specific model"""
+    
+    def get(self, request, crm_source, model_name):
+        """Get all schedules for a specific model"""
+        try:
+            schedules = SyncSchedule.objects.filter(
+                crm_source=crm_source,
+                model_name=model_name
+            ).order_by('-created_at')
+            
+            data = []
+            for schedule in schedules:
+                data.append({
+                    'id': schedule.id,
+                    'name': schedule.name,
+                    'mode': schedule.mode,
+                    'recurrence_type': schedule.recurrence_type,
+                    'enabled': schedule.enabled,
+                    'every': schedule.every,
+                    'period': schedule.period,
+                    'minute': schedule.minute,
+                    'hour': schedule.hour,
+                    'day_of_week': schedule.day_of_week,
+                    'day_of_month': schedule.day_of_month,
+                    'month_of_year': schedule.month_of_year,
+                    'start_at': schedule.start_at.isoformat() if schedule.start_at else None,
+                    'end_at': schedule.end_at.isoformat() if schedule.end_at else None,
+                    'created_at': schedule.created_at.isoformat(),
+                    'updated_at': schedule.updated_at.isoformat(),
+                })
+            
+            return self.json_response({
+                'success': True,
+                'data': data
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting schedules for {crm_source}.{model_name}: {e}")
+            return self.error_response(str(e), 500)
+    
+    def post(self, request, crm_source, model_name):
+        """Create a new schedule for a specific model"""
+        try:
+            data = json.loads(request.body)
+            data['crm_source'] = crm_source
+            data['model_name'] = model_name
+            
+            form = IngestionScheduleForm(data, crm_source=crm_source, model_name=model_name)
+            if form.is_valid():
+                schedule = form.save(commit=False)
+                schedule.created_by = request.user if request.user.is_authenticated else None
+                schedule.updated_by = request.user if request.user.is_authenticated else None
+                schedule.save()
+                
+                return self.json_response({
+                    'success': True,
+                    'message': 'Schedule created successfully',
+                    'data': {
+                        'id': schedule.id,
+                        'name': schedule.name,
+                        'mode': schedule.mode,
+                        'enabled': schedule.enabled
+                    }
+                })
+            else:
+                return self.error_response(f"Validation failed: {form.errors}", 400)
+                
+        except json.JSONDecodeError:
+            return self.error_response("Invalid JSON data", 400)
+        except Exception as e:
+            logger.error(f"Error creating schedule for {crm_source}.{model_name}: {e}")
+            return self.error_response(str(e), 500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ScheduleDetailAPIView(BaseAPIView):
+    """API endpoint for managing individual schedules"""
+    
+    def get(self, request, schedule_id):
+        """Get schedule details"""
+        try:
+            schedule = SyncSchedule.objects.get(id=schedule_id)
+            
+            data = {
+                'id': schedule.id,
+                'name': schedule.name,
+                'crm_source': schedule.crm_source,
+                'model_name': schedule.model_name,
+                'mode': schedule.mode,
+                'recurrence_type': schedule.recurrence_type,
+                'enabled': schedule.enabled,
+                'every': schedule.every,
+                'period': schedule.period,
+                'minute': schedule.minute,
+                'hour': schedule.hour,
+                'day_of_week': schedule.day_of_week,
+                'day_of_month': schedule.day_of_month,
+                'month_of_year': schedule.month_of_year,
+                'start_at': schedule.start_at.isoformat() if schedule.start_at else None,
+                'end_at': schedule.end_at.isoformat() if schedule.end_at else None,
+                'created_at': schedule.created_at.isoformat(),
+                'updated_at': schedule.updated_at.isoformat(),
+            }
+            
+            return self.json_response({
+                'success': True,
+                'data': data
+            })
+            
+        except SyncSchedule.DoesNotExist:
+            return self.error_response("Schedule not found", 404)
+        except Exception as e:
+            logger.error(f"Error getting schedule {schedule_id}: {e}")
+            return self.error_response(str(e), 500)
+    
+    def put(self, request, schedule_id):
+        """Update schedule"""
+        try:
+            schedule = SyncSchedule.objects.get(id=schedule_id)
+            data = json.loads(request.body)
+            
+            form = IngestionScheduleForm(
+                data, 
+                instance=schedule,
+                crm_source=schedule.crm_source, 
+                model_name=schedule.model_name
+            )
+            if form.is_valid():
+                schedule = form.save(commit=False)
+                schedule.updated_by = request.user if request.user.is_authenticated else None
+                schedule.save()
+                
+                return self.json_response({
+                    'success': True,
+                    'message': 'Schedule updated successfully'
+                })
+            else:
+                return self.error_response(f"Validation failed: {form.errors}", 400)
+                
+        except SyncSchedule.DoesNotExist:
+            return self.error_response("Schedule not found", 404)
+        except json.JSONDecodeError:
+            return self.error_response("Invalid JSON data", 400)
+        except Exception as e:
+            logger.error(f"Error updating schedule {schedule_id}: {e}")
+            return self.error_response(str(e), 500)
+    
+    def delete(self, request, schedule_id):
+        """Delete schedule"""
+        try:
+            schedule = SyncSchedule.objects.get(id=schedule_id)
+            schedule_name = schedule.name
+            schedule.delete()
+            
+            return self.json_response({
+                'success': True,
+                'message': f'Schedule "{schedule_name}" deleted successfully'
+            })
+            
+        except SyncSchedule.DoesNotExist:
+            return self.error_response("Schedule not found", 404)
+        except Exception as e:
+            logger.error(f"Error deleting schedule {schedule_id}: {e}")
+            return self.error_response(str(e), 500)
+
+
+class AllSchedulesAPIView(BaseAPIView):
+    """API endpoint for getting all schedules across all CRM sources"""
+    
+    def get(self, request):
+        """Get all schedules with filtering and sorting"""
+        try:
+            schedules = SyncSchedule.objects.all().order_by('crm_source', 'model_name', 'mode')
+            
+            # Apply filters if provided
+            crm_filter = request.GET.get('crm_source')
+            model_filter = request.GET.get('model_name')
+            mode_filter = request.GET.get('mode')
+            enabled_filter = request.GET.get('enabled')
+            
+            if crm_filter:
+                schedules = schedules.filter(crm_source=crm_filter)
+            if model_filter:
+                schedules = schedules.filter(model_name__icontains=model_filter)
+            if mode_filter:
+                schedules = schedules.filter(mode=mode_filter)
+            if enabled_filter is not None:
+                schedules = schedules.filter(enabled=enabled_filter.lower() == 'true')
+            
+            data = []
+            for schedule in schedules:
+                # Get last run info
+                last_run = schedule.get_last_run()
+                
+                data.append({
+                    'id': schedule.id,
+                    'name': schedule.name,
+                    'crm_source': schedule.crm_source,
+                    'model_name': schedule.model_name,
+                    'mode': schedule.mode,
+                    'mode_display': schedule.get_mode_display(),
+                    'recurrence_type': schedule.recurrence_type,
+                    'enabled': schedule.enabled,
+                    'every': schedule.every,
+                    'period': schedule.period,
+                    'cron_expression': f"{schedule.minute} {schedule.hour} {schedule.day_of_month} {schedule.month_of_year} {schedule.day_of_week}" if schedule.recurrence_type == 'crontab' else None,
+                    'start_at': schedule.start_at.isoformat() if schedule.start_at else None,
+                    'end_at': schedule.end_at.isoformat() if schedule.end_at else None,
+                    'last_run': {
+                        'status': last_run.status if last_run else None,
+                        'start_time': last_run.start_time.isoformat() if last_run else None,
+                        'end_time': last_run.end_time.isoformat() if last_run and last_run.end_time else None,
+                        'records_processed': last_run.records_processed if last_run else None,
+                    } if last_run else None,
+                    'created_at': schedule.created_at.isoformat(),
+                    'updated_at': schedule.updated_at.isoformat(),
+                })
+            
+            return self.json_response({
+                'success': True,
+                'data': data,
+                'count': len(data)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting all schedules: {e}")
             return self.error_response(str(e), 500)

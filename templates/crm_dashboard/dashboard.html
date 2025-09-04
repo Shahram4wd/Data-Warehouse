@@ -312,7 +312,7 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-history"></i> Recent Sync Activity</h5>
-                <a href="{% url 'crm_dashboard:sync_history' %}" class="btn btn-outline-primary btn-sm">
+                <a href="{% url 'ingestion:crm_dashboard:sync_history' %}" class="btn btn-outline-primary btn-sm">
                     <i class="fas fa-external-link-alt"></i> View All
                 </a>
             </div>
@@ -487,11 +487,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 performance: 'performanceChart'
             },
             apiEndpoints: {
-                crmList: '{% url "crm_dashboard:api_crm_list" %}',
-                runningSync: '{% url "crm_dashboard:api_running_syncs" %}',
-                syncHistory: '{% url "crm_dashboard:api_sync_history" %}',
-                syncExecute: '{% url "crm_dashboard:api_sync_execute" %}',
-                syncStop: '{% url "crm_dashboard:api_sync_stop" 0 %}'
+                crmList: '{% url "ingestion:crm_dashboard:api_crm_list" %}',
+                runningSync: '{% url "ingestion:crm_dashboard:api_running_syncs" %}',
+                syncHistory: '{% url "ingestion:crm_dashboard:api_sync_history" %}',
+                syncExecute: '{% url "ingestion:crm_dashboard:api_sync_execute" %}',
+                syncStop: '{% url "ingestion:crm_dashboard:api_sync_stop" 0 %}'
             }
         });
 
@@ -504,9 +504,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof SyncManager !== 'undefined' && !window.syncManager) {
         window.syncManager = new SyncManager({
             apiEndpoints: {
-                execute: '{% url "crm_dashboard:api_sync_execute" %}',
-                stop: '{% url "crm_dashboard:api_sync_stop" 0 %}',
-                status: '{% url "crm_dashboard:api_sync_status" 0 %}'
+                execute: '{% url "ingestion:crm_dashboard:api_sync_execute" %}',
+                stop: '{% url "ingestion:crm_dashboard:api_sync_stop" 0 %}',
+                status: '{% url "ingestion:crm_dashboard:api_sync_status" 0 %}'
             },
             maxConcurrentSyncs: 3,
             confirmDestructive: true
@@ -603,7 +603,7 @@ function handleQuickAction(action, crm) {
         openSyncModal(crm, 'all');
     } else if (action === 'view-config') {
         // Navigate to CRM models page instead of config
-        window.location.href = `{% url 'crm_dashboard:crm_models' 'PLACEHOLDER' %}`.replace('PLACEHOLDER', crm);
+        window.location.href = `{% url 'ingestion:crm_dashboard:crm_models' 'PLACEHOLDER' %}`.replace('PLACEHOLDER', crm);
     }
 }
 

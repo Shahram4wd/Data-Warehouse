@@ -11,7 +11,8 @@ from django.http import JsonResponse
 from ingestion.services.crm_discovery import CRMDiscoveryService
 from ingestion.services.sync_management import SyncManagementService
 from ingestion.services.data_access import DataAccessService
-from ingestion.models.common import SyncHistory
+from ingestion.models.common import SyncHistory, SyncSchedule
+from ingestion.forms import IngestionScheduleForm
 import logging
 
 logger = logging.getLogger(__name__)
@@ -143,15 +144,29 @@ class ModelDetailView(TemplateView):
                 sync_type__icontains=model_name.lower()
             ).order_by('-start_time')[:10]
             
+            # Get existing schedules for this model
+            existing_schedules = SyncSchedule.objects.filter(
+                crm_source=crm_source,
+                model_name=model_name
+            ).order_by('-created_at')
+            
+            # Create schedule form for this specific model
+            schedule_form = IngestionScheduleForm(
+                crm_source=crm_source,
+                model_name=model_name
+            )
+            
             context.update({
                 'crm_source': crm_source,
                 'model_name': model_name,
                 'model_class': model_class,
                 'metadata': metadata,
-                'statistics': statistics.get('statistics', {}),
+                'statistics': statistics,
                 'model_info': model_info,
                 'sync_history': model_sync_history,
-                'page_title': f'{model_name} - {crm_source.title()}'
+                'existing_schedules': existing_schedules,
+                'schedule_form': schedule_form,
+                'page_title': f'{crm_source.title()} {model_name.title()} Details'
             })
             
         except Exception as e:
@@ -212,6 +227,56 @@ class SyncHistoryView(TemplateView):
             messages.error(self.request, f"Error loading sync history: {e}")
             context.update({
                 'sync_history': [],
+                'error': str(e)
+            })
+        
+        return context
+
+
+class AllSchedulesView(TemplateView):
+    """View for managing all schedules across all CRM sources"""
+    template_name = 'crm_dashboard/all_schedules.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        try:
+            # Get all schedules grouped by CRM source
+            schedules = SyncSchedule.objects.all().order_by('crm_source', 'model_name', 'mode')
+            
+            # Group schedules by CRM source for better organization
+            schedules_by_crm = {}
+            for schedule in schedules:
+                if schedule.crm_source not in schedules_by_crm:
+                    schedules_by_crm[schedule.crm_source] = []
+                schedules_by_crm[schedule.crm_source].append(schedule)
+            
+            # Get CRM sources for filtering
+            crm_sources = list(schedules_by_crm.keys())
+            
+            # Get unique modes for filtering
+            modes = SyncSchedule.objects.values_list('mode', flat=True).distinct()
+            
+            context.update({
+                'schedules': schedules,
+                'schedules_by_crm': schedules_by_crm,
+                'crm_sources': crm_sources,
+                'modes': modes,
+                'total_schedules': schedules.count(),
+                'active_schedules': schedules.filter(enabled=True).count(),
+                'page_title': 'All Schedules Management'
+            })
+            
+        except Exception as e:
+            logger.error(f"Error loading all schedules: {e}")
+            messages.error(self.request, f"Error loading schedules: {e}")
+            context.update({
+                'schedules': [],
+                'schedules_by_crm': {},
+                'crm_sources': [],
+                'modes': [],
+                'total_schedules': 0,
+                'active_schedules': 0,
                 'error': str(e)
             })
         

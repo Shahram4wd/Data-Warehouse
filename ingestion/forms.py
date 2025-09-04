@@ -15,65 +15,67 @@ class IngestionScheduleForm(forms.ModelForm):
     class Meta:
         model = SyncSchedule
         fields = [
-            'name', 'source_key', 'mode', 'recurrence_type',
+            'name', 'crm_source', 'model_name', 'mode', 'recurrence_type',
             'every', 'period',
             'minute', 'hour', 'day_of_week', 'day_of_month', 'month_of_year',
-            'start_at', 'end_at', 'enabled', 'options',
+            'start_at', 'end_at', 'enabled',
         ]
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Schedule name'}),
-            'source_key': forms.Select(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Enter a descriptive name for this schedule'
+            }),
+            'crm_source': forms.HiddenInput(),
+            'model_name': forms.HiddenInput(),
             'mode': forms.Select(attrs={'class': 'form-control'}),
-            'recurrence_type': forms.Select(attrs={'class': 'form-control'}),
+            'recurrence_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_recurrence_type'}),
             'every': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'period': forms.Select(attrs={'class': 'form-control'}),
-            'minute': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '0'}),
-            'hour': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '*'}),
-            'day_of_week': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '*'}),
-            'day_of_month': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '*'}),
-            'month_of_year': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '*'}),
-            'start_at': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'end_at': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'minute': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': '0 (or * for every minute)'
+            }),
+            'hour': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': '* (or specific hour like 9)'
+            }),
+            'day_of_week': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': '* (1=Monday, 7=Sunday)'
+            }),
+            'day_of_month': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': '* (1-31)'
+            }),
+            'month_of_year': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': '* (1-12)'
+            }),
+            'start_at': forms.DateTimeInput(attrs={
+                'class': 'form-control', 
+                'type': 'datetime-local'
+            }),
+            'end_at': forms.DateTimeInput(attrs={
+                'class': 'form-control', 
+                'type': 'datetime-local'
+            }),
             'enabled': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'options': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'JSON options (e.g., {"batch_size": 1000})'}),
         }
     
     def __init__(self, *args, **kwargs):
-        self.source_key = kwargs.pop('source_key', None)
+        self.crm_source = kwargs.pop('crm_source', None)
+        self.model_name = kwargs.pop('model_name', None)
         super().__init__(*args, **kwargs)
         
-        # Set source_key if provided and hide the field
-        if self.source_key:
-            self.fields['source_key'].initial = self.source_key
-            self.fields['source_key'].widget = forms.HiddenInput()
+        # Set source and model if provided
+        if self.crm_source:
+            self.fields['crm_source'].initial = self.crm_source
+        if self.model_name:
+            self.fields['model_name'].initial = self.model_name
         
-        # Update choices dynamically
-        self.fields['source_key'].choices = self.get_source_choices()
-        
-    def get_source_choices(self):
-        """Get available source choices."""
-        # This should match your available sources from ingestion_adapter
-        sources = [
-            ('arrivy', 'Arrivy'),
-            ('hubspot', 'HubSpot'),
-            ('marketsharp', 'MarketSharp'),
-            ('genius', 'Genius'),
-        ]
-        return [('', 'Select Source')] + sources
-    
     def clean(self):
         """Validate the form data."""
         cleaned_data = super().clean()
-        
-        # Validate source/mode combination
-        source_key = cleaned_data.get('source_key')
-        mode = cleaned_data.get('mode')
-        
-        if source_key and mode:
-            if not validate_source_mode(source_key, mode):
-                raise ValidationError(
-                    f"The combination {source_key}/{mode} is not supported."
-                )
         
         # Validate recurrence configuration
         recurrence_type = cleaned_data.get('recurrence_type')
@@ -88,16 +90,19 @@ class IngestionScheduleForm(forms.ModelForm):
                 self.add_error('period', 'This field is required for interval schedules.')
         
         elif recurrence_type == 'crontab':
-            # For crontab, we allow defaults, but validate format if provided
+            # For crontab, validate that at least one field is properly set
             crontab_fields = ['minute', 'hour', 'day_of_week', 'day_of_month', 'month_of_year']
-            has_any_crontab = any(cleaned_data.get(field) for field in crontab_fields)
-            
-            if not has_any_crontab:
-                # Use defaults - this is okay
-                pass
+            # Allow defaults - they're all optional but should be valid cron expressions
+            pass
         
         # Validate date range
         start_at = cleaned_data.get('start_at')
+        end_at = cleaned_data.get('end_at')
+        
+        if start_at and end_at and start_at >= end_at:
+            self.add_error('end_at', 'End time must be after start time.')
+        
+        return cleaned_data
         end_at = cleaned_data.get('end_at')
         
         if start_at and end_at and end_at <= start_at:

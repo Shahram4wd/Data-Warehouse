@@ -88,31 +88,45 @@ class SyncHistory(models.Model):
 class SyncSchedule(models.Model):
     """Defines scheduled syncs (moved next to SyncHistory)."""
 
-    MODE_CHOICES = [("delta", "Delta"), ("full", "Full")]
+    MODE_CHOICES = [
+        ("delta", "Delta - Import since last import"), 
+        ("full", "Full - Delete everything and import again"), 
+        ("force7", "Force7 - Import last 7 days with --force flag")
+    ]
     RECURRENCE_CHOICES = [("interval", "Interval"), ("crontab", "Crontab")]
 
-    source_key = models.CharField(max_length=64, db_index=True)
-    name = models.CharField(max_length=128)
-    mode = models.CharField(max_length=16, choices=MODE_CHOICES)
+    # Basic schedule info
+    name = models.CharField(max_length=128, help_text="Descriptive name for this schedule")
+    crm_source = models.CharField(max_length=64, db_index=True, help_text="CRM source (e.g., genius, hubspot)")
+    model_name = models.CharField(max_length=128, help_text="Model name to sync (e.g., appointments, contacts)")
+    mode = models.CharField(max_length=16, choices=MODE_CHOICES, help_text="Sync mode")
 
-    recurrence_type = models.CharField(max_length=16, choices=RECURRENCE_CHOICES)
-    # Interval
-    every = models.PositiveIntegerField(null=True, blank=True)
+    # Legacy field - keeping for backward compatibility but will be auto-populated
+    source_key = models.CharField(max_length=64, db_index=True, help_text="Auto-generated from crm_source")
+
+    # Scheduling configuration
+    recurrence_type = models.CharField(max_length=16, choices=RECURRENCE_CHOICES, help_text="Type of recurrence schedule")
+    
+    # Interval fields
+    every = models.PositiveIntegerField(null=True, blank=True, help_text="Every X periods")
     period = models.CharField(max_length=16, null=True, blank=True, choices=[
         ("minutes", "Minutes"), ("hours", "Hours"), ("days", "Days")
-    ])
-    # Crontab
-    minute = models.CharField(max_length=64, null=True, blank=True, default="0")
-    hour = models.CharField(max_length=64, null=True, blank=True, default="*")
-    day_of_week = models.CharField(max_length=64, null=True, blank=True, default="*")
-    day_of_month = models.CharField(max_length=64, null=True, blank=True, default="*")
-    month_of_year = models.CharField(max_length=64, null=True, blank=True, default="*")
+    ], help_text="Period unit for interval schedules")
+    
+    # Crontab fields
+    minute = models.CharField(max_length=64, null=True, blank=True, default="0", help_text="Minute (0-59)")
+    hour = models.CharField(max_length=64, null=True, blank=True, default="*", help_text="Hour (0-23)")
+    day_of_week = models.CharField(max_length=64, null=True, blank=True, default="*", help_text="Day of week (0-6, Monday is 1)")
+    day_of_month = models.CharField(max_length=64, null=True, blank=True, default="*", help_text="Day of month (1-31)")
+    month_of_year = models.CharField(max_length=64, null=True, blank=True, default="*", help_text="Month of year (1-12)")
 
-    start_at = models.DateTimeField(null=True, blank=True)
-    end_at = models.DateTimeField(null=True, blank=True)
+    # Schedule timing
+    start_at = models.DateTimeField(null=True, blank=True, help_text="When to start running this schedule")
+    end_at = models.DateTimeField(null=True, blank=True, help_text="When to stop running this schedule")
 
-    enabled = models.BooleanField(default=True)
-    options = models.JSONField(default=dict, blank=True)
+    # Status and options
+    enabled = models.BooleanField(default=True, help_text="Whether this schedule is active")
+    options = models.JSONField(default=dict, blank=True, help_text="Additional options as JSON")
 
     periodic_task = models.OneToOneField(PeriodicTask, null=True, blank=True, on_delete=models.SET_NULL)
 
@@ -129,7 +143,13 @@ class SyncSchedule(models.Model):
         permissions = [("manage_schedules", "Can manage ingestion schedules")]
 
     def __str__(self):
-        return f"{self.source_key}:{self.mode}:{self.name}"
+        return f"{self.crm_source}/{self.model_name}:{self.mode}:{self.name}"
+
+    def save(self, *args, **kwargs):
+        # Auto-populate source_key for backward compatibility
+        if not self.source_key and self.crm_source:
+            self.source_key = self.crm_source
+        super().save(*args, **kwargs)
 
     def get_recent_runs(self, limit=5):
         """Get recent SyncHistory records for this schedule."""
