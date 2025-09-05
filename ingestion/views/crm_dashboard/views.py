@@ -139,17 +139,23 @@ class ModelDetailView(TemplateView):
             model_info = next((m for m in models if m['name'].lower() == model_name.lower()), None)
             
             # Get recent sync history for this model
-            # Extract the actual model name from Django model name (e.g., 'Genius_Appointment' -> 'appointment')
-            sync_type_search = model_name
-            if model_name.startswith(f'{crm_source.title()}_'):
-                # Remove the CRM prefix (e.g., 'Genius_' from 'Genius_Appointment')
-                sync_type_search = model_name.replace(f'{crm_source.title()}_', '').lower()
-            else:
-                sync_type_search = model_name.lower()
+            # Use CRM discovery service to properly convert model name to sync_type
+            try:
+                sync_type_search = crm_discovery._model_name_to_sync_type(model_name)
+                logger.debug(f"Converted model_name '{model_name}' to sync_type '{sync_type_search}'")
+            except Exception as e:
+                logger.warning(f"Failed to convert model name '{model_name}' to sync_type: {e}")
+                # Fallback to extracting from model name
+                sync_type_search = model_name
+                if model_name.startswith(f'{crm_source.title()}_'):
+                    # Remove the CRM prefix (e.g., 'Genius_' from 'Genius_Appointment')
+                    sync_type_search = model_name.replace(f'{crm_source.title()}_', '').lower()
+                else:
+                    sync_type_search = model_name.lower()
             
             model_sync_history = SyncHistory.objects.filter(
                 crm_source=crm_source,
-                sync_type__icontains=sync_type_search
+                sync_type=sync_type_search  # Use exact match instead of icontains
             ).order_by('-start_time')[:10]
             
             # Get existing schedules for this model

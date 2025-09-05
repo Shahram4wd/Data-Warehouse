@@ -6,13 +6,32 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def run_source_ingestion(source_key: str, mode: str, **options):
+def get_command_for_source(source_key: str, mode: str, model_name: str = None):
+    """
+    Get the command name and default arguments for a specific source and mode.
+    This is a helper function that returns command info without executing it.
+    
+    Args:
+        source_key: The source identifier (e.g., 'arrivy', 'hubspot', 'marketsharp')
+        mode: The ingestion mode ('delta' or 'full')
+        model_name: Optional specific model name for model-specific commands
+        
+    Returns:
+        tuple: (command_name, default_args_dict)
+        
+    Raises:
+        ValueError: If the source/mode combination is not supported
+    """
+    return _get_command_for_source(source_key, mode, model_name)
+
+def run_source_ingestion(source_key: str, mode: str, model_name: str = None, **options):
     """
     Run ingestion for a specific source and mode.
     
     Args:
         source_key: The source identifier (e.g., 'arrivy', 'hubspot', 'marketsharp')
         mode: The ingestion mode ('delta' or 'full')
+        model_name: Optional specific model name for model-specific commands
         **options: Additional options passed to the ingestion command
         
     Raises:
@@ -20,139 +39,18 @@ def run_source_ingestion(source_key: str, mode: str, **options):
         Exception: If the ingestion command fails
     """
     
-    # Define the mapping between source/mode and management commands
-    # Based on actual commands in ingestion/management/commands/
-    command_map = {
-        # Arrivy source
-        ("arrivy", "delta"): {
-            "command": "sync_arrivy_all", 
-            "default_args": {}
-        },
-        ("arrivy", "full"): {
-            "command": "sync_arrivy_all", 
-            "default_args": {"full": True}
-        },
-        
-        # HubSpot source
-        ("hubspot", "delta"): {
-            "command": "sync_hubspot_all", 
-            "default_args": {}
-        },
-        ("hubspot", "full"): {
-            "command": "sync_hubspot_all", 
-            "default_args": {"full": True}
-        },
-        
-        # MarketSharp source
-        ("marketsharp", "delta"): {
-            "command": "sync_marketsharp_data", 
-            "default_args": {}
-        },
-        ("marketsharp", "full"): {
-            "command": "sync_marketsharp_data", 
-            "default_args": {"full": True}
-        },
-        
-        # Genius source
-        ("genius", "delta"): {
-            "command": "db_genius_appointments", 
-            "default_args": {}
-        },
-        ("genius", "full"): {
-            "command": "db_genius_appointments", 
-            "default_args": {"full": True}
-        },
-        
-        # SalesPro source
-        ("salespro", "delta"): {
-            "command": "db_salespro_all", 
-            "default_args": {}
-        },
-        ("salespro", "full"): {
-            "command": "db_salespro_all", 
-            "default_args": {"full": True}
-        },
-        
-        # SalesRabbit source
-        ("salesrabbit", "delta"): {
-            "command": "sync_salesrabbit_all", 
-            "default_args": {}
-        },
-        ("salesrabbit", "full"): {
-            "command": "sync_salesrabbit_all", 
-            "default_args": {"full": True}
-        },
-        
-        # CallRail source
-        ("callrail", "delta"): {
-            "command": "sync_callrail_all", 
-            "default_args": {}
-        },
-        ("callrail", "full"): {
-            "command": "sync_callrail_all", 
-            "default_args": {"full": True}
-        },
-        
-        # Google Sheets source
-        ("gsheet", "delta"): {
-            "command": "sync_gsheet_all", 
-            "default_args": {}
-        },
-        ("gsheet", "full"): {
-            "command": "sync_gsheet_all", 
-            "default_args": {"full": True}
-        },
-        
-        # LeadConduit source
-        ("leadconduit", "delta"): {
-            "command": "sync_leadconduit_all", 
-            "default_args": {}
-        },
-        ("leadconduit", "full"): {
-            "command": "sync_leadconduit_all", 
-            "default_args": {"full": True}
-        },
-        
-        # Five9 source
-        ("five9", "delta"): {
-            "command": "sync_five9_contacts", 
-            "default_args": {}
-        },
-        ("five9", "full"): {
-            "command": "sync_five9_contacts", 
-            "default_args": {"full": True}
-        },
-        
-        # Add more sources as needed
-    }
+    # Get the command for this source/model combination
+    command, default_args = _get_command_for_source(source_key, mode, model_name)
     
-    # Look up the command configuration
-    key = (source_key.lower(), mode.lower())
-    if key not in command_map:
-        available_keys = list(command_map.keys())
-        raise ValueError(
-            f"Unsupported source/mode combination: {source_key}/{mode}. "
-            f"Available combinations: {available_keys}"
-        )
-    
-    config = command_map[key]
-    command = config["command"]
-    default_args = config["default_args"].copy()
+    logger.info(f"Running ingestion command: {command} with args: {default_args}")
     
     # Merge default args with provided options
-    # Provided options take precedence over defaults
-    final_args = {}
-    
-    # Start with defaults
-    for k, v in default_args.items():
-        final_args[k] = v
+    final_args = default_args.copy()
     
     # Override with provided options, filtering out None values
     for k, v in options.items():
         if v is not None:
             final_args[k] = v
-    
-    logger.info(f"Running ingestion command: {command} with args: {final_args}")
     
     try:
         # Execute the management command
@@ -163,6 +61,154 @@ def run_source_ingestion(source_key: str, mode: str, **options):
         logger.error(f"Failed to execute {command} for {source_key}/{mode}: {e}")
         raise
 
+def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
+    """Get the appropriate command and default args for a source/model combination"""
+    source_key = source_key.lower()
+    mode = mode.lower()
+    
+    # Handle Genius models with specific commands
+    if source_key == 'genius' and model_name:
+        command = _get_genius_command(model_name)
+        default_args = {"full": True} if mode == "full" else {}
+        return command, default_args
+    
+    # Handle CallRail models with specific commands
+    if source_key == 'callrail' and model_name:
+        command = _get_callrail_command(model_name)
+        default_args = {"full": True} if mode == "full" else {}
+        return command, default_args
+    
+    # Define the mapping between source/mode and management commands for other sources
+    command_map = {
+        # Arrivy source
+        ("arrivy", "delta"): ("sync_arrivy_all", {}),
+        ("arrivy", "full"): ("sync_arrivy_all", {"full": True}),
+        
+        # HubSpot source  
+        ("hubspot", "delta"): ("sync_hubspot_all", {}),
+        ("hubspot", "full"): ("sync_hubspot_all", {"full": True}),
+        
+        # MarketSharp source
+        ("marketsharp", "delta"): ("sync_marketsharp_data", {}),
+        ("marketsharp", "full"): ("sync_marketsharp_data", {"full": True}),
+        
+        # SalesPro source
+        ("salespro", "delta"): ("db_salespro_all", {}),
+        ("salespro", "full"): ("db_salespro_all", {"full": True}),
+        
+        # SalesRabbit source
+        ("salesrabbit", "delta"): ("sync_salesrabbit_all", {}),
+        ("salesrabbit", "full"): ("sync_salesrabbit_all", {"full": True}),
+        
+        # CallRail source
+        ("callrail", "delta"): ("sync_callrail_all", {}),
+        ("callrail", "full"): ("sync_callrail_all", {"full": True}),
+        
+        # Google Sheets source
+        ("gsheet", "delta"): ("sync_gsheet_all", {}),
+        ("gsheet", "full"): ("sync_gsheet_all", {"full": True}),
+        
+        # LeadConduit source
+        ("leadconduit", "delta"): ("sync_leadconduit_all", {}),
+        ("leadconduit", "full"): ("sync_leadconduit_all", {"full": True}),
+        
+        # Five9 source
+        ("five9", "delta"): ("sync_five9_contacts", {}),
+        ("five9", "full"): ("sync_five9_contacts", {"full": True}),
+    }
+    
+    # Look up the command configuration
+    key = (source_key, mode)
+    if key in command_map:
+        return command_map[key]
+    
+    # If no specific mapping found, raise error
+    available_keys = list(command_map.keys())
+    raise ValueError(
+        f"Unsupported source/mode combination: {source_key}/{mode}. "
+        f"Available combinations: {available_keys}"
+    )
+
+def _get_genius_command(model_name: str) -> str:
+    """Get the specific command for a Genius model"""
+    # Map both full model names and sync types to their specific commands
+    genius_commands = {
+        # Full model names
+        'Genius_Appointment': 'db_genius_appointments',
+        'Genius_AppointmentOutcome': 'db_genius_appointment_outcomes', 
+        'Genius_AppointmentOutcomeType': 'db_genius_appointment_outcome_types',
+        'Genius_AppointmentService': 'db_genius_appointment_services',
+        'Genius_AppointmentType': 'db_genius_appointment_types',
+        'Genius_Division': 'db_genius_divisions',
+        'Genius_DivisionGroup': 'db_genius_division_groups',
+        'Genius_Job': 'db_genius_jobs',
+        'Genius_JobChangeOrder': 'db_genius_job_change_orders',
+        'Genius_Lead': 'db_genius_leads',
+        'Genius_Location': 'db_genius_locations',
+        'Genius_Person': 'db_genius_people',
+        'Genius_Product': 'db_genius_products',
+        'Genius_SalesRep': 'db_genius_sales_reps',
+        'Genius_Unit': 'db_genius_units',
+        'Genius_UnitType': 'db_genius_unit_types',
+        
+        # Sync types (from JavaScript modelNameToSyncType)
+        'appointments': 'db_genius_appointments',
+        'appointmentoutcomes': 'db_genius_appointment_outcomes',
+        'appointmentoutcometypes': 'db_genius_appointment_outcome_types', 
+        'appointmentservices': 'db_genius_appointment_services',
+        'appointmenttypes': 'db_genius_appointment_types',
+        'divisions': 'db_genius_divisions',
+        'divisiongroups': 'db_genius_division_groups',
+        'jobs': 'db_genius_jobs',
+        'jobchangeorders': 'db_genius_job_change_orders',
+        'leads': 'db_genius_leads',
+        'locations': 'db_genius_locations',
+        'people': 'db_genius_people',
+        'products': 'db_genius_products',
+        'salesreps': 'db_genius_sales_reps',
+        'units': 'db_genius_units',
+        'unittypes': 'db_genius_unit_types',
+    }
+    
+    if model_name in genius_commands:
+        return genius_commands[model_name]
+    
+    # If no specific command found, default to db_genius_all
+    logger.warning(f"No specific command found for {model_name}, using db_genius_all")
+    return 'db_genius_all'
+
+def _get_callrail_command(model_name: str) -> str:
+    """Get the specific command for a CallRail model"""
+    # Map both full model names and sync types to their specific commands
+    callrail_commands = {
+        # Full model names
+        'CallRail_Account': 'sync_callrail_accounts',
+        'CallRail_Call': 'sync_callrail_calls',
+        'CallRail_Company': 'sync_callrail_companies',
+        'CallRail_FormSubmission': 'sync_callrail_form_submissions',
+        'CallRail_Tag': 'sync_callrail_tags',
+        'CallRail_TextMessage': 'sync_callrail_text_messages',
+        'CallRail_Tracker': 'sync_callrail_trackers',
+        'CallRail_User': 'sync_callrail_users',
+        
+        # Sync types (from JavaScript modelNameToSyncType)
+        'accounts': 'sync_callrail_accounts',
+        'calls': 'sync_callrail_calls',
+        'companies': 'sync_callrail_companies',
+        'form_submissions': 'sync_callrail_form_submissions',
+        'tags': 'sync_callrail_tags',
+        'text_messages': 'sync_callrail_text_messages',
+        'trackers': 'sync_callrail_trackers',
+        'users': 'sync_callrail_users',
+    }
+    
+    if model_name in callrail_commands:
+        return callrail_commands[model_name]
+    
+    # If no specific command found, default to sync_callrail_all
+    logger.warning(f"No specific command found for {model_name}, using sync_callrail_all")
+    return 'sync_callrail_all'
+
 def get_available_sources():
     """
     Get a list of all available source keys.
@@ -170,8 +216,6 @@ def get_available_sources():
     Returns:
         list: List of available source key strings
     """
-    # Extract unique source keys from the command map
-    sources = set()
     available_sources = [
         "arrivy", "hubspot", "marketsharp", "genius", "salespro", 
         "salesrabbit", "callrail", "gsheet", "leadconduit", "five9"

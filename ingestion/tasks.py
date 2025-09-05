@@ -244,10 +244,11 @@ def run_ingestion(self, schedule_id: int):
         
         try:
             # Execute the actual ingestion
-            logger.info(f"Starting ingestion for {schedule.source_key}:{schedule.mode}")
+            logger.info(f"Starting ingestion for {schedule.source_key}:{schedule.mode} model={schedule.model_name}")
             run_source_ingestion(
                 source_key=schedule.source_key,
                 mode=schedule.mode,
+                model_name=schedule.model_name,
                 **(schedule.options or {}),
             )
             

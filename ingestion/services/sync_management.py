@@ -14,6 +14,7 @@ from datetime import datetime
 from django.utils import timezone
 from django.conf import settings
 from ingestion.models.common import SyncHistory
+from ingestion.services.ingestion_adapter import get_command_for_source
 import logging
 
 logger = logging.getLogger(__name__)
@@ -140,45 +141,43 @@ class SyncManagementService:
         return validation_result
     
     def build_sync_command(self, crm_source: str, sync_type: str, parameters: Dict) -> str:
-        """Build the management command string with parameters"""
+        """Build the management command string using IngestionAdapter"""
         try:
-            # Determine command name
-            if sync_type == 'all':
-                command_name = f'sync_{crm_source}_all'
-            else:
-                # Use sync_type as-is, don't modify it
-                # The sync_type should match the actual command name
-                command_name = f'sync_{crm_source}_{sync_type}'
+            logger.info(f"Building sync command for {crm_source} {sync_type} with parameters: {parameters}")
             
-            # Verify command exists before proceeding
-            command_file = os.path.join(self.management_commands_dir, f'{command_name}.py')
-            if not os.path.exists(command_file):
-                logger.warning(f"Command file not found: {command_file}")
-                # Fallback: try common variations
-                variations = [
-                    f'sync_{crm_source}_{sync_type}',  # exact match
-                    f'sync_{crm_source}_{sync_type.rstrip("s")}',  # remove trailing 's'
-                    f'sync_{crm_source}_{sync_type}s',  # add 's' if missing
-                ]
-                
-                for variation in variations:
-                    test_file = os.path.join(self.management_commands_dir, f'{variation}.py')
-                    if os.path.exists(test_file):
-                        command_name = variation
-                        logger.info(f"Found command variation: {command_name}")
-                        break
+            # For manual sync, determine mode based on parameters
+            # Most sources use 'delta' for incremental, 'full' for full sync
+            mode = 'full' if parameters.get('full') else 'delta'
+            
+            # Convert sync_type to model_name for model-specific syncs
+            # sync_type like 'appointments' should become model_name 'appointments'
+            model_name = sync_type if sync_type not in ['all', 'full'] else None
+            
+            # Get command from adapter function
+            try:
+                command, default_args = get_command_for_source(crm_source, mode, model_name)
+            except Exception as e:
+                # If the adapter function fails, fall back to building command manually
+                logger.warning(f"Adapter function failed: {e}, using fallback command building")
+                if model_name:
+                    command = f"db_{crm_source}_{model_name}"
                 else:
-                    raise Exception(f"No valid command found for {crm_source} {sync_type}")
+                    command = f"sync_{crm_source}_all"
+                default_args = {}
             
-            # Start with base command
-            cmd_parts = ['python', 'manage.py', command_name]
+            # Build command parts
+            cmd_parts = ['python', 'manage.py', command]
             
-            # Add parameters
+            # Add default args from the adapter
+            for arg, value in default_args.items():
+                if value is True:
+                    cmd_parts.append(f'--{arg}')
+                elif value is not False and value is not None:
+                    cmd_parts.extend([f'--{arg}', str(value)])
+            
+            # Add additional parameters
             if parameters.get('force'):
                 cmd_parts.append('--force')
-            
-            if parameters.get('full'):
-                cmd_parts.append('--full')
             
             if parameters.get('since'):
                 cmd_parts.extend(['--since', parameters['since']])
@@ -191,9 +190,6 @@ class SyncManagementService:
             
             if parameters.get('max_records'):
                 cmd_parts.extend(['--max-records', str(parameters['max_records'])])
-            
-            if parameters.get('batch_size'):
-                cmd_parts.extend(['--batch-size', str(parameters['batch_size'])])
             
             return ' '.join(cmd_parts)
             

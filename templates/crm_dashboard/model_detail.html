@@ -867,6 +867,8 @@ function modelNameToSyncType(modelName) {
     // Handle specific CRM patterns first
     if (name.startsWith('CallRail_')) {
         name = name.substring(9); // Remove 'CallRail_'
+    } else if (name.startsWith('Genius_')) {
+        name = name.substring(7); // Remove 'Genius_'
     } else if (name.startsWith('Genius')) {
         name = name.substring(6); // Remove 'Genius'
     } else if (name.startsWith('Hubspot') || name.startsWith('HubSpot')) {
