@@ -139,9 +139,17 @@ class ModelDetailView(TemplateView):
             model_info = next((m for m in models if m['name'].lower() == model_name.lower()), None)
             
             # Get recent sync history for this model
+            # Extract the actual model name from Django model name (e.g., 'Genius_Appointment' -> 'appointment')
+            sync_type_search = model_name
+            if model_name.startswith(f'{crm_source.title()}_'):
+                # Remove the CRM prefix (e.g., 'Genius_' from 'Genius_Appointment')
+                sync_type_search = model_name.replace(f'{crm_source.title()}_', '').lower()
+            else:
+                sync_type_search = model_name.lower()
+            
             model_sync_history = SyncHistory.objects.filter(
                 crm_source=crm_source,
-                sync_type__icontains=model_name.lower()
+                sync_type__icontains=sync_type_search
             ).order_by('-start_time')[:10]
             
             # Get existing schedules for this model

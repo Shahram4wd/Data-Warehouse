@@ -491,16 +491,16 @@ class CRMDiscoveryService:
         # Handle specific CRM patterns first
         if name.startswith('CallRail_'):
             name = name[9:]  # Remove 'CallRail_'
-        elif name.startswith('Genius'):
-            name = name[6:]  # Remove 'Genius'
-        elif name.startswith('Hubspot') or name.startswith('HubSpot'):
-            name = name[7:]  # Remove 'Hubspot'/'HubSpot'
-        elif name.startswith('Salespro'):
-            name = name[8:]  # Remove 'Salespro'
-        elif name.startswith('Salesrabbit'):
-            name = name[11:]  # Remove 'Salesrabbit'
-        elif name.startswith('Arrivy'):
-            name = name[6:]  # Remove 'Arrivy'
+        elif name.startswith('Genius_'):
+            name = name[7:]  # Remove 'Genius_'
+        elif name.startswith('Hubspot_') or name.startswith('HubSpot_'):
+            name = name[8:]  # Remove 'Hubspot_'/'HubSpot_'
+        elif name.startswith('Salespro_'):
+            name = name[9:]  # Remove 'Salespro_'
+        elif name.startswith('Salesrabbit_'):
+            name = name[12:]  # Remove 'Salesrabbit_'
+        elif name.startswith('Arrivy_'):
+            name = name[7:]  # Remove 'Arrivy_'
         
         name = name.lower()
         if name.endswith('y'):
