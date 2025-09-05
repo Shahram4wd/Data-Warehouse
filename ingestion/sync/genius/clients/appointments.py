@@ -57,7 +57,7 @@ class GeniusAppointmentsClient(GeniusBaseClient):
                    a.confirm_user_id, a.confirm_date, a.confirm_with, a.spouses_present, 
                    a.is_complete, a.complete_outcome_id, a.complete_user_id, a.complete_date, 
                    a.updated_at, a.marketsharp_id, a.marketsharp_appt_type, a.leap_estimate_id, 
-                   a.third_party_source_id, tps.third_party_id AS hubspot_appointment_id
+                   tps.third_party_id AS hubspot_appointment_id
             FROM {self.table_name} AS a
             LEFT JOIN third_party_source AS tps 
               ON tps.id = a.third_party_source_id

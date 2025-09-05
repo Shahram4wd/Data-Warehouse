@@ -21,46 +21,106 @@ def run_source_ingestion(source_key: str, mode: str, **options):
     """
     
     # Define the mapping between source/mode and management commands
-    # Adjust these based on your actual management commands
+    # Based on actual commands in ingestion/management/commands/
     command_map = {
         # Arrivy source
         ("arrivy", "delta"): {
-            "command": "import_arrivy", 
-            "default_args": {"delta": True}
+            "command": "sync_arrivy_all", 
+            "default_args": {}
         },
         ("arrivy", "full"): {
-            "command": "import_arrivy", 
+            "command": "sync_arrivy_all", 
             "default_args": {"full": True}
         },
         
         # HubSpot source
         ("hubspot", "delta"): {
-            "command": "sync_hubspot", 
-            "default_args": {"mode": "delta"}
+            "command": "sync_hubspot_all", 
+            "default_args": {}
         },
         ("hubspot", "full"): {
-            "command": "sync_hubspot", 
-            "default_args": {"mode": "full"}
+            "command": "sync_hubspot_all", 
+            "default_args": {"full": True}
         },
         
         # MarketSharp source
         ("marketsharp", "delta"): {
-            "command": "sync_marketsharp", 
-            "default_args": {"mode": "delta"}
+            "command": "sync_marketsharp_data", 
+            "default_args": {}
         },
         ("marketsharp", "full"): {
-            "command": "sync_marketsharp", 
-            "default_args": {"mode": "full"}
+            "command": "sync_marketsharp_data", 
+            "default_args": {"full": True}
         },
         
         # Genius source
         ("genius", "delta"): {
-            "command": "sync_genius", 
-            "default_args": {"mode": "delta"}
+            "command": "db_genius_appointments", 
+            "default_args": {}
         },
         ("genius", "full"): {
-            "command": "sync_genius", 
-            "default_args": {"mode": "full"}
+            "command": "db_genius_appointments", 
+            "default_args": {"full": True}
+        },
+        
+        # SalesPro source
+        ("salespro", "delta"): {
+            "command": "db_salespro_all", 
+            "default_args": {}
+        },
+        ("salespro", "full"): {
+            "command": "db_salespro_all", 
+            "default_args": {"full": True}
+        },
+        
+        # SalesRabbit source
+        ("salesrabbit", "delta"): {
+            "command": "sync_salesrabbit_all", 
+            "default_args": {}
+        },
+        ("salesrabbit", "full"): {
+            "command": "sync_salesrabbit_all", 
+            "default_args": {"full": True}
+        },
+        
+        # CallRail source
+        ("callrail", "delta"): {
+            "command": "sync_callrail_all", 
+            "default_args": {}
+        },
+        ("callrail", "full"): {
+            "command": "sync_callrail_all", 
+            "default_args": {"full": True}
+        },
+        
+        # Google Sheets source
+        ("gsheet", "delta"): {
+            "command": "sync_gsheet_all", 
+            "default_args": {}
+        },
+        ("gsheet", "full"): {
+            "command": "sync_gsheet_all", 
+            "default_args": {"full": True}
+        },
+        
+        # LeadConduit source
+        ("leadconduit", "delta"): {
+            "command": "sync_leadconduit_all", 
+            "default_args": {}
+        },
+        ("leadconduit", "full"): {
+            "command": "sync_leadconduit_all", 
+            "default_args": {"full": True}
+        },
+        
+        # Five9 source
+        ("five9", "delta"): {
+            "command": "sync_five9_contacts", 
+            "default_args": {}
+        },
+        ("five9", "full"): {
+            "command": "sync_five9_contacts", 
+            "default_args": {"full": True}
         },
         
         # Add more sources as needed
@@ -112,21 +172,12 @@ def get_available_sources():
     """
     # Extract unique source keys from the command map
     sources = set()
-    command_map = {
-        ("arrivy", "delta"): None,
-        ("arrivy", "full"): None,
-        ("hubspot", "delta"): None,
-        ("hubspot", "full"): None,
-        ("marketsharp", "delta"): None,
-        ("marketsharp", "full"): None,
-        ("genius", "delta"): None,
-        ("genius", "full"): None,
-    }
+    available_sources = [
+        "arrivy", "hubspot", "marketsharp", "genius", "salespro", 
+        "salesrabbit", "callrail", "gsheet", "leadconduit", "five9"
+    ]
     
-    for source_key, _ in command_map.keys():
-        sources.add(source_key)
-    
-    return sorted(list(sources))
+    return sorted(available_sources)
 
 def get_available_modes():
     """
@@ -148,16 +199,10 @@ def validate_source_mode(source_key: str, mode: str):
     Returns:
         bool: True if the combination is supported, False otherwise
     """
-    command_map = {
-        ("arrivy", "delta"): None,
-        ("arrivy", "full"): None,
-        ("hubspot", "delta"): None,
-        ("hubspot", "full"): None,
-        ("marketsharp", "delta"): None,
-        ("marketsharp", "full"): None,
-        ("genius", "delta"): None,
-        ("genius", "full"): None,
-    }
+    available_sources = [
+        "arrivy", "hubspot", "marketsharp", "genius", "salespro", 
+        "salesrabbit", "callrail", "gsheet", "leadconduit", "five9"
+    ]
+    available_modes = ["delta", "full"]
     
-    key = (source_key.lower(), mode.lower())
-    return key in command_map
+    return source_key.lower() in available_sources and mode.lower() in available_modes

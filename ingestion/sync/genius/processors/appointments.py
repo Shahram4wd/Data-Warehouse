@@ -3,7 +3,7 @@ Genius Appointments Data Processor
 Handles transformation and validation of appointments data
 """
 import logging
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from typing import Dict, List, Optional, Any
 from django.db import transaction
 from asgiref.sync import sync_to_async
@@ -78,21 +78,54 @@ class GeniusAppointmentsProcessor:
                                 stats['updated'] += 1
                 
                 except Exception as e:
-                    logger.error(f"Error processing appointment record {record.get('id')}: {e}")
+                    record_id = record.get('id', 'Unknown')
+                    logger.error(f"Error processing appointment record ID {record_id}: {e}")
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.debug(f"Failed record data: {record}")
                     stats['errors'] += 1
         
         return stats
     
     def transform_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Transform raw database record to model-compatible format"""
+        record_id = record.get('id', 'Unknown')
         try:
-            # Handle date and time fields
-            appointment_date = self._convert_date(record.get('date'))
-            appointment_time = self._convert_time(record.get('time'))
-            add_date = self._convert_datetime(record.get('add_date'))
-            assign_date = self._convert_datetime(record.get('assign_date'))
-            confirm_date = self._convert_datetime(record.get('confirm_date'))
-            complete_date = self._convert_datetime(record.get('complete_date'))
+            # Handle date and time fields with individual error handling
+            try:
+                appointment_date = self._convert_date(record.get('date'))
+            except Exception as e:
+                logger.error(f"Error converting date field for appointment ID {record_id}: {e}, value: {record.get('date')}")
+                appointment_date = None
+                
+            try:
+                appointment_time = self._convert_time(record.get('time'))
+            except Exception as e:
+                logger.error(f"Error converting time field for appointment ID {record_id}: {e}, value: {record.get('time')}")
+                appointment_time = None
+                
+            try:
+                add_date = self._convert_datetime(record.get('add_date'))
+            except Exception as e:
+                logger.error(f"Error converting add_date field for appointment ID {record_id}: {e}, value: {record.get('add_date')}")
+                add_date = None
+                
+            try:
+                assign_date = self._convert_datetime(record.get('assign_date'))
+            except Exception as e:
+                logger.error(f"Error converting assign_date field for appointment ID {record_id}: {e}, value: {record.get('assign_date')}")
+                assign_date = None
+                
+            try:
+                confirm_date = self._convert_datetime(record.get('confirm_date'))
+            except Exception as e:
+                logger.error(f"Error converting confirm_date field for appointment ID {record_id}: {e}, value: {record.get('confirm_date')}")
+                confirm_date = None
+                
+            try:
+                complete_date = self._convert_datetime(record.get('complete_date'))
+            except Exception as e:
+                logger.error(f"Error converting complete_date field for appointment ID {record_id}: {e}, value: {record.get('complete_date')}")
+                complete_date = None
             
             # Transform the record
             transformed = {
@@ -103,7 +136,7 @@ class GeniusAppointmentsProcessor:
                 'type_id': record.get('type_id'),
                 'date': appointment_date,
                 'time': appointment_time,
-                'duration': record.get('duration'),
+                'duration': self._convert_duration(record.get('duration')),
                 'address1': record.get('address1'),
                 'address2': record.get('address2'),
                 'city': record.get('city'),
@@ -125,18 +158,27 @@ class GeniusAppointmentsProcessor:
                 'marketsharp_id': record.get('marketsharp_id'),
                 'marketsharp_appt_type': record.get('marketsharp_appt_type'),
                 'leap_estimate_id': record.get('leap_estimate_id'),
-                'third_party_source_id': record.get('third_party_source_id'),
                 'hubspot_appointment_id': record.get('hubspot_appointment_id'),
             }
             
             return transformed
             
         except Exception as e:
-            logger.error(f"Error transforming appointment record {record.get('id')}: {e}")
+            record_id = record.get('id', 'Unknown')
+            error_msg = str(e)
+            
+            # Enhanced transformation error logging
+            if 'fromisoformat' in error_msg:
+                logger.error(f"Error transforming appointment record ID {record_id}: Date/time format error - {error_msg}")
+                logger.error(f"Problematic date/time fields: date={record.get('date')}, time={record.get('time')}, add_date={record.get('add_date')}")
+            else:
+                logger.error(f"Error transforming appointment record ID {record_id}: {error_msg}")
+                logger.error(f"Record sample fields: {dict(list(record.items())[:5])}")  # Show first 5 fields for context
             return None
     
     def transform_and_save_record(self, record: Dict[str, Any]) -> Optional[Genius_Appointment]:
         """Transform and save a single appointment record"""
+        record_id = record.get('id', 'Unknown')
         try:
             transformed = self.transform_record(record)
             if not transformed:
@@ -153,7 +195,24 @@ class GeniusAppointmentsProcessor:
             return appointment
             
         except Exception as e:
-            logger.error(f"Error saving appointment record {record.get('id')}: {e}")
+            # Enhanced error logging with field information
+            error_msg = str(e)
+            if 'Invalid field name' in error_msg:
+                # Extract field name from Django error message
+                field_name = error_msg.split("'")[1] if "'" in error_msg else "unknown field"
+                logger.error(f"Error saving appointment record ID {record_id}: Invalid field '{field_name}' - {error_msg}")
+            elif hasattr(e, 'message_dict'):
+                # Django validation errors with field-specific messages
+                field_errors = []
+                for field, messages in e.message_dict.items():
+                    field_errors.append(f"{field}: {', '.join(messages)}")
+                logger.error(f"Error saving appointment record ID {record_id}: Field validation errors - {'; '.join(field_errors)}")
+            else:
+                # Generic error with more context
+                logger.error(f"Error saving appointment record ID {record_id}: {error_msg}")
+                logger.error(f"Record data keys: {list(record.keys())}")
+                if transformed:
+                    logger.error(f"Transformed data keys: {list(transformed.keys())}")
             return None
     
     def _convert_date(self, value) -> Optional[datetime]:
@@ -182,6 +241,13 @@ class GeniusAppointmentsProcessor:
         
         if isinstance(value, time):
             return value
+        elif isinstance(value, timedelta):
+            # Convert timedelta to time (seconds since midnight)
+            total_seconds = int(value.total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            return time(hours % 24, minutes, seconds)  # Ensure hours are within 0-23
         elif isinstance(value, str):
             try:
                 # Handle HH:MM:SS format
@@ -212,6 +278,27 @@ class GeniusAppointmentsProcessor:
                 except ValueError:
                     logger.warning(f"Could not parse datetime: {value}")
                     return None
+        
+        return value
+    
+    def _convert_duration(self, value) -> Optional[timedelta]:
+        """Convert various duration formats to timedelta"""
+        if value is None:
+            return None
+        
+        if isinstance(value, timedelta):
+            return value
+        elif isinstance(value, (int, float)):
+            # Assume seconds if it's a number
+            return timedelta(seconds=value)
+        elif isinstance(value, str):
+            try:
+                # Try to parse as seconds
+                seconds = float(value)
+                return timedelta(seconds=seconds)
+            except ValueError:
+                logger.warning(f"Could not parse duration: {value}")
+                return None
         
         return value
     
