@@ -347,11 +347,11 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <small>{{ sync.start_time|date:"M d, H:i" }}</small>
+                                    <small class="sync-time" data-time="{{ sync.start_time|date:'c' }}">{{ sync.start_time|date:"M d, H:i" }}</small>
                                 </td>
                                 <td>
                                     {% if sync.duration_seconds %}
-                                        <small>{{ sync.duration_seconds|floatformat:1 }}s</small>
+                                        <small class="sync-duration" data-duration="{{ sync.duration_seconds }}">{{ sync.duration_seconds|floatformat:1 }}s</small>
                                     {% else %}
                                         <small class="text-muted">-</small>
                                     {% endif %}
@@ -359,9 +359,9 @@
                                 <td>
                                     <small>
                                         {% if sync.records_processed %}
-                                            {{ sync.records_processed }}
+                                            <span class="records-count" data-count="{{ sync.records_processed }}">{{ sync.records_processed }}</span>
                                             {% if sync.records_failed > 0 %}
-                                                <span class="text-danger">({{ sync.records_failed }} failed)</span>
+                                                <span class="text-danger">(<span class="records-count" data-count="{{ sync.records_failed }}">{{ sync.records_failed }}</span> failed)</span>
                                             {% endif %}
                                         {% else %}
                                             <span class="text-muted">-</span>
@@ -737,6 +737,109 @@ function debounce(func, wait) {
 window.syncAllCRM = function(crmSource) {
     openSyncModal(crmSource, 'all');
 };
+
+// Format time and duration values on page load
+function formatPageValues() {
+    // Format time ago values
+    document.querySelectorAll('.sync-time').forEach(element => {
+        const timeStr = element.getAttribute('data-time');
+        if (timeStr && timeStr !== '-') {
+            const date = new Date(timeStr);
+            element.textContent = formatTimeAgo(date);
+        }
+    });
+    
+    // Format duration values
+    document.querySelectorAll('.sync-duration').forEach(element => {
+        const duration = parseFloat(element.getAttribute('data-duration'));
+        if (duration) {
+            element.textContent = formatDuration(duration);
+        }
+    });
+    
+    // Format record counts
+    document.querySelectorAll('.records-count').forEach(element => {
+        const count = parseInt(element.getAttribute('data-count'));
+        if (count || count === 0) {
+            element.textContent = formatRecordsCount(count);
+        }
+    });
+}
+
+function formatTimeAgo(date) {
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffMinutes < 1) {
+        return 'Just now';
+    } else if (diffMinutes < 60) {
+        return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else if (diffDays < 7) {
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    } else {
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+}
+
+function formatDuration(seconds) {
+    if (!seconds || seconds <= 0) return '0s';
+    
+    const totalSeconds = Math.floor(seconds);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    
+    const parts = [];
+    
+    if (days > 0) {
+        parts.push(`${days}d`);
+        if (hours > 0) {
+            parts.push(`${hours}h`);
+        }
+        if (minutes > 0 && days === 0) {
+            parts.push(`${minutes}m`);
+        }
+    } else if (hours > 0) {
+        parts.push(`${hours}h`);
+        if (minutes > 0) {
+            parts.push(`${minutes}m`);
+        }
+    } else if (minutes > 0) {
+        parts.push(`${minutes}m`);
+        if (secs > 0) {
+            parts.push(`${secs}s`);
+        }
+    } else {
+        parts.push(`${secs}s`);
+    }
+    
+    return parts.join(' ');
+}
+
+function formatRecordsCount(count) {
+    if (!count && count !== 0) return '0';
+    
+    const num = parseInt(count);
+    
+    if (num < 1000) {
+        return num.toString();
+    } else if (num < 1000000) {
+        return `${(num/1000).toFixed(1)}K`;
+    } else if (num < 1000000000) {
+        return `${(num/1000000).toFixed(1)}M`;
+    } else {
+        return `${(num/1000000000).toFixed(1)}B`;
+    }
+}
+
+// Initialize formatting when page loads
+document.addEventListener('DOMContentLoaded', formatPageValues);
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', function() {

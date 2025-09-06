@@ -457,13 +457,55 @@ function getLastRunDisplay(lastRun) {
     const statusClass = lastRun.status === 'success' ? 'success' : 
                        lastRun.status === 'failed' ? 'danger' : 'warning';
     
+    // Format time ago
+    const timeAgo = formatTimeAgo(date);
+    
+    // Format records count
+    const recordsText = lastRun.records_processed ? formatRecordsCount(lastRun.records_processed) : '0';
+    
     return `
         <div>
-            <small>${date.toLocaleDateString()} ${date.toLocaleTimeString()}</small><br>
+            <small>${timeAgo}</small><br>
             <span class="badge bg-${statusClass}">${lastRun.status}</span>
-            ${lastRun.records_processed ? `<br><small>${lastRun.records_processed} records</small>` : ''}
+            ${lastRun.records_processed ? `<br><small>${recordsText} records</small>` : ''}
         </div>
     `;
+}
+
+function formatTimeAgo(date) {
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffMinutes < 1) {
+        return 'Just now';
+    } else if (diffMinutes < 60) {
+        return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else if (diffDays < 7) {
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    } else {
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+}
+
+function formatRecordsCount(count) {
+    if (!count || count === 0) return '0';
+    
+    const num = parseInt(count);
+    
+    if (num < 1000) {
+        return num.toString();
+    } else if (num < 1000000) {
+        return `${(num/1000).toFixed(1)}K`;
+    } else if (num < 1000000000) {
+        return `${(num/1000000).toFixed(1)}M`;
+    } else {
+        return `${(num/1000000000).toFixed(1)}B`;
+    }
 }
 
 function editSchedule(scheduleId) {

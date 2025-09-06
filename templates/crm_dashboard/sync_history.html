@@ -435,39 +435,75 @@ function formatDateTime(dateStr) {
     const date = new Date(dateStr);
     const now = new Date();
     const diffTime = Math.abs(now - date);
-    const diffMinutes = Math.ceil(diffTime / (1000 * 60));
-    const diffHours = Math.ceil(diffTime / (1000 * 60 * 60));
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffMinutes < 60) {
-        return `${diffMinutes} minutes ago`;
+    if (diffMinutes < 1) {
+        return 'Just now';
+    } else if (diffMinutes < 60) {
+        return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
     } else if (diffHours < 24) {
-        return `${diffHours} hours ago`;
+        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
     } else if (diffDays < 7) {
-        return `${diffDays} days ago`;
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
     } else {
         return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
 }
 
 function formatDuration(seconds) {
-    if (!seconds) return 'N/A';
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
+    if (!seconds || seconds <= 0) return 'N/A';
     
-    if (hours > 0) {
-        return `${hours}h ${minutes}m ${secs}s`;
+    // Convert to integer to avoid decimals
+    const totalSeconds = Math.floor(seconds);
+    
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    
+    const parts = [];
+    
+    if (days > 0) {
+        parts.push(`${days}d`);
+        if (hours > 0) {
+            parts.push(`${hours}h`);
+        }
+        if (minutes > 0 && days === 0) {
+            parts.push(`${minutes}m`);
+        }
+    } else if (hours > 0) {
+        parts.push(`${hours}h`);
+        if (minutes > 0) {
+            parts.push(`${minutes}m`);
+        }
     } else if (minutes > 0) {
-        return `${minutes}m ${secs}s`;
+        parts.push(`${minutes}m`);
+        if (secs > 0) {
+            parts.push(`${secs}s`);
+        }
     } else {
-        return `${secs}s`;
+        parts.push(`${secs}s`);
     }
+    
+    return parts.join(' ');
 }
 
 function formatNumber(num) {
     if (!num && num !== 0) return '0';
-    return parseInt(num).toLocaleString();
+    
+    const count = parseInt(num);
+    
+    if (count < 1000) {
+        return count.toString();
+    } else if (count < 1000000) {
+        return `${(count/1000).toFixed(1)}K`;
+    } else if (count < 1000000000) {
+        return `${(count/1000000).toFixed(1)}M`;
+    } else {
+        return `${(count/1000000000).toFixed(1)}B`;
+    }
 }
 
 function showError(message) {
