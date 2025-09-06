@@ -175,11 +175,31 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 # Celery Configuration
-CELERY_BROKER_URL = config('CELERY_BROKER_URL')
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
+try:
+    CELERY_BROKER_URL = config('CELERY_BROKER_URL')
+    CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
+except Exception as e:
+    # Fallback for development or when Redis is not available
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Redis configuration not available: {e}")
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_RESULT_BACKEND = 'cache+memory://'
+
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+# Add resilience settings
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_RETRY = True
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
+    'socket_keepalive': True,
+    'socket_keepalive_options': {
+        'TCP_KEEPINTVL': 1,
+        'TCP_KEEPCNT': 3,
+        'TCP_USER_TIMEOUT': 30,
+    },
+}
 
 # SQL Explorer Configuration
 EXPLORER_CONNECTIONS = {'Default': 'default'}
