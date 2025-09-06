@@ -14,6 +14,16 @@ services:
         value: "true"
       - key: WEB_CONCURRENCY
         value: "1"
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: redis
+          property: connectionString
     disk:
       name: static-files
       mountPath: /app/staticfiles
@@ -30,6 +40,20 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "true"
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: redis
+          property: connectionString
+      - key: DATABASE_URL
+        sync: false  # Will use the same DATABASE_URL as the web service
+      - key: DJANGO_SECRET_KEY
+        sync: false  # Will use the same SECRET_KEY as the web service
     autoDeploy: true
 
   # Celery Beat - schedules periodic tasks
@@ -41,6 +65,20 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "true"
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: redis
+          property: connectionString
+      - key: DATABASE_URL
+        sync: false  # Will use the same DATABASE_URL as the web service
+      - key: DJANGO_SECRET_KEY
+        sync: false  # Will use the same SECRET_KEY as the web service
     autoDeploy: true
 
   # Redis - message broker for Celery
