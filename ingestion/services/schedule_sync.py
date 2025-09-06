@@ -31,7 +31,7 @@ def sync_periodic_task(schedule):
         pt_kwargs = {
             "task": task_name,
             "interval": interval,
-            "args": json.dumps([schedule.id]),
+            "args": json.dumps([]),
             "kwargs": json.dumps(task_kwargs)
         }
     else:  # crontab
@@ -45,7 +45,7 @@ def sync_periodic_task(schedule):
         pt_kwargs = {
             "task": task_name,
             "crontab": crontab,
-            "args": json.dumps([schedule.id]),
+            "args": json.dumps([]),
             "kwargs": json.dumps(task_kwargs)
         }
 
