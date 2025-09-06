@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError
 from ingestion.services.crm_discovery import CRMDiscoveryService
 from ingestion.services.sync_management import SyncManagementService
 from ingestion.services.data_access import DataAccessService
+from ingestion.services.schedule_sync import sync_periodic_task, delete_periodic_task
 from ingestion.models.common import SyncHistory, SyncSchedule
 from ingestion.forms import IngestionScheduleForm
 import json
@@ -581,6 +582,14 @@ class ModelScheduleAPIView(BaseAPIView):
                 schedule.updated_by = request.user if request.user.is_authenticated else None
                 schedule.save()
                 
+                # Create the corresponding PeriodicTask in Celery Beat
+                try:
+                    sync_periodic_task(schedule)
+                    logger.info(f"Created PeriodicTask for schedule {schedule.id}: {schedule.name}")
+                except Exception as e:
+                    logger.error(f"Failed to create PeriodicTask for schedule {schedule.id}: {e}")
+                    # Note: We don't fail the request since the schedule is saved
+                
                 return self.json_response({
                     'success': True,
                     'message': 'Schedule created successfully',
@@ -658,6 +667,14 @@ class ScheduleDetailAPIView(BaseAPIView):
                 schedule = form.save(commit=False)
                 schedule.updated_by = request.user if request.user.is_authenticated else None
                 schedule.save()
+                
+                # Update the corresponding PeriodicTask in Celery Beat
+                try:
+                    sync_periodic_task(schedule)
+                    logger.info(f"Updated PeriodicTask for schedule {schedule.id}: {schedule.name}")
+                except Exception as e:
+                    logger.error(f"Failed to update PeriodicTask for schedule {schedule.id}: {e}")
+                    # Note: We don't fail the request since the schedule is saved
                 
                 return self.json_response({
                     'success': True,

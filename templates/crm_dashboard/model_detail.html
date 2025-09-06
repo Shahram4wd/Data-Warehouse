@@ -532,6 +532,116 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Schedule Modal -->
+<div class="modal fade" id="editScheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>Edit Schedule
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editScheduleForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="editScheduleId">
+                    
+                    <div class="mb-3">
+                        <label for="editScheduleName" class="form-label">Schedule Name</label>
+                        <input type="text" class="form-control" id="editScheduleName" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editScheduleMode" class="form-label">Mode</label>
+                        <select class="form-select" id="editScheduleMode" required>
+                            <option value="delta">Delta - Import since last import</option>
+                            <option value="full">Full - Delete everything and import again</option>
+                            <option value="force7">Force7 - Import last 7 days with --force flag</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editRecurrenceType" class="form-label">Recurrence Type</label>
+                        <select class="form-select" id="editRecurrenceType" onchange="toggleEditRecurrenceFields()">
+                            <option value="interval">Interval (every X minutes/hours/days)</option>
+                            <option value="crontab">Crontab (specific times)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Interval fields -->
+                    <div id="editIntervalFields">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="editEvery" class="form-label">Every</label>
+                                <input type="number" class="form-control" id="editEvery" min="1">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editPeriod" class="form-label">Period</label>
+                                <select class="form-select" id="editPeriod">
+                                    <option value="minutes">Minutes</option>
+                                    <option value="hours">Hours</option>
+                                    <option value="days">Days</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Crontab fields -->
+                    <div id="editCrontabFields" style="display: none;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="editMinute" class="form-label">Minute (0-59)</label>
+                                <input type="text" class="form-control" id="editMinute" placeholder="*">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editHour" class="form-label">Hour (0-23)</label>
+                                <input type="text" class="form-control" id="editHour" placeholder="*">
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <label for="editDayOfWeek" class="form-label">Day of Week (0-6)</label>
+                                <input type="text" class="form-control" id="editDayOfWeek" placeholder="*">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editDayOfMonth" class="form-label">Day of Month (1-31)</label>
+                                <input type="text" class="form-control" id="editDayOfMonth" placeholder="*">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <label for="editStartAt" class="form-label">Start At (optional)</label>
+                            <input type="datetime-local" class="form-control" id="editStartAt">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editEndAt" class="form-label">End At (optional)</label>
+                            <input type="datetime-local" class="form-control" id="editEndAt">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3 mt-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="editEnabled">
+                            <label class="form-check-label" for="editEnabled">
+                                Enabled
+                            </label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveScheduleEdit()">
+                    <i class="fas fa-save me-1"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -982,8 +1092,126 @@ function createSchedule() {
 }
 
 function editSchedule(scheduleId) {
-    // TODO: Implement edit schedule in a modal
-    showError('Edit functionality will be implemented in a future update');
+    // Get schedule details via API
+    fetch(`/ingestion/crm-dashboard/api/schedules/${scheduleId}/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const schedule = data.data;
+            
+            // Populate the edit form
+            document.getElementById('editScheduleId').value = schedule.id;
+            document.getElementById('editScheduleName').value = schedule.name;
+            document.getElementById('editScheduleMode').value = schedule.mode;
+            document.getElementById('editRecurrenceType').value = schedule.recurrence_type;
+            document.getElementById('editEnabled').checked = schedule.enabled;
+            
+            // Handle interval vs crontab fields
+            if (schedule.recurrence_type === 'interval') {
+                document.getElementById('editEvery').value = schedule.every || '';
+                document.getElementById('editPeriod').value = schedule.period || 'minutes';
+            } else {
+                document.getElementById('editMinute').value = schedule.minute || '*';
+                document.getElementById('editHour').value = schedule.hour || '*';
+                document.getElementById('editDayOfWeek').value = schedule.day_of_week || '*';
+                document.getElementById('editDayOfMonth').value = schedule.day_of_month || '*';
+            }
+            
+            // Handle datetime fields
+            if (schedule.start_at) {
+                const startDate = new Date(schedule.start_at);
+                document.getElementById('editStartAt').value = startDate.toISOString().slice(0, 16);
+            }
+            if (schedule.end_at) {
+                const endDate = new Date(schedule.end_at);
+                document.getElementById('editEndAt').value = endDate.toISOString().slice(0, 16);
+            }
+            
+            // Toggle field visibility
+            toggleEditRecurrenceFields();
+            
+            // Show the modal
+            new bootstrap.Modal(document.getElementById('editScheduleModal')).show();
+        } else {
+            showError('Failed to load schedule details: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error loading schedule:', error);
+        showError('Failed to load schedule details');
+    });
+}
+
+function toggleEditRecurrenceFields() {
+    const recurrenceType = document.getElementById('editRecurrenceType').value;
+    const intervalFields = document.getElementById('editIntervalFields');
+    const crontabFields = document.getElementById('editCrontabFields');
+    
+    if (recurrenceType === 'interval') {
+        intervalFields.style.display = 'block';
+        crontabFields.style.display = 'none';
+    } else {
+        intervalFields.style.display = 'none';
+        crontabFields.style.display = 'block';
+    }
+}
+
+function saveScheduleEdit() {
+    const scheduleId = document.getElementById('editScheduleId').value;
+    const recurrenceType = document.getElementById('editRecurrenceType').value;
+    
+    const payload = {
+        name: document.getElementById('editScheduleName').value,
+        mode: document.getElementById('editScheduleMode').value,
+        recurrence_type: recurrenceType,
+        enabled: document.getElementById('editEnabled').checked,
+        start_at: document.getElementById('editStartAt').value || null,
+        end_at: document.getElementById('editEndAt').value || null
+    };
+    
+    // Add recurrence-specific fields
+    if (recurrenceType === 'interval') {
+        payload.every = parseInt(document.getElementById('editEvery').value) || null;
+        payload.period = document.getElementById('editPeriod').value;
+    } else {
+        payload.minute = document.getElementById('editMinute').value || '*';
+        payload.hour = document.getElementById('editHour').value || '*';
+        payload.day_of_week = document.getElementById('editDayOfWeek').value || '*';
+        payload.day_of_month = document.getElementById('editDayOfMonth').value || '*';
+        payload.month_of_year = '*';
+    }
+    
+    fetch(`/ingestion/crm-dashboard/api/schedules/${scheduleId}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showSuccess('Schedule updated successfully');
+            bootstrap.Modal.getInstance(document.getElementById('editScheduleModal')).hide();
+            
+            // Reload the page to show updated schedule
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showError('Failed to update schedule: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating schedule:', error);
+        showError('Failed to update schedule');
+    });
 }
 
 function deleteSchedule(scheduleId) {
