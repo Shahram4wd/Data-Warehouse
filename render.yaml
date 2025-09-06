@@ -1,4 +1,5 @@
 services:
+  # Django Web Application
   - type: web
     name: data-warehouse
     env: python
@@ -19,3 +20,30 @@ services:
       sizeGB: 1
     healthCheckPath: /admin/login/
     autoDeploy: true
+
+  # Celery Worker - processes background tasks
+  - type: worker
+    name: celery-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A data_warehouse worker --loglevel=info
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "true"
+    autoDeploy: true
+
+  # Celery Beat - schedules periodic tasks
+  - type: worker
+    name: celery-beat
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A data_warehouse beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "true"
+    autoDeploy: true
+
+  # Redis - message broker for Celery
+  - type: redis
+    name: redis
+    plan: starter
