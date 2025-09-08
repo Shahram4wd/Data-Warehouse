@@ -92,4 +92,5 @@ services:
     name: redis
     plan: starter  # Options: starter (free), standard ($7/month), pro ($15/month)
     maxmemoryPolicy: allkeys-lru  # Memory management policy
-    
+    ipAllowList: []  # Allow all addresses (required for Render blueprint)
+
