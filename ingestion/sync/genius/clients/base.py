@@ -17,7 +17,11 @@ class GeniusBaseClient:
     def connect(self):
         """Establish connection to Genius database"""
         if not self.connection:
-            self.connection = get_mysql_connection()
+            try:
+                self.connection = get_mysql_connection()
+            except Exception as e:
+                logger.error(f"Failed to establish database connection: {e}")
+                raise
     
     def disconnect(self):
         """Close connection to Genius database"""
@@ -25,15 +29,47 @@ class GeniusBaseClient:
             self.connection.close()
             self.connection = None
     
+    def is_connected(self) -> bool:
+        """Check if database connection is active"""
+        if not self.connection:
+            return False
+        try:
+            self.connection.ping(reconnect=True, attempts=1, delay=0)
+            return True
+        except Exception as e:
+            logger.warning(f"Database connection check failed: {e}")
+            return False
+
     def execute_query(self, query: str, params: tuple = None) -> List[tuple]:
         """Execute SQL query and return results"""
-        self.connect()
+        # Ensure we have a valid connection
+        if not self.is_connected():
+            logger.info("Database connection lost, reconnecting...")
+            self.disconnect()
+            self.connect()
+            
         cursor = self.connection.cursor()
         try:
             cursor.execute(query, params or ())
             return cursor.fetchall()
+        except Exception as e:
+            logger.error(f"Query execution failed: {e}")
+            # Try to reconnect and retry once
+            try:
+                logger.info("Attempting to reconnect and retry query...")
+                self.disconnect()
+                self.connect()
+                cursor = self.connection.cursor()
+                cursor.execute(query, params or ())
+                result = cursor.fetchall()
+                cursor.close()
+                return result
+            except Exception as retry_e:
+                logger.error(f"Query retry also failed: {retry_e}")
+                raise
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
     
     def get_table_count(self, table_name: str) -> int:
         """Get total record count for a table"""

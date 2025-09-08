@@ -1,8 +1,11 @@
 from datetime import datetime
 import os
+import logging
 import psycopg2
 import mysql.connector
 from django.db import transaction
+
+logger = logging.getLogger(__name__)
 
 def parse_datetime_obj(value):
     """Convert common date/datetime formats to datetime objects.
@@ -67,23 +70,82 @@ def prepare_data(row, field_mapping, required_fields):
 def get_mysql_connection():
     """
     Establish and return a connection to the MySQL database using environment variables.
+    Includes retry logic, connection timeout settings, and fallback hosts.
     """
+    import time
+    import mysql.connector.errors
+    
     db_host = os.getenv("GENIUS_DB_HOST")
-    db_name = os.getenv("GENIUS_DB_NAME")
+    db_name = os.getenv("GENIUS_DB_NAME") 
     db_user = os.getenv("GENIUS_DB_USER")
     db_password = os.getenv("GENIUS_DB_PASSWORD")
-    db_port = os.getenv("GENIUS_DB_PORT", 3306)  # Default to 3306 if not set
+    db_port = int(os.getenv("GENIUS_DB_PORT", 3306))  # Default to 3306 if not set
 
     if not all([db_host, db_name, db_user, db_password]):
         raise ValueError("Database connection details are missing in environment variables.")
 
-    return mysql.connector.connect(
-        host=db_host,
-        database=db_name,
-        user=db_user,
-        password=db_password,
-        port=db_port
-    )
+    # Fallback hosts to try if primary host fails
+    fallback_hosts = [
+        db_host,  # Primary host
+        "db2.nsginternal.com",  # Original host as fallback
+        "localhost",  # Local fallback if available
+    ]
+    
+    # Remove duplicates while preserving order
+    hosts_to_try = []
+    for host in fallback_hosts:
+        if host and host not in hosts_to_try:
+            hosts_to_try.append(host)
+
+    # Connection configuration with timeouts and retry settings
+    base_config = {
+        'database': db_name,
+        'user': db_user,
+        'password': db_password,
+        'port': db_port,
+        'connection_timeout': 10,  # 10 seconds connection timeout
+        'autocommit': True,
+        'reconnect': True,
+        'charset': 'utf8mb4',
+        'collation': 'utf8mb4_unicode_ci'
+    }
+    
+    # Try each host
+    for host in hosts_to_try:
+        config = base_config.copy()
+        config['host'] = host
+        
+        max_retries = 2  # Reduced retries per host
+        retry_delay = 3  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Attempting to connect to MySQL database at {host}:{db_port} (attempt {attempt + 1}/{max_retries})")
+                connection = mysql.connector.connect(**config)
+                logger.info(f"Successfully connected to MySQL database at {host}:{db_port}")
+                return connection
+                
+            except mysql.connector.errors.DatabaseError as e:
+                logger.warning(f"Database connection to {host} attempt {attempt + 1} failed: {e}")
+                if attempt < max_retries - 1:
+                    logger.info(f"Retrying connection to {host} in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    logger.error(f"All {max_retries} connection attempts to {host} failed")
+                    break  # Try next host
+                    
+            except Exception as e:
+                logger.warning(f"Unexpected error connecting to {host} attempt {attempt + 1}: {e}")
+                if attempt < max_retries - 1:
+                    logger.info(f"Retrying connection to {host} in {retry_delay} seconds...")
+                    time.sleep(retry_delay)
+                else:
+                    logger.error(f"All {max_retries} connection attempts to {host} failed")
+                    break  # Try next host
+    
+    # If we reach here, all hosts failed
+    logger.error(f"Failed to connect to any of the available MySQL hosts: {hosts_to_try}")
+    raise mysql.connector.errors.DatabaseError("Unable to connect to any MySQL database host")
 
 
 def get_athena_connection():
