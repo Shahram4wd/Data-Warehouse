@@ -3,7 +3,7 @@ services:
   - type: web
     name: data-warehouse
     env: python
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
+    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput
     startCommand: gunicorn data_warehouse.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
       - key: DJANGO_STATIC_ROOT
@@ -36,7 +36,7 @@ services:
     name: celery-worker
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: celery -A data_warehouse worker --loglevel=info
+    startCommand: celery -A data_warehouse worker --loglevel=info --without-heartbeat --without-mingle --without-gossip
     envVars:
       - key: PYTHONUNBUFFERED
         value: "true"
@@ -54,7 +54,10 @@ services:
         sync: false  # Will use the same DATABASE_URL as the web service
       - key: DJANGO_SECRET_KEY
         sync: false  # Will use the same SECRET_KEY as the web service
+      - key: DJANGO_SETTINGS_MODULE
+        value: data_warehouse.settings
     autoDeploy: true
+    numInstances: 1  # Scale based on your needs
 
   # Celery Beat - schedules periodic tasks
   - type: worker
@@ -79,9 +82,13 @@ services:
         sync: false  # Will use the same DATABASE_URL as the web service
       - key: DJANGO_SECRET_KEY
         sync: false  # Will use the same SECRET_KEY as the web service
+      - key: DJANGO_SETTINGS_MODULE
+        value: data_warehouse.settings
     autoDeploy: true
+    numInstances: 1  # Only run 1 instance of beat scheduler
 
   # Redis - message broker for Celery
   - type: redis
     name: redis
-    plan: starter
+    plan: starter  # Options: starter (free), standard ($7/month), pro ($15/month)
+    maxmemoryPolicy: allkeys-lru  # Memory management policy
