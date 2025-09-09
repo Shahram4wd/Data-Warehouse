@@ -6,6 +6,7 @@ import logging
 from datetime import datetime, time, timedelta
 from typing import Dict, List, Optional, Any
 from django.db import transaction
+from django.utils import timezone
 from asgiref.sync import sync_to_async
 
 from ingestion.models import Genius_Appointment, Genius_Prospect, Genius_ProspectSource, Genius_AppointmentType, Genius_AppointmentOutcome
@@ -263,18 +264,23 @@ class GeniusAppointmentsProcessor:
         return value
     
     def _convert_datetime(self, value) -> Optional[datetime]:
-        """Convert various datetime formats to datetime"""
+        """Convert various datetime formats to timezone-aware datetime (UTC)"""
         if value is None:
             return None
         
         if isinstance(value, datetime):
+            # If already timezone-aware, return as is; otherwise make it UTC
+            if value.tzinfo is None:
+                return timezone.make_aware(value, timezone=timezone.utc)
             return value
         elif isinstance(value, str):
             try:
-                return datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+                dt = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+                return timezone.make_aware(dt, timezone=timezone.utc)
             except ValueError:
                 try:
-                    return datetime.strptime(value, '%Y-%m-%d')
+                    dt = datetime.strptime(value, '%Y-%m-%d')
+                    return timezone.make_aware(dt, timezone=timezone.utc)
                 except ValueError:
                     logger.warning(f"Could not parse datetime: {value}")
                     return None

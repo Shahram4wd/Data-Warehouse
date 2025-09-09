@@ -105,7 +105,6 @@ def get_mysql_connection():
         'port': db_port,
         'connection_timeout': 10,  # 10 seconds connection timeout
         'autocommit': True,
-        'reconnect': True,
         'charset': 'utf8mb4',
         'collation': 'utf8mb4_unicode_ci'
     }
@@ -126,7 +125,8 @@ def get_mysql_connection():
                 return connection
                 
             except mysql.connector.errors.DatabaseError as e:
-                logger.warning(f"Database connection to {host} attempt {attempt + 1} failed: {e}")
+                error_code = getattr(e, 'errno', 'Unknown')
+                logger.warning(f"Database connection to {host} attempt {attempt + 1} failed (Error {error_code}): {e}")
                 if attempt < max_retries - 1:
                     logger.info(f"Retrying connection to {host} in {retry_delay} seconds...")
                     time.sleep(retry_delay)
