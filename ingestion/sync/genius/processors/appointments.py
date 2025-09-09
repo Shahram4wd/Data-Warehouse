@@ -127,6 +127,12 @@ class GeniusAppointmentsProcessor:
             except Exception as e:
                 logger.error(f"Error converting complete_date field for appointment ID {record_id}: {e}, value: {record.get('complete_date')}")
                 complete_date = None
+                
+            try:
+                updated_at = self._convert_datetime(record.get('updated_at'))
+            except Exception as e:
+                logger.error(f"Error converting updated_at field for appointment ID {record_id}: {e}, value: {record.get('updated_at')}")
+                updated_at = None
             
             # Transform the record
             transformed = {
@@ -160,6 +166,7 @@ class GeniusAppointmentsProcessor:
                 'marketsharp_appt_type': record.get('marketsharp_appt_type'),
                 'leap_estimate_id': record.get('leap_estimate_id'),
                 'hubspot_appointment_id': record.get('hubspot_appointment_id'),
+                'updated_at': updated_at,
             }
             
             return transformed
