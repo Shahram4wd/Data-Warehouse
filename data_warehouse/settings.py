@@ -178,6 +178,23 @@ CORS_ALLOWED_ORIGINS = [
 try:
     CELERY_BROKER_URL = config('CELERY_BROKER_URL')
     CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
+    
+    # Use different queue names for local vs production using existing DJANGO_ENV
+    DJANGO_ENV = config('DJANGO_ENV', default='development')
+    
+    if DJANGO_ENV == 'production':
+        # Production - use your existing production queue
+        CELERY_TASK_DEFAULT_QUEUE = config('CELERY_TASK_DEFAULT_QUEUE', default='dw-production')
+        CELERY_TASK_ROUTES = {
+            'ingestion.tasks.*': {'queue': 'dw-production'},
+        }
+    else:
+        # Local development - use separate queues to avoid conflicts with production
+        CELERY_TASK_DEFAULT_QUEUE = 'dw-local'
+        CELERY_TASK_ROUTES = {
+            'ingestion.tasks.*': {'queue': 'dw-local'},
+        }
+        
 except Exception as e:
     # Fallback for development or when Redis is not available
     import logging

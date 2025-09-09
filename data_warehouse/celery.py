@@ -9,16 +9,23 @@ app = Celery('data_warehouse')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
-# Configure periodic tasks
-app.conf.beat_schedule = {
-    'generate-automation-reports-afternoon': {
-        'task': 'ingestion.tasks.generate_automation_reports',
-        'schedule': crontab(hour=16, minute=0),  # 4:00 PM UTC daily
-    },
-    'generate-automation-reports-morning': {
-        'task': 'ingestion.tasks.generate_automation_reports',
-        'schedule': crontab(hour=4, minute=0),   # 4:00 AM UTC daily
-    },
-}
+# Configure periodic tasks only for production environment
+# Check if we're in production using existing DJANGO_ENV variable
+DJANGO_ENV = os.environ.get('DJANGO_ENV', 'development')
+
+if DJANGO_ENV == 'production':
+    app.conf.beat_schedule = {
+        'generate-automation-reports-afternoon': {
+            'task': 'ingestion.tasks.generate_automation_reports',
+            'schedule': crontab(hour=16, minute=0),  # 4:00 PM UTC daily
+        },
+        'generate-automation-reports-morning': {
+            'task': 'ingestion.tasks.generate_automation_reports',
+            'schedule': crontab(hour=4, minute=0),   # 4:00 AM UTC daily
+        },
+    }
+else:
+    # No scheduled tasks for local development
+    app.conf.beat_schedule = {}
 
 app.conf.timezone = 'UTC'

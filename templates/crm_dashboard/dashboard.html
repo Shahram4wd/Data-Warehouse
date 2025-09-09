@@ -323,6 +323,7 @@
                         <thead>
                             <tr>
                                 <th>CRM</th>
+                                <th>Sync Type</th>
                                 <th>Status</th>
                                 <th>Started</th>
                                 <th>Duration</th>
@@ -335,6 +336,9 @@
                             <tr>
                                 <td>
                                     <span class="badge bg-secondary">{{ sync.crm_source }}</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ sync.sync_type|default:"N/A" }}</span>
                                 </td>
                                 <td>
                                     <span class="status-badge status-{{ sync.status }}">
