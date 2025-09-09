@@ -127,29 +127,29 @@ class GeniusDivisionGroupsSyncEngine(GeniusBaseSyncEngine):
                     validated_data = self.processor.validate_record(record_data)
                     
                     # Skip if required data missing
-                    if not validated_data.get('genius_id'):
+                    if not validated_data.get('id'):
                         logger.warning("Skipping division group with no ID")
                         stats['skipped'] += 1
                         continue
                     
                     # Get or create division group
                     division_group, created = Genius_DivisionGroup.objects.get_or_create(
-                        genius_id=validated_data['genius_id'],
+                        id=validated_data['id'],
                         defaults=validated_data
                     )
                     
                     if created:
                         stats['created'] += 1
-                        logger.debug(f"Created division group {division_group.genius_id}: {division_group.name}")
+                        logger.debug(f"Created division group {division_group.id}: {division_group.group_label}")
                     else:
                         # Update if force_overwrite or data changed
                         if force_overwrite or self._should_update_division_group(division_group, validated_data):
                             for field, value in validated_data.items():
-                                if field != 'genius_id':  # Don't update primary key
+                                if field != 'id':  # Don't update primary key
                                     setattr(division_group, field, value)
                             division_group.save()
                             stats['updated'] += 1
-                            logger.debug(f"Updated division group {division_group.genius_id}: {division_group.name}")
+                            logger.debug(f"Updated division group {division_group.id}: {division_group.group_label}")
                         else:
                             stats['skipped'] += 1
                     
@@ -159,15 +159,11 @@ class GeniusDivisionGroupsSyncEngine(GeniusBaseSyncEngine):
                     logger.error(f"Record data: {raw_record}")
         
         return {
-            'success': True,
-            'sync_id': None,  # Add sync record ID when implemented
-            'stats': {
-                'processed': stats['total_processed'],
-                'created': stats['created'],
-                'updated': stats['updated'],
-                'errors': stats['errors'],
-                'skipped': stats['skipped']
-            }
+            'total_processed': stats['total_processed'],
+            'created': stats['created'],
+            'updated': stats['updated'],
+            'errors': stats['errors'],
+            'skipped': stats['skipped']
         }
     
     def _should_update_division_group(self, existing: Genius_DivisionGroup, new_data: Dict[str, Any]) -> bool:

@@ -22,10 +22,10 @@ class GeniusDivisionGroupProcessor(GeniusBaseProcessor):
         validated = {}
         
         # Validate each field using GeniusValidator
-        validated['genius_id'] = GeniusValidator.validate_id_field(record_data.get('id'))
-        validated['name'] = GeniusValidator.validate_string_field(record_data.get('name'), max_length=255, required=True)
-        validated['code'] = GeniusValidator.validate_string_field(record_data.get('code'), max_length=50)
-        validated['active'] = GeniusValidator.validate_boolean_field(record_data.get('active'))
+        validated['id'] = GeniusValidator.validate_id_field(record_data.get('id'))
+        validated['group_label'] = GeniusValidator.validate_string_field(record_data.get('name'), max_length=255, required=True)
+        validated['region'] = GeniusValidator.validate_id_field(record_data.get('code')) or 1
+        validated['is_active'] = GeniusValidator.validate_boolean_field(record_data.get('active'))
         validated['created_at'] = GeniusValidator.validate_datetime_field(record_data.get('created_at'))
         validated['updated_at'] = GeniusValidator.validate_datetime_field(record_data.get('updated_at'))
         
@@ -37,11 +37,11 @@ class GeniusDivisionGroupProcessor(GeniusBaseProcessor):
             validated['updated_at'] = self.convert_timezone_aware(validated['updated_at'])
         
         # Ensure we have required fields
-        if not validated.get('genius_id'):
-            raise ValueError("Division group must have a genius_id")
+        if not validated.get('id'):
+            raise ValueError("Division group must have an id")
         
-        if not validated.get('name'):
-            raise ValueError("Division group must have a name")
+        if not validated.get('group_label'):
+            raise ValueError("Division group must have a group_label")
         
         return validated
     

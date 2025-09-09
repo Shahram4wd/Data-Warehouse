@@ -66,7 +66,7 @@ class Command(BaseCommand):
         
         # Legacy argument support (deprecated)
         parser.add_argument(
-            '--force-overwrite',
+            '--force',
             action='store_true',
             help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
         )
@@ -110,6 +110,10 @@ class Command(BaseCommand):
                 self.style.WARNING("⚠️  --force-overwrite is deprecated, use --full instead")
             )
             options['full'] = True
+            
+        # Handle --force as alias for --full
+        if options.get('force'):
+            options['full'] = True
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -133,13 +137,13 @@ class Command(BaseCommand):
             ))
             
             # Display results
-            stats = result['stats']
+            stats = result if isinstance(result, dict) and 'total_processed' in result else result.get('stats', result)
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   📊 Processed: {stats.get('total_processed', stats.get('processed', 0))} records")
+            self.stdout.write(f"   ➕ Created: {stats.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {stats.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {stats.get('errors', 0)} records")
+            self.stdout.write(f"   🆔 SyncHistory ID: {result.get('sync_id', 'N/A') if isinstance(result, dict) else 'N/A'}")
             
         except Exception as e:
             logger.exception("Genius division groups sync failed")
