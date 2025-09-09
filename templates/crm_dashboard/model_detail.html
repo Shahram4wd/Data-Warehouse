@@ -547,6 +547,8 @@
                 <form id="editScheduleForm">
                     {% csrf_token %}
                     <input type="hidden" id="editScheduleId">
+                    <input type="hidden" id="editCrmSource">
+                    <input type="hidden" id="editModelName">
                     
                     <div class="mb-3">
                         <label for="editScheduleName" class="form-label">Schedule Name</label>
@@ -1117,6 +1119,8 @@ function editSchedule(scheduleId) {
             
             // Populate the edit form
             document.getElementById('editScheduleId').value = schedule.id;
+            document.getElementById('editCrmSource').value = schedule.crm_source;
+            document.getElementById('editModelName').value = schedule.model_name;
             document.getElementById('editScheduleName').value = schedule.name;
             document.getElementById('editScheduleMode').value = schedule.mode;
             document.getElementById('editRecurrenceType').value = schedule.recurrence_type;
@@ -1177,6 +1181,8 @@ function saveScheduleEdit() {
     const recurrenceType = document.getElementById('editRecurrenceType').value;
     
     const payload = {
+        crm_source: document.getElementById('editCrmSource').value,
+        model_name: document.getElementById('editModelName').value,
         name: document.getElementById('editScheduleName').value,
         mode: document.getElementById('editScheduleMode').value,
         recurrence_type: recurrenceType,
@@ -1197,6 +1203,8 @@ function saveScheduleEdit() {
         payload.month_of_year = '*';
     }
     
+    console.log('Updating schedule with payload:', payload);
+    
     fetch(`/ingestion/crm-dashboard/api/schedules/${scheduleId}/`, {
         method: 'PUT',
         headers: {
@@ -1216,7 +1224,7 @@ function saveScheduleEdit() {
                 window.location.reload();
             }, 1000);
         } else {
-            showError('Failed to update schedule: ' + data.message);
+            showError('Failed to update schedule: ' + (data.error || data.message || 'Unknown error'));
         }
     })
     .catch(error => {

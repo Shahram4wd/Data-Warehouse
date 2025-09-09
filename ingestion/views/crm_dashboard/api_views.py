@@ -657,6 +657,8 @@ class ScheduleDetailAPIView(BaseAPIView):
             schedule = SyncSchedule.objects.get(id=schedule_id)
             data = json.loads(request.body)
             
+            logger.info(f"Updating schedule {schedule_id} with data: {data}")
+            
             form = IngestionScheduleForm(
                 data, 
                 instance=schedule,
@@ -681,6 +683,7 @@ class ScheduleDetailAPIView(BaseAPIView):
                     'message': 'Schedule updated successfully'
                 })
             else:
+                logger.error(f"Form validation failed for schedule {schedule_id}: {form.errors}")
                 return self.error_response(f"Validation failed: {form.errors}", 400)
                 
         except SyncSchedule.DoesNotExist:
