@@ -5,7 +5,7 @@ import logging
 from typing import Dict, Any, List
 
 from .base import GeniusBaseProcessor
-from ..validators import GeniusValidator, GeniusRecordValidator
+from ..validators import GeniusValidator, GeniusRecordValidator, GeniusFieldValidator
 
 logger = logging.getLogger(__name__)
 
@@ -19,42 +19,25 @@ class GeniusJobChangeOrderProcessor(GeniusBaseProcessor):
     def validate_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and clean job change order record data"""
         
-        validated = {}
+        # Use the field validator from validators.py
+        validated = GeniusFieldValidator.validate_job_change_order_record(record_data)
         
-        # Validate each field using GeniusValidator
-        validated['genius_id'] = GeniusValidator.validate_id_field(record_data.get('id'))
-        validated['job_id'] = GeniusValidator.validate_id_field(record_data.get('job_id'))
-        validated['change_order_number'] = GeniusValidator.validate_string_field(record_data.get('change_order_number'), max_length=100)
-        validated['change_order_type_id'] = GeniusValidator.validate_id_field(record_data.get('change_order_type_id'))
-        validated['change_order_status_id'] = GeniusValidator.validate_id_field(record_data.get('change_order_status_id'))
-        validated['change_order_reason_id'] = GeniusValidator.validate_id_field(record_data.get('change_order_reason_id'))
-        validated['description'] = GeniusValidator.validate_string_field(record_data.get('description'), max_length=2000)
-        validated['amount'] = GeniusValidator.validate_decimal_field(record_data.get('amount'), max_digits=10, decimal_places=2)
-        validated['requested_date'] = GeniusValidator.validate_datetime_field(record_data.get('requested_date'))
-        validated['approved_date'] = GeniusValidator.validate_datetime_field(record_data.get('approved_date'))
-        validated['completed_date'] = GeniusValidator.validate_datetime_field(record_data.get('completed_date'))
-        validated['requested_by_user_id'] = GeniusValidator.validate_id_field(record_data.get('requested_by_user_id'))
-        validated['approved_by_user_id'] = GeniusValidator.validate_id_field(record_data.get('approved_by_user_id'))
-        validated['notes'] = GeniusValidator.validate_string_field(record_data.get('notes'), max_length=2000)
-        validated['created_at'] = GeniusValidator.validate_datetime_field(record_data.get('created_at'))
-        validated['updated_at'] = GeniusValidator.validate_datetime_field(record_data.get('updated_at'))
-        
-        # Convert timezone awareness
-        for date_field in ['requested_date', 'approved_date', 'completed_date', 'created_at', 'updated_at']:
+        # Convert timezone awareness for datetime fields
+        for date_field in ['effective_date', 'add_date', 'sold_date', 'cancel_date', 'updated_at']:
             if validated.get(date_field):
                 validated[date_field] = self.convert_timezone_aware(validated[date_field])
         
         # Ensure we have required fields
-        if not validated.get('genius_id'):
-            raise ValueError("Job change order must have a genius_id")
+        if validated.get('id') is None:
+            raise ValueError("Job change order must have an id")
         
         if not validated.get('job_id'):
             raise ValueError("Job change order must have a job_id")
         
-        # Validate business rules for job change orders
-        business_errors = self._validate_job_change_order_business_rules(validated)
-        if business_errors:
-            raise ValueError(f"Job change order validation errors: {', '.join(business_errors)}")
+        # Handle required fields that might be NULL in source but required in Django model
+        if not validated.get('add_date') and validated.get('effective_date'):
+            # If add_date is missing but effective_date exists, use effective_date
+            validated['add_date'] = validated['effective_date']
         
         return validated
     

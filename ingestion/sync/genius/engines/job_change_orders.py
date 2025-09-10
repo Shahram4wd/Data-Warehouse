@@ -5,18 +5,17 @@ import logging
 from typing import Dict, Any, List
 from asgiref.sync import sync_to_async
 from django.db import transaction
+from django.utils import timezone
 
 from .base import GeniusBaseSyncEngine
 from ..clients.job_change_orders import GeniusJobChangeOrderClient
 from ..processors.job_change_orders import GeniusJobChangeOrderProcessor
-from ingestion.models import (Genius_JobChangeOrder, Genius_Job, Genius_User,
-                             Genius_JobChangeOrderType, Genius_JobChangeOrderStatus, 
-                             Genius_JobChangeOrderReason)
+from ingestion.models import Genius_JobChangeOrder
 
 logger = logging.getLogger(__name__)
 
 
-class GeniusJobChangeOrderSyncEngine(GeniusBaseSyncEngine):
+class GeniusJobChangeOrdersSyncEngine(GeniusBaseSyncEngine):
     """Sync engine for Genius job change order data"""
     
     def __init__(self):
@@ -38,23 +37,24 @@ class GeniusJobChangeOrderSyncEngine(GeniusBaseSyncEngine):
         
         try:
             # Get job change orders from source
-            raw_job_change_orders = await sync_to_async(self.client.get_job_change_orders)(
+            raw_data = await sync_to_async(self.client.get_job_change_orders)(
                 since_date=since_date,
                 limit=max_records
             )
             
-            logger.info(f"Fetched {len(raw_job_change_orders)} job change orders from Genius")
+            logger.info(f"Fetched {len(raw_data)} job change orders from Genius")
             
             if dry_run:
                 logger.info("DRY RUN: Would process job change orders but making no changes")
+                stats['total_processed'] = len(raw_data)
                 return stats
             
-            # Process job change orders in batches
-            batch_size = 500
+            # Process records in batches
+            batch_size = 100
             field_mapping = self.client.get_field_mapping()
             
-            for i in range(0, len(raw_job_change_orders), batch_size):
-                batch = raw_job_change_orders[i:i + batch_size]
+            for i in range(0, len(raw_data), batch_size):
+                batch = raw_data[i:i + batch_size]
                 batch_stats = await self._process_job_change_order_batch(
                     batch, field_mapping, force_overwrite
                 )
@@ -85,118 +85,97 @@ class GeniusJobChangeOrderSyncEngine(GeniusBaseSyncEngine):
         
         stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
         
-        # Preload lookup data for FK validation
-        jobs = {j.genius_id: j for j in Genius_Job.objects.all()}
-        users = {u.genius_id: u for u in Genius_User.objects.all()}
+        # Prepare data for bulk operations
+        validated_records = []
         
-        # Try to get lookup tables, they may not exist yet
-        change_order_types = {}
-        change_order_statuses = {}
-        change_order_reasons = {}
+        # First pass: transform and validate all records
+        for raw_record in batch:
+            try:
+                stats['total_processed'] += 1
+                
+                # Transform raw data to dict
+                record_data = self.processor.transform_record(raw_record, field_mapping)
+                
+                # Validate the record
+                validated_record = self.processor.validate_record(record_data)
+                
+                validated_records.append(validated_record)
+                
+            except Exception as e:
+                logger.error(f"Error processing job change order record {raw_record}: {e}")
+                stats['errors'] += 1
+                continue
         
-        try:
-            change_order_types = {t.genius_id: t for t in Genius_JobChangeOrderType.objects.all()}
-        except:
-            logger.warning("Genius_JobChangeOrderType model not found, skipping type lookups")
-            
-        try:
-            change_order_statuses = {s.genius_id: s for s in Genius_JobChangeOrderStatus.objects.all()}
-        except:
-            logger.warning("Genius_JobChangeOrderStatus model not found, skipping status lookups")
-            
-        try:
-            change_order_reasons = {r.genius_id: r for r in Genius_JobChangeOrderReason.objects.all()}
-        except:
-            logger.warning("Genius_JobChangeOrderReason model not found, skipping reason lookups")
-        
-        with transaction.atomic():
-            for raw_record in batch:
-                try:
-                    stats['total_processed'] += 1
-                    
-                    # Transform raw data to dict
-                    record_data = self.processor.transform_record(raw_record, field_mapping)
-                    
-                    # Validate record
-                    validated_data = self.processor.validate_record(record_data)
-                    
-                    # Skip if required data missing
-                    if not validated_data.get('genius_id'):
-                        logger.warning("Skipping job change order with no ID")
-                        stats['skipped'] += 1
-                        continue
-                    
-                    # Validate required FK relationships exist
-                    if validated_data.get('job_id') and validated_data['job_id'] not in jobs:
-                        logger.warning(f"Job change order {validated_data['genius_id']} references non-existent job {validated_data['job_id']}")
-                        stats['skipped'] += 1
-                        continue
-                    
-                    # Get or create job change order
-                    job_change_order, created = Genius_JobChangeOrder.objects.get_or_create(
-                        genius_id=validated_data['genius_id'],
-                        defaults=validated_data
-                    )
-                    
-                    if created:
-                        stats['created'] += 1
-                        logger.debug(f"Created job change order {job_change_order.genius_id}: {job_change_order.change_order_number}")
-                    else:
-                        # Update if force_overwrite or data changed
-                        if force_overwrite or self._should_update_job_change_order(job_change_order, validated_data):
-                            for field, value in validated_data.items():
-                                if field != 'genius_id':  # Don't update primary key
-                                    setattr(job_change_order, field, value)
-                            job_change_order.save()
-                            stats['updated'] += 1
-                            logger.debug(f"Updated job change order {job_change_order.genius_id}: {job_change_order.change_order_number}")
-                        else:
-                            stats['skipped'] += 1
-                    
-                    # Set relationships
-                    if validated_data.get('job_id'):
-                        job_change_order.job = jobs[validated_data['job_id']]
-                    
-                    if validated_data.get('requested_by_user_id') and validated_data['requested_by_user_id'] in users:
-                        job_change_order.requested_by_user = users[validated_data['requested_by_user_id']]
-                    
-                    if validated_data.get('approved_by_user_id') and validated_data['approved_by_user_id'] in users:
-                        job_change_order.approved_by_user = users[validated_data['approved_by_user_id']]
-                    
-                    # Set lookup table relationships if available
-                    if validated_data.get('change_order_type_id') and validated_data['change_order_type_id'] in change_order_types:
-                        job_change_order.change_order_type = change_order_types[validated_data['change_order_type_id']]
-                    
-                    if validated_data.get('change_order_status_id') and validated_data['change_order_status_id'] in change_order_statuses:
-                        job_change_order.change_order_status = change_order_statuses[validated_data['change_order_status_id']]
-                    
-                    if validated_data.get('change_order_reason_id') and validated_data['change_order_reason_id'] in change_order_reasons:
-                        job_change_order.change_order_reason = change_order_reasons[validated_data['change_order_reason_id']]
-                    
-                    job_change_order.save()
-                    
-                except Exception as e:
-                    stats['errors'] += 1
-                    logger.error(f"Error processing job change order record: {e}")
-                    logger.error(f"Record data: {raw_record}")
+        if validated_records:
+            # Perform bulk upsert
+            upsert_stats = self._bulk_upsert_records(validated_records, force_overwrite)
+            stats['created'] += upsert_stats['created']
+            stats['updated'] += upsert_stats['updated']
         
         return stats
     
-    def _should_update_job_change_order(self, existing: Genius_JobChangeOrder, new_data: Dict[str, Any]) -> bool:
-        """Check if job change order should be updated based on data changes"""
+    def _bulk_upsert_records(self, records: List[Dict[str, Any]], force: bool = False) -> Dict[str, int]:
+        """Bulk upsert records with conflict resolution"""
+        created_count = 0
+        updated_count = 0
         
-        # Always update if updated_at is newer
-        if (new_data.get('updated_at') and existing.updated_at and 
-            new_data['updated_at'] > existing.updated_at):
-            return True
+        if not records:
+            return {'created': created_count, 'updated': updated_count}
         
-        # Check for actual data changes
-        fields_to_check = ['change_order_number', 'description', 'amount', 'requested_date', 
-                          'approved_date', 'completed_date', 'notes', 'job_id',
-                          'change_order_type_id', 'change_order_status_id', 'change_order_reason_id',
-                          'requested_by_user_id', 'approved_by_user_id']
-        for field in fields_to_check:
-            if field in new_data and getattr(existing, field, None) != new_data[field]:
-                return True
+        logger.info(f"Bulk upserting {len(records)} job change order records (force={force})")
         
-        return False
+        # Prepare model instances
+        model_instances = []
+        for record in records:
+            instance = Genius_JobChangeOrder(**record)
+            model_instances.append(instance)
+        
+        with transaction.atomic():
+            # Get existing IDs BEFORE the operation to calculate created vs updated
+            existing_ids = set(
+                Genius_JobChangeOrder.objects.filter(
+                    id__in=[r['id'] for r in records]
+                ).values_list('id', flat=True)
+            )
+            
+            if force:
+                # Force mode: overwrite all fields including sync timestamps
+                Genius_JobChangeOrder.objects.bulk_create(
+                    model_instances,
+                    batch_size=100,
+                    update_conflicts=True,
+                    unique_fields=['id'],
+                    update_fields=[
+                        'job_id', 'number', 'status_id', 'type_id', 'adjustment_change_order_id',
+                        'effective_date', 'total_amount', 'add_user_id', 'add_date',
+                        'sold_user_id', 'sold_date', 'cancel_user_id', 'cancel_date',
+                        'reason_id', 'envelope_id', 'total_contract_amount', 
+                        'total_pre_change_orders_amount', 'signer_name', 'signer_email',
+                        'financing_note', 'updated_at', 'sync_created_at', 'sync_updated_at'
+                    ]
+                )
+                logger.info(f"Force mode: completely overwriting records")
+            else:
+                # Normal mode: standard upsert, preserve sync timestamps
+                Genius_JobChangeOrder.objects.bulk_create(
+                    model_instances,
+                    batch_size=100,
+                    update_conflicts=True,
+                    unique_fields=['id'],
+                    update_fields=[
+                        'job_id', 'number', 'status_id', 'type_id', 'adjustment_change_order_id',
+                        'effective_date', 'total_amount', 'add_user_id', 'add_date',
+                        'sold_user_id', 'sold_date', 'cancel_user_id', 'cancel_date',
+                        'reason_id', 'envelope_id', 'total_contract_amount', 
+                        'total_pre_change_orders_amount', 'signer_name', 'signer_email',
+                        'financing_note', 'updated_at'
+                    ]
+                )
+            
+            # Calculate created vs updated counts
+            created_count = len([r for r in records if r['id'] not in existing_ids])
+            updated_count = len(records) - created_count
+        
+        logger.info(f"Bulk upsert completed: {created_count} created, {updated_count} updated")
+        return {'created': created_count, 'updated': updated_count}
+

@@ -87,6 +87,11 @@ class GeniusValidator:
         if isinstance(value, datetime):
             return value
         
+        # Handle date objects (convert to datetime)
+        from datetime import date
+        if isinstance(value, date):
+            return datetime.combine(value, datetime.min.time())
+        
         if isinstance(value, str):
             try:
                 # Try common datetime formats
@@ -99,6 +104,35 @@ class GeniusValidator:
                 pass
         
         logger.warning(f"Invalid datetime value: {value}")
+        return None
+    
+    @staticmethod
+    def validate_date_field(value: Any) -> Optional[datetime]:
+        """Validate and convert date fields to datetime for Django DateField compatibility"""
+        if value is None:
+            return None
+        
+        # Handle date objects directly
+        from datetime import date
+        if isinstance(value, date):
+            return datetime.combine(value, datetime.min.time())
+        
+        if isinstance(value, datetime):
+            return value
+        
+        if isinstance(value, str):
+            try:
+                # Try common date formats
+                for fmt in ['%Y-%m-%d', '%Y-%m-%d %H:%M:%S']:
+                    try:
+                        parsed = datetime.strptime(value, fmt)
+                        return parsed
+                    except ValueError:
+                        continue
+            except Exception:
+                pass
+        
+        logger.warning(f"Invalid date value: {value}")
         return None
     
     @staticmethod
@@ -260,6 +294,37 @@ class GeniusFieldValidator:
         validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
         validated['label'] = GeniusValidator.validate_string_field(record.get('label'), max_length=100, required=False)
         validated['description'] = GeniusValidator.validate_string_field(record.get('description'), max_length=255, required=False)
+        
+        return validated
+    
+    @staticmethod
+    def validate_job_change_order_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate job change order record"""
+        validated = {}
+        
+        # Map database fields to Django model fields
+        validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['job_id'] = GeniusValidator.validate_id_field(record.get('job_id'))
+        validated['number'] = GeniusValidator.validate_string_field(record.get('number'), max_length=20, required=False)
+        validated['status_id'] = GeniusValidator.validate_id_field(record.get('status_id'))
+        validated['type_id'] = GeniusValidator.validate_id_field(record.get('type_id'))
+        validated['adjustment_change_order_id'] = GeniusValidator.validate_id_field(record.get('adjustment_change_order_id'))
+        validated['effective_date'] = GeniusValidator.validate_date_field(record.get('effective_date'))
+        validated['total_amount'] = GeniusValidator.validate_decimal_field(record.get('total_amount'), max_digits=9, decimal_places=2)
+        validated['add_user_id'] = GeniusValidator.validate_id_field(record.get('add_user_id'))
+        validated['add_date'] = GeniusValidator.validate_datetime_field(record.get('add_date'))
+        validated['sold_user_id'] = GeniusValidator.validate_id_field(record.get('sold_user_id'))
+        validated['sold_date'] = GeniusValidator.validate_datetime_field(record.get('sold_date'))
+        validated['cancel_user_id'] = GeniusValidator.validate_id_field(record.get('cancel_user_id'))
+        validated['cancel_date'] = GeniusValidator.validate_datetime_field(record.get('cancel_date'))
+        validated['reason_id'] = GeniusValidator.validate_id_field(record.get('reason_id'))
+        validated['envelope_id'] = GeniusValidator.validate_string_field(record.get('envelope_id'), max_length=64, required=False)
+        validated['total_contract_amount'] = GeniusValidator.validate_decimal_field(record.get('total_contract_amount'), max_digits=9, decimal_places=2)
+        validated['total_pre_change_orders_amount'] = GeniusValidator.validate_decimal_field(record.get('total_pre_change_orders_amount'), max_digits=9, decimal_places=2)
+        validated['signer_name'] = GeniusValidator.validate_string_field(record.get('signer_name'), max_length=100, required=False)
+        validated['signer_email'] = GeniusValidator.validate_string_field(record.get('signer_email'), max_length=100, required=False)
+        validated['financing_note'] = GeniusValidator.validate_string_field(record.get('financing_note'), max_length=255, required=False)
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
         
         return validated
 
