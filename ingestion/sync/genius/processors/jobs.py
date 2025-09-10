@@ -23,8 +23,8 @@ class GeniusJobProcessor(GeniusBaseProcessor):
         validated = GeniusFieldValidator.validate_job_record(record_data)
         
         # Convert timezone awareness
-        if validated.get('created_at'):
-            validated['created_at'] = self.convert_timezone_aware(validated['created_at'])
+        if validated.get('add_date'):
+            validated['add_date'] = self.convert_timezone_aware(validated['add_date'])
         
         if validated.get('updated_at'):
             validated['updated_at'] = self.convert_timezone_aware(validated['updated_at'])
@@ -32,12 +32,12 @@ class GeniusJobProcessor(GeniusBaseProcessor):
         if validated.get('start_date'):
             validated['start_date'] = self.convert_timezone_aware(validated['start_date'])
             
-        if validated.get('completion_date'):
-            validated['completion_date'] = self.convert_timezone_aware(validated['completion_date'])
+        if validated.get('end_date'):
+            validated['end_date'] = self.convert_timezone_aware(validated['end_date'])
         
-        # Ensure we have required fields
-        if not validated.get('genius_id'):
-            raise ValueError("Job must have a genius_id")
+        # Ensure we have required fields  
+        if not validated.get('id'):
+            raise ValueError("Job must have an id")
         
         # Validate business rules
         relationship_errors = GeniusRecordValidator.validate_required_relationships('job', validated)

@@ -257,18 +257,31 @@ class GeniusFieldValidator:
     @staticmethod
     def validate_job_record(record: Dict[str, Any]) -> Dict[str, Any]:
         """Validate job record"""
+        from django.utils import timezone
         validated = {}
         
-        validated['genius_id'] = GeniusValidator.validate_id_field(record.get('id'))
+        # Use 'id' as the field name (not 'genius_id') to match the Django model
+        validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
         validated['prospect_id'] = GeniusValidator.validate_id_field(record.get('prospect_id'))
         validated['division_id'] = GeniusValidator.validate_id_field(record.get('division_id'))
-        validated['job_number'] = GeniusValidator.validate_string_field(record.get('job_number'), max_length=100)
-        validated['job_status_id'] = GeniusValidator.validate_id_field(record.get('job_status_id'))
+        
+        # Use correct field names that match the actual database schema
+        validated['status'] = GeniusValidator.validate_string_field(record.get('status'), max_length=50)
         validated['contract_amount'] = GeniusValidator.validate_decimal_field(record.get('contract_amount'), max_digits=10, decimal_places=2)
         validated['start_date'] = GeniusValidator.validate_datetime_field(record.get('start_date'))
-        validated['completion_date'] = GeniusValidator.validate_datetime_field(record.get('completion_date'))
-        validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
-        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        validated['end_date'] = GeniusValidator.validate_datetime_field(record.get('end_date'))
+        validated['add_user_id'] = GeniusValidator.validate_id_field(record.get('add_user_id'))
+        validated['add_date'] = GeniusValidator.validate_datetime_field(record.get('add_date'))
+        
+        # Workaround: Handle NULL updated_at values from Genius by setting to current time
+        # TODO: Fix this in Genius database in the future
+        updated_at_value = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        if updated_at_value is None:
+            updated_at_value = timezone.now()
+            logger.warning(f"Job {record.get('id')}: updated_at was NULL, setting to current time as workaround")
+        validated['updated_at'] = updated_at_value
+        
+        validated['service_id'] = GeniusValidator.validate_id_field(record.get('service_id', 8))  # Default to 8
         
         return validated
     

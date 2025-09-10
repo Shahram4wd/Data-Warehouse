@@ -19,24 +19,22 @@ class GeniusJobClient(GeniusBaseClient):
     def get_jobs(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
         """Fetch jobs from Genius database"""
         
-        # Base query with all required fields
+        # Base query with core fields that exist in the database
         query = """
-        SELECT 
+        SELECT
             j.id,
             j.prospect_id,
             j.division_id,
-            j.job_number,
-            j.job_status_id,
+            j.status,
             j.contract_amount,
             j.start_date,
-            j.completion_date,
-            j.notes,
-            j.created_at,
-            j.updated_at
+            j.end_date,
+            j.add_user_id,
+            j.add_date,
+            j.updated_at,
+            COALESCE(j.service_id, 8) as service_id
         FROM job j
-        """
-        
-        # Add WHERE clause for incremental sync
+        """        # Add WHERE clause for incremental sync
         where_clause = self.build_where_clause(since_date, self.table_name)
         if where_clause:
             query += f" {where_clause}"
@@ -55,12 +53,12 @@ class GeniusJobClient(GeniusBaseClient):
             'id',
             'prospect_id',
             'division_id',
-            'job_number',
-            'job_status_id',
+            'status',
             'contract_amount',
             'start_date',
-            'completion_date',
-            'notes',
-            'created_at',
-            'updated_at'
+            'end_date',
+            'add_user_id',
+            'add_date',
+            'updated_at',
+            'service_id'
         ]

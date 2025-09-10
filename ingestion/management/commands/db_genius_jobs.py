@@ -10,7 +10,7 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 
-from ingestion.sync.genius.engines.jobs import GeniusJobsSyncEngine
+from ingestion.sync.genius.engines.jobs import GeniusJobSyncEngine
 
 logger = logging.getLogger(__name__)
 
@@ -64,11 +64,11 @@ class Command(BaseCommand):
             help='Enable debug logging for detailed sync information'
         )
         
-        # Legacy argument support (deprecated)
+        # Force overwrite flag
         parser.add_argument(
             '--force',
             action='store_true',
-            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
+            help='Completely replace existing records (force overwrite mode)'
         )
 
     def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
@@ -104,12 +104,10 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
+        # Handle force flag for overwrite mode
+        force_mode = options.get('force', False)
+        if force_mode:
+            self.stdout.write("🔄 Force overwrite mode enabled - existing records will be completely replaced")
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -124,6 +122,7 @@ class Command(BaseCommand):
         try:
             result = asyncio.run(self.execute_async_sync(
                 full=options.get('full', False),
+                force=force_mode,
                 since=since,
                 start_date=start_date,
                 end_date=end_date,
@@ -148,8 +147,52 @@ class Command(BaseCommand):
             )
             raise
 
-    async def execute_async_sync(self, **kwargs):
+    async def execute_async_sync(self, full=False, force=False, since=None, start_date=None, 
+                                end_date=None, max_records=None, dry_run=False, 
+                                debug=False, **kwargs):
         """Execute the async sync operation"""
-        engine = GeniusJobsSyncEngine()
-        return await engine.execute_sync(**kwargs)
+        engine = GeniusJobSyncEngine()
+        
+        # Prepare sync parameters
+        sync_params = {
+            'since_date': None if full else (since or start_date),  # --full ignores since timestamp
+            'force_overwrite': kwargs.get('force', False),  # --force enables complete overwrite
+            'dry_run': dry_run,
+            'max_records': max_records or 0,
+        }
+        
+        # Create sync history record
+        sync_record = await engine.create_sync_record(
+            configuration={
+                'full': full,
+                'force': kwargs.get('force', False),
+                'since': since.isoformat() if since else None,
+                'start_date': start_date.isoformat() if start_date else None,
+                'end_date': end_date.isoformat() if end_date else None,
+                'max_records': max_records,
+                'dry_run': dry_run
+            }
+        )
+        
+        try:
+            # Execute the sync
+            stats = await engine.sync_jobs(**sync_params)
+            
+            # Complete sync history with success
+            await engine.complete_sync_record(sync_record, stats)
+            
+            return {
+                'stats': {
+                    'processed': stats.get('total_processed', 0),
+                    'created': stats.get('created', 0),
+                    'updated': stats.get('updated', 0),
+                    'errors': stats.get('errors', 0)
+                },
+                'sync_id': sync_record.id
+            }
+            
+        except Exception as e:
+            # Complete sync history with failure
+            await engine.complete_sync_record(sync_record, {}, error_message=str(e))
+            raise
 
