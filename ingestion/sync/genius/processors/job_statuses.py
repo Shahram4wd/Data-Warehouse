@@ -22,27 +22,17 @@ class GeniusJobStatusProcessor(GeniusBaseProcessor):
         validated = {}
         
         # Validate each field using GeniusValidator
-        validated['genius_id'] = GeniusValidator.validate_id_field(record_data.get('id'))
-        validated['name'] = GeniusValidator.validate_string_field(record_data.get('name'), max_length=255, required=True)
-        validated['code'] = GeniusValidator.validate_string_field(record_data.get('code'), max_length=50)
-        validated['active'] = GeniusValidator.validate_boolean_field(record_data.get('active'))
-        validated['sort_order'] = GeniusValidator.validate_id_field(record_data.get('sort_order'))
-        validated['created_at'] = GeniusValidator.validate_datetime_field(record_data.get('created_at'))
-        validated['updated_at'] = GeniusValidator.validate_datetime_field(record_data.get('updated_at'))
-        
-        # Convert timezone awareness
-        if validated.get('created_at'):
-            validated['created_at'] = self.convert_timezone_aware(validated['created_at'])
-        
-        if validated.get('updated_at'):
-            validated['updated_at'] = self.convert_timezone_aware(validated['updated_at'])
+        validated['id'] = GeniusValidator.validate_id_field(record_data.get('id'))
+        validated['label'] = GeniusValidator.validate_string_field(record_data.get('label'), max_length=50)
+        validated['is_system'] = GeniusValidator.validate_id_field(record_data.get('is_system'))
         
         # Ensure we have required fields
-        if not validated.get('genius_id'):
-            raise ValueError("Job status must have a genius_id")
+        if not validated.get('id'):
+            raise ValueError("Job status must have an id")
         
-        if not validated.get('name'):
-            raise ValueError("Job status must have a name")
+        # Convert is_system to int if it's not already
+        if validated.get('is_system') is None:
+            validated['is_system'] = 0
         
         return validated
     
@@ -54,12 +44,8 @@ class GeniusJobStatusProcessor(GeniusBaseProcessor):
         
         # Job status-specific transformations
         
-        # Convert active flag to boolean
-        if 'active' in record:
-            record['active'] = bool(record['active'])
-        
-        # Handle NULL sort_order
-        if record.get('sort_order') is None:
-            record['sort_order'] = 999  # Default sort order for null values
+        # Convert is_system to int
+        if 'is_system' in record and record['is_system'] is not None:
+            record['is_system'] = int(record['is_system'])
         
         return record

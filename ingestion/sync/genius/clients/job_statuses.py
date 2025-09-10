@@ -23,22 +23,16 @@ class GeniusJobStatusClient(GeniusBaseClient):
         query = """
         SELECT 
             js.id,
-            js.name,
-            js.code,
-            js.active,
-            js.sort_order,
-            js.created_at,
-            js.updated_at
+            js.label,
+            js.is_system
         FROM job_status js
         """
         
-        # Add WHERE clause for incremental sync
-        where_clause = self.build_where_clause(since_date, self.table_name)
-        if where_clause:
-            query += f" {where_clause}"
+        # Add WHERE clause for incremental sync (job_status is a lookup table, typically no timestamps)
+        # Since job_status doesn't have timestamp fields, we'll do full syncs
         
         # Add ordering and limit
-        query += " ORDER BY js.sort_order, js.id"
+        query += " ORDER BY js.id"
         if limit > 0:
             query += f" LIMIT {limit}"
         
@@ -49,10 +43,6 @@ class GeniusJobStatusClient(GeniusBaseClient):
         """Get field mapping for transformation"""
         return [
             'id',
-            'name',
-            'code',
-            'active',
-            'sort_order',
-            'created_at',
-            'updated_at'
+            'label',
+            'is_system'
         ]

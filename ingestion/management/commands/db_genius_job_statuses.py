@@ -10,7 +10,7 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 
-from ingestion.sync.genius.engines.job_statuses import GeniusJobStatusesSyncEngine
+from ingestion.sync.genius.engines.job_statuses import GeniusJobStatusSyncEngine
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ class Command(BaseCommand):
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
         # Handle legacy arguments
-        if options.get('force_overwrite'):
+        if options.get('force'):
             self.stdout.write(
                 self.style.WARNING("⚠️  --force is deprecated, use --full instead")
             )
@@ -148,8 +148,51 @@ class Command(BaseCommand):
             )
             raise
 
-    async def execute_async_sync(self, **kwargs):
+    async def execute_async_sync(self, full=False, since=None, start_date=None, 
+                                end_date=None, max_records=None, dry_run=False, 
+                                debug=False, **kwargs):
         """Execute the async sync operation"""
-        engine = GeniusJobStatusesSyncEngine()
-        return await engine.execute_sync(**kwargs)
+        engine = GeniusJobStatusSyncEngine()
+        
+        # Prepare sync parameters
+        sync_params = {
+            'since_date': since or start_date,
+            'force_overwrite': full,  # --full flag becomes force_overwrite
+            'dry_run': dry_run,
+            'max_records': max_records or 0,
+        }
+        
+        # Create sync history record
+        sync_record = await engine.create_sync_record(
+            configuration={
+                'full': full,
+                'since': since.isoformat() if since else None,
+                'start_date': start_date.isoformat() if start_date else None,
+                'end_date': end_date.isoformat() if end_date else None,
+                'max_records': max_records,
+                'dry_run': dry_run
+            }
+        )
+        
+        try:
+            # Execute the sync
+            stats = await engine.sync_job_statuses(**sync_params)
+            
+            # Complete sync history with success
+            await engine.complete_sync_record(sync_record, stats)
+            
+            return {
+                'stats': {
+                    'processed': stats.get('total_processed', 0),
+                    'created': stats.get('created', 0),
+                    'updated': stats.get('updated', 0),
+                    'errors': stats.get('errors', 0)
+                },
+                'sync_id': sync_record.id
+            }
+            
+        except Exception as e:
+            # Complete sync history with failure
+            await engine.complete_sync_record(sync_record, {}, error_message=str(e))
+            raise
 
