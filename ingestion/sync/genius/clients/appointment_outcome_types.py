@@ -17,29 +17,20 @@ class GeniusAppointmentOutcomeTypeClient(GeniusBaseClient):
         self.table_name = 'appointment_outcome_type'
     
     def get_appointment_outcome_types(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
-        """Fetch appointment outcome types from Genius database"""
+        """Fetch appointment outcome types from Genius database - select all fields with delta support"""
         
-        # Base query with all required fields
-        query = """
-        SELECT 
-            aot.id,
-            aot.name,
-            aot.code,
-            aot.description,
-            aot.active,
-            aot.sort_order,
-            aot.created_at,
-            aot.updated_at
-        FROM appointment_outcome_type aot
-        """
+        # Simple query to get all fields from the table
+        query = "SELECT * FROM appointment_outcome_type"
         
-        # Add WHERE clause for incremental sync
+        # Add WHERE clause for incremental sync if needed
         where_clause = self.build_where_clause(since_date, self.table_name)
         if where_clause:
             query += f" {where_clause}"
         
-        # Add ordering and limit
-        query += " ORDER BY aot.sort_order, aot.id"
+        # Add ordering
+        query += " ORDER BY id"
+        
+        # Add limit if specified
         if limit > 0:
             query += f" LIMIT {limit}"
         
@@ -47,14 +38,12 @@ class GeniusAppointmentOutcomeTypeClient(GeniusBaseClient):
         return self.execute_query(query)
     
     def get_field_mapping(self) -> List[str]:
-        """Get field mapping for transformation"""
+        """Get field mapping for transformation - matches actual database table structure"""
         return [
             'id',
-            'name',
-            'code',
-            'description',
-            'active',
-            'sort_order',
+            'label',
+            'sort_idx',
+            'is_active',
             'created_at',
             'updated_at'
         ]
