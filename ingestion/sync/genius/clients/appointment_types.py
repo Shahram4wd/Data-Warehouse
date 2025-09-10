@@ -19,21 +19,8 @@ class GeniusAppointmentTypeClient(GeniusBaseClient):
     def get_appointment_types(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
         """Fetch appointment types from Genius database"""
         
-        # Base query with all required fields
-        query = """
-        SELECT 
-            at.id,
-            at.label as name,
-            '' as code,
-            '' as description,
-            0 as duration_minutes,
-            '' as color,
-            at.is_active as active,
-            at.id as sort_order,
-            NOW() as created_at,
-            NOW() as updated_at
-        FROM appointment_type at
-        """
+        # Base query selecting all fields from appointment_type table
+        query = "SELECT * FROM appointment_type"
         
         # Add WHERE clause for incremental sync
         where_clause = self.build_where_clause(since_date, self.table_name)
@@ -41,7 +28,7 @@ class GeniusAppointmentTypeClient(GeniusBaseClient):
             query += f" {where_clause}"
         
         # Add ordering and limit
-        query += " ORDER BY at.id"
+        query += " ORDER BY id"
         if limit > 0:
             query += f" LIMIT {limit}"
         
@@ -49,16 +36,9 @@ class GeniusAppointmentTypeClient(GeniusBaseClient):
         return self.execute_query(query)
     
     def get_field_mapping(self) -> List[str]:
-        """Get field mapping for transformation"""
+        """Get field mapping for transformation - matches actual database columns"""
         return [
             'id',
-            'name',
-            'code',
-            'description',
-            'duration_minutes',
-            'color',
-            'active',
-            'sort_order',
-            'created_at',
-            'updated_at'
+            'label',
+            'is_active'
         ]

@@ -21,36 +21,19 @@ class GeniusAppointmentTypeProcessor(GeniusBaseProcessor):
         
         validated = {}
         
-        # Validate each field using GeniusValidator
-        validated['genius_id'] = GeniusValidator.validate_id_field(record_data.get('id'))
-        validated['name'] = GeniusValidator.validate_string_field(record_data.get('name'), max_length=255, required=True)
-        validated['code'] = GeniusValidator.validate_string_field(record_data.get('code'), max_length=50)
-        validated['description'] = GeniusValidator.validate_string_field(record_data.get('description'), max_length=1000)
-        validated['duration_minutes'] = GeniusValidator.validate_id_field(record_data.get('duration_minutes'))
-        validated['color'] = GeniusValidator.validate_string_field(record_data.get('color'), max_length=20)
-        validated['active'] = GeniusValidator.validate_boolean_field(record_data.get('active'))
-        validated['sort_order'] = GeniusValidator.validate_id_field(record_data.get('sort_order'))
-        validated['created_at'] = GeniusValidator.validate_datetime_field(record_data.get('created_at'))
-        validated['updated_at'] = GeniusValidator.validate_datetime_field(record_data.get('updated_at'))
-        
-        # Convert timezone awareness
-        if validated.get('created_at'):
-            validated['created_at'] = self.convert_timezone_aware(validated['created_at'])
-        
-        if validated.get('updated_at'):
-            validated['updated_at'] = self.convert_timezone_aware(validated['updated_at'])
+        # Validate each field based on actual model structure
+        # Model fields: id, label, is_active
+        validated['id'] = GeniusValidator.validate_id_field(record_data.get('id'))
+        validated['label'] = GeniusValidator.validate_string_field(record_data.get('label'), max_length=50, required=True)
+        validated['is_active'] = GeniusValidator.validate_boolean_field(record_data.get('is_active'))
         
         # Ensure we have required fields
-        if not validated.get('genius_id'):
-            raise ValueError("Appointment type must have a genius_id")
+        if not validated.get('id'):
+            raise ValueError("Appointment type must have an id")
         
-        if not validated.get('name'):
-            raise ValueError("Appointment type must have a name")
+        if not validated.get('label'):
+            raise ValueError("Appointment type must have a label")
         
-        # Validate business rules
-        if validated.get('duration_minutes') and validated['duration_minutes'] <= 0:
-            logger.warning(f"Appointment type {validated['genius_id']} has invalid duration: {validated['duration_minutes']}")
-            validated['duration_minutes'] = 30  # Default to 30 minutes
         
         return validated
     
@@ -62,19 +45,8 @@ class GeniusAppointmentTypeProcessor(GeniusBaseProcessor):
         
         # Appointment type-specific transformations
         
-        # Convert active flag to boolean
-        if 'active' in record:
-            record['active'] = bool(record['active'])
-        
-        # Handle NULL sort_order
-        if record.get('sort_order') is None:
-            record['sort_order'] = 999  # Default sort order for null values
-        
-        # Clean color field (remove # if present)
-        if record.get('color'):
-            color = str(record['color']).strip()
-            if color.startswith('#'):
-                color = color[1:]
-            record['color'] = color
+        # Convert is_active flag to boolean if needed
+        if 'is_active' in record:
+            record['is_active'] = bool(record['is_active'])
         
         return record

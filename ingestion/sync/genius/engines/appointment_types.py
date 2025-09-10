@@ -99,7 +99,17 @@ class GeniusAppointmentTypesSyncEngine(GeniusBaseSyncEngine):
                           f"{batch_stats['errors']} errors")
             
             logger.info(f"Appointment type sync completed. Total stats: {stats}")
-            return stats
+            return {
+                'success': True,
+                'sync_id': None,  # TODO: Implement SyncHistory tracking
+                'stats': {
+                    'processed': stats['total_processed'],
+                    'created': stats['created'],
+                    'updated': stats['updated'],
+                    'errors': stats['errors'],
+                    'skipped': stats['skipped']
+                }
+            }
             
         except Exception as e:
             logger.error(f"Appointment type sync failed: {str(e)}")
@@ -127,29 +137,29 @@ class GeniusAppointmentTypesSyncEngine(GeniusBaseSyncEngine):
                     validated_data = self.processor.validate_record(record_data)
                     
                     # Skip if required data missing
-                    if not validated_data.get('genius_id'):
+                    if not validated_data.get('id'):
                         logger.warning("Skipping appointment type with no ID")
                         stats['skipped'] += 1
                         continue
                     
                     # Get or create appointment type
                     appointment_type, created = Genius_AppointmentType.objects.get_or_create(
-                        genius_id=validated_data['genius_id'],
+                        id=validated_data['id'],
                         defaults=validated_data
                     )
                     
                     if created:
                         stats['created'] += 1
-                        logger.debug(f"Created appointment type {appointment_type.genius_id}: {appointment_type.name}")
+                        logger.debug(f"Created appointment type {appointment_type.id}: {appointment_type.label}")
                     else:
                         # Update if force_overwrite or data changed
                         if force_overwrite or self._should_update_appointment_type(appointment_type, validated_data):
                             for field, value in validated_data.items():
-                                if field != 'genius_id':  # Don't update primary key
+                                if field != 'id':  # Don't update primary key
                                     setattr(appointment_type, field, value)
                             appointment_type.save()
                             stats['updated'] += 1
-                            logger.debug(f"Updated appointment type {appointment_type.genius_id}: {appointment_type.name}")
+                            logger.debug(f"Updated appointment type {appointment_type.id}: {appointment_type.label}")
                         else:
                             stats['skipped'] += 1
                     
@@ -158,17 +168,7 @@ class GeniusAppointmentTypesSyncEngine(GeniusBaseSyncEngine):
                     logger.error(f"Error processing appointment type record: {e}")
                     logger.error(f"Record data: {raw_record}")
         
-        return {
-            'success': True,
-            'sync_id': None,  # Add sync record ID when implemented
-            'stats': {
-                'processed': stats['total_processed'],
-                'created': stats['created'],
-                'updated': stats['updated'],
-                'errors': stats['errors'],
-                'skipped': stats['skipped']
-            }
-        }
+        return stats
     
     def _should_update_appointment_type(self, existing: Genius_AppointmentType, new_data: Dict[str, Any]) -> bool:
         """Check if appointment type should be updated based on data changes"""
