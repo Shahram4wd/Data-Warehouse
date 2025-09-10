@@ -64,11 +64,11 @@ class Command(BaseCommand):
             help='Enable debug logging for detailed sync information'
         )
         
-        # Legacy argument support (deprecated)
+        # Force overwrite mode
         parser.add_argument(
             '--force',
             action='store_true',
-            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
+            help='Completely replace existing records (force overwrite mode)'
         )
 
     def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
@@ -104,12 +104,9 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
+        # Handle force mode
+        if options.get('force'):
+            self.stdout.write("🔄 FORCE MODE - Overwriting existing records")
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -124,6 +121,7 @@ class Command(BaseCommand):
         try:
             result = asyncio.run(self.execute_async_sync(
                 full=options.get('full', False),
+                force=options.get('force', False),
                 since=since,
                 start_date=start_date,
                 end_date=end_date,
@@ -133,13 +131,24 @@ class Command(BaseCommand):
             ))
             
             # Display results
-            stats = result['stats']
+            if isinstance(result, dict) and 'stats' in result:
+                stats = result['stats']
+            else:
+                # Direct stats return from engine
+                stats = result
+                
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   📊 Processed: {stats.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {stats.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {stats.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {stats.get('errors', 0)} records")
+            self.stdout.write(f"   ⏭️ Skipped: {stats.get('skipped', 0)} records")
+            
+            # Handle sync_id if available
+            if isinstance(result, dict) and 'sync_id' in result:
+                self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            else:
+                self.stdout.write(f"   🆔 SyncHistory ID: None")
             
         except Exception as e:
             logger.exception("Genius marketing source types sync failed")
@@ -148,8 +157,20 @@ class Command(BaseCommand):
             )
             raise
 
-    async def execute_async_sync(self, **kwargs):
+    async def execute_async_sync(self, full=False, force=False, since=None, start_date=None, 
+                                end_date=None, max_records=None, dry_run=False, 
+                                debug=False, **kwargs):
         """Execute the async sync operation"""
         engine = GeniusMarketingSourceTypesSyncEngine()
-        return await engine.execute_sync(**kwargs)
+        return await engine.execute_sync(
+            full=full,
+            force=force,
+            since=since,
+            start_date=start_date,
+            end_date=end_date,
+            max_records=max_records,
+            dry_run=dry_run,
+            debug=debug,
+            **kwargs
+        )
 
