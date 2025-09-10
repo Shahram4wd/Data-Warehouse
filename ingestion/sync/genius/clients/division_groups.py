@@ -19,17 +19,8 @@ class GeniusDivisionGroupClient(GeniusBaseClient):
     def get_division_groups(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
         """Fetch division groups from Genius database"""
         
-        # Base query with all required fields
-        query = """
-        SELECT 
-            dg.id,
-            dg.group_label as name,
-            dg.region as code,
-            dg.is_active as active,
-            dg.created_at,
-            dg.updated_at
-        FROM division_group dg
-        """
+        # Base query selecting all fields from division_group table
+        query = "SELECT dg.* FROM division_group dg"
         
         # Add WHERE clause for incremental sync
         where_clause = self.build_where_clause(since_date, self.table_name)
@@ -45,12 +36,22 @@ class GeniusDivisionGroupClient(GeniusBaseClient):
         return self.execute_query(query)
     
     def get_field_mapping(self) -> List[str]:
-        """Get field mapping for transformation"""
+        """Get field mapping for transformation - matches actual database columns"""
         return [
             'id',
-            'name', 
-            'code',
-            'active',
+            'group_label',
+            'region',
+            'default_time_zone_name',
+            'intern_payroll_start',
+            'painter_payroll_start',
+            'is_active',
+            'cc_profile_id',
+            'mes_profile_id',
+            'mes_profile_key',
+            'docusign_acct_id',
+            'paysimple_username',
+            'paysimple_secret',
+            'hub_account_id',
             'created_at',
             'updated_at'
         ]

@@ -34,7 +34,8 @@ class GeniusDivisionGroupsSyncEngine(GeniusBaseSyncEngine):
         """Execute the division groups sync process - adapter for standard sync interface"""
         
         # Convert parameters to match existing method signature
-        since_date = since
+        # Priority: start_date > since for consistency with other commands
+        since_date = start_date or since
         force_overwrite = full
         
         return await self.sync_division_groups(
