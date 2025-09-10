@@ -228,7 +228,7 @@ class TestLeadConduitSyncCommand(TestCase):
         
         # Deprecated flags for backward compatibility  
         self.assertIn('--since', argument_calls)
-        self.assertIn('--force-overwrite', argument_calls)
+        self.assertIn('--force', argument_calls)
         
     @patch('ingestion.management.commands.sync_leadconduit_leads.LeadConduitLeadsSyncEngine')
     @patch('ingestion.management.commands.sync_leadconduit_leads.LeadConduitConfig')
@@ -306,7 +306,7 @@ class TestLeadConduitAllSyncCommand(TestCase):
         
         # Deprecated flags for backward compatibility  
         self.assertIn('--since', argument_calls)
-        self.assertIn('--force-overwrite', argument_calls)
+        self.assertIn('--force', argument_calls)
         
     @patch('ingestion.management.commands.sync_leadconduit_all.LeadConduitSyncEngine')
     @patch('ingestion.management.commands.sync_leadconduit_all.LeadConduitConfig')
@@ -918,7 +918,7 @@ class TestHubSpotContactsCommand(TestCase):
         
         # Verify HubSpot's flag system (similar to BaseSyncCommand but with HubSpot naming)
         expected_flags = ['--full', '--debug', '--dry-run', '--batch-size', 
-                         '--max-records', '--since', '--force-overwrite']
+                         '--max-records', '--since', '--force']
         
         for flag in expected_flags:
             self.assertIn(flag, argument_calls, f"HubSpot flag {flag} not found")
@@ -990,7 +990,7 @@ class TestHubSpotDealsCommand(TestCase):
         argument_calls = [call[0][0] for call in parser.add_argument.call_args_list]
         
         # Verify same flag system as contacts (consistent HubSpot architecture)
-        hubspot_flags = ['--full', '--debug', '--dry-run', '--batch-size', '--max-records', '--since', '--force-overwrite']
+        hubspot_flags = ['--full', '--debug', '--dry-run', '--batch-size', '--max-records', '--since', '--force']
         
         for flag in hubspot_flags:
             self.assertIn(flag, argument_calls, f"Consistent HubSpot flag {flag} not found in deals command")
@@ -1198,7 +1198,7 @@ class TestSalesRabbitLeadsCommand(TestCase):
         
         # Check SalesRabbit-specific flags  
         self.assertIn('--since', option_strings)
-        self.assertIn('--force-overwrite', option_strings)
+        self.assertIn('--force', option_strings)
     
     def test_unit_help_text_mentions_salesrabbit(self):
         """Unit Test: Help text mentions SalesRabbit and leads functionality"""

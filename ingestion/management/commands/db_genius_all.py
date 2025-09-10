@@ -55,7 +55,7 @@ class Command(BaseCommand):
         
         # Legacy argument support (deprecated)
         parser.add_argument(
-            '--force-overwrite',
+            '--force',
             action='store_true',
             help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
         )

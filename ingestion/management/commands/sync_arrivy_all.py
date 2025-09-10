@@ -41,7 +41,7 @@ class Command(BaseCommand):
         )
         
         parser.add_argument(
-            '--force-overwrite',
+            '--force',
             action='store_true',
             help='Overwrite existing records'
         )

@@ -38,7 +38,7 @@ class TestLeadConduitSyncCommand(TestCase):
         
         # Deprecated flags for backward compatibility  
         self.assertIn('--since', argument_calls)
-        self.assertIn('--force-overwrite', argument_calls)
+        self.assertIn('--force', argument_calls)
         
     @patch('ingestion.management.commands.sync_leadconduit_leads.LeadConduitLeadsSyncEngine')
     @patch('ingestion.management.commands.sync_leadconduit_leads.LeadConduitConfig')
@@ -116,7 +116,7 @@ class TestLeadConduitAllSyncCommand(TestCase):
         
         # Deprecated flags for backward compatibility  
         self.assertIn('--since', argument_calls)
-        self.assertIn('--force-overwrite', argument_calls)
+        self.assertIn('--force', argument_calls)
         
     @patch('ingestion.management.commands.sync_leadconduit_all.LeadConduitSyncEngine')
     @patch('ingestion.management.commands.sync_leadconduit_all.LeadConduitConfig')

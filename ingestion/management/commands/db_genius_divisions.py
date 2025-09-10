@@ -22,7 +22,7 @@ class Command(BaseCommand):
             help='Perform full sync (ignore last sync timestamp)'
         )
         parser.add_argument(
-            '--force-overwrite',
+            '--force',
             action='store_true', 
             help='Completely replace existing records'
         )

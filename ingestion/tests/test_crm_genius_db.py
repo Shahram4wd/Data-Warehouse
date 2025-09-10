@@ -84,7 +84,7 @@ class TestGeniusAppointmentsCommand(GeniusDBTestBase):
         self.command.add_arguments(parser)
         
         # Test Genius-specific flags
-        args = parser.parse_args(['--since', '2024-01-01', '--force-overwrite'])
+        args = parser.parse_args(['--since', '2024-01-01', '--force'])
         self.assertEqual(args.since, '2024-01-01')
         self.assertTrue(args.force_overwrite)
         

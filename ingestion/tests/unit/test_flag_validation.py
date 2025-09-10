@@ -119,7 +119,7 @@ class TestFlagValidation:
     def test_deprecated_flags_removed(self):
         """Test that deprecated flags have been removed"""
         crm_commands = self.get_crm_commands()
-        deprecated_flags = ['--since', '--full-sync', '--force-overwrite']
+        deprecated_flags = ['--since', '--full-sync', '--force']
         commands_with_deprecated = {}
         
         for command_name in crm_commands:

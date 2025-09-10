@@ -39,7 +39,7 @@ class Command(BaseSyncCommand):
             help='(DEPRECATED) Use --start-date instead. Manual sync start date (YYYY-MM-DD format)'
         )
         parser.add_argument(
-            '--force-overwrite',
+            '--force',
             action='store_true',
             help='(DEPRECATED) Use --force instead. Completely replace existing records'
         )
