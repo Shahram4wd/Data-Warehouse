@@ -32,7 +32,7 @@ class BaseSalesProSyncCommand(BaseCommand):
             help="Perform full sync (ignore last sync timestamp)"
         )
         parser.add_argument(
-            "--force-overwrite", 
+            "--force", 
             action="store_true",
             help="Completely replace existing records"
         )
@@ -90,7 +90,7 @@ class BaseSalesProSyncCommand(BaseCommand):
             
             # Implement delta sync logic following CRM sync guide priority order:
             # 1. --since parameter (manual override)
-            # 2. --force-overwrite flag (None = fetch all) 
+            # 2. --force flag (None = fetch all) 
             # 3. --full flag (None = fetch all)
             # 4. Database last sync timestamp
             # 5. Default: None (full sync)

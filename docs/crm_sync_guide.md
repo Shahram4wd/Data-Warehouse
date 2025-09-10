@@ -415,7 +415,7 @@ The following flags are **deprecated** and should be replaced:
 
 | Deprecated Flag | Replacement | Reason |
 |----------------|-------------|---------|
-| `--force-overwrite` | `--force` | Simplified naming convention |
+| `--force` | `--force` | Simplified naming convention |
 | `--since` | `--start-date` | Clearer parameter naming |
 | `--test` | `--debug` | Consolidated redundant debugging flags |
 | `--verbose` | `--debug` | Consolidated redundant debugging flags |
@@ -423,7 +423,7 @@ The following flags are **deprecated** and should be replaced:
 **Migration Guide:**
 ```bash
 # ❌ OLD (Deprecated)
-python manage.py sync_hubspot_contacts --since=2025-01-01 --force-overwrite --test --verbose
+python manage.py sync_hubspot_contacts --since=2025-01-01 --force --test --verbose
 
 # ✅ NEW (Current Standard)
 python manage.py sync_hubspot_contacts --start-date=2025-01-01 --force --debug
@@ -522,8 +522,8 @@ If you're using deprecated flags, update your commands:
 
 ```bash
 # ❌ OLD (Deprecated - DO NOT USE)
-python manage.py sync_hubspot_contacts --since=2025-01-01 --force-overwrite --test --verbose
-python manage.py sync_callrail_calls --since=2024-12-01 --force-overwrite --batch-size=100 --verbose
+python manage.py sync_hubspot_contacts --since=2025-01-01 --force --test --verbose
+python manage.py sync_callrail_calls --since=2024-12-01 --force --batch-size=100 --verbose
 
 # ✅ NEW (Current Standard - USE THESE)
 python manage.py sync_hubspot_contacts --start-date=2025-01-01 --force --debug

@@ -15,13 +15,13 @@ class Command(BaseSalesRabbitSyncCommand):
         python manage.py sync_salesrabbit_users --full
         
         # Force overwrite ALL records (fetch all + ignore local timestamps)
-        python manage.py sync_salesrabbit_users --full --force-overwrite
+        python manage.py sync_salesrabbit_users --full --force
         
         # Force overwrite recent records only
-        python manage.py sync_salesrabbit_users --since=2025-01-01 --force-overwrite
+        python manage.py sync_salesrabbit_users --since=2025-01-01 --force
         
         # Resume from specific date with enhanced error logging
-        python manage.py sync_salesrabbit_users --since=2025-08-25 --force-overwrite --debug
+        python manage.py sync_salesrabbit_users --since=2025-08-25 --force --debug
         
         # Process with smaller batches for testing
         python manage.py sync_salesrabbit_users --batch-size=50 --max-records=100 --debug

@@ -98,7 +98,7 @@ data integrity and relationships."""
                 if option == 'dry_run':
                     common_kwargs['dry-run'] = True
                 elif option == 'force_overwrite':
-                    common_kwargs['force-overwrite'] = True
+                    common_kwargs['force'] = True
                 else:
                     common_kwargs[option.replace('_', '-')] = options[option]
         

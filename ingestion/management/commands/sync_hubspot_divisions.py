@@ -15,15 +15,15 @@ class Command(BaseHubSpotSyncCommand):
         python manage.py sync_hubspot_divisions --full
         
         # Force overwrite ALL records (fetch all + ignore local timestamps)
-        python manage.py sync_hubspot_divisions --full --force-overwrite
+        python manage.py sync_hubspot_divisions --full --force
         
         # Force overwrite recent records only
-        python manage.py sync_hubspot_divisions --since=2025-01-01 --force-overwrite
+        python manage.py sync_hubspot_divisions --since=2025-01-01 --force
     """
     
     help = """Sync divisions from HubSpot API using the new unified architecture.
     
-Use --force-overwrite to completely overwrite existing records, ignoring timestamps.
+Use --force to completely overwrite existing records, ignoring timestamps.
 This ensures all data is replaced with the latest from HubSpot."""
     
     def get_sync_engine(self, **options):

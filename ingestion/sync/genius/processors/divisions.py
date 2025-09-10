@@ -31,11 +31,11 @@ class GeniusDivisionProcessor(GeniusBaseProcessor):
             validated['updated_at'] = self.convert_timezone_aware(validated['updated_at'])
         
         # Ensure we have required fields
-        if not validated.get('genius_id'):
-            raise ValueError("Division must have a genius_id")
+        if not validated.get('id'):
+            raise ValueError("Division must have an id")
         
-        if not validated.get('name'):
-            raise ValueError("Division must have a name")
+        if not validated.get('label'):
+            raise ValueError("Division must have a label")
         
         return validated
     

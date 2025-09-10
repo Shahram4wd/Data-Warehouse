@@ -15,13 +15,13 @@ class Command(BaseSalesRabbitSyncCommand):
         python manage.py sync_salesrabbit_leads --full
         
         # Force overwrite ALL records (fetch all + ignore local timestamps)
-        python manage.py sync_salesrabbit_leads --full --force-overwrite
+        python manage.py sync_salesrabbit_leads --full --force
         
         # Force overwrite recent records only
-        python manage.py sync_salesrabbit_leads --since=2025-01-01 --force-overwrite
+        python manage.py sync_salesrabbit_leads --since=2025-01-01 --force
         
         # Resume from specific date with enhanced error logging
-        python manage.py sync_salesrabbit_leads --since=2025-07-16 --force-overwrite --debug
+        python manage.py sync_salesrabbit_leads --since=2025-07-16 --force --debug
         
         # Process with smaller batches for problematic data
         python manage.py sync_salesrabbit_leads --batch-size=50 --max-records=1000 --debug
@@ -29,7 +29,7 @@ class Command(BaseSalesRabbitSyncCommand):
     
     help = """Sync leads from SalesRabbit API using the new unified architecture.
     
-Use --force-overwrite to completely overwrite existing records, ignoring timestamps.
+Use --force to completely overwrite existing records, ignoring timestamps.
 This ensures all data is replaced with the latest from SalesRabbit.
 
 Enhanced error logging provides SalesRabbit URLs and detailed field information

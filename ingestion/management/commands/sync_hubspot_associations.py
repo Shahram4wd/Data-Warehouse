@@ -16,12 +16,12 @@ class Command(BaseHubSpotSyncCommand):
         python manage.py sync_hubspot_associations --association-type=contact_division --full
         
         # Force overwrite ALL association records (fetch all + ignore local timestamps)
-        python manage.py sync_hubspot_associations --association-type=contact_appointment --full --force-overwrite
+        python manage.py sync_hubspot_associations --association-type=contact_appointment --full --force
     """
     
     help = """Sync associations between HubSpot objects (contact-appointment or contact-division).
     
-Use --force-overwrite to completely overwrite existing association records, ignoring timestamps.
+Use --force to completely overwrite existing association records, ignoring timestamps.
 This ensures all association data is replaced with the latest from HubSpot."""
     
     def add_arguments(self, parser):

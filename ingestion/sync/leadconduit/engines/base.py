@@ -144,7 +144,7 @@ class LeadConduitSyncEngine:
         try:
             # Determine sync strategy following guide priority:
             # 1. --since parameter (manual override)
-            # 2. --force-overwrite flag (None = fetch all)
+            # 2. --force flag (None = fetch all)
             # 3. --full flag (None = fetch all)
             # 4. SyncHistory table last successful sync timestamp
             # 5. Default: None (full sync)

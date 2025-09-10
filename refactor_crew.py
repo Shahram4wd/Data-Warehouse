@@ -84,7 +84,7 @@ sync_validation_agent = Agent(
         You validate that the refactored Arrivy implementation strictly follows crm_sync_guide.md:
         - MANDATORY SyncHistory usage (no custom sync tracking)
         - Proper delta sync using SyncHistory.end_time
-        - Standard command-line flags (--full, --force-overwrite, --since, --dry-run)
+        - Standard command-line flags (--full, --force, --since, --dry-run)
         - Bulk operations with conflict resolution
         - Enterprise error handling and monitoring
     """),
@@ -209,7 +209,7 @@ sync_validation_task = Task(
            - Ensure bulk operations with proper conflict resolution
         
         3. **Command-Line Interface:**
-           - Verify standard flags (--full, --force-overwrite, --since, --dry-run, --batch-size)
+           - Verify standard flags (--full, --force, --since, --dry-run, --batch-size)
            - Check --entity-type parameter for unified command
            - Validate flag behavior matches crm_sync_guide.md specifications
         

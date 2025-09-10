@@ -31,7 +31,7 @@ class BaseSyncCommand(BaseCommand, ABC):
         
         Standard Flags (All CRM Syncs) - SIMPLIFIED AND STANDARDIZED:
         - --full: Perform full sync (ignore last sync timestamp)
-        - --force: Force overwrite existing records (standardized from --force-overwrite)
+        - --force: Force overwrite existing records (standardized from --force)
         - --start-date: Manual sync start date (YYYY-MM-DD) - replaces deprecated --since
         - --end-date: Manual sync end date (YYYY-MM-DD)
         - --dry-run: Test run without database writes

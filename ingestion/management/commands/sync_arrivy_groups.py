@@ -25,7 +25,7 @@ class Command(BaseSyncCommand):
     help = "Sync Arrivy groups/crews using enterprise CRM sync patterns"
     
     def add_arguments(self, parser):
-        # Add base sync arguments (--full, --force-overwrite, --since, --dry-run, --batch-size, etc.)
+        # Add base sync arguments (--full, --force, --since, --dry-run, --batch-size, etc.)
         super().add_arguments(parser)
         
         # Add group-specific arguments

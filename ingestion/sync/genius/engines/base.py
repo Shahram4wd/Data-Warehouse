@@ -95,7 +95,7 @@ class GeniusBaseSyncEngine:
         
         # Priority order from CRM sync guide:
         # 1. --since parameter (manual override)
-        # 2. --force-overwrite flag 
+        # 2. --force flag 
         # 3. --full flag
         # 4. SyncHistory table last successful sync timestamp
         # 5. Default: full sync

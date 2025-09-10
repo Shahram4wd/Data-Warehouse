@@ -16,10 +16,10 @@ class Command(BaseHubSpotSyncCommand):
         python manage.py sync_hubspot_genius_users --full
         
         # Force overwrite ALL records (fetch all + ignore local timestamps)
-        python manage.py sync_hubspot_genius_users --full --force-overwrite
+        python manage.py sync_hubspot_genius_users --full --force
         
         # Force overwrite recent records only
-        python manage.py sync_hubspot_genius_users --since=2025-01-01 --force-overwrite
+        python manage.py sync_hubspot_genius_users --since=2025-01-01 --force
         
         # Limit the number of records for testing
         python manage.py sync_hubspot_genius_users --max-records=50
@@ -28,7 +28,7 @@ class Command(BaseHubSpotSyncCommand):
     help = """Sync HubSpot Genius Users (custom object 2-42119425) using the new unified architecture.
     
 By default, performs incremental sync (delta sync) to fetch only records modified since the last sync.
-Use --force-overwrite to completely overwrite existing records, ignoring timestamps."""
+Use --force to completely overwrite existing records, ignoring timestamps."""
 
     def get_sync_engine(self, **options):
         """Get the genius users sync engine"""

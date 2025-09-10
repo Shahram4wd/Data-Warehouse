@@ -103,7 +103,7 @@ class SyncHistory(models.Model):
 | `sync_{crm}_{model}` | `--debug`, `--full`, `--force`, `--start-date`, `--end-date`, `--skip-validation`, `--dry-run`, `--batch-size` | ✅ Standardized |
 | `sync_{crm}_all` | Same as above | ✅ Standardized |
 
-**Deprecated Flags Removed**: `--test`, `--verbose` (consolidated into `--debug`), `--since` (replaced by `--start-date`), `--force-overwrite` (replaced by `--force`)
+**Deprecated Flags Removed**: `--test`, `--verbose` (consolidated into `--debug`), `--since` (replaced by `--start-date`), `--force` (replaced by `--force`)
 
 ---
 

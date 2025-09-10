@@ -104,7 +104,7 @@ class Command(BaseCommand):
             # Determine sync strategy
             sync_strategy = await sync_engine.determine_sync_strategy(
                 since_param=options.get('since'),
-                force_overwrite=options.get('force_overwrite', False),
+                force_overwrite=options.get('force', False),
                 full_sync=options.get('full', False)
             )
             

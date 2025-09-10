@@ -14,7 +14,7 @@ class Command(BaseHubSpotSyncCommand):
         python manage.py sync_hubspot_zipcodes
         
         # Force overwrite ALL records
-        python manage.py sync_hubspot_zipcodes --force-overwrite
+        python manage.py sync_hubspot_zipcodes --force
         
         # Test without saving
         python manage.py sync_hubspot_zipcodes --dry-run
@@ -22,7 +22,7 @@ class Command(BaseHubSpotSyncCommand):
     
     help = """Sync zipcodes from GitHub CSV into HubSpot ZipCode model using unified architecture.
     
-Use --force-overwrite to completely overwrite existing records, ignoring timestamps.
+Use --force to completely overwrite existing records, ignoring timestamps.
 This ensures all data is replaced with the latest from the CSV source."""
     
     def get_sync_engine(self, **options):

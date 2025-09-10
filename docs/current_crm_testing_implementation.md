@@ -307,7 +307,7 @@ The following flags have been deprecated in favor of cleaner, more consistent na
 
 | Deprecated Flag | Replacement | Reason |
 |----------------|-------------|---------|
-| `--force-overwrite` | `--force` | Simplified naming convention |
+| `--force` | `--force` | Simplified naming convention |
 | `--since` | `--start-date` | Clearer parameter naming |
 | `--test` | `--debug` | Consolidated redundant debugging flags |
 | `--verbose` | `--debug` | Consolidated redundant debugging flags |
@@ -324,7 +324,7 @@ The following flags have been deprecated in favor of cleaner, more consistent na
 - ✅ `--batch-size` - Batch processing control
 - ✅ `--max-records` - Record limit control  
 - ✅ `--start-date` - Date-based filtering (replaces deprecated `--since`)
-- ✅ `--force` - Overwrite protection (replaces deprecated `--force-overwrite`)
+- ✅ `--force` - Overwrite protection (replaces deprecated `--force`)
 
 **Arrivy Performance Flags:**
 - ✅ `--booking-status` - Booking state filtering

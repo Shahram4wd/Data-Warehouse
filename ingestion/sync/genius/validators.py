@@ -149,16 +149,19 @@ class GeniusFieldValidator:
         """Validate division record"""
         validated = {}
         
-        validated['genius_id'] = GeniusValidator.validate_id_field(record.get('id'))
-        validated['name'] = GeniusValidator.validate_string_field(record.get('name'), max_length=255, required=True)
-        validated['code'] = GeniusValidator.validate_string_field(record.get('code'), max_length=50)
-        validated['active'] = GeniusValidator.validate_boolean_field(record.get('active'))
+        # Validate based on actual model fields
+        validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['group_id'] = GeniusValidator.validate_id_field(record.get('group_id'))
+        validated['region_id'] = GeniusValidator.validate_id_field(record.get('region_id'))
+        validated['label'] = GeniusValidator.validate_string_field(record.get('label'), max_length=255, required=True)
+        validated['abbreviation'] = GeniusValidator.validate_string_field(record.get('abbreviation'), max_length=50)
+        validated['is_utility'] = GeniusValidator.validate_boolean_field(record.get('is_utility'))
+        validated['is_corp'] = GeniusValidator.validate_boolean_field(record.get('is_corp'))
+        validated['is_omniscient'] = GeniusValidator.validate_boolean_field(record.get('is_omniscient'))
+        validated['is_inactive'] = GeniusValidator.validate_id_field(record.get('is_inactive'))
+        validated['account_scheduler_id'] = GeniusValidator.validate_id_field(record.get('account_scheduler_id'))
         validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
         validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
-        
-        # Division-specific validations
-        if record.get('division_group_id'):
-            validated['division_group_id'] = GeniusValidator.validate_id_field(record.get('division_group_id'))
         
         return validated
     

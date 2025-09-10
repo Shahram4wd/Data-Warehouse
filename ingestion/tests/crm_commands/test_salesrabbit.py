@@ -215,7 +215,7 @@ class TestSalesRabbitPerformanceFeatures(SalesRabbitTestBase):
         command.add_arguments(parser)
         option_strings = parser._option_string_actions
         
-        # Should support force-overwrite for data integrity scenarios
+        # Should support force for data integrity scenarios
         self.assertIn('--force', option_strings)
         
     def test_since_parameter_capabilities(self):

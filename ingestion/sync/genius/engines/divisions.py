@@ -85,58 +85,89 @@ class GeniusDivisionSyncEngine(GeniusBaseSyncEngine):
         
         # Preload division groups for FK validation
         division_groups = {
-            dg.genius_id: dg for dg in Genius_DivisionGroup.objects.all()
+            dg.id: dg for dg in Genius_DivisionGroup.objects.all()
         }
         
+        # Prepare data for bulk operations
+        validated_records = []
+        
+        # First pass: transform and validate all records
+        for raw_record in batch:
+            try:
+                stats['total_processed'] += 1
+                
+                # Transform raw data to dict
+                record_data = self.processor.transform_record(raw_record, field_mapping)
+                
+                # Validate record
+                validated_data = self.processor.validate_record(record_data)
+                
+                # Skip if required data missing
+                if not validated_data.get('id'):
+                    logger.warning("Skipping division with no ID")
+                    stats['skipped'] += 1
+                    continue
+                
+                validated_records.append(validated_data)
+                
+            except Exception as e:
+                stats['errors'] += 1
+                logger.error(f"Error processing division record: {e}")
+                logger.error(f"Record data: {raw_record}")
+        
+        if not validated_records:
+            return stats
+        
         with transaction.atomic():
-            for raw_record in batch:
-                try:
-                    stats['total_processed'] += 1
-                    
-                    # Transform raw data to dict
-                    record_data = self.processor.transform_record(raw_record, field_mapping)
-                    
-                    # Validate record
-                    validated_data = self.processor.validate_record(record_data)
-                    
-                    # Skip if required data missing
-                    if not validated_data.get('genius_id'):
-                        logger.warning("Skipping division with no ID")
-                        stats['skipped'] += 1
-                        continue
-                    
-                    # Get or create division
-                    division, created = Genius_Division.objects.get_or_create(
-                        genius_id=validated_data['genius_id'],
-                        defaults=validated_data
-                    )
-                    
-                    if created:
-                        stats['created'] += 1
-                        logger.debug(f"Created division {division.genius_id}: {division.name}")
-                    else:
-                        # Update if force_overwrite or data changed
-                        if force_overwrite or self._should_update_division(division, validated_data):
+            if force_overwrite:
+                # Force overwrite: use bulk_create with update_conflicts
+                division_objects = [Genius_Division(**data) for data in validated_records]
+                Genius_Division.objects.bulk_create(
+                    division_objects,
+                    update_conflicts=True,
+                    update_fields=['group_id', 'region_id', 'label', 'abbreviation', 'is_utility', 
+                                   'is_corp', 'is_omniscient', 'is_inactive', 'account_scheduler_id',
+                                   'created_at', 'updated_at'],
+                    unique_fields=['id'],
+                    batch_size=100
+                )
+                stats['updated'] = len(validated_records)
+                logger.debug(f"Bulk upserted {len(validated_records)} divisions with force overwrite")
+            else:
+                # Regular upsert: separate new and existing records
+                existing_ids = set(Genius_Division.objects.filter(
+                    id__in=[r['id'] for r in validated_records]
+                ).values_list('id', flat=True))
+                
+                new_records = [r for r in validated_records if r['id'] not in existing_ids]
+                existing_records = [r for r in validated_records if r['id'] in existing_ids]
+                
+                # Bulk create new records
+                if new_records:
+                    division_objects = [Genius_Division(**data) for data in new_records]
+                    Genius_Division.objects.bulk_create(division_objects, batch_size=100)
+                    stats['created'] = len(new_records)
+                    logger.debug(f"Bulk created {len(new_records)} new divisions")
+                
+                # Check existing records for updates
+                updated_count = 0
+                for validated_data in existing_records:
+                    try:
+                        division = Genius_Division.objects.get(id=validated_data['id'])
+                        if self._should_update_division(division, validated_data):
                             for field, value in validated_data.items():
-                                if field != 'genius_id':  # Don't update primary key
+                                if field != 'id':  # Don't update primary key
                                     setattr(division, field, value)
                             division.save()
-                            stats['updated'] += 1
-                            logger.debug(f"Updated division {division.genius_id}: {division.name}")
+                            updated_count += 1
                         else:
                             stats['skipped'] += 1
-                    
-                    # Set division group relationship if exists
-                    if validated_data.get('division_group_id'):
-                        division_group = division_groups.get(validated_data['division_group_id'])
-                        if division_group:
-                            division.division_group = division_group
-                            division.save(update_fields=['division_group'])
-                    
-                except Exception as e:
-                    stats['errors'] += 1
-                    logger.error(f"Error processing division record: {e}")
-                    logger.error(f"Record data: {raw_record}")
+                    except Genius_Division.DoesNotExist:
+                        # Record was deleted between queries, create it
+                        Genius_Division.objects.create(**validated_data)
+                        stats['created'] += 1
+                
+                stats['updated'] = updated_count
         
         return stats
     

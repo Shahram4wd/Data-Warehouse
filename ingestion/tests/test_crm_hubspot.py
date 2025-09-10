@@ -84,7 +84,7 @@ class TestHubSpotContactsCommand(TestCase):
         # Test help text indicates HubSpot-specific features
         help_text = self.command.help.lower()
         self.assertIn('hubspot', help_text)
-        self.assertIn('force-overwrite', help_text)
+        self.assertIn('force', help_text)
 
 
 class TestHubSpotDealsCommand(TestCase):

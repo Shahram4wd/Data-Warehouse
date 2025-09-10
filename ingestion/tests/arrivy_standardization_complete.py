@@ -11,7 +11,7 @@ ACCOMPLISHMENTS:
 ===============
 
 ✅ Updated BaseSyncCommand with standardized flags:
-   - --force (changed from --force-overwrite)  
+   - --force (changed from --force)  
    - --start-date (changed from deprecated --since)
    - --end-date (new standard flag)
    - --quiet (NEW - suppresses non-error output)
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     print("✅ PHASE 3: Ready for comprehensive testing")
     print("🚀 All Arrivy commands now follow enterprise standards!")
     print("\nStandardized flags applied across 5+ Arrivy commands:")
-    print("  • --force (updated from --force-overwrite)")
+    print("  • --force (updated from --force)")
     print("  • --start-date (updated from --since)")  
     print("  • --end-date (new standard)")
     print("  • --quiet (NEW!)")

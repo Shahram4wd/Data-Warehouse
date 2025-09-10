@@ -107,7 +107,7 @@ class Command(BaseCommand):
         # Handle legacy arguments
         if options.get('force_overwrite'):
             self.stdout.write(
-                self.style.WARNING("⚠️  --force-overwrite is deprecated, use --full instead")
+                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
             )
             options['full'] = True
             

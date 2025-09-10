@@ -24,7 +24,7 @@ class Command(BaseSyncCommand):
     help = "Sync Arrivy statuses using enterprise patterns with SyncHistory integration"
     
     def add_arguments(self, parser):
-        # Add base sync arguments (--full, --force-overwrite, --since, --dry-run, --batch-size, etc.)
+        # Add base sync arguments (--full, --force, --since, --dry-run, --batch-size, etc.)
         super().add_arguments(parser)
         
         # Add status-specific arguments

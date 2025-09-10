@@ -110,7 +110,7 @@ class CallsSyncEngine(CallRailBaseSyncEngine):
                 
                 # Determine sync strategy following CRM sync guide priority:
                 # 1. --since parameter (manual override)
-                # 2. --force-overwrite flag (None = fetch all)
+                # 2. --force flag (None = fetch all)
                 # 3. --full flag (None = fetch all)
                 # 4. Database last sync timestamp from SyncHistory
                 if since_date:
