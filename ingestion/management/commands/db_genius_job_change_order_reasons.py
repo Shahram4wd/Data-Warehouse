@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Sync Genius job change order reasons data using the standardized sync engine'
+    help = 'Sync Genius job change order reasons data using the standardized sync engine (Note: Delta sync not supported - always full sync)'
 
     def add_arguments(self, parser):
         """Add command arguments following CRM sync guide standards"""
@@ -115,6 +115,15 @@ class Command(BaseCommand):
         since = self.parse_datetime_arg(options.get('since'))
         start_date = self.parse_datetime_arg(options.get('start_date'))
         end_date = self.parse_datetime_arg(options.get('end_date'))
+        
+        # Warning for delta sync parameters (not supported)
+        if since or start_date:
+            self.stdout.write(
+                self.style.WARNING(
+                    "⚠️  WARNING: job_change_order_reason table has no timestamp fields. "
+                    "--since and --start-date parameters are ignored. Always performs full sync."
+                )
+            )
         
         # Validate date range
         if start_date and end_date and start_date > end_date:

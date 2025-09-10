@@ -30,7 +30,11 @@ class GeniusJobChangeOrderReasonsSyncEngine(GeniusBaseSyncEngine):
     
     async def sync_job_change_order_reasons(self, since_date=None, force_overwrite=False, 
                            dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
-        """Main sync method for job change order reasons"""
+        """Main sync method for job change order reasons
+        
+        Note: since_date is ignored as this table has no timestamp fields for delta sync.
+        Always performs full sync of all records.
+        """
         
         stats = {
             'total_processed': 0,
@@ -41,9 +45,9 @@ class GeniusJobChangeOrderReasonsSyncEngine(GeniusBaseSyncEngine):
         }
         
         try:
-            # Get job change order reasons from source
+            # Get job change order reasons from source (ignores since_date)
             raw_data = await sync_to_async(self.client.get_job_change_order_reasons)(
-                since_date=since_date,
+                since_date=None,  # Always None as delta sync not supported
                 limit=max_records
             )
             
