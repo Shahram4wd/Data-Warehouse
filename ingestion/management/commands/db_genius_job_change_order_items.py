@@ -64,11 +64,11 @@ class Command(BaseCommand):
             help='Enable debug logging for detailed sync information'
         )
         
-        # Legacy argument support (deprecated)
+        # Additional sync options
         parser.add_argument(
             '--force',
             action='store_true',
-            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
+            help='Force overwrite existing records (delete and re-insert)'
         )
 
     def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
@@ -104,12 +104,11 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
+        # Handle force flag
+        if options.get('force'):
             self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
+                self.style.WARNING("⚠️  FORCE MODE - Existing records will be deleted and re-inserted")
             )
-            options['full'] = True
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -129,16 +128,18 @@ class Command(BaseCommand):
                 end_date=end_date,
                 max_records=options.get('max_records'),
                 dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
+                debug=options.get('debug', False),
+                force=options.get('force', False)
             ))
             
             # Display results
             stats = result['stats']
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
+            self.stdout.write(f"   📊 Processed: {stats['total_processed']} records")
             self.stdout.write(f"   ➕ Created: {stats['created']} records")
             self.stdout.write(f"   📝 Updated: {stats['updated']} records")
             self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
+            self.stdout.write(f"   ⏭️  Skipped: {stats['skipped']} records")
             self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
             
         except Exception as e:
@@ -150,6 +151,49 @@ class Command(BaseCommand):
 
     async def execute_async_sync(self, **kwargs):
         """Execute the async sync operation"""
-        engine = GeniusJobChangeOrderItemsSyncEngine()
-        return await engine.execute_sync(**kwargs)
+        
+        # Create sync engine
+        sync_engine = GeniusJobChangeOrderItemsSyncEngine()
+        
+        # Create SyncHistory record at start
+        sync_record = await sync_engine.create_sync_record(
+            configuration={
+                'command': 'db_genius_job_change_order_items',
+                'full': kwargs.get('full', False),
+                'force': kwargs.get('force', False),
+                'since': kwargs.get('since'),
+                'dry_run': kwargs.get('dry_run', False),
+                'max_records': kwargs.get('max_records', 0)
+            }
+        )
+        
+        try:
+            # Determine sync strategy
+            sync_strategy = await sync_engine.determine_sync_strategy(
+                since_param=kwargs.get('since'),
+                force_overwrite=kwargs.get('force', False),
+                full_sync=kwargs.get('full', False)
+            )
+            
+            # Execute the sync
+            result = await sync_engine.sync_job_change_order_items(
+                since_date=sync_strategy.get('since_date'),
+                force_overwrite=sync_strategy.get('force_overwrite', False),
+                dry_run=kwargs.get('dry_run', False),
+                max_records=kwargs.get('max_records', 0)
+            )
+            
+            # Complete sync record with success
+            await sync_engine.complete_sync_record(sync_record, result)
+            
+            return {'stats': result, 'sync_id': sync_record.id}
+            
+        except Exception as e:
+            # Complete sync record with error
+            await sync_engine.complete_sync_record(
+                sync_record, 
+                {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}, 
+                error_message=str(e)
+            )
+            raise
 

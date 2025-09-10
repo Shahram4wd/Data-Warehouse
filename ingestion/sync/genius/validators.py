@@ -237,6 +237,20 @@ class GeniusFieldValidator:
         validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
         
         return validated
+    
+    @staticmethod
+    def validate_job_change_order_item_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate job change order item record"""
+        validated = {}
+        
+        validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['change_order_id'] = GeniusValidator.validate_id_field(record.get('change_order_id'))
+        validated['description'] = GeniusValidator.validate_string_field(record.get('description'), max_length=256, required=False)
+        validated['amount'] = GeniusValidator.validate_decimal_field(record.get('amount'), max_digits=8, decimal_places=2)
+        validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        
+        return validated
 
 
 class GeniusRecordValidator:
