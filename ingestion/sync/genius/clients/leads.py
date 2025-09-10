@@ -38,7 +38,7 @@ class GeniusLeadClient(GeniusBaseClient):
             l.status,
             l.copied_to_id as converted_to_prospect_id,
             l.added_on as created_at,
-            COALESCE(l.updated_at, l.added_on) as updated_at
+            l.updated_at
         FROM `lead` l
         """
         
@@ -79,7 +79,7 @@ class GeniusLeadClient(GeniusBaseClient):
                 l.status,
                 l.copied_to_id as converted_to_prospect_id,
                 l.added_on as created_at,
-                COALESCE(l.updated_at, l.added_on) as updated_at
+                l.updated_at
             FROM `lead` l
             """
             

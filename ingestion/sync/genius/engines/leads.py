@@ -28,6 +28,7 @@ class GeniusLeadsSyncEngine(GeniusBaseSyncEngine):
     
     async def execute_sync(self, 
                           full: bool = False,
+                          force: bool = False,
                           since: Optional[datetime] = None,
                           start_date: Optional[datetime] = None,
                           end_date: Optional[datetime] = None,
@@ -36,13 +37,12 @@ class GeniusLeadsSyncEngine(GeniusBaseSyncEngine):
                           debug: bool = False) -> Dict[str, Any]:
         """Execute the leads sync process - adapter for standard sync interface"""
         
-        # Convert parameters to match existing method signature
-        since_date = since
-        force_overwrite = full
+        # Determine since_date based on full flag
+        since_date = None if full else since
         
         return await self.sync_leads(
             since_date=since_date, 
-            force_overwrite=force_overwrite,
+            force_overwrite=force,
             dry_run=dry_run, 
             max_records=max_records or 0
         )

@@ -104,8 +104,17 @@ class GeniusLeadService(GeniusBaseService):
         Returns:
             Transformed value
         """
+        from django.utils import timezone
+        import pytz
+        
         if value is None:
             return None
+        
+        # Handle datetime fields - convert naive datetimes to timezone-aware
+        if dest_field in ['added_on', 'updated_at'] and isinstance(value, datetime):
+            if value.tzinfo is None:
+                # Make naive datetime timezone-aware using UTC
+                value = pytz.UTC.localize(value)
         
         # Handle string fields with length limits
         if dest_field in self.config.FIELD_LIMITS:
@@ -176,6 +185,75 @@ class GeniusLeadService(GeniusBaseService):
                 continue
         
         return objects_for_create, data_for_update
+    
+    def bulk_upsert_records(self, transformed_records: List[Dict[str, Any]], force_overwrite: bool = False) -> Dict[str, Any]:
+        """
+        Modern bulk upsert using bulk_create with update_conflicts
+        """
+        from django.utils import timezone
+        
+        stats = {
+            'created': 0,
+            'updated': 0,
+            'skipped': 0,
+            'errors': 0
+        }
+        
+        if not transformed_records:
+            return stats
+        
+        try:
+            # Prepare objects for bulk_create
+            leads_to_create = []
+            
+            for record_data in transformed_records:
+                # Handle NULL updated_at with current timestamp workaround
+                if record_data.get('updated_at') is None:
+                    record_data['updated_at'] = timezone.now()
+                
+                # Create Lead object
+                try:
+                    lead_obj = Genius_Lead(**record_data)
+                    leads_to_create.append(lead_obj)
+                except Exception as e:
+                    logger.error(f"Error creating Lead object for lead_id {record_data.get('lead_id')}: {e}")
+                    stats['errors'] += 1
+                    continue
+            
+            if not leads_to_create:
+                logger.warning("No valid Lead objects to process")
+                return stats
+            
+            # Perform bulk upsert using bulk_create with update_conflicts
+            if force_overwrite:
+                # Force mode: update all fields
+                update_fields = self.get_bulk_update_fields()
+            else:
+                # Normal mode: update only if newer timestamp
+                update_fields = ['updated_at', 'sync_updated_at', 'first_name', 'last_name', 
+                               'email', 'phone1', 'address1', 'city', 'state', 'zip', 
+                               'status', 'notes', 'source', 'added_by', 'division_id', 'copied_to_id']
+            
+            # Use bulk_create with update_conflicts for efficient upsert
+            results = Genius_Lead.objects.bulk_create(
+                leads_to_create,
+                update_conflicts=True,
+                update_fields=update_fields,
+                unique_fields=['lead_id']
+            )
+            
+            # Count creates vs updates (bulk_create returns created objects)
+            stats['created'] = len([r for r in results if r._state.adding])
+            stats['updated'] = len(results) - stats['created']
+            
+            logger.info(f"Bulk upsert completed - Created: {stats['created']}, Updated: {stats['updated']}")
+            
+        except Exception as e:
+            logger.error(f"Error in bulk_upsert_records: {e}")
+            stats['errors'] = len(transformed_records)
+            raise
+        
+        return stats
     
     def get_chunk_size(self) -> int:
         """Get optimal chunk size for this entity type"""

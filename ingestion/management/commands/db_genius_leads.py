@@ -64,11 +64,11 @@ class Command(BaseCommand):
             help='Enable debug logging for detailed sync information'
         )
         
-        # Legacy argument support (deprecated)
+        # Force overwrite mode
         parser.add_argument(
             '--force',
             action='store_true',
-            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
+            help='Completely replace existing records (force overwrite mode)'
         )
 
     def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
@@ -104,12 +104,9 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
+        # Handle force mode
+        if options.get('force'):
+            self.stdout.write("🔄 FORCE MODE - Overwriting existing records")
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -124,6 +121,7 @@ class Command(BaseCommand):
         try:
             result = asyncio.run(self.execute_async_sync(
                 full=options.get('full', False),
+                force=options.get('force', False),
                 since=since,
                 start_date=start_date,
                 end_date=end_date,
@@ -159,8 +157,20 @@ class Command(BaseCommand):
             )
             raise
 
-    async def execute_async_sync(self, **kwargs):
+    async def execute_async_sync(self, full=False, force=False, since=None, start_date=None, 
+                                end_date=None, max_records=None, dry_run=False, 
+                                debug=False, **kwargs):
         """Execute the async sync operation"""
         engine = GeniusLeadsSyncEngine()
-        return await engine.execute_sync(**kwargs)
+        return await engine.execute_sync(
+            full=full,
+            force=force,
+            since=since,
+            start_date=start_date,
+            end_date=end_date,
+            max_records=max_records,
+            dry_run=dry_run,
+            debug=debug,
+            **kwargs
+        )
 
