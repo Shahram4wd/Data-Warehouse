@@ -1,13 +1,15 @@
 """
-Genius Prospects Management Command
-
-This command provides a simplified interface to the Genius prospects sync engine,
-following the standardized CRM sync architecture.
+Django management command for syncing Genius prospects following CRM sync guide patterns.
+Supports both --full and --force flags with distinct behaviors.
 """
-from django.core.management.base import BaseCommand
-from ingestion.sync.genius.engines.prospects import GeniusProspectsSyncEngine
-import asyncio
 import logging
+from datetime import datetime
+from typing import Optional
+
+from django.core.management.base import BaseCommand
+from django.utils.dateparse import parse_datetime
+
+from ingestion.sync.genius.engines.prospects import GeniusProspectsSyncEngine
 
 logger = logging.getLogger(__name__)
 
@@ -118,26 +120,23 @@ class Command(BaseCommand):
         sync_engine = GeniusProspectsSyncEngine()
         
         try:
-            # Run the async sync operation using correct parameter names
-            result = asyncio.run(sync_engine.execute_sync(
-                since=since_param,
-                force=options.get("force", False),  # Fixed: use 'force', not 'force_overwrite'
-                full=options.get("full", False),
-                dry_run=options.get("dry_run", False),
-                max_records=options.get("max_records", 0)
-            ))
+            # Determine since_date for sync
+            since_date = None if options.get('full') else since_param
+            
+            result = sync_engine.sync_prospects(
+                since_date=since_date,
+                force_overwrite=options.get('force', False),
+                dry_run=options.get('dry_run', False),
+                max_records=options.get('max_records')
+            )
             
             # Display results
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"✅ Sync completed successfully:\n"
-                    f"   📊 Processed: {result['total_processed']:,} records\n"
-                    f"   ➕ Created: {result['created']:,} records\n"
-                    f"   📝 Updated: {result['updated']:,} records\n" 
-                    f"   ❌ Errors: {result['errors']:,} records\n"
-                    f"   🆔 SyncHistory ID: {result['sync_history_id']}"
-                )
-            )
+            self.stdout.write("✅ Sync completed successfully:")
+            self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")
+            self.stdout.write(f"   📊 Processed: {result['total_processed']:,} records")
+            self.stdout.write(f"   ➕ Created: {result['created']:,} records")
+            self.stdout.write(f"   📝 Updated: {result['updated']:,} records")
+            self.stdout.write(f"   ❌ Errors: {result['errors']:,} records")
             
             if result['errors'] > 0:
                 self.stdout.write(

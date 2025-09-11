@@ -1,116 +1,227 @@
 """
-Genius Appointments Sync Engine
-Orchestrates the synchronization of appointments data from Genius to local database
+Appointments sync engine for Genius CRM data synchronization
 """
 import logging
-from datetime import datetime
 from typing import Dict, Any, Optional
+from datetime import datetime
+from django.utils import timezone
 
-from ingestion.sync.genius.engines.base import GeniusBaseSyncEngine
-from ingestion.sync.genius.clients.appointments import GeniusAppointmentsClient
-from ingestion.sync.genius.processors.appointments import GeniusAppointmentsProcessor
+from ..clients.appointments import GeniusAppointmentsClient
+from ..processors.appointments import GeniusAppointmentsProcessor
+from ingestion.models.common import SyncHistory
 
 logger = logging.getLogger(__name__)
 
-
-class GeniusAppointmentsSyncEngine(GeniusBaseSyncEngine):
-    """Sync engine for Genius appointments"""
+class GeniusAppointmentsSyncEngine:
+    """Sync engine for Genius appointments data with chunked processing"""
     
     def __init__(self):
-        super().__init__(entity_type="appointments")
+        # Import model here to avoid circular imports
+        from ingestion.models import Genius_Appointment
+        
         self.client = GeniusAppointmentsClient()
-        self.processor = GeniusAppointmentsProcessor()
+        self.processor = GeniusAppointmentsProcessor(Genius_Appointment)
+        self.chunk_size = 100000  # 100K records per chunk
+        self.batch_size = 500     # 500 records per batch
+        
+        # SyncHistory configuration
+        self.crm_source = 'genius'
+        self.entity_type = 'appointments'
     
-    async def execute_sync(self,
-                          full: bool = False,
-                          since: Optional[datetime] = None,
-                          start_date: Optional[datetime] = None,
-                          end_date: Optional[datetime] = None,
-                          max_records: Optional[int] = None,
-                          dry_run: bool = False,
-                          debug: bool = False) -> Dict[str, Any]:
-        """Execute the appointments sync process"""
-        
-        if debug:
-            logging.getLogger().setLevel(logging.DEBUG)
-        
-        # Create sync record
-        configuration = {
-            'full': full,
-            'since': since.isoformat() if since else None,
-            'start_date': start_date.isoformat() if start_date else None,
-            'end_date': end_date.isoformat() if end_date else None,
-            'max_records': max_records,
-            'dry_run': dry_run
-        }
-        sync_record = await self.create_sync_record(configuration)
+    def get_last_sync_timestamp(self, force_overwrite: bool = False) -> Optional[datetime]:
+        """Get the timestamp of the last successful sync"""
+        if force_overwrite:
+            return None
         
         try:
-            # Determine sync strategy and build WHERE clause
-            since_param = since.strftime('%Y-%m-%d %H:%M:%S') if since else None
-            sync_strategy_result = await self.determine_sync_strategy(since_param, False, full)
-            sync_strategy = sync_strategy_result['type']
-            effective_since = sync_strategy_result.get('since_date')
+            last_sync = SyncHistory.objects.filter(
+                crm_source=self.crm_source,
+                entity_type=self.entity_type,
+                status='completed'
+            ).order_by('-end_time').first()
             
-            logger.info(f"Starting Genius appointments sync with strategy: {sync_strategy}")
-            if dry_run:
-                logger.warning("🔍 DRY RUN MODE - No database changes will be made")
+            return last_sync.end_time if last_sync else None
+        except Exception as e:
+            logger.warning(f"Could not retrieve last sync timestamp: {e}")
+            return None
+    
+    def create_sync_record(self, configuration: Dict[str, Any]) -> SyncHistory:
+        """Create a new SyncHistory record"""
+        return SyncHistory.objects.create(
+            crm_source=self.crm_source,
+            entity_type=self.entity_type,
+            configuration=configuration,
+            start_time=timezone.now(),
+            status='in_progress'
+        )
+    
+    def complete_sync_record(self, sync_record: SyncHistory, stats: Dict[str, Any], 
+                           error_message: Optional[str] = None):
+        """Complete the SyncHistory record"""
+        sync_record.end_time = timezone.now()
+        sync_record.total_processed = stats.get('total_processed', 0)
+        sync_record.successful_count = stats.get('created', 0) + stats.get('updated', 0)
+        sync_record.error_count = stats.get('errors', 0)
+        sync_record.statistics = stats
+        
+        if error_message:
+            sync_record.status = 'failed'
+            sync_record.error_message = error_message
+        else:
+            sync_record.status = 'completed'
+        
+        sync_record.save()
+    
+    def sync_appointments(self, since_date: Optional[datetime] = None, 
+                         force_overwrite: bool = False, 
+                         dry_run: bool = False,
+                         max_records: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Sync appointments data with chunked processing
+        
+        Args:
+            since_date: Optional datetime to sync from (for delta updates)
+            force_overwrite: Whether to force overwrite existing records
+            dry_run: Whether to perform a dry run without database changes
+            max_records: Maximum number of records to process (for testing)
             
-            # Get total count for progress tracking
-            total_count = self.client.get_appointments_count(
-                since=effective_since,
-                start_date=start_date,
-                end_date=end_date
-            )
+        Returns:
+            Dictionary containing sync statistics
+        """
+        logger.info(f"Starting appointments sync - since_date: {since_date}, force_overwrite: {force_overwrite}, "
+                   f"dry_run: {dry_run}, max_records: {max_records}")
+        
+        # Create SyncHistory record
+        configuration = {
+            'since_date': since_date.isoformat() if since_date else None,
+            'force_overwrite': force_overwrite,
+            'dry_run': dry_run,
+            'max_records': max_records
+        }
+        sync_record = self.create_sync_record(configuration)
+        
+        try:
+            stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
             
-            if max_records and max_records < total_count:
-                total_count = max_records
-                logger.info(f"Limiting to {max_records} records (max_records parameter)")
-            
-            logger.info(f"Total records to process: {total_count}")
-            
-            if total_count == 0:
-                total_stats = {'processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+            if max_records and max_records <= 10000:
+                # For smaller datasets, use direct processing
+                logger.info(f"Processing limited dataset: {max_records} records")
+                appointments_data = self.client.get_appointments(since_date=since_date, limit=max_records)
+                stats = self._process_appointments_batch(appointments_data, force_overwrite, dry_run, stats)
             else:
-                # Get the data
-                raw_data = self.client.get_appointments(
-                    since=effective_since,
-                    start_date=start_date,
-                    end_date=end_date,
-                    limit=max_records
-                )
-                
-                # Process in batches
-                total_stats = {'processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
-                batch_size = 500
-                
-                for i in range(0, len(raw_data), batch_size):
-                    batch = raw_data[i:i + batch_size]
-                    batch_stats = await self.processor.process_batch(batch, dry_run)
-                    
-                    # Update totals
-                    for key, value in batch_stats.items():
-                        total_stats[key] += value
-                    
-                    total_stats['processed'] += len(batch)
-                    logger.info(f"Processed batch: {len(batch)} records, Total: {total_stats['processed']}/{total_count}")
+                # For larger datasets, use chunked processing
+                stats = self._sync_chunked_appointments(since_date, force_overwrite, dry_run, max_records, stats)
             
-            # Complete sync record
-            await self.complete_sync_record(sync_record, total_stats)
+            logger.info(f"Appointments sync completed - Stats: {stats}")
             
-            logger.info(f"Completed Genius appointments sync: {total_stats['created']} created, "
-                       f"{total_stats['updated']} updated, {total_stats['errors']} errors")
+            # Complete sync record with success
+            self.complete_sync_record(sync_record, stats)
             
-            return {
-                'success': True,
-                'stats': total_stats,
-                'sync_id': sync_record.id,
-                'strategy': sync_strategy
-            }
+            # Return stats with sync_id for compatibility
+            result = stats.copy()
+            result['sync_id'] = sync_record.id
+            return result
             
         except Exception as e:
-            # Mark sync as failed
-            error_msg = f"Genius appointments sync failed: {str(e)}"
-            await self.complete_sync_record(sync_record, {'processed': 0, 'errors': 1}, error_msg)
-            logger.error(error_msg)
+            # Complete sync record with error
+            error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}
+            self.complete_sync_record(sync_record, error_stats, error_message=str(e))
             raise
+    
+    def _sync_chunked_appointments(self, since_date: Optional[datetime], force_overwrite: bool, 
+                                  dry_run: bool, max_records: Optional[int], 
+                                  stats: Dict[str, Any]) -> Dict[str, Any]:
+        """Process appointments data in chunks for large datasets"""
+        
+        offset = 0
+        total_processed = 0
+        
+        while True:
+            # Apply max_records limit to chunk size if specified
+            current_chunk_size = self.chunk_size
+            if max_records:
+                remaining = max_records - total_processed
+                if remaining <= 0:
+                    break
+                current_chunk_size = min(self.chunk_size, remaining)
+            
+            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {current_chunk_size})")
+            
+            # Get chunked query for logging
+            query = self.client.get_chunked_query(offset, current_chunk_size, since_date)
+            logger.info(query)
+            
+            # Fetch chunk data
+            chunk_data = self.client.get_chunked_appointments(offset, current_chunk_size, since_date)
+            
+            if not chunk_data:
+                logger.info("No more data to process")
+                break
+                
+            logger.info(f"Processing chunk {(offset // self.chunk_size) + 1}: "
+                       f"{len(chunk_data)} records (total processed so far: {total_processed + len(chunk_data)})")
+            
+            # Process this chunk
+            chunk_stats = self._process_appointments_batch(chunk_data, force_overwrite, dry_run, stats)
+            
+            # Update running totals
+            for key in ['total_processed', 'created', 'updated', 'errors']:
+                stats[key] = chunk_stats[key]
+            
+            total_processed = stats['total_processed']
+            
+            logger.info(f"Chunk {(offset // self.chunk_size) + 1} completed - "
+                       f"Created: {chunk_stats['created'] - (stats['created'] - len([r for r in chunk_data if r]))}, "
+                       f"Updated: {chunk_stats['updated'] - (stats['updated'] - len([r for r in chunk_data if r]))}, "
+                       f"Running totals: {stats['created']} created, {stats['updated']} updated")
+            
+            # Move to next chunk
+            offset += current_chunk_size
+            
+            # Break if we got less data than requested (end of data)
+            if len(chunk_data) < current_chunk_size:
+                break
+        
+        return stats
+    
+    def _process_appointments_batch(self, appointments_data: list, force_overwrite: bool, 
+                                   dry_run: bool, stats: Dict[str, Any]) -> Dict[str, Any]:
+        """Process a batch of appointments data using bulk operations"""
+        
+        if not appointments_data:
+            return stats
+            
+        field_mapping = self.client.get_field_mapping()
+        
+        # Process in smaller batches for efficiency
+        batch_count = (len(appointments_data) + self.batch_size - 1) // self.batch_size
+        logger.info(f"Processing {len(appointments_data)} appointments in {batch_count} batches of {self.batch_size}")
+        
+        for i in range(0, len(appointments_data), self.batch_size):
+            batch_num = (i // self.batch_size) + 1
+            batch_data = appointments_data[i:i + self.batch_size]
+            
+            logger.info(f"Processing batch {batch_num}/{batch_count}: records {i+1}-{min(i+self.batch_size, len(appointments_data))}")
+            
+            try:
+                # Process batch through processor
+                batch_stats = self.processor.process_batch(
+                    batch_data, 
+                    field_mapping, 
+                    force_overwrite=force_overwrite,
+                    dry_run=dry_run
+                )
+                
+                # Update cumulative stats
+                for key, value in batch_stats.items():
+                    stats[key] += value
+                
+                logger.info(f"Batch {batch_num} completed - Created: {batch_stats['created']}, "
+                           f"Updated: {batch_stats['updated']}, Total so far: {stats['created']} created, "
+                           f"{stats['updated']} updated")
+                
+            except Exception as e:
+                logger.error(f"Error processing batch {batch_num}: {e}")
+                stats['errors'] += len(batch_data)
+        
+        return stats

@@ -1,8 +1,7 @@
 """
-Django management command for syncing Genius leads using the new sync engine architecture.
-This command follows the CRM sync guide patterns for consistent data synchronization.
+Django management command for syncing Genius leads following CRM sync guide patterns.
+Supports both --full and --force flags with distinct behaviors.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -119,36 +118,25 @@ class Command(BaseCommand):
         
         # Execute sync
         try:
-            result = asyncio.run(self.execute_async_sync(
-                full=options.get('full', False),
-                force=options.get('force', False),
-                since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options.get('max_records'),
+            engine = GeniusLeadsSyncEngine()
+            
+            # Determine since_date for sync
+            since_date = None if options.get('full') else since
+            
+            result = engine.sync_leads(
+                since_date=since_date,
+                force_overwrite=options.get('force', False),
                 dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
-            ))
+                max_records=options.get('max_records')
+            )
             
             # Display results
-            if isinstance(result, dict) and 'stats' in result:
-                stats = result['stats']
-            else:
-                # Direct stats return from engine
-                stats = result
-                
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats.get('total_processed', 0)} records")
-            self.stdout.write(f"   ➕ Created: {stats.get('created', 0)} records")
-            self.stdout.write(f"   📝 Updated: {stats.get('updated', 0)} records")
-            self.stdout.write(f"   ❌ Errors: {stats.get('errors', 0)} records")
-            self.stdout.write(f"   ⏭️ Skipped: {stats.get('skipped', 0)} records")
-            
-            # Handle sync_id if available
-            if isinstance(result, dict) and 'sync_id' in result:
-                self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
-            else:
-                self.stdout.write(f"   🆔 SyncHistory ID: None")
+            self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")
+            self.stdout.write(f"   📊 Processed: {result.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {result.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {result.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {result.get('errors', 0)} records")
             
         except Exception as e:
             logger.exception("Genius leads sync failed")
@@ -156,21 +144,4 @@ class Command(BaseCommand):
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
             raise
-
-    async def execute_async_sync(self, full=False, force=False, since=None, start_date=None, 
-                                end_date=None, max_records=None, dry_run=False, 
-                                debug=False, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusLeadsSyncEngine()
-        return await engine.execute_sync(
-            full=full,
-            force=force,
-            since=since,
-            start_date=start_date,
-            end_date=end_date,
-            max_records=max_records,
-            dry_run=dry_run,
-            debug=debug,
-            **kwargs
-        )
 

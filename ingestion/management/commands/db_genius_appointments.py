@@ -1,8 +1,7 @@
 """
-Django management command for syncing Genius appointments using the new sync engine architecture.
-This command follows the CRM sync guide patterns for consistent data synchronization.
+Django management command for syncing Genius appointments following CRM sync guide patterns.
+Supports both --full and --force flags with distinct behaviors.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -122,24 +121,25 @@ class Command(BaseCommand):
         
         # Execute sync
         try:
-            result = asyncio.run(self.execute_async_sync(
-                full=options.get('full', False),
-                since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options.get('max_records'),
+            engine = GeniusAppointmentsSyncEngine()
+            
+            # Determine since_date for sync
+            since_date = None if options.get('full') else since
+            
+            result = engine.sync_appointments(
+                since_date=since_date,
+                force_overwrite=options.get('force', False),
                 dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
-            ))
+                max_records=options.get('max_records')
+            )
             
             # Display results
-            stats = result['stats']
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")
+            self.stdout.write(f"   📊 Processed: {result['total_processed']} records")
+            self.stdout.write(f"   ➕ Created: {result['created']} records")
+            self.stdout.write(f"   📝 Updated: {result['updated']} records")
+            self.stdout.write(f"   ❌ Errors: {result['errors']} records")
             
         except Exception as e:
             logger.exception("Genius appointments sync failed")
@@ -147,8 +147,3 @@ class Command(BaseCommand):
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
             raise
-
-    async def execute_async_sync(self, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusAppointmentsSyncEngine()
-        return await engine.execute_sync(**kwargs)
