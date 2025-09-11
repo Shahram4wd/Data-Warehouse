@@ -53,37 +53,76 @@ class GeniusAppointmentsProcessor:
     
     @sync_to_async
     def _process_single_batch(self, records: List[Dict[str, Any]], dry_run: bool) -> Dict[str, int]:
-        """Process a single batch of records synchronously"""
+        """Process a single batch of records synchronously using bulk operations for performance"""
         stats = {'created': 0, 'updated': 0, 'errors': 0}
         
-        with transaction.atomic():
+        if dry_run:
+            # For dry run, just validate transformations
             for record in records:
                 try:
-                    if dry_run:
-                        # For dry run, just validate the transformation
-                        transformed = self.transform_record(record)
-                        if transformed:
-                            # Check if record exists
-                            exists = Genius_Appointment.objects.filter(id=record['id']).exists()
-                            if exists:
-                                stats['updated'] += 1
-                            else:
-                                stats['created'] += 1
-                    else:
-                        # Transform and save the record
-                        appointment = self.transform_and_save_record(record)
-                        if appointment:
-                            if hasattr(appointment, '_created') and appointment._created:
-                                stats['created'] += 1
-                            else:
-                                stats['updated'] += 1
-                
+                    transformed = self.transform_record(record)
+                    if transformed:
+                        # Check if record exists for dry run stats
+                        exists = Genius_Appointment.objects.filter(id=record['id']).exists()
+                        if exists:
+                            stats['updated'] += 1
+                        else:
+                            stats['created'] += 1
                 except Exception as e:
-                    record_id = record.get('id', 'Unknown')
-                    logger.error(f"Error processing appointment record ID {record_id}: {e}")
-                    if logger.isEnabledFor(logging.DEBUG):
-                        logger.debug(f"Failed record data: {record}")
                     stats['errors'] += 1
+            return stats
+        
+        # Transform all records first
+        appointment_instances = []
+        for record in records:
+            try:
+                transformed = self.transform_record(record)
+                if transformed:
+                    appointment_instances.append(Genius_Appointment(**transformed))
+                else:
+                    stats['errors'] += 1
+            except Exception as e:
+                record_id = record.get('id', 'Unknown')
+                logger.error(f"Error transforming appointment record ID {record_id}: {e}")
+                stats['errors'] += 1
+        
+        if not appointment_instances:
+            return stats
+        
+        # Bulk upsert using Django's bulk_create with update_conflicts
+        try:
+            with transaction.atomic():
+                logger.info(f"Bulk upserting {len(appointment_instances)} appointment records")
+                
+                # Define fields to update on conflict
+                update_fields = [
+                    'prospect_id', 'prospect_source_id', 'user_id', 'type_id',
+                    'date', 'time', 'duration', 'address1', 'address2', 'city', 
+                    'state', 'zip', 'email', 'notes', 'add_user_id', 'add_date',
+                    'assign_date', 'confirm_user_id', 'confirm_date', 'confirm_with',
+                    'spouses_present', 'is_complete', 'complete_outcome_id',
+                    'complete_user_id', 'complete_date', 'marketsharp_id',
+                    'marketsharp_appt_type', 'leap_estimate_id', 'hubspot_appointment_id',
+                    'updated_at'
+                ]
+                
+                created_appointments = Genius_Appointment.objects.bulk_create(
+                    appointment_instances,
+                    update_conflicts=True,
+                    update_fields=update_fields,
+                    unique_fields=['id']
+                )
+                
+                # Count results - bulk_create returns all instances but _state.adding indicates new records
+                batch_created = sum(1 for appt in created_appointments if appt._state.adding)
+                stats['created'] = batch_created
+                stats['updated'] = len(appointment_instances) - batch_created
+                
+                logger.info(f"Bulk upsert completed - Created: {stats['created']}, Updated: {stats['updated']}")
+                
+        except Exception as e:
+            logger.error(f"Error in bulk upsert: {e}")
+            stats['errors'] += len(appointment_instances)
         
         return stats
     
