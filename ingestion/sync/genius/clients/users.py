@@ -52,6 +52,80 @@ class GeniusUsersClient(GeniusBaseClient):
             base_query += f" LIMIT {limit}"
             
         return base_query
+
+    def get_chunked_users(self, offset: int, chunk_size: int, since_date: Optional[Any] = None) -> List[Tuple]:
+        """Fetch user data in chunks for large datasets"""
+        where_clause = ""
+        if since_date:
+            where_clause = f"updated_at >= '{since_date.strftime('%Y-%m-%d %H:%M:%S')}'"
+        query = f"""
+        SELECT 
+            user_id,
+            division_id,
+            title_id,
+            manager_user_id,
+            first_name,
+            first_name_alt,
+            last_name,
+            email,
+            personal_email,
+            birth_date,
+            gender_id,
+            marital_status_id,
+            time_zone_name,
+            hired_on,
+            start_date,
+            add_user_id,
+            add_datetime,
+            updated_at,
+            is_inactive,
+            inactive_on,
+            inactive_reason_id,
+            inactive_reason_other,
+            inactive_transfer_division_id
+        FROM {self.table_name}
+        """
+        if where_clause:
+            query += f" WHERE {where_clause}"
+        query += f" ORDER BY user_id LIMIT {chunk_size} OFFSET {offset}"
+        return self.execute_query(query)
+
+    def get_chunked_query(self, offset: int, chunk_size: int, since_date: Optional[Any] = None) -> str:
+        """Get the chunked query for logging purposes"""
+        where_clause = ""
+        if since_date:
+            where_clause = f"updated_at >= '{since_date.strftime('%Y-%m-%d %H:%M:%S')}'"
+        query = f"""
+        SELECT 
+            user_id,
+            division_id,
+            title_id,
+            manager_user_id,
+            first_name,
+            first_name_alt,
+            last_name,
+            email,
+            personal_email,
+            birth_date,
+            gender_id,
+            marital_status_id,
+            time_zone_name,
+            hired_on,
+            start_date,
+            add_user_id,
+            add_datetime,
+            updated_at,
+            is_inactive,
+            inactive_on,
+            inactive_reason_id,
+            inactive_reason_other,
+            inactive_transfer_division_id
+        FROM {self.table_name}
+        """
+        if where_clause:
+            query += f" WHERE {where_clause}"
+        query += f" ORDER BY user_id LIMIT {chunk_size} OFFSET {offset}"
+        return query
     
     def get_total_count(self, where_clause: str = "") -> int:
         """Get total count of records matching criteria"""
@@ -66,3 +140,39 @@ class GeniusUsersClient(GeniusBaseClient):
         """Fetch user data with optional filtering"""
         query = self.get_query(where_clause, limit)
         return self.execute_query(query)
+    
+    def get_users(self, since_date: Optional[Any] = None, limit: Optional[int] = None) -> List[Tuple]:
+        """Fetch users data with optional since_date filtering"""
+        where_clause = ""
+        if since_date:
+            where_clause = f"updated_at >= '{since_date.strftime('%Y-%m-%d %H:%M:%S')}'"
+        
+        return self.fetch_data(where_clause, limit)
+    
+    def get_field_mapping(self) -> Dict[str, int]:
+        """Return field mapping for processor (field_name -> column_index)"""
+        return {
+            'id': 0,  # user_id
+            'division_id': 1,
+            'title_id': 2,
+            'manager_user_id': 3,
+            'first_name': 4,
+            'first_name_alt': 5,
+            'last_name': 6,
+            'email': 7,
+            'personal_email': 8,
+            'birth_date': 9,
+            'gender_id': 10,
+            'marital_status_id': 11,
+            'time_zone_name': 12,
+            'hired_on': 13,
+            'start_date': 14,
+            'add_user_id': 15,
+            'add_datetime': 16,
+            'updated_at': 17,
+            'is_inactive': 18,
+            'inactive_on': 19,
+            'inactive_reason_id': 20,
+            'inactive_reason_other': 21,
+            'inactive_transfer_division_id': 22
+        }
