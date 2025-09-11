@@ -2,7 +2,6 @@
 Django management command for syncing Genius appointment outcome types using the new sync engine architecture.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -10,7 +9,10 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 
-from ingestion.sync.genius.engines.appointment_outcome_types import GeniusAppointmentOutcomeTypesSyncEngine
+from ingestion.sync.genius.clients.appointment_outcome_types import GeniusAppointmentOutcomeTypeClient
+from ingestion.sync.genius.processors.appointment_outcome_types import GeniusAppointmentOutcomeTypeProcessor
+from ingestion.models.genius import Genius_AppointmentOutcomeType
+from ingestion.models import SyncHistory
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +107,7 @@ class Command(BaseCommand):
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
         # Handle legacy arguments
-        if options.get('force_overwrite'):
+        if options.get('force'):
             self.stdout.write(
                 self.style.WARNING("⚠️  --force is deprecated, use --full instead")
             )
@@ -122,7 +124,7 @@ class Command(BaseCommand):
         
         # Execute sync
         try:
-            result = asyncio.run(self.execute_async_sync(
+            result = self.execute_sync(
                 full=options.get('full', False),
                 since=since,
                 start_date=start_date,
@@ -130,7 +132,7 @@ class Command(BaseCommand):
                 max_records=options.get('max_records'),
                 dry_run=options.get('dry_run', False),
                 debug=options.get('debug', False)
-            ))
+            )
             
             # Display results
             stats = result['stats']
@@ -148,8 +150,239 @@ class Command(BaseCommand):
             )
             raise
 
-    async def execute_async_sync(self, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusAppointmentOutcomeTypesSyncEngine()
-        return await engine.execute_sync(**kwargs)
+    def execute_sync(self, **kwargs):
+        """Execute the sync operation"""
+        
+        # Extract parameters
+        full = kwargs.get('full', False)
+        since = kwargs.get('since')
+        start_date = kwargs.get('start_date')
+        end_date = kwargs.get('end_date')
+        max_records = kwargs.get('max_records')
+        dry_run = kwargs.get('dry_run', False)
+        debug = kwargs.get('debug', False)
+        
+        logger.info(f"Starting appointment outcome types sync (full={full}, dry_run={dry_run})")
+        
+        # Initialize stats
+        stats = {
+            'processed': 0,
+            'created': 0,
+            'updated': 0,
+            'errors': 0,
+        }
+        
+        # Create sync record
+        sync_record = self.create_sync_record({
+            'full': full,
+            'since': since.isoformat() if since else None,
+            'start_date': start_date.isoformat() if start_date else None,
+            'end_date': end_date.isoformat() if end_date else None,
+            'max_records': max_records,
+            'dry_run': dry_run
+        })
+        
+        try:
+            # Initialize client and processor
+            client = GeniusAppointmentOutcomeTypeClient()
+            processor = GeniusAppointmentOutcomeTypeProcessor(Genius_AppointmentOutcomeType)
+            
+            # Determine sync timestamp
+            sync_start = start_date or since
+            if not sync_start and not full:
+                sync_start = self.get_last_sync_timestamp()
+            
+            if debug:
+                logger.info(f"Sync parameters: full={full}, sync_start={sync_start}")
+            
+            # Fetch data from Genius database
+            logger.info("Fetching appointment outcome types from Genius database...")
+            raw_records = client.get_appointment_outcome_types(
+                since_date=sync_start,
+                limit=max_records or 0
+            )
+            
+            if debug:
+                logger.info(f"Retrieved {len(raw_records)} raw records")
+            
+            # Convert tuples to dictionaries using field mapping
+            field_mapping = client.get_field_mapping()
+            records = []
+            for raw_record in raw_records:
+                if len(raw_record) != len(field_mapping):
+                    logger.warning(f"Field count mismatch: got {len(raw_record)} fields, expected {len(field_mapping)}")
+                    continue
+                
+                record_dict = dict(zip(field_mapping, raw_record))
+                records.append(record_dict)
+            
+            if debug:
+                logger.info(f"Converted to {len(records)} dictionary records")
+            
+            # Process records in chunks
+            chunk_size = 100000  # 100K records per chunk
+            batch_size = 500     # 500 records per batch for bulk operations
+            
+            for chunk_start in range(0, len(records), chunk_size):
+                chunk_end = min(chunk_start + chunk_size, len(records))
+                chunk_records = records[chunk_start:chunk_end]
+                
+                if debug:
+                    logger.info(f"Processing chunk {chunk_start//chunk_size + 1}: records {chunk_start+1}-{chunk_end}")
+                
+                # Process chunk in batches
+                objects_to_create = []
+                objects_to_update = []
+                
+                for i, record in enumerate(chunk_records, start=chunk_start):
+                    try:
+                        # Transform and validate record
+                        if not processor.validate_record(record):
+                            stats['errors'] += 1
+                            continue
+                        
+                        transformed_record = processor.transform_record(record)
+                        
+                        if debug and i < 3:  # Show first few records in debug mode
+                            logger.info(f"Transformed record {i+1}: {transformed_record}")
+                        
+                        # Prepare for bulk operation
+                        record_id = transformed_record.get('id')
+                        if record_id:
+                            # Check if record exists
+                            try:
+                                if Genius_AppointmentOutcomeType.objects.filter(id=record_id).exists():
+                                    # Update existing record
+                                    obj, created = Genius_AppointmentOutcomeType.objects.get_or_create(
+                                        id=record_id,
+                                        defaults=transformed_record
+                                    )
+                                    if not created:
+                                        for field, value in transformed_record.items():
+                                            setattr(obj, field, value)
+                                        objects_to_update.append(obj)
+                                else:
+                                    # Create new record
+                                    objects_to_create.append(Genius_AppointmentOutcomeType(**transformed_record))
+                            except Exception as e:
+                                logger.error(f"Error checking existing record {record_id}: {e}")
+                                stats['errors'] += 1
+                                continue
+                        
+                        stats['processed'] += 1
+                        
+                        # Process batch when it reaches batch_size
+                        if len(objects_to_create) + len(objects_to_update) >= batch_size:
+                            batch_stats = self._process_batch(objects_to_create, objects_to_update, dry_run, debug)
+                            stats['created'] += batch_stats['created']
+                            stats['updated'] += batch_stats['updated']
+                            stats['errors'] += batch_stats['errors']
+                            objects_to_create = []
+                            objects_to_update = []
+                    
+                    except Exception as e:
+                        logger.error(f"Error processing record {i+1}: {e}")
+                        stats['errors'] += 1
+                        continue
+                
+                # Process remaining records in the chunk
+                if objects_to_create or objects_to_update:
+                    batch_stats = self._process_batch(objects_to_create, objects_to_update, dry_run, debug)
+                    stats['created'] += batch_stats['created']
+                    stats['updated'] += batch_stats['updated']
+                    stats['errors'] += batch_stats['errors']
+            
+            # Complete sync record with success
+            self.complete_sync_record(sync_record, stats)
+            
+            logger.info(f"Completed appointment outcome types sync: {stats['processed']} processed, "
+                       f"{stats['created']} created, {stats['updated']} updated, {stats['errors']} errors")
+            
+            return {
+                'stats': stats,
+                'sync_id': sync_record.id,
+                'status': 'success'
+            }
+            
+        except Exception as e:
+            logger.error(f"Sync failed: {e}")
+            self.fail_sync_record(sync_record, str(e))
+            raise
+
+    def create_sync_record(self, configuration):
+        """Create a new sync record"""
+        return SyncHistory.objects.create(
+            sync_type='genius_appointment_outcome_types',
+            status='running',
+            started_at=datetime.now(),
+            configuration=configuration
+        )
+    
+    def complete_sync_record(self, sync_record, stats):
+        """Mark sync record as completed"""
+        sync_record.status = 'completed'
+        sync_record.completed_at = datetime.now()
+        sync_record.records_processed = stats['processed']
+        sync_record.records_created = stats['created'] 
+        sync_record.records_updated = stats['updated']
+        sync_record.records_failed = stats['errors']
+        sync_record.save()
+    
+    def fail_sync_record(self, sync_record, error_message):
+        """Mark sync record as failed"""
+        sync_record.status = 'failed'
+        sync_record.completed_at = datetime.now()
+        sync_record.error_message = error_message
+        sync_record.save()
+    
+    def get_last_sync_timestamp(self):
+        """Get the timestamp of the last successful sync"""
+        last_sync = SyncHistory.objects.filter(
+            sync_type='genius_appointment_outcome_types',
+            status='completed'
+        ).order_by('-completed_at').first()
+        
+        return last_sync.completed_at if last_sync else None
+
+    def _process_batch(self, objects_to_create, objects_to_update, dry_run, debug):
+        """Process a batch of objects for creation/update"""
+        batch_stats = {'created': 0, 'updated': 0, 'errors': 0}
+        
+        if dry_run:
+            # In dry-run mode, just count what would be processed
+            batch_stats['created'] = len(objects_to_create)
+            batch_stats['updated'] = len(objects_to_update)
+            if debug:
+                logger.info(f"DRY-RUN: Would create {len(objects_to_create)} and update {len(objects_to_update)} records")
+            return batch_stats
+        
+        # Create new records
+        if objects_to_create:
+            try:
+                created_objects = Genius_AppointmentOutcomeType.objects.bulk_create(
+                    objects_to_create, 
+                    ignore_conflicts=True
+                )
+                batch_stats['created'] = len(created_objects)
+                if debug:
+                    logger.info(f"Created {len(created_objects)} new appointment outcome type records")
+                    
+            except Exception as e:
+                logger.error(f"Error creating appointment outcome type records: {e}")
+                batch_stats['errors'] += len(objects_to_create)
+        
+        # Update existing records
+        if objects_to_update:
+            try:
+                for obj in objects_to_update:
+                    obj.save()
+                    batch_stats['updated'] += 1
+                if debug:
+                    logger.info(f"Updated {batch_stats['updated']} existing appointment outcome type records")
+                    
+            except Exception as e:
+                logger.error(f"Error updating appointment outcome type records: {e}")
+                batch_stats['errors'] += len(objects_to_update)
+        
+        return batch_stats
 
