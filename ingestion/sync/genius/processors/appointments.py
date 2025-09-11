@@ -106,9 +106,20 @@ class GeniusAppointmentsProcessor:
                 
             try:
                 add_date = self._convert_datetime(record.get('add_date'))
+                # If add_date is null or empty, use the appointment date as fallback
+                if add_date is None and appointment_date is not None:
+                    logger.debug(f"Using appointment date as add_date fallback for appointment ID {record_id}")
+                    add_date = datetime.combine(appointment_date, time.min)
+                    add_date = timezone.make_aware(add_date) if not timezone.is_aware(add_date) else add_date
             except Exception as e:
                 logger.error(f"Error converting add_date field for appointment ID {record_id}: {e}, value: {record.get('add_date')}")
-                add_date = None
+                # Use appointment date as fallback when add_date conversion fails
+                if appointment_date is not None:
+                    logger.debug(f"Using appointment date as add_date fallback after conversion error for appointment ID {record_id}")
+                    add_date = datetime.combine(appointment_date, time.min)
+                    add_date = timezone.make_aware(add_date) if not timezone.is_aware(add_date) else add_date
+                else:
+                    add_date = None
                 
             try:
                 assign_date = self._convert_datetime(record.get('assign_date'))
