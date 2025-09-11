@@ -1,100 +1,139 @@
 """
-Quote processor for Genius CRM data transformation
+Quote processor for Genius CRM data transformation and bulk operations
+Following CRM sync guide with Django bulk_create operations
 """
 import logging
 from typing import Dict, Any, List
+from decimal import Decimal
+from datetime import datetime
 
-from .base import GeniusBaseProcessor
-from ..validators import GeniusValidator, GeniusRecordValidator
+from django.db import transaction
+from django.utils import timezone
 
-logger = logging.getLogger(__name__)
+from ingestion.models import Genius_Quote
+
+logger = logging.getLogger('quotes')
 
 
-class GeniusQuoteProcessor(GeniusBaseProcessor):
-    """Processor for Genius quote data transformation and validation"""
+class GeniusQuoteProcessor:
+    """Processor for Genius quote data transformation with bulk operations"""
     
-    def __init__(self, model_class):
-        super().__init__(model_class)
+    def __init__(self):
+        pass
+    def bulk_upsert_quotes(self, quotes_data: List[tuple], force_overwrite: bool = False) -> Dict[str, Any]:
+        """Bulk upsert quotes using Django bulk_create with update_conflicts"""
+        
+        stats = {
+            'created': 0,
+            'updated': 0,
+            'errors': 0
+        }
+        
+        if not quotes_data:
+            return stats
+        
+        quote_objects = []
+        
+        for raw_quote in quotes_data:
+            try:
+                # Transform and validate quote data
+                quote_data = self._transform_quote(raw_quote)
+                
+                if not quote_data:  # Skip invalid records
+                    stats['errors'] += 1
+                    continue
+                
+                # Create quote object
+                quote_obj = Genius_Quote(**quote_data)
+                quote_objects.append(quote_obj)
+                
+            except Exception as e:
+                logger.error(f"Error transforming quote record: {e}")
+                stats['errors'] += 1
+        
+        if quote_objects:
+            try:
+                # Use bulk_create with update_conflicts for upsert behavior
+                created_quotes = Genius_Quote.objects.bulk_create(
+                    quote_objects,
+                    update_conflicts=True,
+                    update_fields=[
+                        'prospect_id', 'appointment_id', 'job_id', 'client_cid',
+                        'service_id', 'label', 'description', 'amount', 'expire_date',
+                        'status_id', 'contract_file_id', 'estimate_file_id', 
+                        'add_user_id', 'add_date', 'updated_at'
+                    ] if force_overwrite else ['updated_at'],
+                    unique_fields=['id']
+                )
+                
+                # Count actual creates vs updates
+                stats['created'] = len(created_quotes)
+                logger.info(f"Bulk upsert completed - Created: {stats['created']}, Updated: {stats['updated']}")
+                
+            except Exception as e:
+                logger.error(f"Bulk operation failed: {e}")
+                stats['errors'] += len(quote_objects)
+        
+        return stats
     
-    def validate_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate and clean quote record data"""
+    def _transform_quote(self, raw_data: tuple) -> Dict[str, Any]:
+        """Transform raw quote data to model fields"""
         
-        validated = {}
+        # Map raw tuple to dictionary based on query field order
+        # From client query: id, prospect_id, appointment_id, job_id, client_cid,
+        # service_id, label, description, amount, expire_date, status_id,
+        # contract_file_id, estimate_file_id, add_user_id, add_date, updated_at
         
-        # Validate each field using GeniusValidator
-        validated['genius_id'] = GeniusValidator.validate_id_field(record_data.get('id'))
-        validated['prospect_id'] = GeniusValidator.validate_id_field(record_data.get('prospect_id'))
-        validated['user_id'] = GeniusValidator.validate_id_field(record_data.get('user_id'))
-        validated['division_id'] = GeniusValidator.validate_id_field(record_data.get('division_id'))
-        validated['quote_number'] = GeniusValidator.validate_string_field(record_data.get('quote_number'), max_length=100)
-        validated['quote_date'] = GeniusValidator.validate_datetime_field(record_data.get('quote_date'))
-        validated['total_amount'] = GeniusValidator.validate_decimal_field(record_data.get('total_amount'), max_digits=10, decimal_places=2)
-        validated['status'] = GeniusValidator.validate_string_field(record_data.get('status'), max_length=50)
-        validated['notes'] = GeniusValidator.validate_string_field(record_data.get('notes'), max_length=2000)
-        validated['valid_until'] = GeniusValidator.validate_datetime_field(record_data.get('valid_until'))
-        validated['converted_to_job_id'] = GeniusValidator.validate_id_field(record_data.get('converted_to_job_id'))
-        validated['created_at'] = GeniusValidator.validate_datetime_field(record_data.get('created_at'))
-        validated['updated_at'] = GeniusValidator.validate_datetime_field(record_data.get('updated_at'))
-        
-        # Convert timezone awareness
-        for date_field in ['quote_date', 'valid_until', 'created_at', 'updated_at']:
-            if validated.get(date_field):
-                validated[date_field] = self.convert_timezone_aware(validated[date_field])
-        
-        # Ensure we have required fields
-        if not validated.get('genius_id'):
-            raise ValueError("Quote must have a genius_id")
-        
-        if not validated.get('prospect_id'):
-            raise ValueError("Quote must have a prospect_id")
-        
-        # Validate business rules for quotes
-        business_errors = self._validate_quote_business_rules(validated)
-        if business_errors:
-            raise ValueError(f"Quote validation errors: {', '.join(business_errors)}")
-        
-        return validated
+        try:
+            if not raw_data or len(raw_data) < 16:
+                logger.error("Quote record missing required fields")
+                return None
+            
+            # Check for required ID field
+            if not raw_data[0]:
+                logger.error("Quote record missing required ID field")
+                return None
+                
+            quote_data = {
+                'id': int(raw_data[0]),
+                'prospect_id': int(raw_data[1]) if raw_data[1] and raw_data[1] != 0 else None,
+                'appointment_id': int(raw_data[2]) if raw_data[2] and raw_data[2] != 0 else None,
+                'job_id': int(raw_data[3]) if raw_data[3] and raw_data[3] != 0 else None,
+                'client_cid': int(raw_data[4]) if raw_data[4] and raw_data[4] != 0 else None,
+                'service_id': int(raw_data[5]) if raw_data[5] else 1,  # Default service_id
+                'label': str(raw_data[6]).strip() if raw_data[6] else None,
+                'description': str(raw_data[7]).strip() if raw_data[7] else None,
+                'amount': Decimal(str(raw_data[8])) if raw_data[8] is not None else Decimal('0.00'),
+                'expire_date': raw_data[9] if raw_data[9] else None,
+                'status_id': int(raw_data[10]) if raw_data[10] else 1,  # Default status
+                'contract_file_id': int(raw_data[11]) if raw_data[11] and raw_data[11] != 0 else None,
+                'estimate_file_id': int(raw_data[12]) if raw_data[12] and raw_data[12] != 0 else None,
+                'add_user_id': int(raw_data[13]) if raw_data[13] and raw_data[13] != 0 else 1,  # Default user
+                'add_date': self._ensure_timezone_aware(raw_data[14]) if raw_data[14] else timezone.now(),
+                'updated_at': self._ensure_timezone_aware(raw_data[15]) if raw_data[15] else timezone.now(),
+            }
+            
+            # Validate required fields
+            if not quote_data['prospect_id']:
+                logger.error(f"Quote {quote_data['id']} missing required prospect_id")
+                return None
+            
+            return quote_data
+            
+        except (ValueError, TypeError, IndexError) as e:
+            logger.error(f"Error transforming quote data: {e}")
+            logger.error(f"Raw data: {raw_data}")
+            return None
     
-    def _validate_quote_business_rules(self, record: Dict[str, Any]) -> List[str]:
-        """Validate quote-specific business rules"""
-        errors = []
+    def _ensure_timezone_aware(self, dt):
+        """Ensure datetime is timezone-aware"""
+        if dt is None:
+            return None
         
-        # Quote date should not be in future (with some tolerance)
-        if record.get('quote_date'):
-            from datetime import datetime, timedelta
-            if record['quote_date'] > datetime.now() + timedelta(days=1):
-                logger.warning(f"Quote {record.get('genius_id')} has future quote_date")
+        if isinstance(dt, datetime):
+            if timezone.is_aware(dt):
+                return dt
+            else:
+                return timezone.make_aware(dt)
         
-        # Valid until should be after quote date
-        if (record.get('quote_date') and record.get('valid_until') and 
-            record['valid_until'] < record['quote_date']):
-            errors.append("Quote valid_until cannot be before quote_date")
-        
-        # Total amount should be positive
-        if record.get('total_amount') and record['total_amount'] < 0:
-            errors.append("Quote total_amount cannot be negative")
-        
-        return errors
-    
-    def transform_record(self, raw_data: tuple, field_mapping: List[str]) -> Dict[str, Any]:
-        """Transform raw quote data to dictionary"""
-        
-        # Use base class transformation
-        record = super().transform_record(raw_data, field_mapping)
-        
-        # Quote-specific transformations
-        
-        # Handle NULL foreign keys
-        for fk_field in ['prospect_id', 'user_id', 'division_id', 'converted_to_job_id']:
-            if record.get(fk_field) == 0:
-                record[fk_field] = None
-        
-        # Clean quote_number
-        if record.get('quote_number'):
-            record['quote_number'] = str(record['quote_number']).strip()
-        
-        # Clean and standardize status
-        if record.get('status'):
-            record['status'] = str(record['status']).strip().lower()
-        
-        return record
+        return dt

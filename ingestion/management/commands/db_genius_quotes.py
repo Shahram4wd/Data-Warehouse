@@ -2,7 +2,6 @@
 Django management command for syncing Genius quotes using the new sync engine architecture.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -25,7 +24,13 @@ class Command(BaseCommand):
         parser.add_argument(
             '--full',
             action='store_true',
-            help='Force full sync instead of incremental (ignores last sync timestamp)'
+            help='Perform full sync (ignore last sync timestamp) - fetches ALL records'
+        )
+        
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Completely replace existing records - enables force overwrite mode'
         )
         
         parser.add_argument(
@@ -63,13 +68,6 @@ class Command(BaseCommand):
             action='store_true',
             help='Enable debug logging for detailed sync information'
         )
-        
-        # Legacy argument support (deprecated)
-        parser.add_argument(
-            '--force',
-            action='store_true',
-            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
-        )
 
     def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
         """Parse datetime string argument"""
@@ -104,12 +102,15 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
+        # Display sync mode messages
+        if options.get('full') and options.get('force'):
+            self.stdout.write("🔄 FULL SYNC MODE + FORCE OVERWRITE MODE")
+        elif options.get('full'):
+            self.stdout.write("🔄 FULL SYNC MODE - Processing all records (ignoring last sync timestamp)")
+        elif options.get('force'):
+            self.stdout.write("💪 FORCE OVERWRITE MODE - Existing records will be overwritten")
+        else:
+            self.stdout.write("🔧 DELTA SYNC MODE - Processing updates since last sync")
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -122,24 +123,28 @@ class Command(BaseCommand):
         
         # Execute sync
         try:
-            result = asyncio.run(self.execute_async_sync(
+            engine = GeniusQuotesSyncEngine()
+            result = engine.execute_sync(
                 full=options.get('full', False),
+                force_overwrite=options.get('force', False),
                 since=since,
                 start_date=start_date,
                 end_date=end_date,
                 max_records=options.get('max_records'),
                 dry_run=options.get('dry_run', False),
                 debug=options.get('debug', False)
-            ))
+            )
             
             # Display results
-            stats = result['stats']
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   📊 Processed: {result.get('total_processed', 0):,} records")
+            self.stdout.write(f"   ➕ Created: {result.get('created', 0):,} records")
+            self.stdout.write(f"   📝 Updated: {result.get('updated', 0):,} records")
+            self.stdout.write(f"   ❌ Errors: {result.get('errors', 0):,} records")
+            self.stdout.write(f"   🆔 SyncHistory ID: {result.get('sync_history_id', 'None')}")
+            
+            if result.get('errors', 0) > 0:
+                self.stdout.write(self.style.WARNING(f"⚠️ Completed with {result.get('errors', 0)} errors. Check logs for details."))
             
         except Exception as e:
             logger.exception("Genius quotes sync failed")
@@ -147,9 +152,4 @@ class Command(BaseCommand):
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
             raise
-
-    async def execute_async_sync(self, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusQuotesSyncEngine()
-        return await engine.execute_sync(**kwargs)
 

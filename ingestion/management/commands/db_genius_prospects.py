@@ -101,14 +101,27 @@ class Command(BaseCommand):
         if options.get("page", 1) > 1:
             self.stdout.write(self.style.WARNING("⚠️ DEPRECATED: --page is deprecated. Use --since instead."))
         
+        # Prepare sync mode display messages
+        mode_messages = []
+        if options.get("full"):
+            mode_messages.append("FULL SYNC MODE - Ignoring last sync timestamp")
+        if options.get("force"):
+            mode_messages.append("FORCE OVERWRITE MODE - Completely replacing existing records")
+        if not options.get("full") and not options.get("force"):
+            mode_messages.append("DELTA SYNC MODE - Processing updates since last sync")
+        
+        if mode_messages:
+            for message in mode_messages:
+                self.stdout.write(self.style.WARNING(f"🔧 {message}"))
+        
         # Create sync engine and execute
         sync_engine = GeniusProspectsSyncEngine()
         
         try:
-            # Run the async sync operation
+            # Run the async sync operation using correct parameter names
             result = asyncio.run(sync_engine.execute_sync(
                 since=since_param,
-                force_overwrite=options.get("force_overwrite", False),
+                force=options.get("force", False),  # Fixed: use 'force', not 'force_overwrite'
                 full=options.get("full", False),
                 dry_run=options.get("dry_run", False),
                 max_records=options.get("max_records", 0)

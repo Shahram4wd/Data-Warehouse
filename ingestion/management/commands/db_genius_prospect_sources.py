@@ -1,5 +1,5 @@
 """
-Django management command for syncing Genius prospect sources using the new sync engine architecture.
+Django management command for syncing Genius prospect sources using the standardized sync engine.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
 import asyncio
@@ -21,11 +21,17 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         """Add command arguments following CRM sync guide standards"""
         
-        # Core sync options
+        # Core sync flags (distinct purposes)
         parser.add_argument(
             '--full',
             action='store_true',
-            help='Force full sync instead of incremental (ignores last sync timestamp)'
+            help='Perform full sync (ignore last sync timestamp) - fetches ALL records'
+        )
+        
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            help='Completely replace existing records - enables force overwrite mode'
         )
         
         parser.add_argument(
@@ -63,13 +69,6 @@ class Command(BaseCommand):
             action='store_true',
             help='Enable debug logging for detailed sync information'
         )
-        
-        # Legacy argument support (deprecated)
-        parser.add_argument(
-            '--force',
-            action='store_true',
-            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
-        )
 
     def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
         """Parse datetime string argument"""
@@ -104,12 +103,13 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
+        # Handle flag combinations
+        if options.get('full') and options.get('force'):
+            self.stdout.write("🚀 FULL SYNC + FORCE OVERWRITE MODE - Fetching all records and replacing existing data")
+        elif options.get('full'):
+            self.stdout.write("📊 FULL SYNC MODE - Fetching all records but respecting existing data")
+        elif options.get('force'):
+            self.stdout.write("💪 FORCE OVERWRITE MODE - Replacing existing records with fetched data")
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -124,6 +124,7 @@ class Command(BaseCommand):
         try:
             result = asyncio.run(self.execute_async_sync(
                 full=options.get('full', False),
+                force=options.get('force', False),
                 since=since,
                 start_date=start_date,
                 end_date=end_date,
@@ -132,14 +133,15 @@ class Command(BaseCommand):
                 debug=options.get('debug', False)
             ))
             
-            # Display results
-            stats = result['stats']
+            # Display results - result is the stats dict directly
+            stats = result
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   📊 Processed: {stats.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {stats.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {stats.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {stats.get('errors', 0)} records")
+            self.stdout.write(f"   ⏭️ Skipped: {stats.get('skipped', 0)} records")
+            self.stdout.write(f"   🆔 SyncHistory ID: {stats.get('sync_history_id', 'None')}")
             
         except Exception as e:
             logger.exception("Genius prospect sources sync failed")

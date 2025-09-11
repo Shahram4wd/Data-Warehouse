@@ -1,225 +1,200 @@
 """
-Quote sync engine for Genius CRM
+Quotes sync engine for Genius CRM
+Following CRM sync guide architecture with chunked processing and bulk operations
 """
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 from datetime import datetime
-from asgiref.sync import sync_to_async
-from django.db import transaction
 
-from .base import GeniusBaseSyncEngine
 from ..clients.quotes import GeniusQuoteClient
 from ..processors.quotes import GeniusQuoteProcessor
-from ingestion.models import Genius_Quote, Genius_Prospect, Genius_UserData, Genius_Division, Genius_Job
+from ingestion.models import SyncHistory, Genius_Quote
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('quotes')
 
 
-class GeniusQuotesSyncEngine(GeniusBaseSyncEngine):
-    """Sync engine for Genius quote data"""
+class GeniusQuotesSyncEngine:
+    """Sync engine for Genius quote data with chunked processing"""
     
     def __init__(self):
-        super().__init__('quotes')
         self.client = GeniusQuoteClient()
-        self.processor = GeniusQuoteProcessor(Genius_Quote)
-    
-    async def execute_sync(self, 
-                          full: bool = False,
-                          since: Optional[datetime] = None,
-                          start_date: Optional[datetime] = None,
-                          end_date: Optional[datetime] = None,
-                          max_records: Optional[int] = None,
-                          dry_run: bool = False,
-                          debug: bool = False) -> Dict[str, Any]:
-        """Execute the quotes sync process - adapter for standard sync interface"""
+        self.processor = GeniusQuoteProcessor()
         
-        # Convert parameters to match existing method signature
-        since_date = since
-        force_overwrite = full
+    def execute_sync(self, 
+                    full: bool = False,
+                    force_overwrite: bool = False, 
+                    since: Optional[datetime] = None,
+                    start_date: Optional[datetime] = None,
+                    end_date: Optional[datetime] = None,
+                    max_records: Optional[int] = None,
+                    dry_run: bool = False,
+                    debug: bool = False) -> Dict[str, Any]:
+        """Execute quotes sync with chunked processing"""
         
-        return await self.sync_quotes(
-            since_date=since_date, 
+        # Determine since_date for sync
+        since_date = None if full else (since or self._get_last_sync_date())
+        
+        logger.info(f"Starting quotes sync - since_date: {since_date}, force_overwrite: {force_overwrite}, dry_run: {dry_run}, max_records: {max_records}")
+        
+        # Handle limited datasets for testing
+        if max_records:
+            logger.info(f"Processing limited dataset: {max_records} records")
+            return self._sync_limited_quotes(
+                max_records=max_records,
+                force_overwrite=force_overwrite,
+                dry_run=dry_run
+            )
+        
+        # Process in chunks for large datasets
+        return self._sync_chunked_quotes(
+            since_date=since_date,
             force_overwrite=force_overwrite,
-            dry_run=dry_run, 
-            max_records=max_records or 0
+            dry_run=dry_run
         )
     
-    async def sync_quotes(self, since_date=None, force_overwrite=False, 
-                         dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
-        """Main sync method for quotes"""
+    def _sync_limited_quotes(self, max_records: int, force_overwrite: bool, dry_run: bool) -> Dict[str, Any]:
+        """Sync limited number of quotes (for testing)"""
+        
+        try:
+            # Get limited quotes
+            quotes = self.client.get_quotes(limit=max_records)
+            logger.info(f"Retrieved {len(quotes)} quotes")
+            
+            if dry_run:
+                logger.info("DRY RUN: Would process quotes but making no changes")
+                return {
+                    'total_processed': len(quotes),
+                    'created': 0,
+                    'updated': 0,
+                    'errors': 0,
+                    'sync_history_id': None
+                }
+            
+            # Process quotes in batches
+            return self._process_quotes_batch(quotes, force_overwrite)
+            
+        except Exception as e:
+            logger.error(f"Limited quotes sync failed: {e}")
+            raise
+        finally:
+            self.client.disconnect()
+    
+    def _sync_chunked_quotes(self, since_date: Optional[datetime], force_overwrite: bool, dry_run: bool) -> Dict[str, Any]:
+        """Sync quotes using chunked processing for large datasets"""
         
         stats = {
             'total_processed': 0,
             'created': 0,
             'updated': 0,
-            'errors': 0,
-            'skipped': 0
+            'errors': 0
         }
         
         try:
-            # Get quotes from source
-            raw_quotes = await sync_to_async(self.client.get_quotes)(
-                since_date=since_date,
-                limit=max_records
-            )
+            chunk_size = 100000  # Process 100K records per chunk
+            chunk_number = 1
             
-            logger.info(f"Fetched {len(raw_quotes)} quotes from Genius")
-            
-            if dry_run:
-                logger.info("DRY RUN: Would process quotes but making no changes")
-                return {
-                    'success': True,
-                    'sync_id': None,  # No sync record created in dry run
-                    'stats': {
-                        'processed': stats['total_processed'],
-                        'created': stats['created'],
-                        'updated': stats['updated'],
-                        'errors': stats['errors'],
-                        'skipped': stats['skipped']
-                    }
-                }
-            
-            # Process quotes in batches
-            batch_size = 500
-            field_mapping = self.client.get_field_mapping()
-            
-            for i in range(0, len(raw_quotes), batch_size):
-                batch = raw_quotes[i:i + batch_size]
-                batch_stats = await self._process_quote_batch(
-                    batch, field_mapping, force_overwrite
+            while True:
+                logger.info(f"Executing chunked query (offset: {(chunk_number - 1) * chunk_size}, chunk_size: {chunk_size}):")
+                
+                # Get chunk of quotes
+                quotes_chunk = self.client.get_chunked_quotes(
+                    since_date=since_date,
+                    offset=(chunk_number - 1) * chunk_size,
+                    chunk_size=chunk_size
                 )
                 
-                # Update overall stats
-                for key in stats:
-                    stats[key] += batch_stats[key]
+                if not quotes_chunk:
+                    logger.info("No more quotes to process")
+                    break
                 
-                logger.info(f"Processed batch {i//batch_size + 1}: "
-                          f"{batch_stats['created']} created, "
-                          f"{batch_stats['updated']} updated, "
-                          f"{batch_stats['errors']} errors")
+                logger.info(f"Processing chunk {chunk_number}: {len(quotes_chunk)} records (total processed so far: {stats['total_processed'] + len(quotes_chunk)})")
+                
+                if dry_run:
+                    logger.info("DRY RUN: Would process chunk but making no changes")
+                    stats['total_processed'] += len(quotes_chunk)
+                    chunk_number += 1
+                    continue
+                
+                # Process chunk
+                chunk_stats = self._process_quotes_batch(quotes_chunk, force_overwrite)
+                
+                # Update running totals
+                for key in ['total_processed', 'created', 'updated', 'errors']:
+                    stats[key] += chunk_stats[key]
+                
+                logger.info(f"Chunk {chunk_number} completed - Created: {chunk_stats['created']}, Updated: {chunk_stats['updated']}, Running totals: {stats['created']} created, {stats['updated']} updated")
+                
+                # Break if we processed less than chunk_size (last chunk)
+                if len(quotes_chunk) < chunk_size:
+                    break
+                    
+                chunk_number += 1
             
-            logger.info(f"Quote sync completed. Total stats: {stats}")
+            logger.info(f"Quotes sync completed - Stats: {stats}")
             return stats
             
         except Exception as e:
-            logger.error(f"Quote sync failed: {str(e)}")
+            logger.error(f"Chunked quotes sync failed: {e}")
             raise
-        
         finally:
             self.client.disconnect()
     
-    @sync_to_async
-    def _process_quote_batch(self, batch: List[tuple], field_mapping: List[str], 
-                            force_overwrite: bool = False) -> Dict[str, int]:
-        """Process a batch of quote records"""
+    def _process_quotes_batch(self, quotes: list, force_overwrite: bool) -> Dict[str, Any]:
+        """Process a batch of quotes with bulk operations"""
         
-        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
-        
-        # Preload lookup data for FK validation
-        prospects = {p.genius_id: p for p in Genius_Prospect.objects.all()}
-        users = {u.user_id: u for u in Genius_UserData.objects.all()}
-        divisions = {d.genius_id: d for d in Genius_Division.objects.all()}
-        jobs = {j.genius_id: j for j in Genius_Job.objects.all()}
-        
-        with transaction.atomic():
-            for raw_record in batch:
-                try:
-                    stats['total_processed'] += 1
-                    
-                    # Transform raw data to dict
-                    record_data = self.processor.transform_record(raw_record, field_mapping)
-                    
-                    # Validate record
-                    validated_data = self.processor.validate_record(record_data)
-                    
-                    # Skip if required data missing
-                    if not validated_data.get('genius_id'):
-                        logger.warning("Skipping quote with no ID")
-                        stats['skipped'] += 1
-                        continue
-                    
-                    # Validate required FK relationships exist
-                    if validated_data.get('prospect_id') and validated_data['prospect_id'] not in prospects:
-                        logger.warning(f"Quote {validated_data['genius_id']} references non-existent prospect {validated_data['prospect_id']}")
-                        stats['skipped'] += 1
-                        continue
-                    
-                    # Validate optional FK relationships
-                    if validated_data.get('user_id') and validated_data['user_id'] not in users:
-                        logger.warning(f"Quote {validated_data['genius_id']} references non-existent user {validated_data['user_id']}")
-                        validated_data['user_id'] = None
-                    
-                    if validated_data.get('division_id') and validated_data['division_id'] not in divisions:
-                        logger.warning(f"Quote {validated_data['genius_id']} references non-existent division {validated_data['division_id']}")
-                        validated_data['division_id'] = None
-                    
-                    # Get or create quote
-                    quote, created = Genius_Quote.objects.get_or_create(
-                        genius_id=validated_data['genius_id'],
-                        defaults=validated_data
-                    )
-                    
-                    if created:
-                        stats['created'] += 1
-                        logger.debug(f"Created quote {quote.genius_id}: {quote.quote_number}")
-                    else:
-                        # Update if force_overwrite or data changed
-                        if force_overwrite or self._should_update_quote(quote, validated_data):
-                            for field, value in validated_data.items():
-                                if field != 'genius_id':  # Don't update primary key
-                                    setattr(quote, field, value)
-                            quote.save()
-                            stats['updated'] += 1
-                            logger.debug(f"Updated quote {quote.genius_id}: {quote.quote_number}")
-                        else:
-                            stats['skipped'] += 1
-                    
-                    # Set relationships
-                    if validated_data.get('prospect_id'):
-                        quote.prospect = prospects[validated_data['prospect_id']]
-                    
-                    if validated_data.get('user_id') and validated_data['user_id'] in users:
-                        quote.user = users[validated_data['user_id']]
-                    
-                    if validated_data.get('division_id') and validated_data['division_id'] in divisions:
-                        quote.division = divisions[validated_data['division_id']]
-                    
-                    if validated_data.get('converted_to_job_id') and validated_data['converted_to_job_id'] in jobs:
-                        quote.converted_to_job = jobs[validated_data['converted_to_job_id']]
-                    
-                    quote.save()
-                    
-                except Exception as e:
-                    stats['errors'] += 1
-                    logger.error(f"Error processing quote record: {e}")
-                    logger.error(f"Record data: {raw_record}")
-        
-        return {
-            'success': True,
-            'sync_id': None,  # Add sync record ID when implemented  
-            'stats': {
-                'processed': stats['total_processed'],
-                'created': stats['created'],
-                'updated': stats['updated'],
-                'errors': stats['errors'],
-                'skipped': stats['skipped']
-            }
+        stats = {
+            'total_processed': len(quotes),
+            'created': 0,
+            'updated': 0,
+            'errors': 0
         }
+        
+        if not quotes:
+            return stats
+        
+        # Process quotes in smaller batches for bulk operations
+        batch_size = 500
+        logger.info(f"Processing {len(quotes)} quotes in {(len(quotes) + batch_size - 1) // batch_size} batches of {batch_size}")
+        
+        for i in range(0, len(quotes), batch_size):
+            batch = quotes[i:i + batch_size]
+            batch_num = i // batch_size + 1
+            total_batches = (len(quotes) + batch_size - 1) // batch_size
+            
+            logger.info(f"Processing batch {batch_num}/{total_batches}: records {i + 1}-{min(i + batch_size, len(quotes))}")
+            
+            try:
+                batch_stats = self.processor.bulk_upsert_quotes(batch, force_overwrite)
+                
+                # Update stats
+                stats['created'] += batch_stats['created']
+                stats['updated'] += batch_stats['updated']
+                stats['errors'] += batch_stats['errors']
+                
+                logger.info(f"Batch {batch_num} completed - Created: {batch_stats['created']}, Updated: {batch_stats['updated']}, Total so far: {stats['created']} created, {stats['updated']} updated")
+                
+            except Exception as e:
+                logger.error(f"Error processing batch {batch_num}: {e}")
+                stats['errors'] += len(batch)
+        
+        logger.info(f"Bulk upsert completed - Created: {stats['created']}, Updated: {stats['updated']}")
+        return stats
     
-    def _should_update_quote(self, existing: Genius_Quote, new_data: Dict[str, Any]) -> bool:
-        """Check if quote should be updated based on data changes"""
-        
-        # Always update if updated_at is newer
-        if (new_data.get('updated_at') and existing.updated_at and 
-            new_data['updated_at'] > existing.updated_at):
-            return True
-        
-        # Check for actual data changes
-        fields_to_check = ['quote_number', 'quote_date', 'total_amount', 'status', 
-                          'notes', 'valid_until', 'prospect_id', 'user_id', 
-                          'division_id', 'converted_to_job_id']
-        for field in fields_to_check:
-            if field in new_data and getattr(existing, field, None) != new_data[field]:
-                return True
-        
-        return False
+    def _get_last_sync_date(self) -> Optional[datetime]:
+        """Get the last successful sync date for incremental sync"""
+        try:
+            last_sync = SyncHistory.objects.filter(
+                source='genius',
+                entity='quotes',
+                status='completed'
+            ).order_by('-sync_started_at').first()
+            
+            if last_sync:
+                logger.info(f"Last successful sync: {last_sync.sync_started_at}")
+                return last_sync.sync_started_at
+            else:
+                logger.info("No previous sync found - performing full sync")
+                return None
+        except Exception as e:
+            logger.warning(f"Error getting last sync date: {e}")
+            return None

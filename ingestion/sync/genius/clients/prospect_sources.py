@@ -19,44 +19,84 @@ class GeniusProspectSourceClient(GeniusBaseClient):
     def get_prospect_sources(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
         """Fetch prospect sources from Genius database"""
         
-        # Base query with all required fields
+        # Base query with all required fields matching the model schema
         query = """
         SELECT 
             ps.id,
-            ps.name,
-            ps.code,
-            ps.description,
+            ps.prospect_id,
             ps.marketing_source_id,
-            ps.active,
-            ps.sort_order,
-            ps.created_at,
+            ps.source_date,
+            ps.notes,
+            ps.add_user_id,
+            ps.add_date,
             ps.updated_at
         FROM prospect_source ps
         """
         
-        # Add WHERE clause for incremental sync
-        where_clause = self.build_where_clause(since_date, self.table_name)
-        if where_clause:
-            query += f" {where_clause}"
+        # Add WHERE clause for incremental sync - handle both updated_at and add_date
+        if since_date:
+            since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+            query += f" WHERE (ps.updated_at > '{since_str}' OR (ps.updated_at IS NULL AND ps.add_date > '{since_str}'))"
         
         # Add ordering and limit
-        query += " ORDER BY ps.sort_order, ps.id"
+        query += " ORDER BY ps.id"
         if limit > 0:
             query += f" LIMIT {limit}"
         
         logger.info(f"Executing query: {query}")
         return self.execute_query(query)
     
+    def get_prospect_sources_chunked(self, since_date: Optional[datetime] = None, chunk_size: int = 1000):
+        """Generator that yields chunks of prospect sources to handle large datasets efficiently"""
+        offset = 0
+        
+        while True:
+            # Base query with all required fields matching the model schema
+            query = """
+            SELECT 
+                ps.id,
+                ps.prospect_id,
+                ps.marketing_source_id,
+                ps.source_date,
+                ps.notes,
+                ps.add_user_id,
+                ps.add_date,
+                ps.updated_at
+            FROM prospect_source ps
+            """
+            
+            # Add WHERE clause for incremental sync - handle both updated_at and add_date
+            if since_date:
+                since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+                query += f" WHERE (ps.updated_at > '{since_str}' OR (ps.updated_at IS NULL AND ps.add_date > '{since_str}'))"
+            
+            # Add ordering and pagination
+            query += f" ORDER BY ps.id LIMIT {chunk_size} OFFSET {offset}"
+            
+            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {chunk_size}): {query}")
+            chunk_results = self.execute_query(query)
+            
+            if not chunk_results:
+                # No more records, break the loop
+                break
+            
+            yield chunk_results
+            
+            # If we got less than chunk_size records, we've reached the end
+            if len(chunk_results) < chunk_size:
+                break
+            
+            offset += chunk_size
+    
     def get_field_mapping(self) -> List[str]:
-        """Get field mapping for transformation"""
+        """Get field mapping for transformation matching the model schema"""
         return [
             'id',
-            'name',
-            'code',
-            'description',
+            'prospect_id',
             'marketing_source_id',
-            'active',
-            'sort_order',
-            'created_at',
+            'source_date',
+            'notes',
+            'add_user_id',
+            'add_date',
             'updated_at'
         ]

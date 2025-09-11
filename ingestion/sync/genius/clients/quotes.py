@@ -1,16 +1,17 @@
 """
 Quote client for Genius CRM database access
+Following CRM sync guide with chunked processing support
 """
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, List
 from datetime import datetime
 from .base import GeniusBaseClient
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('quotes')
 
 
 class GeniusQuoteClient(GeniusBaseClient):
-    """Client for accessing Genius CRM quote data"""
+    """Client for accessing Genius CRM quote data with chunked processing"""
     
     def __init__(self):
         super().__init__()
@@ -19,24 +20,7 @@ class GeniusQuoteClient(GeniusBaseClient):
     def get_quotes(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
         """Fetch quotes from Genius database"""
         
-        # Base query with all required fields
-        query = """
-        SELECT 
-            q.id,
-            q.prospect_id,
-            q.add_user_id as user_id,
-            q.appointment_id as division_id,
-            q.id as quote_number,
-            q.add_date as quote_date,
-            q.amount as total_amount,
-            q.status_id as status,
-            q.description as notes,
-            q.expire_date as valid_until,
-            q.job_id as converted_to_job_id,
-            q.add_date as created_at,
-            q.updated_at
-        FROM quote q
-        """
+        query = self._get_base_query()
         
         # Add WHERE clause for incremental sync
         where_clause = self.build_where_clause(since_date, self.table_name)
@@ -51,20 +35,47 @@ class GeniusQuoteClient(GeniusBaseClient):
         logger.info(f"Executing query: {query}")
         return self.execute_query(query)
     
-    def get_field_mapping(self) -> List[str]:
-        """Get field mapping for transformation"""
-        return [
-            'id',
-            'prospect_id',
-            'user_id',
-            'division_id',
-            'quote_number',
-            'quote_date',
-            'total_amount',
-            'status',
-            'notes',
-            'valid_until',
-            'converted_to_job_id',
-            'created_at',
-            'updated_at'
-        ]
+    def get_chunked_quotes(self, since_date: Optional[datetime] = None, offset: int = 0, chunk_size: int = 100000) -> List[tuple]:
+        """Fetch chunked quotes for large dataset processing"""
+        
+        query = self.get_chunked_query(since_date, offset, chunk_size)
+        logger.info(query)
+        return self.execute_query(query)
+    
+    def get_chunked_query(self, since_date: Optional[datetime] = None, offset: int = 0, chunk_size: int = 100000) -> str:
+        """Build chunked query for large dataset processing"""
+        
+        query = self._get_base_query()
+        
+        # Add WHERE clause for incremental sync
+        where_clause = self.build_where_clause(since_date, self.table_name)
+        if where_clause:
+            query += f" {where_clause}"
+        
+        # Add ordering and chunking
+        query += f" ORDER BY q.id LIMIT {chunk_size} OFFSET {offset}"
+        
+        return query
+    
+    def _get_base_query(self) -> str:
+        """Get the base query for quotes"""
+        return """
+            SELECT
+                q.id,
+                q.prospect_id,
+                q.appointment_id,
+                q.job_id,
+                q.client_cid,
+                q.service_id,
+                q.label,
+                q.description,
+                q.amount,
+                q.expire_date,
+                q.status_id,
+                q.contract_file_id,
+                q.estimate_file_id,
+                q.add_user_id,
+                q.add_date,
+                q.updated_at
+            FROM quote q
+        """
