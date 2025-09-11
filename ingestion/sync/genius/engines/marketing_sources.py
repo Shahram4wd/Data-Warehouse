@@ -52,7 +52,7 @@ class GeniusMarketingSourcesSyncEngine(GeniusBaseSyncEngine):
     
     async def sync_marketing_sources(self, since_date=None, force_overwrite=False, 
                         dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
-        """Main sync method for marketing sources"""
+        """Main sync method for marketing sources with chunked processing for large datasets"""
         
         logger.info(f"Starting marketing sources sync - since_date: {since_date}, "
                    f"force_overwrite: {force_overwrite}, dry_run: {dry_run}, "
@@ -68,30 +68,77 @@ class GeniusMarketingSourcesSyncEngine(GeniusBaseSyncEngine):
         }
         
         try:
-            # Get data from client
-            raw_data = await sync_to_async(self.client.get_marketing_sources)(
-                since_date=since_date,
-                limit=max_records or 0
-            )
-            
-            if not raw_data:
-                logger.info("No marketing sources data retrieved")
-                return stats
-            
-            logger.info(f"Retrieved {len(raw_data)} marketing sources")
-            stats['total_processed'] = len(raw_data)
-            
-            if dry_run:
-                logger.info(f"DRY RUN: Would process {len(raw_data)} records")
-                return stats
-            
-            # Process data
-            batch_stats = await self._process_marketing_sources_batch(
-                raw_data, self.client.get_field_mapping(), force_overwrite
-            )
-            
-            # Update stats
-            stats.update(batch_stats)
+            if max_records and max_records > 0:
+                # For limited records, use the old method (load all at once)
+                logger.info(f"Processing limited dataset: {max_records} records")
+                raw_data = await sync_to_async(self.client.get_marketing_sources)(
+                    since_date=since_date,
+                    limit=max_records
+                )
+                
+                if not raw_data:
+                    logger.info("No marketing sources data retrieved")
+                    return stats
+                
+                logger.info(f"Retrieved {len(raw_data)} marketing sources")
+                
+                if dry_run:
+                    logger.info(f"DRY RUN: Would process {len(raw_data)} records")
+                    stats['total_processed'] = len(raw_data)
+                    return stats
+                
+                stats['total_processed'] = len(raw_data)
+                
+                # Process data using existing batch method
+                batch_stats = await self._process_marketing_sources_batch(
+                    raw_data, self.client.get_field_mapping(), force_overwrite
+                )
+                
+                # Update stats
+                stats.update(batch_stats)
+                
+            else:
+                # For full sync (no max_records), use chunked processing to avoid memory issues
+                logger.info(f"Starting chunked processing for full sync")
+                
+                if dry_run:
+                    logger.info("DRY RUN: Would process all records using chunked processing")
+                    # For dry run, just count first chunk
+                    first_chunk = next(self.client.get_marketing_sources_chunked(since_date=since_date, chunk_size=100), [])
+                    stats['total_processed'] = len(first_chunk) if first_chunk else 0
+                    return stats
+                
+                chunk_num = 0
+                total_processed = 0
+                
+                # Process each chunk separately to avoid loading everything into memory
+                for chunk_data in self.client.get_marketing_sources_chunked(
+                    since_date=since_date, 
+                    chunk_size=self.DEFAULT_CHUNK_SIZE
+                ):
+                    if not chunk_data:
+                        break
+                    
+                    chunk_num += 1
+                    chunk_size_actual = len(chunk_data)
+                    total_processed += chunk_size_actual
+                    
+                    logger.info(f"Processing chunk {chunk_num}: {chunk_size_actual} records "
+                              f"(total processed so far: {total_processed})")
+                    
+                    # Process this chunk
+                    chunk_stats = await self._process_marketing_sources_batch(
+                        chunk_data, self.client.get_field_mapping(), force_overwrite
+                    )
+                    
+                    # Update running totals
+                    stats['created'] += chunk_stats['created']
+                    stats['updated'] += chunk_stats['updated']
+                    stats['total_processed'] = total_processed
+                    
+                    logger.info(f"Chunk {chunk_num} completed - Created: {chunk_stats['created']}, "
+                              f"Updated: {chunk_stats['updated']}, "
+                              f"Running totals: {stats['created']} created, {stats['updated']} updated")
             
         except Exception as e:
             logger.error(f"Error in sync_marketing_sources: {e}")
@@ -139,8 +186,14 @@ class GeniusMarketingSourcesSyncEngine(GeniusBaseSyncEngine):
             with transaction.atomic():
                 # Process in batches
                 batch_size = self.BATCH_SIZE
+                total_batches = (len(validated_records) + batch_size - 1) // batch_size
+                logger.info(f"Processing {len(validated_records)} marketing sources in {total_batches} batches of {batch_size}")
+                
                 for i in range(0, len(validated_records), batch_size):
+                    batch_num = (i // batch_size) + 1
                     batch = validated_records[i:i + batch_size]
+                    
+                    logger.info(f"Processing batch {batch_num}/{total_batches}: records {i+1}-{min(i+batch_size, len(validated_records))}")
                     
                     # Prepare model instances
                     marketing_source_instances = []
@@ -166,8 +219,9 @@ class GeniusMarketingSourcesSyncEngine(GeniusBaseSyncEngine):
                     stats['created'] += batch_created
                     stats['updated'] += len(batch) - batch_created
                     
-                    logger.info(f"Bulk upsert completed - Created: {batch_created}, "
-                              f"Updated: {len(batch) - batch_created}")
+                    logger.info(f"Batch {batch_num} completed - Created: {batch_created}, "
+                              f"Updated: {len(batch) - batch_created}, "
+                              f"Total so far: {stats['created']} created, {stats['updated']} updated")
                 
         except Exception as e:
             logger.error(f"Error in bulk upsert: {e}")

@@ -23,6 +23,10 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
         super().__init__('marketing_source_types')
         self.client = GeniusMarketingSourceTypeClient()
         self.processor = GeniusMarketingSourceTypeProcessor(Genius_MarketingSourceType)
+        
+        # Configuration constants (no separate config class needed)
+        self.DEFAULT_CHUNK_SIZE = 1000
+        self.BATCH_SIZE = 500
     
     async def execute_sync(self, 
                           full: bool = False,
@@ -47,7 +51,7 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
     
     async def sync_marketing_source_types(self, since_date=None, force_overwrite=False, 
                         dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
-        """Main sync method for marketing source types"""
+        """Main sync method for marketing source types with chunked processing for large datasets"""
         
         logger.info(f"Starting marketing source types sync - since_date: {since_date}, "
                    f"force_overwrite: {force_overwrite}, dry_run: {dry_run}, "
@@ -63,30 +67,74 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
         }
         
         try:
-            # Get data from client
-            if max_records:
+            if max_records and max_records > 0:
+                # For limited records, use the old method (load all at once)
+                logger.info(f"Processing limited dataset: {max_records} records")
                 raw_data = self.client.get_marketing_source_types(since_date, max_records)
+                
+                if not raw_data:
+                    logger.info("No marketing source types data to process")
+                    return stats
+                
+                logger.info(f"Retrieved {len(raw_data)} marketing source types")
+                
+                if dry_run:
+                    logger.info("DRY RUN: Would process marketing source types data")
+                    stats['total_processed'] = len(raw_data)
+                    return stats
+                
+                stats['total_processed'] = len(raw_data)
+                
+                # Process data using existing batch method
+                batch_stats = await self._process_marketing_source_type_batch(
+                    raw_data, self.client.get_field_mapping(), force_overwrite
+                )
+                
+                # Update stats
+                stats.update(batch_stats)
+                
             else:
-                raw_data = self.client.get_marketing_source_types(since_date)
-            
-            if not raw_data:
-                logger.info("No marketing source types data to process")
-                return stats
-            
-            logger.info(f"Retrieved {len(raw_data)} marketing source types")
-            stats['total_processed'] = len(raw_data)
-            
-            if dry_run:
-                logger.info("DRY RUN: Would process marketing source types data")
-                return stats
-            
-            # Process data
-            batch_stats = await self._process_marketing_source_type_batch(
-                raw_data, self.client.get_field_mapping(), force_overwrite
-            )
-            
-            # Update stats
-            stats.update(batch_stats)
+                # For full sync (no max_records), use chunked processing to avoid memory issues
+                logger.info(f"Starting chunked processing for full sync")
+                
+                if dry_run:
+                    logger.info("DRY RUN: Would process all records using chunked processing")
+                    # For dry run, just count first chunk
+                    first_chunk = next(self.client.get_marketing_source_types_chunked(since_date=since_date, chunk_size=100), [])
+                    stats['total_processed'] = len(first_chunk) if first_chunk else 0
+                    return stats
+                
+                chunk_num = 0
+                total_processed = 0
+                
+                # Process each chunk separately to avoid loading everything into memory
+                for chunk_data in self.client.get_marketing_source_types_chunked(
+                    since_date=since_date, 
+                    chunk_size=self.DEFAULT_CHUNK_SIZE
+                ):
+                    if not chunk_data:
+                        break
+                    
+                    chunk_num += 1
+                    chunk_size_actual = len(chunk_data)
+                    total_processed += chunk_size_actual
+                    
+                    logger.info(f"Processing chunk {chunk_num}: {chunk_size_actual} records "
+                              f"(total processed so far: {total_processed})")
+                    
+                    # Process this chunk
+                    chunk_stats = await self._process_marketing_source_type_batch(
+                        chunk_data, self.client.get_field_mapping(), force_overwrite
+                    )
+                    
+                    # Update running totals
+                    stats['created'] += chunk_stats['created']
+                    stats['updated'] += chunk_stats['updated']
+                    stats['total_processed'] = total_processed
+                    
+                    logger.info(f"Chunk {chunk_num} completed - Created: {chunk_stats['created']}, "
+                              f"Updated: {chunk_stats['updated']}, "
+                              f"Running totals: {stats['created']} created, {stats['updated']} updated")
             
         except Exception as e:
             logger.error(f"Marketing source types sync failed: {str(e)}")
@@ -130,50 +178,62 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
             return stats
         
         try:
-            # Prepare objects for bulk_create
-            source_types_to_create = []
-            
-            for record_data in validated_records:
-                # Handle NULL updated_at with current timestamp workaround
-                if record_data.get('updated_at') is None:
-                    record_data['updated_at'] = timezone.now()
-                
-                try:
-                    source_type_obj = Genius_MarketingSourceType(**record_data)
-                    source_types_to_create.append(source_type_obj)
-                except Exception as e:
-                    logger.error(f"Error creating MarketingSourceType object for id {record_data.get('id')}: {e}")
-                    continue
-            
-            if not source_types_to_create:
-                logger.warning("No valid MarketingSourceType objects to process")
-                return stats
-            
-            # Perform bulk upsert using bulk_create with update_conflicts
-            if force_overwrite:
-                # Force mode: update all fields
-                update_fields = ['label', 'description', 'is_active', 'list_order',
-                               'created_at', 'updated_at', 'sync_updated_at']
-            else:
-                # Normal mode: update selective fields
-                update_fields = ['updated_at', 'sync_updated_at', 'label', 'description', 
-                               'is_active', 'list_order', 'created_at']
-            
-            # Use bulk_create with update_conflicts for efficient upsert
             with transaction.atomic():
-                results = Genius_MarketingSourceType.objects.bulk_create(
-                    source_types_to_create,
-                    update_conflicts=True,
-                    update_fields=update_fields,
-                    unique_fields=['id']
-                )
+                # Process in batches
+                batch_size = self.BATCH_SIZE
+                total_batches = (len(validated_records) + batch_size - 1) // batch_size
+                logger.info(f"Processing {len(validated_records)} marketing source types in {total_batches} batches of {batch_size}")
                 
-                # Count creates vs updates (bulk_create returns created objects)
-                stats['created'] = len([r for r in results if r._state.adding])
-                stats['updated'] = len(results) - stats['created']
-                
-                logger.info(f"Bulk upsert completed - Created: {stats['created']}, Updated: {stats['updated']}")
-                
+                for i in range(0, len(validated_records), batch_size):
+                    batch_num = (i // batch_size) + 1
+                    batch = validated_records[i:i + batch_size]
+                    
+                    logger.info(f"Processing batch {batch_num}/{total_batches}: records {i+1}-{min(i+batch_size, len(validated_records))}")
+                    
+                    # Prepare model instances for this batch
+                    source_type_instances = []
+                    for record_data in batch:
+                        # Handle NULL updated_at with current timestamp workaround
+                        if record_data.get('updated_at') is None:
+                            record_data['updated_at'] = timezone.now()
+                        
+                        try:
+                            source_type_instances.append(Genius_MarketingSourceType(**record_data))
+                        except Exception as e:
+                            logger.error(f"Error creating MarketingSourceType object for id {record_data.get('id')}: {e}")
+                            continue
+                    
+                    if not source_type_instances:
+                        logger.warning(f"No valid MarketingSourceType objects in batch {batch_num}")
+                        continue
+                    
+                    # Perform bulk upsert for this batch
+                    if force_overwrite:
+                        # Force mode: update all fields
+                        update_fields = ['label', 'description', 'is_active', 'list_order',
+                                       'created_at', 'updated_at', 'sync_updated_at']
+                    else:
+                        # Normal mode: update selective fields
+                        update_fields = ['updated_at', 'sync_updated_at', 'label', 'description', 
+                                       'is_active', 'list_order', 'created_at']
+                    
+                    # Bulk create with conflict resolution
+                    created_source_types = Genius_MarketingSourceType.objects.bulk_create(
+                        source_type_instances,
+                        update_conflicts=True,
+                        update_fields=update_fields,
+                        unique_fields=['id']
+                    )
+                    
+                    # Count results
+                    batch_created = sum(1 for st in created_source_types if st._state.adding)
+                    stats['created'] += batch_created
+                    stats['updated'] += len(source_type_instances) - batch_created
+                    
+                    logger.info(f"Batch {batch_num} completed - Created: {batch_created}, "
+                              f"Updated: {len(source_type_instances) - batch_created}, "
+                              f"Total so far: {stats['created']} created, {stats['updated']} updated")
+                              
         except Exception as e:
             logger.error(f"Error in bulk_upsert_records: {e}")
             raise

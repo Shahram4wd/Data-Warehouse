@@ -16,6 +16,13 @@ class GeniusLeadProcessor(GeniusBaseProcessor):
     
     def __init__(self, model_class):
         super().__init__(model_class)
+        
+        # Track validation issues for summary logging
+        self.validation_stats = {
+            'missing_names': 0,
+            'missing_contact_info': 0,
+            'processed_count': 0
+        }
     
     def validate_record(self, record_data: tuple, field_mapping: List[str]) -> Dict[str, Any]:
         """Validate and clean lead record data"""
@@ -55,15 +62,44 @@ class GeniusLeadProcessor(GeniusBaseProcessor):
                 logger.warning("Skipping record with missing lead_id")
                 return None
             
-            # Validate at least some name info exists
+            # Track validation issues for batch summary (don't log individual warnings)
+            self.validation_stats['processed_count'] += 1
+            
             if not processed.get('first_name') and not processed.get('last_name'):
-                logger.warning(f"Lead {processed['lead_id']} has no first or last name")
+                self.validation_stats['missing_names'] += 1
+                # Only log a debug message for the first few occurrences
+                if self.validation_stats['missing_names'] <= 5:
+                    logger.debug(f"Lead {processed['lead_id']} has no first or last name")
+            
+            if not processed.get('email') and not processed.get('phone1'):
+                self.validation_stats['missing_contact_info'] += 1
+                if self.validation_stats['missing_contact_info'] <= 5:
+                    logger.debug(f"Lead {processed['lead_id']} has no email or phone")
             
             return processed
             
         except Exception as e:
             logger.error(f"Error processing lead record: {e}")
             return None
+    
+    def log_validation_summary(self):
+        """Log a summary of validation issues instead of individual warnings"""
+        if self.validation_stats['processed_count'] > 0:
+            logger.info(f"Lead validation summary:")
+            logger.info(f"  • Processed: {self.validation_stats['processed_count']} records")
+            
+            if self.validation_stats['missing_names'] > 0:
+                logger.info(f"  • Missing names: {self.validation_stats['missing_names']} records ({self.validation_stats['missing_names']/self.validation_stats['processed_count']*100:.1f}%)")
+            
+            if self.validation_stats['missing_contact_info'] > 0:
+                logger.info(f"  • Missing contact info: {self.validation_stats['missing_contact_info']} records ({self.validation_stats['missing_contact_info']/self.validation_stats['processed_count']*100:.1f}%)")
+        
+        # Reset stats for next batch
+        self.validation_stats = {
+            'missing_names': 0,
+            'missing_contact_info': 0,
+            'processed_count': 0
+        }
     
     def _convert_to_string(self, value: Any) -> str:
         """Convert value to string or None"""
