@@ -1,8 +1,7 @@
 """
-Django management command for syncing Genius jobs using the new sync engine architecture.
-This command follows the CRM sync guide patterns for consistent data synchronization.
+Django management command for syncing Genius jobs following CRM sync guide patterns.
+Supports both --full and --force flags with distinct behaviors.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -94,105 +93,39 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Main command handler"""
-        
-        # Set up logging
         if options['debug']:
             logging.getLogger().setLevel(logging.DEBUG)
             self.stdout.write("🐛 DEBUG MODE - Verbose logging enabled")
-        
-        # Handle dry run
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
+        if options.get('full'):
+            self.stdout.write("📂 FULL SYNC MODE - Ignoring last sync timestamp (fetches ALL records)")
+        if options.get('force'):
+            self.stdout.write("🔄 FORCE MODE - Existing records will be completely replaced")
         
-        # Handle force flag for overwrite mode
-        force_mode = options.get('force', False)
-        if force_mode:
-            self.stdout.write("🔄 Force overwrite mode enabled - existing records will be completely replaced")
-        
-        # Parse datetime arguments
-        since = self.parse_datetime_arg(options.get('since'))
-        start_date = self.parse_datetime_arg(options.get('start_date'))
-        end_date = self.parse_datetime_arg(options.get('end_date'))
-        
-        # Validate date range
-        if start_date and end_date and start_date > end_date:
-            raise ValueError("Start date cannot be after end date")
-        
-        # Execute sync
-        try:
-            result = asyncio.run(self.execute_async_sync(
-                full=options.get('full', False),
-                force=force_mode,
-                since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options.get('max_records'),
-                dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
-            ))
+        since_date = self.parse_datetime_arg(options.get('since'))
+        if options.get('full'):
+            since_date = None
             
-            # Display results
-            stats = result['stats']
+        try:
+            engine = GeniusJobSyncEngine()
+            result = engine.sync_jobs(
+                since_date=since_date,
+                force_overwrite=options.get('force', False),
+                dry_run=options.get('dry_run', False),
+                max_records=options.get('max_records')
+            )
+            
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   📊 Total Processed: {result['total_processed']} records")
+            self.stdout.write(f"   ➕ Created: {result['created']} records")
+            self.stdout.write(f"   📝 Updated: {result['updated']} records")
+            self.stdout.write(f"   ❌ Errors: {result['errors']} records")
             
         except Exception as e:
             logger.exception("Genius jobs sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
-            raise
-
-    async def execute_async_sync(self, full=False, force=False, since=None, start_date=None, 
-                                end_date=None, max_records=None, dry_run=False, 
-                                debug=False, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusJobSyncEngine()
-        
-        # Prepare sync parameters
-        sync_params = {
-            'since_date': None if full else (since or start_date),  # --full ignores since timestamp
-            'force_overwrite': kwargs.get('force', False),  # --force enables complete overwrite
-            'dry_run': dry_run,
-            'max_records': max_records or 0,
-        }
-        
-        # Create sync history record
-        sync_record = await engine.create_sync_record(
-            configuration={
-                'full': full,
-                'force': kwargs.get('force', False),
-                'since': since.isoformat() if since else None,
-                'start_date': start_date.isoformat() if start_date else None,
-                'end_date': end_date.isoformat() if end_date else None,
-                'max_records': max_records,
-                'dry_run': dry_run
-            }
-        )
-        
-        try:
-            # Execute the sync
-            stats = await engine.sync_jobs(**sync_params)
-            
-            # Complete sync history with success
-            await engine.complete_sync_record(sync_record, stats)
-            
-            return {
-                'stats': {
-                    'processed': stats.get('total_processed', 0),
-                    'created': stats.get('created', 0),
-                    'updated': stats.get('updated', 0),
-                    'errors': stats.get('errors', 0)
-                },
-                'sync_id': sync_record.id
-            }
-            
-        except Exception as e:
-            # Complete sync history with failure
-            await engine.complete_sync_record(sync_record, {}, error_message=str(e))
             raise
 

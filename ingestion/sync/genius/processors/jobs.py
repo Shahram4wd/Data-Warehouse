@@ -67,3 +67,65 @@ class GeniusJobProcessor(GeniusBaseProcessor):
             record['job_number'] = str(record['job_number']).strip()
         
         return record
+
+    def process_batch(self, batch_data: List[tuple], field_mapping: Dict[str, int], 
+                     force_overwrite: bool = False, dry_run: bool = False) -> Dict[str, Any]:
+        """Process a batch of jobs data using bulk operations"""
+        if not batch_data:
+            return {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+        
+        if dry_run:
+            logger.info(f"DRY RUN: Would process {len(batch_data)} job records")
+            return {'total_processed': len(batch_data), 'created': len(batch_data), 'updated': 0, 'errors': 0}
+        
+        # Transform raw data to model instances
+        records_to_create = []
+        processed_ids = []
+        
+        for raw_record in batch_data:
+            try:
+                # Transform using field mapping (dict format)
+                record_dict = {}
+                for field_name, column_index in field_mapping.items():
+                    if column_index < len(raw_record):
+                        record_dict[field_name] = raw_record[column_index]
+                
+                # Validate and clean the record
+                validated_record = self.validate_record(record_dict)
+                
+                # Create model instance
+                records_to_create.append(self.model_class(**validated_record))
+                processed_ids.append(validated_record['id'])
+                
+            except Exception as e:
+                logger.error(f"Error processing job record {raw_record}: {e}")
+                continue
+        
+        if not records_to_create:
+            return {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': len(batch_data)}
+        
+        try:
+            # Use bulk_create with update_conflicts for efficient upsert
+            created_records = self.model_class.objects.bulk_create(
+                records_to_create,
+                update_conflicts=True,
+                unique_fields=['id'],
+                update_fields=[
+                    'prospect_id', 'division_id', 'status', 'contract_amount',
+                    'start_date', 'end_date', 'add_user_id', 'add_date', 
+                    'updated_at', 'service_id'
+                ]
+            )
+            
+            stats = {
+                'total_processed': len(batch_data),
+                'created': len(created_records),
+                'updated': 0,  # bulk_create doesn't distinguish between created and updated
+                'errors': len(batch_data) - len(records_to_create)
+            }
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error in bulk_create for jobs: {e}")
+            return {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': len(batch_data)}

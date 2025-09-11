@@ -1,198 +1,154 @@
 """
-Job sync engine for Genius CRM
+Jobs sync engine for Genius CRM data synchronization
 """
 import logging
-from typing import Dict, Any, List
-from asgiref.sync import sync_to_async
-from django.db import transaction
-from django.utils import timezone
+from typing import Dict, Any, Optional
+from datetime import datetime
 
-from .base import GeniusBaseSyncEngine
 from ..clients.jobs import GeniusJobClient
 from ..processors.jobs import GeniusJobProcessor
-from ingestion.models import Genius_Job
 
 logger = logging.getLogger(__name__)
 
-
-class GeniusJobSyncEngine(GeniusBaseSyncEngine):
-    """Sync engine for Genius job data"""
+class GeniusJobSyncEngine:
+    """Sync engine for Genius jobs data with chunked processing"""
     
     def __init__(self):
-        super().__init__('jobs')
+        # Import model here to avoid circular imports
+        from ingestion.models import Genius_Job
+        
         self.client = GeniusJobClient()
         self.processor = GeniusJobProcessor(Genius_Job)
+        self.chunk_size = 100000  # 100K records per chunk
+        self.batch_size = 500     # 500 records per batch
     
-    async def sync_jobs(self, since_date=None, force_overwrite=False, 
-                       dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
-        """Main sync method for jobs"""
+    def sync_jobs(self, since_date: Optional[datetime] = None, 
+                 force_overwrite: bool = False, 
+                 dry_run: bool = False,
+                 max_records: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Sync jobs data with chunked processing
         
-        stats = {
-            'total_processed': 0,
-            'created': 0,
-            'updated': 0,
-            'errors': 0,
-            'skipped': 0
-        }
+        Args:
+            since_date: Optional datetime to sync from (for delta updates)
+            force_overwrite: Whether to force overwrite existing records
+            dry_run: Whether to perform a dry run without database changes
+            max_records: Maximum number of records to process (for testing)
+            
+        Returns:
+            Dictionary containing sync statistics
+        """
+        logger.info(f"Starting jobs sync - since_date: {since_date}, force_overwrite: {force_overwrite}, "
+                   f"dry_run: {dry_run}, max_records: {max_records}")
         
-        try:
-            # Get jobs from source
-            raw_data = await sync_to_async(self.client.get_jobs)(
-                since_date=since_date,
-                limit=max_records
-            )
+        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+        
+        if max_records and max_records <= 10000:
+            # For smaller datasets, use direct processing
+            logger.info(f"Processing limited dataset: {max_records} records")
+            jobs_data = self.client.get_jobs(since_date=since_date, limit=max_records)
+            stats = self._process_jobs_batch(jobs_data, force_overwrite, dry_run, stats)
+        else:
+            # For larger datasets, use chunked processing
+            stats = self._sync_chunked_jobs(since_date, force_overwrite, dry_run, max_records, stats)
+        
+        logger.info(f"Jobs sync completed - Stats: {stats}")
+        return stats
+    
+    def _sync_chunked_jobs(self, since_date: Optional[datetime], force_overwrite: bool, 
+                          dry_run: bool, max_records: Optional[int], 
+                          stats: Dict[str, Any]) -> Dict[str, Any]:
+        """Process jobs data in chunks for large datasets"""
+        
+        offset = 0
+        total_processed = 0
+        
+        while True:
+            # Apply max_records limit to chunk size if specified
+            current_chunk_size = self.chunk_size
+            if max_records:
+                remaining = max_records - total_processed
+                if remaining <= 0:
+                    break
+                current_chunk_size = min(self.chunk_size, remaining)
             
-            logger.info(f"Fetched {len(raw_data)} jobs from Genius")
+            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {current_chunk_size})")
             
-            if dry_run:
-                logger.info("DRY RUN: Would process jobs but making no changes")
-                stats['total_processed'] = len(raw_data)
-                return stats
+            # Get chunked query for logging
+            query = self.client.get_chunked_query(offset, current_chunk_size, since_date)
+            logger.info(query)
             
-            # Process jobs in batches
-            batch_size = 100
-            field_mapping = self.client.get_field_mapping()
+            # Fetch chunk data
+            chunk_data = self.client.get_chunked_jobs(offset, current_chunk_size, since_date)
             
-            for i in range(0, len(raw_data), batch_size):
-                batch = raw_data[i:i + batch_size]
-                batch_stats = await self._process_job_batch(
-                    batch, field_mapping, force_overwrite
-                )
+            if not chunk_data:
+                logger.info("No more data to process")
+                break
                 
-                # Update overall stats
-                for key in stats:
-                    stats[key] += batch_stats[key]
-                
-                logger.info(f"Processed batch {i//batch_size + 1}: "
-                          f"{batch_stats['created']} created, "
-                          f"{batch_stats['updated']} updated, "
-                          f"{batch_stats['errors']} errors")
+            logger.info(f"Processing chunk {(offset // self.chunk_size) + 1}: "
+                       f"{len(chunk_data)} records (total processed so far: {total_processed + len(chunk_data)})")
             
-            logger.info(f"Job sync completed. Total stats: {stats}")
+            # Process this chunk
+            chunk_stats = self._process_jobs_batch(chunk_data, force_overwrite, dry_run, stats)
+            
+            # Update running totals
+            for key in ['total_processed', 'created', 'updated', 'errors']:
+                stats[key] = chunk_stats[key]
+            
+            total_processed = stats['total_processed']
+            
+            logger.info(f"Chunk {(offset // self.chunk_size) + 1} completed - "
+                       f"Created: {chunk_stats['created'] - (stats['created'] - len([r for r in chunk_data if r]))}, "
+                       f"Updated: {chunk_stats['updated'] - (stats['updated'] - len([r for r in chunk_data if r]))}, "
+                       f"Running totals: {stats['created']} created, {stats['updated']} updated")
+            
+            # Move to next chunk
+            offset += current_chunk_size
+            
+            # Break if we got less data than requested (end of data)
+            if len(chunk_data) < current_chunk_size:
+                break
+        
+        return stats
+    
+    def _process_jobs_batch(self, jobs_data: list, force_overwrite: bool, 
+                           dry_run: bool, stats: Dict[str, Any]) -> Dict[str, Any]:
+        """Process a batch of jobs data using bulk operations"""
+        
+        if not jobs_data:
             return stats
             
-        except Exception as e:
-            logger.error(f"Job sync failed: {str(e)}")
-            raise
+        field_mapping = self.client.get_field_mapping()
         
-        finally:
-            self.client.disconnect()
-    
-    @sync_to_async
-    def _process_job_batch(self, batch: List[tuple], field_mapping: List[str], 
-                          force_overwrite: bool = False) -> Dict[str, int]:
-        """Process a batch of job records"""
+        # Process in smaller batches for efficiency
+        batch_count = (len(jobs_data) + self.batch_size - 1) // self.batch_size
+        logger.info(f"Processing {len(jobs_data)} jobs in {batch_count} batches of {self.batch_size}")
         
-        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
-        
-        # Prepare data for bulk operations
-        validated_records = []
-        
-        # First pass: transform and validate all records
-        for raw_record in batch:
+        for i in range(0, len(jobs_data), self.batch_size):
+            batch_num = (i // self.batch_size) + 1
+            batch_data = jobs_data[i:i + self.batch_size]
+            
+            logger.info(f"Processing batch {batch_num}/{batch_count}: records {i+1}-{min(i+self.batch_size, len(jobs_data))}")
+            
             try:
-                stats['total_processed'] += 1
+                # Process batch through processor
+                batch_stats = self.processor.process_batch(
+                    batch_data, 
+                    field_mapping, 
+                    force_overwrite=force_overwrite,
+                    dry_run=dry_run
+                )
                 
-                # Transform raw data to dict
-                record_data = self.processor.transform_record(raw_record, field_mapping)
+                # Update cumulative stats
+                for key, value in batch_stats.items():
+                    stats[key] += value
                 
-                # Validate the record
-                validated_record = self.processor.validate_record(record_data)
-                
-                validated_records.append(validated_record)
+                logger.info(f"Batch {batch_num} completed - Created: {batch_stats['created']}, "
+                           f"Updated: {batch_stats['updated']}, Total so far: {stats['created']} created, "
+                           f"{stats['updated']} updated")
                 
             except Exception as e:
-                logger.error(f"Error processing job record {raw_record}: {e}")
-                stats['errors'] += 1
-                continue
-        
-        if validated_records:
-            # Perform bulk upsert
-            upsert_stats = self._bulk_upsert_records(validated_records, force_overwrite)
-            stats['created'] += upsert_stats['created']
-            stats['updated'] += upsert_stats['updated']
+                logger.error(f"Error processing batch {batch_num}: {e}")
+                stats['errors'] += len(batch_data)
         
         return stats
-    
-    def _bulk_upsert_records(self, validated_records: List[dict], force_overwrite: bool) -> Dict[str, int]:
-        """Perform bulk upsert of job records"""
-        stats = {'created': 0, 'updated': 0}
-        
-        if not validated_records:
-            return stats
-        
-        # Get existing records using 'id' field (not 'genius_id')
-        record_ids = [record.get('id') for record in validated_records if record.get('id')]
-        existing_jobs = {
-            job.id: job 
-            for job in Genius_Job.objects.filter(id__in=record_ids)
-        }
-        
-        # Prepare records for bulk operations
-        records_to_create = []
-        records_to_update = []
-        
-        for record in validated_records:
-            record_id = record.get('id')
-            if not record_id:
-                logger.warning("Skipping record without id")
-                continue
-            
-            if record_id in existing_jobs:
-                # Existing record - check if update needed
-                existing_job = existing_jobs[record_id]
-                if force_overwrite or self._should_update_job(existing_job, record):
-                    # Update the existing object
-                    for field, value in record.items():
-                        if hasattr(existing_job, field):
-                            setattr(existing_job, field, value)
-                    records_to_update.append(existing_job)
-            else:
-                # New record
-                records_to_create.append(Genius_Job(**record))
-        
-        # Perform bulk operations
-        with transaction.atomic():
-            # Bulk create new records
-            if records_to_create:
-                created_jobs = Genius_Job.objects.bulk_create(
-                    records_to_create,
-                    batch_size=100,
-                    ignore_conflicts=False
-                )
-                stats['created'] = len(created_jobs)
-                logger.info(f"Created {len(created_jobs)} jobs")
-            
-            # Bulk update existing records
-            if records_to_update:
-                update_fields = ['status', 'contract_amount', 'start_date', 'end_date', 
-                               'add_user_id', 'add_date', 'updated_at', 'service_id']
-                # Filter fields that exist on the model
-                valid_fields = [f for f in update_fields if hasattr(Genius_Job, f)]
-                
-                Genius_Job.objects.bulk_update(
-                    records_to_update,
-                    valid_fields,
-                    batch_size=100
-                )
-                stats['updated'] = len(records_to_update)
-                logger.info(f"Updated {len(records_to_update)} jobs")
-        
-        return stats
-
-    def _should_update_job(self, existing: Genius_Job, new_data: Dict[str, Any]) -> bool:
-        """Check if job should be updated based on data changes"""
-        
-        # Always update if updated_at is newer
-        if (new_data.get('updated_at') and existing.updated_at and 
-            new_data['updated_at'] > existing.updated_at):
-            return True
-        
-        # Check for actual data changes using correct field names
-        fields_to_check = ['status', 'contract_amount', 'start_date', 'end_date', 
-                          'prospect_id', 'division_id', 'add_user_id', 'add_date', 'service_id']
-        for field in fields_to_check:
-            if field in new_data and getattr(existing, field, None) != new_data[field]:
-                return True
-        
-        return False
