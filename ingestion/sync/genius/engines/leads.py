@@ -28,7 +28,7 @@ class GeniusLeadsSyncEngine(GeniusBaseSyncEngine):
         self.processor = GeniusLeadProcessor(Genius_Lead)
         
         # Configuration constants (no separate config class needed)
-        self.DEFAULT_CHUNK_SIZE = 1000
+        self.DEFAULT_CHUNK_SIZE = 100000
         self.BATCH_SIZE = 500
     
     async def execute_sync(self, 

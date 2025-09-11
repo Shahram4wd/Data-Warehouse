@@ -91,7 +91,7 @@ class GeniusLeadClient(GeniusBaseClient):
             # Add ordering and pagination
             query += f" ORDER BY l.lead_id LIMIT {chunk_size} OFFSET {offset}"
             
-            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {chunk_size})")
+            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {chunk_size}): {query}")
             chunk_results = self.execute_query(query)
             
             if not chunk_results:

@@ -57,6 +57,13 @@ class GeniusLeadProcessor(GeniusBaseProcessor):
                 'sync_updated_at': self.convert_timezone_aware(datetime.now()),
             }
             
+            # Ensure required datetime fields are not None - fallback to timezone.now()
+            from django.utils import timezone
+            if processed['updated_at'] is None:
+                processed['updated_at'] = timezone.now()
+            if processed['added_on'] is None:
+                processed['added_on'] = timezone.now()
+            
             # Validate required fields
             if not processed.get('lead_id'):
                 logger.warning("Skipping record with missing lead_id")
