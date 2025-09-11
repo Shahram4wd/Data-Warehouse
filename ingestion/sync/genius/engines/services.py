@@ -4,10 +4,12 @@ Services sync engine for Genius CRM data synchronization
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
+from django.utils import timezone
 
 from ..clients.services import GeniusServicesClient  
 from ..processors.services import GeniusServicesProcessor
 from ingestion.models import Genius_Service
+from ingestion.models.common import SyncHistory
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,54 @@ class GeniusServicesSyncEngine:
         self.processor = GeniusServicesProcessor(Genius_Service)
         self.chunk_size = 100000  # 100K records per chunk
         self.batch_size = 500     # 500 records per batch
+        
+        # SyncHistory configuration
+        self.crm_source = 'genius'
+        self.entity_type = 'services'
+    
+    def get_last_sync_timestamp(self, force_overwrite: bool = False) -> Optional[datetime]:
+        """Get the timestamp of the last successful sync"""
+        if force_overwrite:
+            return None
+        
+        try:
+            last_sync = SyncHistory.objects.filter(
+                crm_source=self.crm_source,
+                entity_type=self.entity_type,
+                status='completed'
+            ).order_by('-end_time').first()
+            
+            return last_sync.end_time if last_sync else None
+        except Exception as e:
+            logger.warning(f"Could not retrieve last sync timestamp: {e}")
+            return None
+    
+    def create_sync_record(self, configuration: Dict[str, Any]) -> SyncHistory:
+        """Create a new SyncHistory record"""
+        return SyncHistory.objects.create(
+            crm_source=self.crm_source,
+            entity_type=self.entity_type,
+            configuration=configuration,
+            start_time=timezone.now(),
+            status='in_progress'
+        )
+    
+    def complete_sync_record(self, sync_record: SyncHistory, stats: Dict[str, Any], 
+                           error_message: Optional[str] = None):
+        """Complete the SyncHistory record"""
+        sync_record.end_time = timezone.now()
+        sync_record.total_processed = stats.get('total_processed', 0)
+        sync_record.successful_count = stats.get('created', 0) + stats.get('updated', 0)
+        sync_record.error_count = stats.get('errors', 0)
+        sync_record.statistics = stats
+        
+        if error_message:
+            sync_record.status = 'failed'
+            sync_record.error_message = error_message
+        else:
+            sync_record.status = 'completed'
+        
+        sync_record.save()
     
     def sync_services(self, since_date: Optional[datetime] = None, 
                      force_overwrite: bool = False, 
@@ -39,19 +89,42 @@ class GeniusServicesSyncEngine:
         logger.info(f"Starting services sync - since_date: {since_date}, force_overwrite: {force_overwrite}, "
                    f"dry_run: {dry_run}, max_records: {max_records}")
         
-        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+        # Create SyncHistory record
+        configuration = {
+            'since_date': since_date.isoformat() if since_date else None,
+            'force_overwrite': force_overwrite,
+            'dry_run': dry_run,
+            'max_records': max_records
+        }
+        sync_record = self.create_sync_record(configuration)
         
-        if max_records and max_records <= 10000:
-            # For smaller datasets, use direct processing
-            logger.info(f"Processing limited dataset: {max_records} records")
-            services_data = self.client.get_services(since_date=since_date, limit=max_records)
-            stats = self._process_services_batch(services_data, force_overwrite, dry_run, stats)
-        else:
-            # For larger datasets, use chunked processing
-            stats = self._sync_chunked_services(since_date, force_overwrite, dry_run, max_records, stats)
-        
-        logger.info(f"Services sync completed - Stats: {stats}")
-        return stats
+        try:
+            stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+            
+            if max_records and max_records <= 10000:
+                # For smaller datasets, use direct processing
+                logger.info(f"Processing limited dataset: {max_records} records")
+                services_data = self.client.get_services(since_date=since_date, limit=max_records)
+                stats = self._process_services_batch(services_data, force_overwrite, dry_run, stats)
+            else:
+                # For larger datasets, use chunked processing
+                stats = self._sync_chunked_services(since_date, force_overwrite, dry_run, max_records, stats)
+            
+            logger.info(f"Services sync completed - Stats: {stats}")
+            
+            # Complete sync record with success
+            self.complete_sync_record(sync_record, stats)
+            
+            # Return stats with sync_id for compatibility
+            result = stats.copy()
+            result['sync_id'] = sync_record.id
+            return result
+            
+        except Exception as e:
+            # Complete sync record with error
+            error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}
+            self.complete_sync_record(sync_record, error_stats, error_message=str(e))
+            raise
     
     def _sync_chunked_services(self, since_date: Optional[datetime], force_overwrite: bool, 
                               dry_run: bool, max_records: Optional[int], 

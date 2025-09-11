@@ -129,11 +129,11 @@ class Command(BaseCommand):
             
             # Display results
             self.stdout.write("✅ Sync completed successfully:")
+            self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")
             self.stdout.write(f"   📊 Processed: {result['total_processed']:,} records")
             self.stdout.write(f"   ➕ Created: {result['created']:,} records")  
             self.stdout.write(f"   📝 Updated: {result['updated']:,} records")
             self.stdout.write(f"   ❌ Errors: {result['errors']:,} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: None")
             
             if result['errors'] > 0:
                 self.stdout.write(f"⚠️ Completed with {result['errors']} errors. Check logs for details.")

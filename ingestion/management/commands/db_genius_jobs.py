@@ -117,6 +117,7 @@ class Command(BaseCommand):
             )
             
             self.stdout.write("✅ Sync completed successfully:")
+            self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")
             self.stdout.write(f"   📊 Total Processed: {result['total_processed']} records")
             self.stdout.write(f"   ➕ Created: {result['created']} records")
             self.stdout.write(f"   📝 Updated: {result['updated']} records")

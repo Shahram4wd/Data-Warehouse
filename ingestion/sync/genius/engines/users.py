@@ -4,6 +4,7 @@ Genius Users Sync Engine
 import logging
 from typing import Dict, Any, Optional
 from datetime import datetime
+from django.utils import timezone
 
 from ..clients.users import GeniusUsersClient
 from ..processors.users import GeniusUsersProcessor
@@ -15,31 +16,110 @@ class GeniusUsersSyncEngine:
     """Sync engine for Genius users data with chunked processing"""
     
     def __init__(self):
-        # Import model here to avoid circular imports
+        # Import models here to avoid circular imports
         from ingestion.models import Genius_UserData
+        from ingestion.models.common import SyncHistory
         
         self.client = GeniusUsersClient()
         self.processor = GeniusUsersProcessor(Genius_UserData)
         self.chunk_size = 100000  # 100K records per chunk
         self.batch_size = 500     # 500 records per batch
+        self.crm_source = 'genius'
+        self.entity_type = 'users'
+        self.SyncHistory = SyncHistory
+
+    def get_last_sync_timestamp(self) -> Optional[datetime]:
+        """Get last successful sync timestamp from SyncHistory table"""
+        try:
+            last_sync = self.SyncHistory.objects.filter(
+                crm_source=self.crm_source,
+                sync_type=self.entity_type,
+                status__in=['success', 'completed'],
+                end_time__isnull=False
+            ).order_by('-end_time').first()
+            
+            return last_sync.end_time if last_sync else None
+        except Exception as e:
+            logger.error(f"Error getting last sync timestamp: {e}")
+            return None
+
+    def create_sync_record(self, configuration: Dict[str, Any]):
+        """Create SyncHistory record at sync start"""
+        return self.SyncHistory.objects.create(
+            crm_source=self.crm_source,
+            sync_type=self.entity_type,
+            status='running',
+            start_time=timezone.now(),
+            configuration=configuration
+        )
+
+    def complete_sync_record(self, sync_record, stats: Dict[str, int], error_message: str = None) -> None:
+        """Complete SyncHistory record with results"""
+        sync_record.end_time = timezone.now()
+        sync_record.records_processed = stats.get('total_processed', 0)
+        sync_record.records_created = stats.get('created', 0)
+        sync_record.records_updated = stats.get('updated', 0)
+        sync_record.records_failed = stats.get('errors', 0)
+        
+        if error_message:
+            sync_record.status = 'failed'
+            sync_record.error_message = error_message
+        else:
+            sync_record.status = 'success' if stats.get('errors', 0) == 0 else 'partial'
+        
+        # Calculate performance metrics
+        duration = (sync_record.end_time - sync_record.start_time).total_seconds()
+        total_processed = stats.get('total_processed', 0)
+        success_rate = ((total_processed - stats.get('errors', 0)) / total_processed) if total_processed > 0 else 0
+        
+        sync_record.performance_metrics = {
+            'duration_seconds': duration,
+            'records_per_second': total_processed / duration if duration > 0 else 0,
+            'success_rate': success_rate
+        }
+        
+        sync_record.save()
     
     def sync_users(self, since_date: Optional[datetime] = None, force_overwrite: bool = False, dry_run: bool = False, max_records: Optional[int] = None) -> Dict[str, Any]:
         """Sync users data with chunked processing"""
         logger.info(f"Starting users sync - since_date: {since_date}, force_overwrite: {force_overwrite}, dry_run: {dry_run}, max_records: {max_records}")
         
-        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+        # Create SyncHistory record
+        configuration = {
+            'since_date': since_date.isoformat() if since_date else None,
+            'force_overwrite': force_overwrite,
+            'dry_run': dry_run,
+            'max_records': max_records
+        }
+        sync_record = self.create_sync_record(configuration)
         
-        if max_records and max_records <= 10000:
-            # For smaller datasets, use direct processing
-            logger.info(f"Processing limited dataset: {max_records} records")
-            users_data = self.client.get_users(since_date=since_date, limit=max_records)
-            stats = self._process_users_batch(users_data, force_overwrite, dry_run, stats)
-        else:
-            # For larger datasets, use chunked processing
-            stats = self._sync_chunked_users(since_date, force_overwrite, dry_run, max_records, stats)
-        
-        logger.info(f"Users sync completed - Stats: {stats}")
-        return stats
+        try:
+            stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+            
+            if max_records and max_records <= 10000:
+                # For smaller datasets, use direct processing
+                logger.info(f"Processing limited dataset: {max_records} records")
+                users_data = self.client.get_users(since_date=since_date, limit=max_records)
+                stats = self._process_users_batch(users_data, force_overwrite, dry_run, stats)
+            else:
+                # For larger datasets, use chunked processing
+                stats = self._sync_chunked_users(since_date, force_overwrite, dry_run, max_records, stats)
+            
+            logger.info(f"Users sync completed - Stats: {stats}")
+            
+            # Complete sync record with success
+            self.complete_sync_record(sync_record, stats)
+            
+            # Return stats with sync_id for compatibility
+            result = stats.copy()
+            result['sync_id'] = sync_record.id
+            return result
+            
+        except Exception as e:
+            # Complete sync record with error
+            error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}
+            self.complete_sync_record(sync_record, error_stats, error_message=str(e))
+            raise
     
     def _sync_chunked_users(self, since_date: Optional[datetime], force_overwrite: bool, 
                            dry_run: bool, max_records: Optional[int], 

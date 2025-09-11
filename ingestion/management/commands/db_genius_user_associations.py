@@ -92,6 +92,7 @@ class Command(BaseCommand):
             
             # Display results
             self.stdout.write("✅ Sync completed successfully:")
+            self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")
             self.stdout.write(f"   📊 Total Processed: {result.get('total_processed', 0)} records")
             self.stdout.write(f"   ➕ Created: {result.get('created', 0)} records")
             self.stdout.write(f"   📝 Updated: {result.get('updated', 0)} records")

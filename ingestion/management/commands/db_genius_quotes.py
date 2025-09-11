@@ -124,24 +124,24 @@ class Command(BaseCommand):
         # Execute sync
         try:
             engine = GeniusQuotesSyncEngine()
-            result = engine.execute_sync(
-                full=options.get('full', False),
+            
+            # Determine since_date for sync
+            since_date = None if options.get('full') else since
+            
+            result = engine.sync_quotes(
+                since_date=since_date,
                 force_overwrite=options.get('force', False),
-                since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options.get('max_records'),
                 dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
+                max_records=options.get('max_records')
             )
             
             # Display results
             self.stdout.write("✅ Sync completed successfully:")
+            self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")
             self.stdout.write(f"   📊 Processed: {result.get('total_processed', 0):,} records")
             self.stdout.write(f"   ➕ Created: {result.get('created', 0):,} records")
             self.stdout.write(f"   📝 Updated: {result.get('updated', 0):,} records")
             self.stdout.write(f"   ❌ Errors: {result.get('errors', 0):,} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result.get('sync_history_id', 'None')}")
             
             if result.get('errors', 0) > 0:
                 self.stdout.write(self.style.WARNING(f"⚠️ Completed with {result.get('errors', 0)} errors. Check logs for details."))
