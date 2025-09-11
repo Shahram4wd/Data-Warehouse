@@ -124,3 +124,40 @@ class GeniusAppointmentsClient(GeniusBaseClient):
         if conditions:
             return "WHERE " + " AND ".join(conditions)
         return ""
+
+    def get_field_mapping(self) -> Dict[str, int]:
+        """Return field mapping for processor (field_name -> column_index)"""
+        # Based on the query SELECT fields from get_appointments()
+        return {
+            'id': 0,
+            'prospect_id': 1,
+            'prospect_source_id': 2, 
+            'user_id': 3,
+            'type_id': 4,
+            'date': 5,
+            'time': 6,
+            'duration': 7,
+            'address1': 8,
+            'address2': 9,
+            'city': 10,
+            'state': 11,
+            'zip': 12,
+            'email': 13,
+            'notes': 14,
+            'add_user_id': 15,
+            'add_date': 16,
+            'assign_date': 17,
+            'confirm_user_id': 18,
+            'confirm_date': 19,
+            'confirm_with': 20,
+            'spouses_present': 21,
+            'is_complete': 22,
+            'complete_outcome_id': 23,
+            'complete_user_id': 24,
+            'complete_date': 25,
+            'updated_at': 26,
+            'marketsharp_id': 27,
+            'marketsharp_appt_type': 28,
+            'leap_estimate_id': 29,
+            'hubspot_appointment_id': 30
+        }

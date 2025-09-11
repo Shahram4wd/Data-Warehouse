@@ -20,7 +20,7 @@ class GeniusAppointmentsSyncEngine:
         from ingestion.models import Genius_Appointment
         
         self.client = GeniusAppointmentsClient()
-        self.processor = GeniusAppointmentsProcessor(Genius_Appointment)
+        self.processor = GeniusAppointmentsProcessor()
         self.chunk_size = 100000  # 100K records per chunk
         self.batch_size = 500     # 500 records per batch
         
@@ -36,8 +36,8 @@ class GeniusAppointmentsSyncEngine:
         try:
             last_sync = SyncHistory.objects.filter(
                 crm_source=self.crm_source,
-                entity_type=self.entity_type,
-                status='completed'
+                sync_type=self.entity_type,
+                status='success'
             ).order_by('-end_time').first()
             
             return last_sync.end_time if last_sync else None
@@ -49,26 +49,27 @@ class GeniusAppointmentsSyncEngine:
         """Create a new SyncHistory record"""
         return SyncHistory.objects.create(
             crm_source=self.crm_source,
-            entity_type=self.entity_type,
+            sync_type=self.entity_type,
             configuration=configuration,
             start_time=timezone.now(),
-            status='in_progress'
+            status='running'
         )
     
     def complete_sync_record(self, sync_record: SyncHistory, stats: Dict[str, Any], 
                            error_message: Optional[str] = None):
         """Complete the SyncHistory record"""
         sync_record.end_time = timezone.now()
-        sync_record.total_processed = stats.get('total_processed', 0)
-        sync_record.successful_count = stats.get('created', 0) + stats.get('updated', 0)
-        sync_record.error_count = stats.get('errors', 0)
-        sync_record.statistics = stats
+        sync_record.records_processed = stats.get('total_processed', 0)
+        sync_record.records_created = stats.get('created', 0)
+        sync_record.records_updated = stats.get('updated', 0)
+        sync_record.records_failed = stats.get('errors', 0)
+        sync_record.performance_metrics = stats
         
         if error_message:
             sync_record.status = 'failed'
             sync_record.error_message = error_message
         else:
-            sync_record.status = 'completed'
+            sync_record.status = 'success'
         
         sync_record.save()
     
@@ -106,7 +107,7 @@ class GeniusAppointmentsSyncEngine:
             if max_records and max_records <= 10000:
                 # For smaller datasets, use direct processing
                 logger.info(f"Processing limited dataset: {max_records} records")
-                appointments_data = self.client.get_appointments(since_date=since_date, limit=max_records)
+                appointments_data = self.client.get_appointments(since=since_date, limit=max_records)
                 stats = self._process_appointments_batch(appointments_data, force_overwrite, dry_run, stats)
             else:
                 # For larger datasets, use chunked processing
@@ -133,54 +134,54 @@ class GeniusAppointmentsSyncEngine:
                                   stats: Dict[str, Any]) -> Dict[str, Any]:
         """Process appointments data in chunks for large datasets"""
         
-        offset = 0
-        total_processed = 0
+        # Get total count first
+        total_count = self.client.get_appointments_count(since=since_date)
+        logger.info(f"Total appointments to process: {total_count}")
         
-        while True:
-            # Apply max_records limit to chunk size if specified
-            current_chunk_size = self.chunk_size
-            if max_records:
-                remaining = max_records - total_processed
-                if remaining <= 0:
-                    break
-                current_chunk_size = min(self.chunk_size, remaining)
+        if max_records:
+            total_count = min(total_count, max_records)
             
-            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {current_chunk_size})")
+        # Process in chunks using limit and offset simulation
+        processed = 0
+        chunk_num = 1
+        
+        while processed < total_count:
+            # Calculate chunk size
+            current_chunk_size = min(self.chunk_size, total_count - processed)
             
-            # Get chunked query for logging
-            query = self.client.get_chunked_query(offset, current_chunk_size, since_date)
-            logger.info(query)
+            if current_chunk_size <= 0:
+                break
+                
+            logger.info(f"Processing chunk {chunk_num}: records {processed + 1} to {processed + current_chunk_size}")
             
-            # Fetch chunk data
-            chunk_data = self.client.get_chunked_appointments(offset, current_chunk_size, since_date)
+            # Fetch chunk data (the client will handle pagination internally)
+            chunk_data = self.client.get_appointments(since=since_date, limit=current_chunk_size)
             
             if not chunk_data:
                 logger.info("No more data to process")
                 break
                 
-            logger.info(f"Processing chunk {(offset // self.chunk_size) + 1}: "
-                       f"{len(chunk_data)} records (total processed so far: {total_processed + len(chunk_data)})")
+            # Skip already processed records if this isn't the first chunk
+            if processed > 0:
+                chunk_data = chunk_data[processed:]
+                
+            # Limit to current chunk size
+            chunk_data = chunk_data[:current_chunk_size]
+                
+            logger.info(f"Processing chunk {chunk_num}: {len(chunk_data)} records")
             
             # Process this chunk
             chunk_stats = self._process_appointments_batch(chunk_data, force_overwrite, dry_run, stats)
             
-            # Update running totals
-            for key in ['total_processed', 'created', 'updated', 'errors']:
-                stats[key] = chunk_stats[key]
+            # Update stats
+            stats = chunk_stats
+            processed += len(chunk_data)
+            chunk_num += 1
             
-            total_processed = stats['total_processed']
-            
-            logger.info(f"Chunk {(offset // self.chunk_size) + 1} completed - "
-                       f"Created: {chunk_stats['created'] - (stats['created'] - len([r for r in chunk_data if r]))}, "
-                       f"Updated: {chunk_stats['updated'] - (stats['updated'] - len([r for r in chunk_data if r]))}, "
-                       f"Running totals: {stats['created']} created, {stats['updated']} updated")
-            
-            # Move to next chunk
-            offset += current_chunk_size
-            
-            # Break if we got less data than requested (end of data)
-            if len(chunk_data) < current_chunk_size:
-                break
+            logger.info(f"Chunk {chunk_num - 1} completed - "
+                       f"Created: {chunk_stats.get('created', 0)}, "
+                       f"Updated: {chunk_stats.get('updated', 0)}, "
+                       f"Total processed: {processed}")
         
         return stats
     
