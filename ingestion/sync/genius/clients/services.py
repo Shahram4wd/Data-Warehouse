@@ -1,52 +1,107 @@
 """
-Genius Services Database Client
+Services client for Genius CRM database access
 """
-from typing import Dict, List, Tuple, Any, Optional
+import logging
+from typing import Optional, Dict, Any, List
+from datetime import datetime
 from .base import GeniusBaseClient
 
+logger = logging.getLogger(__name__)
 
 class GeniusServicesClient(GeniusBaseClient):
-    """Client for accessing Genius service data"""
+    """Client for accessing Genius services data with chunked processing support"""
     
     def __init__(self):
         super().__init__()
-        self.table_name = "service"
-        self.timestamp_field = "updated_at"
+        self.table_name = 'service'
+    
+    def get_field_mapping(self) -> List[str]:
+        """Return the field mapping for services table"""
+        return [
+            'id', 'label', 'is_active', 'is_lead_required', 'order_number',
+            'created_at', 'updated_at'
+        ]
+    
+    def get_services(self, since_date: Optional[datetime] = None, limit: Optional[int] = None) -> List[tuple]:
+        """Get services data for processing (legacy method for limited records)"""
         
-    def get_query(self, where_clause: str = "", limit: Optional[int] = None) -> str:
-        """Build the complete query for service data"""
-        base_query = f"""
-        SELECT 
-            id,
-            label,
-            is_active,
-            is_lead_required,
-            order_number,
-            created_at,
-            updated_at
-        FROM {self.table_name}
+        where_clause = ""
+        if since_date:
+            where_clause = f"WHERE s.updated_at >= '{since_date}'" 
+            
+        limit_clause = f"LIMIT {limit}" if limit else ""
+        
+        query = f"""
+            SELECT
+                s.id,
+                s.label,
+                s.is_active,
+                s.is_lead_required,
+                s.order_number,
+                s.created_at,
+                s.updated_at
+            FROM {self.table_name} s
+            {where_clause}
+            ORDER BY s.id
+            {limit_clause}
         """
         
-        if where_clause:
-            base_query += f" WHERE {where_clause}"
-            
-        base_query += " ORDER BY id"
-        
-        if limit:
-            base_query += f" LIMIT {limit}"
-            
-        return base_query
+        return self.execute_query(query)
     
-    def get_total_count(self, where_clause: str = "") -> int:
-        """Get total count of records matching criteria"""
-        query = f"SELECT COUNT(*) FROM {self.table_name}"
-        if where_clause:
-            query += f" WHERE {where_clause}"
+    def get_chunked_services(self, offset: int, chunk_size: int, 
+                            since_date: Optional[datetime] = None) -> List[tuple]:
+        """Get services data in chunks for large dataset processing"""
+        
+        where_clause = ""
+        if since_date:
+            where_clause = f"WHERE s.updated_at >= '{since_date}'"
             
+        query = f"""
+            SELECT
+                s.id,
+                s.label,
+                s.is_active,
+                s.is_lead_required,
+                s.order_number,
+                s.created_at,
+                s.updated_at
+            FROM {self.table_name} s
+            {where_clause}
+            ORDER BY s.id LIMIT {chunk_size} OFFSET {offset}
+        """
+        
+        return self.execute_query(query)
+    
+    def get_chunked_query(self, offset: int, chunk_size: int, 
+                         since_date: Optional[datetime] = None) -> str:
+        """Get the query string for chunked processing (for logging)"""
+        
+        where_clause = ""
+        if since_date:
+            where_clause = f" WHERE s.updated_at >= '{since_date}'"
+            
+        return f"""
+            SELECT
+                s.id,
+                s.label,
+                s.is_active,
+                s.is_lead_required,
+                s.order_number,
+                s.created_at,
+                s.updated_at
+            FROM {self.table_name} s
+            {where_clause}
+         ORDER BY s.id LIMIT {chunk_size} OFFSET {offset}
+        """
+    
+    def get_record_count(self, since_date: Optional[datetime] = None) -> int:
+        """Get total count of service records for the sync"""
+        
+        where_clause = ""
+        if since_date:
+            where_clause = f"WHERE s.updated_at >= '{since_date}'"
+            
+        query = f"SELECT COUNT(*) FROM {self.table_name} s {where_clause}"
+        
         result = self.execute_query(query)
         return result[0][0] if result else 0
-        
-    def fetch_data(self, where_clause: str = "", limit: Optional[int] = None) -> List[Tuple]:
-        """Fetch service data with optional filtering"""
-        query = self.get_query(where_clause, limit)
-        return self.execute_query(query)

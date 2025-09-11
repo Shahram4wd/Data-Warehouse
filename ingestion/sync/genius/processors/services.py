@@ -1,37 +1,34 @@
 """
-Genius Services Data Processor
+Services processor for Genius CRM data transformation
 """
 import logging
 from typing import Dict, Any, List, Optional
-from asgiref.sync import sync_to_async
+from datetime import datetime
 from django.utils import timezone
-
-from ingestion.models import Genius_Service
-from .base import GeniusBaseProcessor
 
 logger = logging.getLogger(__name__)
 
-
-class GeniusServicesProcessor(GeniusBaseProcessor):
-    """Processor for Genius service data"""
+class GeniusServicesProcessor:
+    """Processor for Genius services data with bulk operations"""
     
-    def __init__(self):
-        super().__init__(Genius_Service)
-        self.field_mapping = {
-            0: 'id',  # id
-            1: 'label',  # label
-            2: 'is_active',  # is_active
-            3: 'is_lead_required',  # is_lead_required
-            4: 'order_number',  # order_number
-            5: 'created_at',  # created_at
-            6: 'updated_at',  # updated_at
-        }
+    def __init__(self, model_class):
+        self.model_class = model_class
     
-    async def transform_record(self, raw_data: tuple) -> Dict[str, Any]:
-        """Transform raw database tuple to model data"""
-        # Convert field mapping dict to list for base class
-        field_names = [self.field_mapping[i] for i in range(len(raw_data))]
-        record = super().transform_record(raw_data, field_names)
+    def convert_timezone_aware(self, dt):
+        """Convert timezone-naive datetime to timezone-aware"""
+        if dt and isinstance(dt, datetime) and dt.tzinfo is None:
+            return timezone.make_aware(dt, timezone.get_current_timezone())
+        return dt
+    
+    def transform_record(self, raw_data: tuple, field_mapping: List[str]) -> Dict[str, Any]:
+        """Transform raw database tuple to record dict"""
+        
+        if len(raw_data) != len(field_mapping):
+            logger.error(f"Field mapping length ({len(field_mapping)}) doesn't match data length ({len(raw_data)})")
+            raise ValueError("Field mapping mismatch")
+        
+        # Create record dict from tuple and field mapping
+        record = dict(zip(field_mapping, raw_data))
         
         # Convert timezone-naive datetimes to timezone-aware
         if record.get('created_at'):
@@ -50,132 +47,109 @@ class GeniusServicesProcessor(GeniusBaseProcessor):
         return record
     
     def validate_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate and clean service record data"""
-        # Required fields validation
-        if not record_data.get('id'):
-            raise ValueError("Service ID is required")
-            
-        # Clean string fields with length limits
+        """Validate service record data"""
+        
+        # Check for required ID field (allow ID = 0, but not None or empty)
+        if record_data.get('id') is None or record_data.get('id') == '':
+            logger.error(f"Service record missing required ID field")
+            raise ValueError("Missing required ID field")
+        
+        # Clean string fields with length limits  
         if record_data.get('label'):
             record_data['label'] = str(record_data['label']).strip()[:100]
         
-        # Ensure required datetime fields exist
+        # Validate datetime fields
         if not record_data.get('created_at'):
-            record_data['created_at'] = timezone.now()
+            logger.warning(f"Service {record_data.get('id')} missing created_at timestamp")
+        
         if not record_data.get('updated_at'):
-            record_data['updated_at'] = timezone.now()
+            logger.warning(f"Service {record_data.get('id')} missing updated_at timestamp")
         
         return record_data
     
-    def create_model_instance(self, record_data: Dict[str, Any]) -> Genius_Service:
-        """Create new Genius_Service model instance"""
-        return Genius_Service(
-            id=record_data['id'],
-            label=record_data.get('label'),
-            is_active=record_data.get('is_active', True),
-            is_lead_required=record_data.get('is_lead_required', False),
-            order_number=record_data.get('order_number', 0),
-            created_at=record_data.get('created_at'),
-            updated_at=record_data.get('updated_at')
-        )
-    
-    def update_model_instance(self, instance: Genius_Service, record_data: Dict[str, Any]) -> Genius_Service:
-        """Update existing Genius_Service model instance"""
-        instance.label = record_data.get('label')
-        instance.is_active = record_data.get('is_active', True)
-        instance.is_lead_required = record_data.get('is_lead_required', False)
-        instance.order_number = record_data.get('order_number', 0)
-        instance.created_at = record_data.get('created_at')
-        instance.updated_at = record_data.get('updated_at')
-        return instance
-    
-    async def process_batch(self, batch_data: List[tuple], dry_run: bool = False) -> Dict[str, int]:
-        """Process a batch of service records"""
-        stats = {'processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
-        to_create = []
-        to_update = []
+    def bulk_upsert_services(self, batch_data: List[tuple], field_mapping: List[str], 
+                            force_overwrite: bool = False) -> Dict[str, int]:
+        """Bulk upsert services using Django bulk_create with update_conflicts"""
         
-        # Get IDs for existence check
-        record_ids = [row[0] for row in batch_data]
+        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
         
-        @sync_to_async
-        def get_existing_records():
-            return {obj.id: obj for obj in Genius_Service.objects.filter(id__in=record_ids)}
+        if not batch_data:
+            return stats
         
-        existing_records = await get_existing_records()
+        model_instances = []
         
-        for raw_row in batch_data:
+        for i, raw_row in enumerate(batch_data):
             try:
-                # Transform raw data to record dict
-                record_data = await self.transform_record(raw_row)
-                record_id = record_data['id']
-                
-                # Validate record
+                # Transform and validate record
+                record_data = self.transform_record(raw_row, field_mapping)
                 record_data = self.validate_record(record_data)
                 
-                # Create or update
-                if record_id in existing_records:
-                    # Update existing record
-                    existing_instance = existing_records[record_id]
-                    updated_instance = self.update_model_instance(existing_instance, record_data)
-                    to_update.append(updated_instance)
-                    stats['updated'] += 1
-                else:
-                    # Create new record
-                    new_instance = self.create_model_instance(record_data)
-                    to_create.append(new_instance)
-                    stats['created'] += 1
+                # Create model instance
+                instance = self.model_class(
+                    id=record_data['id'],
+                    label=record_data.get('label'),
+                    is_active=record_data.get('is_active', True),
+                    is_lead_required=record_data.get('is_lead_required', False),
+                    order_number=record_data.get('order_number', 0),
+                    created_at=record_data.get('created_at'),
+                    updated_at=record_data.get('updated_at')
+                )
                 
-                stats['processed'] += 1
+                model_instances.append(instance)
+                stats['total_processed'] += 1
                 
             except Exception as e:
-                logger.error(f"Error processing service record {raw_row[0] if raw_row else 'unknown'}: {e}")
+                logger.error(f"Error transforming service record {i}: {e}")
                 stats['errors'] += 1
         
-        # Save to database (unless dry run)
-        if not dry_run:
-            try:
-                @sync_to_async
-                def bulk_save():
-                    if to_create:
-                        Genius_Service.objects.bulk_create(to_create, batch_size=500, ignore_conflicts=True)
-                    
-                    if to_update:
-                        Genius_Service.objects.bulk_update(
-                            to_update,
-                            ['label', 'is_active', 'is_lead_required', 'order_number', 'created_at', 'updated_at'],
-                            batch_size=500
-                        )
-                
-                await bulk_save()
-            except Exception as e:
-                logger.error(f"Bulk save operation failed: {e}")
-                # Fallback to individual saves
-                await self._individual_save(to_create, to_update, stats)
-        else:
-            logger.info(f"DRY RUN: Would create {len(to_create)} and update {len(to_update)} service records")
+        if not model_instances:
+            logger.warning("No valid model instances to process")
+            return stats
+        
+        try:
+            # Use bulk_create with update_conflicts for efficient upsert
+            results = self.model_class.objects.bulk_create(
+                model_instances,
+                update_conflicts=True,
+                update_fields=[
+                    'label', 'is_active', 'is_lead_required', 'order_number', 
+                    'created_at', 'updated_at'
+                ],
+                unique_fields=['id'],
+                batch_size=500
+            )
+            
+            # Count created vs updated (bulk_create returns created objects)
+            created_count = len([obj for obj in results if obj.pk])
+            updated_count = len(model_instances) - created_count
+            
+            stats['created'] = created_count
+            stats['updated'] = updated_count
+            
+            logger.info(f"Bulk upsert completed - Created: {created_count}, Updated: {updated_count}")
+            
+        except Exception as e:
+            logger.error(f"Bulk upsert failed: {e}")
+            # For error counting, assume all failed
+            stats['errors'] = len(model_instances)
+            stats['total_processed'] = 0
+            stats['created'] = 0
+            stats['updated'] = 0
+            raise
         
         return stats
     
-    async def _individual_save(self, to_create: List[Genius_Service], to_update: List[Genius_Service], 
-                              stats: Dict[str, int]):
-        """Fallback individual save when bulk operations fail"""
-        @sync_to_async
-        def save_record(record):
-            record.save()
+    def process_batch(self, batch_data: List[tuple], field_mapping: List[str], 
+                     force_overwrite: bool = False, dry_run: bool = False) -> Dict[str, int]:
+        """Process a batch of services data"""
         
-        for record in to_create:
-            try:
-                await save_record(record)
-            except Exception as e:
-                logger.error(f"Failed to save new service {record.id}: {e}")
-                stats['errors'] += 1
-                stats['created'] -= 1
+        if dry_run:
+            logger.info(f"DRY RUN: Would process {len(batch_data)} service records")
+            return {
+                'total_processed': len(batch_data), 
+                'created': len(batch_data), 
+                'updated': 0, 
+                'errors': 0
+            }
         
-        for record in to_update:
-            try:
-                await save_record(record)
-            except Exception as e:
-                logger.error(f"Failed to update service {record.id}: {e}")
-                stats['errors'] += 1
-                stats['updated'] -= 1
+        return self.bulk_upsert_services(batch_data, field_mapping, force_overwrite)
