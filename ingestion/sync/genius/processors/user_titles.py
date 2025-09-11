@@ -2,41 +2,27 @@
 Genius User Titles Data Processor
 """
 import logging
-from typing import Dict, Any, List, Optional
-from asgiref.sync import sync_to_async
+from typing import Dict, Any, List, Optional, Tuple
 from django.utils import timezone
-
-from ingestion.models import Genius_UserTitle
-from .base import GeniusBaseProcessor
+from django.db import IntegrityError
 
 logger = logging.getLogger(__name__)
 
 
-class GeniusUserTitlesProcessor(GeniusBaseProcessor):
-    """Processor for Genius user title data"""
+class GeniusUserTitlesProcessor:
+    """Processor for Genius user title data with bulk operations"""
     
-    def __init__(self):
-        super().__init__(Genius_UserTitle)
-        self.field_mapping = {
-            0: 'id',  # id
-            1: 'title',  # title
-            2: 'abbreviation',  # abbreviation
-            3: 'roles',  # roles
-            4: 'type_id',  # type_id
-            5: 'section_id',  # section_id
-            6: 'sort',  # sort
-            7: 'pay_component_group_id',  # pay_component_group_id
-            8: 'is_active',  # is_active
-            9: 'is_unique_per_division',  # is_unique_per_division
-            10: 'created_at',  # created_at
-            11: 'updated_at',  # updated_at
-        }
+    def __init__(self, model_class):
+        self.model = model_class
     
-    async def transform_record(self, raw_data: tuple) -> Dict[str, Any]:
+    def transform_record(self, raw_data: Tuple, field_mapping: Dict[str, int]) -> Dict[str, Any]:
         """Transform raw database tuple to model data"""
-        # Convert field mapping dict to list for base class
-        field_names = [self.field_mapping[i] for i in range(len(raw_data))]
-        record = super().transform_record(raw_data, field_names)
+        record = {}
+        
+        # Map fields using field mapping
+        for field_name, column_index in field_mapping.items():
+            if column_index < len(raw_data):
+                record[field_name] = raw_data[column_index]
         
         # Convert timezone-naive datetimes to timezone-aware
         if record.get('created_at'):
@@ -54,6 +40,12 @@ class GeniusUserTitlesProcessor(GeniusBaseProcessor):
         record['sort'] = record.get('sort') or 0
         
         return record
+    
+    def convert_timezone_aware(self, dt):
+        """Convert timezone-naive datetime to timezone-aware"""
+        if dt and not timezone.is_aware(dt):
+            return timezone.make_aware(dt)
+        return dt
     
     def validate_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and clean user title record data"""
@@ -77,129 +69,130 @@ class GeniusUserTitlesProcessor(GeniusBaseProcessor):
         
         return record_data
     
-    def create_model_instance(self, record_data: Dict[str, Any]) -> Genius_UserTitle:
-        """Create new Genius_UserTitle model instance"""
-        return Genius_UserTitle(
-            id=record_data['id'],
-            title=record_data.get('title'),
-            abbreviation=record_data.get('abbreviation'),
-            roles=record_data.get('roles'),
-            type_id=record_data.get('type_id', 0),
-            section_id=record_data.get('section_id'),
-            sort=record_data.get('sort', 0),
-            pay_component_group_id=record_data.get('pay_component_group_id'),
-            is_active=record_data.get('is_active', True),
-            is_unique_per_division=record_data.get('is_unique_per_division', False),
-            created_at=record_data.get('created_at'),
-            updated_at=record_data.get('updated_at')
-        )
-    
-    def update_model_instance(self, instance: Genius_UserTitle, record_data: Dict[str, Any]) -> Genius_UserTitle:
-        """Update existing Genius_UserTitle model instance"""
-        instance.title = record_data.get('title')
-        instance.abbreviation = record_data.get('abbreviation')
-        instance.roles = record_data.get('roles')
-        instance.type_id = record_data.get('type_id', 0)
-        instance.section_id = record_data.get('section_id')
-        instance.sort = record_data.get('sort', 0)
-        instance.pay_component_group_id = record_data.get('pay_component_group_id')
-        instance.is_active = record_data.get('is_active', True)
-        instance.is_unique_per_division = record_data.get('is_unique_per_division', False)
-        instance.created_at = record_data.get('created_at')
-        instance.updated_at = record_data.get('updated_at')
-        return instance
-    
-    async def process_batch(self, batch_data: List[tuple], dry_run: bool = False) -> Dict[str, int]:
-        """Process a batch of user title records"""
-        stats = {'processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
-        to_create = []
-        to_update = []
+    def process_batch(self, batch_data: List[Tuple], field_mapping: Dict[str, int], 
+                     force_overwrite: bool = False, dry_run: bool = False) -> Dict[str, int]:
+        """Process a batch of user title records using bulk operations"""
+        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
         
-        # Get IDs for existence check
-        record_ids = [row[0] for row in batch_data]
+        if not batch_data:
+            return stats
         
-        @sync_to_async
-        def get_existing_records():
-            return {obj.id: obj for obj in Genius_UserTitle.objects.filter(id__in=record_ids)}
-        
-        existing_records = await get_existing_records()
+        instances_to_create = []
         
         for raw_row in batch_data:
             try:
                 # Transform raw data to record dict
-                record_data = await self.transform_record(raw_row)
-                record_id = record_data['id']
+                record_data = self.transform_record(raw_row, field_mapping)
                 
                 # Validate record
                 record_data = self.validate_record(record_data)
                 
-                # Create or update
-                if record_id in existing_records:
-                    # Update existing record
-                    existing_instance = existing_records[record_id]
-                    updated_instance = self.update_model_instance(existing_instance, record_data)
-                    to_update.append(updated_instance)
-                    stats['updated'] += 1
-                else:
-                    # Create new record
-                    new_instance = self.create_model_instance(record_data)
-                    to_create.append(new_instance)
-                    stats['created'] += 1
+                # Create model instance
+                instance = self.model(
+                    id=record_data['id'],
+                    title=record_data.get('title'),
+                    abbreviation=record_data.get('abbreviation'),
+                    roles=record_data.get('roles'),
+                    type_id=record_data.get('type_id', 0),
+                    section_id=record_data.get('section_id'),
+                    sort=record_data.get('sort', 0),
+                    pay_component_group_id=record_data.get('pay_component_group_id'),
+                    is_active=record_data.get('is_active', True),
+                    is_unique_per_division=record_data.get('is_unique_per_division', False),
+                    created_at=record_data.get('created_at'),
+                    updated_at=record_data.get('updated_at')
+                )
                 
-                stats['processed'] += 1
+                instances_to_create.append(instance)
+                stats['total_processed'] += 1
                 
             except Exception as e:
                 logger.error(f"Error processing user title record {raw_row[0] if raw_row else 'unknown'}: {e}")
                 stats['errors'] += 1
         
         # Save to database (unless dry run)
-        if not dry_run:
+        if not dry_run and instances_to_create:
             try:
-                @sync_to_async
-                def bulk_save():
-                    if to_create:
-                        Genius_UserTitle.objects.bulk_create(to_create, batch_size=500, ignore_conflicts=True)
-                    
-                    if to_update:
-                        Genius_UserTitle.objects.bulk_update(
-                            to_update,
-                            [
-                                'title', 'abbreviation', 'roles', 'type_id', 'section_id', 'sort',
-                                'pay_component_group_id', 'is_active', 'is_unique_per_division',
-                                'created_at', 'updated_at'
-                            ],
-                            batch_size=500
-                        )
+                if force_overwrite:
+                    # Use bulk_create with update_conflicts for upsert behavior
+                    result = self.model.objects.bulk_create(
+                        instances_to_create,
+                        update_conflicts=True,
+                        update_fields=[
+                            'title', 'abbreviation', 'roles', 'type_id', 'section_id', 'sort',
+                            'pay_component_group_id', 'is_active', 'is_unique_per_division',
+                            'created_at', 'updated_at'
+                        ],
+                        unique_fields=['id']
+                    )
+                else:
+                    # Use bulk_create with ignore_conflicts to skip existing
+                    result = self.model.objects.bulk_create(
+                        instances_to_create,
+                        ignore_conflicts=True
+                    )
                 
-                await bulk_save()
+                # Django's bulk_create returns the created objects, but count may vary based on conflicts
+                created_count = len(instances_to_create)
+                stats['created'] = created_count
+                
+                if force_overwrite:
+                    logger.info(f"Bulk upserted {created_count} user title records")
+                else:
+                    logger.info(f"Bulk created {created_count} new user title records (existing skipped)")
+                    
+            except IntegrityError as e:
+                logger.error(f"Bulk create operation failed with integrity error: {e}")
+                # Fallback to individual processing
+                stats = self._process_individually(instances_to_create, force_overwrite, stats)
             except Exception as e:
-                logger.error(f"Bulk save operation failed: {e}")
-                # Fallback to individual saves
-                await self._individual_save(to_create, to_update, stats)
-        else:
-            logger.info(f"DRY RUN: Would create {len(to_create)} and update {len(to_update)} user title records")
+                logger.error(f"Bulk create operation failed: {e}")
+                stats['errors'] += len(instances_to_create)
+        elif dry_run:
+            logger.info(f"DRY RUN: Would process {len(instances_to_create)} user title records")
+            stats['created'] = len(instances_to_create)
         
         return stats
     
-    async def _individual_save(self, to_create: List[Genius_UserTitle], to_update: List[Genius_UserTitle], 
-                              stats: Dict[str, int]):
-        """Fallback individual save when bulk operations fail"""
-        @sync_to_async
-        def save_record(record):
-            record.save()
+    def _process_individually(self, instances: List, force_overwrite: bool, stats: Dict[str, int]) -> Dict[str, int]:
+        """Fallback individual processing when bulk operations fail"""
+        stats['created'] = 0  # Reset since bulk failed
         
-        for record in to_create:
+        for instance in instances:
             try:
-                await save_record(record)
+                if force_overwrite:
+                    # Try to update existing, create if not found
+                    obj, created = self.model.objects.update_or_create(
+                        id=instance.id,
+                        defaults={
+                            'title': instance.title,
+                            'abbreviation': instance.abbreviation,
+                            'roles': instance.roles,
+                            'type_id': instance.type_id,
+                            'section_id': instance.section_id,
+                            'sort': instance.sort,
+                            'pay_component_group_id': instance.pay_component_group_id,
+                            'is_active': instance.is_active,
+                            'is_unique_per_division': instance.is_unique_per_division,
+                            'created_at': instance.created_at,
+                            'updated_at': instance.updated_at
+                        }
+                    )
+                    if created:
+                        stats['created'] += 1
+                    else:
+                        stats['updated'] += 1
+                else:
+                    # Try to create, skip if exists
+                    try:
+                        instance.save()
+                        stats['created'] += 1
+                    except IntegrityError:
+                        # Record already exists, skip
+                        pass
+                        
             except Exception as e:
-                logger.error(f"Failed to save new user title {record.id}: {e}")
+                logger.error(f"Failed to save user title {instance.id}: {e}")
                 stats['errors'] += 1
-                stats['created'] -= 1
         
-        for record in to_update:
-            try:
-                await save_record(record)
-            except Exception as e:
-                logger.error(f"Failed to update user title {record.id}: {e}")
-                stats['errors'] += 1
-                stats['updated'] -= 1
+        return stats

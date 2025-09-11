@@ -1,8 +1,7 @@
 """
-Django management command for syncing Genius user titles using the new sync engine architecture.
-This command follows the CRM sync guide patterns for consistent data synchronization.
+Django management command for syncing Genius user titles using the CRM sync guide patterns.
+Supports both --full and --force flags with distinct behaviors.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -16,16 +15,22 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Sync Genius user titles data using the standardized sync engine'
+    help = 'Sync Genius user titles data following CRM sync guide patterns'
 
     def add_arguments(self, parser):
-        """Add command arguments following CRM sync guide standards"""
+        """Add command arguments with distinct --full and --force flags"""
         
         # Core sync options
         parser.add_argument(
             '--full',
             action='store_true',
-            help='Force full sync instead of incremental (ignores last sync timestamp)'
+            help='Perform full sync (ignore last sync timestamp) - fetches ALL records'
+        )
+        
+        parser.add_argument(
+            '--force',
+            action='store_true', 
+            help='Completely replace existing records (enables force overwrite mode)'
         )
         
         parser.add_argument(
@@ -41,18 +46,6 @@ class Command(BaseCommand):
         )
         
         parser.add_argument(
-            '--start-date',
-            type=str,
-            help='Start date for date range sync (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)'
-        )
-        
-        parser.add_argument(
-            '--end-date',
-            type=str,
-            help='End date for date range sync (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)'
-        )
-        
-        parser.add_argument(
             '--max-records',
             type=int,
             help='Maximum number of records to process (for testing/debugging)'
@@ -62,13 +55,6 @@ class Command(BaseCommand):
             '--debug',
             action='store_true',
             help='Enable debug logging for detailed sync information'
-        )
-        
-        # Legacy argument support (deprecated)
-        parser.add_argument(
-            '--force',
-            action='store_true',
-            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
         )
 
     def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
@@ -104,42 +90,37 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
+        # Display flag information
+        if options.get('full'):
+            self.stdout.write("📂 FULL SYNC MODE - Ignoring last sync timestamp (fetches ALL records)")
         
-        # Parse datetime arguments
-        since = self.parse_datetime_arg(options.get('since'))
-        start_date = self.parse_datetime_arg(options.get('start_date'))
-        end_date = self.parse_datetime_arg(options.get('end_date'))
+        if options.get('force'):
+            self.stdout.write("🔄 FORCE MODE - Existing records will be completely replaced")
         
-        # Validate date range
-        if start_date and end_date and start_date > end_date:
-            raise ValueError("Start date cannot be after end date")
+        # Parse datetime arguments  
+        since_date = self.parse_datetime_arg(options.get('since'))
+        
+        # For --full flag, ignore since_date from database
+        if options.get('full'):
+            since_date = None
         
         # Execute sync
         try:
-            result = asyncio.run(self.execute_async_sync(
-                full=options.get('full', False),
-                since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options.get('max_records'),
+            engine = GeniusUserTitlesSyncEngine()
+            
+            result = engine.sync_user_titles(
+                since_date=since_date,
+                force_overwrite=options.get('force', False),
                 dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
-            ))
+                max_records=options.get('max_records')
+            )
             
             # Display results
-            stats = result['stats']
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   📊 Total Processed: {result['total_processed']} records")
+            self.stdout.write(f"   ➕ Created: {result['created']} records")  
+            self.stdout.write(f"   📝 Updated: {result['updated']} records")
+            self.stdout.write(f"   ❌ Errors: {result['errors']} records")
             
         except Exception as e:
             logger.exception("Genius user titles sync failed")
@@ -147,8 +128,3 @@ class Command(BaseCommand):
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
             raise
-
-    async def execute_async_sync(self, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusUserTitlesSyncEngine()
-        return await engine.execute_sync(**kwargs)

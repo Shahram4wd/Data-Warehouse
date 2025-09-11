@@ -1,101 +1,147 @@
 """
-Genius User Associations Data Processor
+User associations data processor for Genius CRM synchronization  
 """
 import logging
 from typing import Dict, Any, List, Optional
-from asgiref.sync import sync_to_async
 from django.utils import timezone
+from django.db import transaction
 
-from ingestion.models import Genius_UserAssociation
 from .base import GeniusBaseProcessor
 
 logger = logging.getLogger(__name__)
 
-
 class GeniusUserAssociationsProcessor(GeniusBaseProcessor):
-    """Processor for Genius user associations data"""
+    """Processor for transforming and upserting user associations data"""
     
-    def __init__(self):
-        super().__init__(Genius_UserAssociation)
-        self.field_mapping = {
-            0: 'id',  # id
-            1: 'user_id',  # primary_user_id -> maps to user_id in our model
-            2: 'created_at',  # created_at
-            3: 'updated_at',  # updated_at
-        }
-    
-    def transform_record(self, raw_data: tuple) -> Dict[str, Any]:
-        """Transform raw database tuple to model data"""
+    def __init__(self, model_class):
+        super().__init__(model_class)
+        self.model_class = model_class
         
-        # Convert field mapping dict to list for base class
-        field_names = [self.field_mapping[i] for i in range(len(raw_data))]
-        record = super().transform_record(raw_data, field_names)
+    def process_batch(self, batch_data: List[Dict[str, Any]], field_mapping: Dict[str, str], 
+                     force_overwrite: bool = False, dry_run: bool = False) -> Dict[str, Any]:
+        """
+        Process batch of user associations using bulk operations for efficiency
         
-        # Convert timezone-naive datetimes to timezone-aware
-        if record.get('created_at'):
-            record['created_at'] = self.convert_timezone_aware(record['created_at'])
+        Args:
+            batch_data: List of raw user associations records from database
+            field_mapping: Mapping of source fields to model fields
+            force_overwrite: Whether to force overwrite existing records
+            dry_run: Whether to perform dry run without database changes
             
-        if record.get('updated_at'):
-            record['updated_at'] = self.convert_timezone_aware(record['updated_at'])
+        Returns:
+            Dictionary containing processing statistics
+        """
+        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
         
-        # Set default values for fields that don't exist in source table
-        record['definition_id'] = None  # Not available in source
-        record['division_id'] = None    # Not available in source
-        record['field_value'] = None    # Not available in source
+        if not batch_data:
+            return stats
         
-        return record
-    
-    async def process_batch(self, batch: List[tuple], dry_run: bool = False) -> Dict[str, int]:
-        """Process a batch of user associations records"""
-        stats = {'processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+        # Transform all records first
+        transformed_records = []
+        record_ids = []
         
-        for raw_record in batch:
+        for raw_record in batch_data:
             try:
-                # Transform the raw data
-                record_data = self.transform_record(raw_record)
-                record_id = record_data.get('id')
-                
-                if dry_run:
-                    logger.debug(f"DRY RUN: Would process user association {record_id}")
-                    stats['processed'] += 1
-                    continue
-                
-                # Process the record (create or update)
-                result = await self.upsert_record(record_data, record_id)
-                
-                if result == 'created':
-                    stats['created'] += 1
-                    logger.debug(f"Created user association {record_id}")
-                elif result == 'updated':
-                    stats['updated'] += 1
-                    logger.debug(f"Updated user association {record_id}")
-                
-                stats['processed'] += 1
-                
+                transformed_record = self.transform_record(raw_record, field_mapping)
+                if transformed_record:
+                    transformed_records.append(transformed_record)
+                    record_ids.append(transformed_record['id'])
+                    
             except Exception as e:
+                logger.error(f"Error transforming user association record: {e}")
                 stats['errors'] += 1
-                error_id = raw_record[0] if raw_record else 'unknown'
-                logger.error(f"Error processing user association {error_id}: {str(e)}")
+        
+        if dry_run:
+            stats['total_processed'] = len(transformed_records)
+            logger.info(f"DRY RUN: Would process {len(transformed_records)} user associations")
+            return stats
+        
+        # Use bulk operations for efficiency
+        try:
+            with transaction.atomic():
+                if force_overwrite:
+                    # Delete existing records and bulk create
+                    self.model_class.objects.filter(id__in=record_ids).delete()
+                    self.model_class.objects.bulk_create([
+                        self.model_class(**record) for record in transformed_records
+                    ])
+                    stats['created'] = len(transformed_records)
+                else:
+                    # Use bulk_create with update_conflicts for upsert behavior  
+                    created_objects = self.model_class.objects.bulk_create(
+                        [self.model_class(**record) for record in transformed_records],
+                        update_conflicts=True,
+                        update_fields=[
+                            'user_id', 'definition_id', 'division_id', 'field_value',
+                            'created_at', 'updated_at', 'sync_updated_at'
+                        ],
+                        unique_fields=['id']
+                    )
+                    
+                    # Count created vs updated based on bulk_create result
+                    stats['created'] = len(created_objects)
+                    stats['updated'] = len(transformed_records) - len(created_objects)
                 
+                stats['total_processed'] = len(transformed_records)
+                
+        except Exception as e:
+            logger.error(f"Error in bulk user associations processing: {e}")
+            stats['errors'] += len(transformed_records)
+        
         return stats
     
-    @sync_to_async
-    def upsert_record(self, record_data: Dict[str, Any], record_id: int) -> str:
-        """Create or update a user association record"""
+    def transform_record(self, raw_record: tuple, field_mapping: Dict[str, str]) -> Optional[Dict[str, Any]]:
+        """
+        Transform raw user associations record to model format
         
-        # Check if record exists
+        Args:
+            raw_record: Raw record tuple from database (id, primary_user_id, created_at, updated_at)
+            field_mapping: Field mapping configuration
+            
+        Returns:
+            Transformed record ready for model creation
+        """
         try:
-            existing_record = Genius_UserAssociation.objects.get(id=record_id)
+            transformed = {}
             
-            # Update existing record
-            for field, value in record_data.items():
-                if field not in ['sync_created_at', 'sync_updated_at']:
-                    setattr(existing_record, field, value)
+            # Map tuple fields to dictionary based on position and field_mapping
+            # raw_record structure: (id, primary_user_id, created_at, updated_at)
+            field_positions = {
+                'id': 0,
+                'primary_user_id': 1, 
+                'created_at': 2,
+                'updated_at': 3
+            }
             
-            existing_record.save()
-            return 'updated'
+            # Map fields based on field_mapping and positions
+            for source_field, target_field in field_mapping.items():
+                if source_field in field_positions:
+                    position = field_positions[source_field]
+                    value = raw_record[position] if len(raw_record) > position else None
+                    
+                    # Handle datetime fields - ensure timezone awareness  
+                    if target_field in ['created_at', 'updated_at'] and value:
+                        if hasattr(value, 'replace') and value.tzinfo is None:
+                            value = timezone.make_aware(value, timezone.get_current_timezone())
+                    
+                    transformed[target_field] = value
             
-        except Genius_UserAssociation.DoesNotExist:
-            # Create new record
-            Genius_UserAssociation.objects.create(**record_data)
-            return 'created'
+            # Set default values for fields that don't exist in source table but are required by model
+            if 'definition_id' not in transformed:
+                transformed['definition_id'] = None
+            if 'division_id' not in transformed:
+                transformed['division_id'] = None
+            if 'field_value' not in transformed:
+                transformed['field_value'] = None
+            
+            # Set sync timestamps
+            transformed['sync_updated_at'] = timezone.now()
+            if 'sync_created_at' not in transformed:
+                transformed['sync_created_at'] = timezone.now()
+            
+            return transformed
+            
+        except Exception as e:
+            record_id = raw_record[0] if raw_record and len(raw_record) > 0 else 'unknown'
+            logger.error(f"Error transforming user associations record {record_id}: {e}")
+            return None

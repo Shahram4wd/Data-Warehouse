@@ -1,13 +1,12 @@
 """
-Django management command to sync Genius user association data from MySQL to PostgreSQL
-Following enterprise architecture with sync engine, client, and processors
+Django management command for Genius user associations sync
 """
-import asyncio
 import logging
 from datetime import datetime
+from typing import Optional
+
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
-from django.conf import settings
 
 from ingestion.sync.genius.engines.user_associations import GeniusUserAssociationsSyncEngine
 
@@ -15,37 +14,29 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Sync Genius user association data from MySQL to PostgreSQL'
+    help = 'Sync user associations data from Genius CRM database'
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--full',
             action='store_true',
-            help='Perform full sync instead of incremental'
+            help='Perform full sync (ignore last sync timestamp)'
         )
-        
+        parser.add_argument(
+            '--force',
+            action='store_true', 
+            help='Force overwrite existing records (replace mode)'
+        )
         parser.add_argument(
             '--since',
             type=str,
-            help='Sync records modified since this timestamp (YYYY-MM-DD HH:MM:SS format)'
-        )
-        
-        parser.add_argument(
-            '--start-date',
-            type=str,
-            help='Start date for sync range (YYYY-MM-DD format)'
-        )
-        
-        parser.add_argument(
-            '--end-date',
-            type=str,
-            help='End date for sync range (YYYY-MM-DD format)'
+            help='Sync records modified since this datetime (YYYY-MM-DD HH:MM:SS format)'
         )
         
         parser.add_argument(
             '--max-records',
             type=int,
-            help='Maximum number of records to process'
+            help='Maximum number of records to process (for testing)'
         )
         
         parser.add_argument(
@@ -70,77 +61,43 @@ class Command(BaseCommand):
             logging.basicConfig(level=logging.INFO)
         
         # Parse date arguments
-        since = None
-        if options['since']:
-            try:
-                since = datetime.strptime(options['since'], '%Y-%m-%d %H:%M:%S')
-                since = timezone.make_aware(since)
-            except ValueError:
-                raise CommandError('Invalid since format. Use YYYY-MM-DD HH:MM:SS')
+        since_date = self.parse_datetime(options.get('since'))
         
-        start_date = None
-        if options['start_date']:
-            try:
-                start_date = datetime.strptime(options['start_date'], '%Y-%m-%d')
-                start_date = timezone.make_aware(start_date)
-            except ValueError:
-                raise CommandError('Invalid start-date format. Use YYYY-MM-DD')
-        
-        end_date = None
-        if options['end_date']:
-            try:
-                end_date = datetime.strptime(options['end_date'], '%Y-%m-%d')
-                end_date = timezone.make_aware(end_date.replace(hour=23, minute=59, second=59))
-            except ValueError:
-                raise CommandError('Invalid end-date format. Use YYYY-MM-DD')
-        
-        # Validate date range
-        if start_date and end_date and start_date > end_date:
-            raise CommandError('Start date must be before end date')
-        
-        # Show sync configuration
         self.stdout.write(
             self.style.SUCCESS("🔄 Starting Genius User Associations Sync")
         )
         
-        sync_config = {
-            'Full Sync': options['full'],
-            'Since': since.strftime('%Y-%m-%d %H:%M:%S') if since else 'None',
-            'Start Date': start_date.strftime('%Y-%m-%d') if start_date else 'None',
-            'End Date': end_date.strftime('%Y-%m-%d') if end_date else 'None',
-            'Max Records': options['max_records'] or 'All',
-            'Dry Run': options['dry_run'],
-            'Debug Mode': options['debug']
-        }
+        # Handle --full flag (ignore since_date when full is specified)
+        if options['full']:
+            since_date = None
+            self.stdout.write(self.style.WARNING("Full sync mode: Ignoring last sync timestamp"))
         
-        for key, value in sync_config.items():
-            self.stdout.write(f"  {key}: {value}")
+        # Display flag information
+        if options['force']:
+            self.stdout.write(self.style.WARNING("Force overwrite mode: Existing records will be replaced"))
         
-        self.stdout.write("")  # Empty line
-        
+        if options['dry_run']:
+            self.stdout.write(self.style.WARNING("DRY RUN MODE: No database changes will be made"))
+
         # Execute sync
         try:
-            result = asyncio.run(self._execute_sync(
-                full=options['full'],
-                since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options['max_records'],
+            engine = GeniusUserAssociationsSyncEngine()
+            
+            result = engine.sync_user_associations(
+                since_date=since_date,
+                force_overwrite=options['force'], 
                 dry_run=options['dry_run'],
-                debug=options['debug']
-            ))
+                max_records=options.get('max_records')
+            )
             
             # Display results
-            stats = result.get('stats', {})
             self.stdout.write(
                 self.style.SUCCESS("✅ Sync completed successfully!")
             )
-            self.stdout.write(f"  Sync ID: {result.get('sync_id')}")
-            self.stdout.write(f"  Strategy: {result.get('sync_strategy')}")
-            self.stdout.write(f"  Processed: {stats.get('processed', 0):,}")
-            self.stdout.write(f"  Created: {stats.get('created', 0):,}")
-            self.stdout.write(f"  Updated: {stats.get('updated', 0):,}")
-            self.stdout.write(f"  Errors: {stats.get('errors', 0):,}")
+            self.stdout.write(f"  Total Processed: {result.get('total_processed', 0):,}")
+            self.stdout.write(f"  Created: {result.get('created', 0):,}")
+            self.stdout.write(f"  Updated: {result.get('updated', 0):,}")
+            self.stdout.write(f"  Errors: {result.get('errors', 0):,}")
             
         except Exception as e:
             self.stderr.write(
@@ -151,7 +108,13 @@ class Command(BaseCommand):
                 self.stderr.write(traceback.format_exc())
             raise CommandError(f"Sync failed: {str(e)}")
 
-    async def _execute_sync(self, **kwargs):
-        """Execute the actual sync operation"""
-        engine = GeniusUserAssociationsSyncEngine()
-        return await engine.execute_sync(**kwargs)
+    def parse_datetime(self, date_string: Optional[str]) -> Optional[datetime]:
+        """Parse datetime string in YYYY-MM-DD HH:MM:SS format"""
+        if not date_string:
+            return None
+        
+        try:
+            dt = datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
+            return timezone.make_aware(dt, timezone.get_current_timezone())
+        except ValueError:
+            raise CommandError(f"Invalid datetime format: {date_string}. Use YYYY-MM-DD HH:MM:SS")
