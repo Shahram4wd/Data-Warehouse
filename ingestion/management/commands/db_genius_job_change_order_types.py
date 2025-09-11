@@ -20,6 +20,36 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = 'Sync Genius job change order types data using the standardized sync engine'
 
+    def create_sync_record(self, full=False, since=None):
+        """Create a SyncHistory record for tracking"""
+        from django.utils import timezone
+        return SyncHistory.objects.create(
+            crm_source='genius',
+            sync_type='job_change_order_types',
+            status='running',
+            start_time=timezone.now(),
+            configuration={
+                'full': full,
+                'since': since.isoformat() if since else None,
+                'command': 'db_genius_job_change_order_types'
+            }
+        )
+    
+    def complete_sync_record(self, sync_record, stats=None, status='completed', error_message=None):
+        """Complete the SyncHistory record with results"""
+        from django.utils import timezone
+        sync_record.end_time = timezone.now()
+        sync_record.status = status
+        if stats:
+            sync_record.records_processed = stats.get('total_processed', 0)
+            sync_record.records_created = stats.get('created', 0) 
+            sync_record.records_updated = stats.get('updated', 0)
+            sync_record.records_failed = stats.get('errors', 0)
+        if error_message:
+            sync_record.error_message = error_message
+        sync_record.save()
+        return sync_record
+
     def add_arguments(self, parser):
         """Add command arguments following CRM sync guide standards"""
         
@@ -122,36 +152,93 @@ class Command(BaseCommand):
         if start_date and end_date and start_date > end_date:
             raise ValueError("Start date cannot be after end date")
         
-        # Execute sync
+        # Initialize sync tracking
+        sync_record = None
         try:
-            result = asyncio.run(self.execute_async_sync(
+            sync_record = self.create_sync_record(
+                full=options.get('full', False),
+                since=since
+            )
+            
+            # Process data in chunks
+            client = GeniusJobChangeOrderTypeClient()
+            processor = GeniusJobChangeOrderTypeProcessor()
+            all_stats = {
+                'total_processed': 0,
+                'created': 0,
+                'updated': 0,
+                'errors': 0,
+                'skipped': 0
+            }
+            
+            # Get data from API
+            all_records = []
+            for chunk in client.get_chunked_data(
+                'jobchangeordertypes',
+                chunk_size=100000,
                 full=options.get('full', False),
                 since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options.get('max_records'),
-                dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
-            ))
+                max_records=options.get('max_records')
+            ):
+                all_records.extend(chunk)
+                
+                # Process in batches
+                if len(all_records) >= 500:
+                    stats = processor.process_batch(
+                        all_records,
+                        dry_run=options.get('dry_run', False),
+                        force=options.get('force', False)
+                    )
+                    
+                    # Update totals
+                    for key in all_stats:
+                        all_stats[key] += stats.get(key, 0)
+                    
+                    all_records = []  # Clear for next batch
+            
+            # Process remaining records
+            if all_records:
+                stats = processor.process_batch(
+                    all_records,
+                    dry_run=options.get('dry_run', False),
+                    force=options.get('force', False)
+                )
+                
+                # Update totals
+                for key in all_stats:
+                    all_stats[key] += stats.get(key, 0)
+            
+            # Complete sync tracking
+            if sync_record:
+                sync_record = self.complete_sync_record(
+                    sync_record,
+                    stats=all_stats,
+                    status='completed'
+                )
             
             # Display results
-            stats = result['stats']
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   📊 Processed: {all_stats.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {all_stats.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {all_stats.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {all_stats.get('errors', 0)} records")
+            self.stdout.write(f"   ⏭️ Skipped: {all_stats.get('skipped', 0)} records")
+            
+            if sync_record:
+                self.stdout.write(f"   🆔 SyncHistory ID: {sync_record.id}")
+            else:
+                self.stdout.write("   🆔 SyncHistory ID: None")
             
         except Exception as e:
+            if sync_record:
+                self.complete_sync_record(
+                    sync_record,
+                    status='failed',
+                    error_message=str(e)
+                )
             logger.exception("Genius job change order types sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
             raise
-
-    async def execute_async_sync(self, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusJobChangeOrderTypesSyncEngine()
-        return await engine.execute_sync(**kwargs)
 
