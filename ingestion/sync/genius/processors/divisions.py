@@ -1,58 +1,122 @@
 """
-Division processor for Genius CRM data transformation
+Divisions processor for Genius CRM data transformation with bulk operations
 """
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 from datetime import datetime
-
-from .base import GeniusBaseProcessor
-from ..validators import GeniusFieldValidator
+from django.utils.dateparse import parse_datetime
+from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
 
-class GeniusDivisionProcessor(GeniusBaseProcessor):
-    """Processor for Genius division data transformation and validation"""
+class GeniusDivisionsProcessor:
+    """Processor for Genius divisions data with bulk operations"""
     
-    def __init__(self, model_class):
-        super().__init__(model_class)
+    def __init__(self, model):
+        self.model = model
     
-    def validate_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate and clean division record data"""
+    def process_batch(self, batch_data: List[Tuple], field_mapping: Dict[str, int], 
+                     force_overwrite: bool = False, dry_run: bool = False) -> Dict[str, Any]:
+        """Process a batch of divisions using bulk operations"""
         
-        # Use the field validator from validators.py
-        validated = GeniusFieldValidator.validate_division_record(record_data)
+        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
         
-        # Additional processing
-        if validated.get('created_at'):
-            validated['created_at'] = self.convert_timezone_aware(validated['created_at'])
+        if not batch_data:
+            return stats
         
-        if validated.get('updated_at'):
-            validated['updated_at'] = self.convert_timezone_aware(validated['updated_at'])
+        if dry_run:
+            logger.info(f"DRY RUN: Would process {len(batch_data)} division records")
+            stats['total_processed'] = len(batch_data)
+            stats['created'] = len(batch_data)  # Assume all would be created in dry run
+            return stats
         
-        # Ensure we have required fields
-        if not validated.get('id'):
-            raise ValueError("Division must have an id")
+        # Transform raw data to model instances
+        divisions_to_create = []
         
-        if not validated.get('label'):
-            raise ValueError("Division must have a label")
+        for row_data in batch_data:
+            try:
+                # Transform tuple to dictionary using field mapping
+                division_dict = self._transform_row(row_data, field_mapping)
+                
+                # Create model instance
+                division = self.model(
+                    id=division_dict.get('id'),
+                    group_id=division_dict.get('group_id'),
+                    region_id=division_dict.get('region_id'),
+                    label=division_dict.get('label'),
+                    abbreviation=division_dict.get('abbreviation'),
+                    is_utility=division_dict.get('is_utility', False),
+                    is_corp=division_dict.get('is_corp', False),
+                    is_omniscient=division_dict.get('is_omniscient', False),
+                    is_inactive=division_dict.get('is_inactive', False),
+                    account_scheduler_id=division_dict.get('account_scheduler_id'),
+                    created_at=division_dict.get('created_at'),
+                    updated_at=division_dict.get('updated_at')
+                )
+                
+                divisions_to_create.append(division)
+                stats['total_processed'] += 1
+                
+            except Exception as e:
+                logger.error(f"Error processing division record {row_data}: {e}")
+                stats['errors'] += 1
+                continue
         
-        return validated
+        # Bulk create with conflict handling
+        if divisions_to_create:
+            try:
+                with transaction.atomic():
+                    if force_overwrite:
+                        # Use bulk_create with update_conflicts for upsert behavior
+                        result = self.model.objects.bulk_create(
+                            divisions_to_create,
+                            update_conflicts=True,
+                            update_fields=['group_id', 'region_id', 'label', 'abbreviation', 
+                                         'is_utility', 'is_corp', 'is_omniscient', 'is_inactive',
+                                         'account_scheduler_id', 'created_at', 'updated_at'],
+                            unique_fields=['id']
+                        )
+                        stats['created'] = len(result)
+                        stats['updated'] = len(result)  # In force mode, treat as both
+                    else:
+                        # Use bulk_create with ignore_conflicts to skip existing
+                        result = self.model.objects.bulk_create(
+                            divisions_to_create,
+                            ignore_conflicts=True
+                        )
+                        stats['created'] = len(result)
+                
+                # Django's bulk_create returns the created objects, but count may vary based on conflicts
+                logger.info(f"Successfully bulk created {len(result)} divisions")
+                
+            except Exception as e:
+                logger.error(f"Error in bulk_create for divisions: {e}")
+                stats['errors'] += len(divisions_to_create)
+        
+        return stats
     
-    def transform_record(self, raw_data: tuple, field_mapping: List[str]) -> Dict[str, Any]:
-        """Transform raw division data to dictionary"""
+    def _transform_row(self, row_data: Tuple, field_mapping: Dict[str, int]) -> Dict[str, Any]:
+        """Transform a single row of data into a dictionary"""
+        result = {}
         
-        # Use base class transformation
-        record = super().transform_record(raw_data, field_mapping)
+        for field_name, index in field_mapping.items():
+            if index < len(row_data):
+                value = row_data[index]
+                
+                # Handle datetime fields
+                if field_name in ['created_at', 'updated_at'] and value:
+                    if isinstance(value, str):
+                        try:
+                            result[field_name] = parse_datetime(value)
+                        except (ValueError, TypeError):
+                            result[field_name] = value
+                    else:
+                        result[field_name] = value
+                # Handle boolean fields
+                elif field_name in ['is_utility', 'is_corp', 'is_omniscient', 'is_inactive']:
+                    result[field_name] = bool(value) if value is not None else False
+                else:
+                    result[field_name] = value
         
-        # Division-specific transformations
-        
-        # Convert active flag to boolean
-        if 'active' in record:
-            record['active'] = bool(record['active'])
-        
-        # Handle NULL division_group_id
-        if record.get('division_group_id') == 0:
-            record['division_group_id'] = None
-        
-        return record
+        return result

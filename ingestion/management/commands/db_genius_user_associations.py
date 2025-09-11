@@ -70,14 +70,14 @@ class Command(BaseCommand):
         # Handle --full flag (ignore since_date when full is specified)
         if options['full']:
             since_date = None
-            self.stdout.write(self.style.WARNING("Full sync mode: Ignoring last sync timestamp"))
+            self.stdout.write("📂 FULL SYNC MODE - Ignoring last sync timestamp (fetches ALL records)")
         
         # Display flag information
         if options['force']:
-            self.stdout.write(self.style.WARNING("Force overwrite mode: Existing records will be replaced"))
+            self.stdout.write("🔄 FORCE MODE - Existing records will be completely replaced")
         
         if options['dry_run']:
-            self.stdout.write(self.style.WARNING("DRY RUN MODE: No database changes will be made"))
+            self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
 
         # Execute sync
         try:
@@ -91,13 +91,11 @@ class Command(BaseCommand):
             )
             
             # Display results
-            self.stdout.write(
-                self.style.SUCCESS("✅ Sync completed successfully!")
-            )
-            self.stdout.write(f"  Total Processed: {result.get('total_processed', 0):,}")
-            self.stdout.write(f"  Created: {result.get('created', 0):,}")
-            self.stdout.write(f"  Updated: {result.get('updated', 0):,}")
-            self.stdout.write(f"  Errors: {result.get('errors', 0):,}")
+            self.stdout.write("✅ Sync completed successfully:")
+            self.stdout.write(f"   📊 Total Processed: {result.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {result.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {result.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {result.get('errors', 0)} records")
             
         except Exception as e:
             self.stderr.write(

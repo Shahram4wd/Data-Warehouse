@@ -1,188 +1,154 @@
 """
-Division sync engine for Genius CRM
+Divisions sync engine for Genius CRM data synchronization
 """
 import logging
-from typing import Dict, Any, List
-from asgiref.sync import sync_to_async
-from django.db import transaction
+from typing import Dict, Any, Optional
+from datetime import datetime
 
-from .base import GeniusBaseSyncEngine
-from ..clients.divisions import GeniusDivisionClient
-from ..processors.divisions import GeniusDivisionProcessor
-from ingestion.models import Genius_Division, Genius_DivisionGroup
+from ..clients.divisions import GeniusDivisionsClient  
+from ..processors.divisions import GeniusDivisionsProcessor
 
 logger = logging.getLogger(__name__)
 
-
-class GeniusDivisionSyncEngine(GeniusBaseSyncEngine):
-    """Sync engine for Genius division data"""
+class GeniusDivisionSyncEngine:
+    """Sync engine for Genius divisions data with chunked processing"""
     
     def __init__(self):
-        super().__init__('divisions')
-        self.client = GeniusDivisionClient()
-        self.processor = GeniusDivisionProcessor(Genius_Division)
+        # Import model here to avoid circular imports
+        from ingestion.models import Genius_Division
+        
+        self.client = GeniusDivisionsClient()
+        self.processor = GeniusDivisionsProcessor(Genius_Division)
+        self.chunk_size = 100000  # 100K records per chunk
+        self.batch_size = 500     # 500 records per batch
     
-    async def sync_divisions(self, since_date=None, force_overwrite=False, 
-                           dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
-        """Main sync method for divisions"""
+    def sync_divisions(self, since_date: Optional[datetime] = None, 
+                      force_overwrite: bool = False, 
+                      dry_run: bool = False,
+                      max_records: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Sync divisions data with chunked processing
         
-        stats = {
-            'total_processed': 0,
-            'created': 0,
-            'updated': 0,
-            'errors': 0,
-            'skipped': 0
-        }
+        Args:
+            since_date: Optional datetime to sync from (for delta updates)
+            force_overwrite: Whether to force overwrite existing records
+            dry_run: Whether to perform a dry run without database changes
+            max_records: Maximum number of records to process (for testing)
+            
+        Returns:
+            Dictionary containing sync statistics
+        """
+        logger.info(f"Starting divisions sync - since_date: {since_date}, force_overwrite: {force_overwrite}, "
+                   f"dry_run: {dry_run}, max_records: {max_records}")
         
-        try:
-            # Get divisions from source
-            raw_divisions = await sync_to_async(self.client.get_divisions)(
-                since_date=since_date,
-                limit=max_records
-            )
-            
-            logger.info(f"Fetched {len(raw_divisions)} divisions from Genius")
-            
-            if dry_run:
-                logger.info("DRY RUN: Would process divisions but making no changes")
-                return stats
-            
-            # Process divisions in batches
-            batch_size = 500
-            field_mapping = self.client.get_field_mapping()
-            
-            for i in range(0, len(raw_divisions), batch_size):
-                batch = raw_divisions[i:i + batch_size]
-                batch_stats = await self._process_division_batch(
-                    batch, field_mapping, force_overwrite
-                )
-                
-                # Update overall stats
-                for key in stats:
-                    stats[key] += batch_stats[key]
-                
-                logger.info(f"Processed batch {i//batch_size + 1}: "
-                          f"{batch_stats['created']} created, "
-                          f"{batch_stats['updated']} updated, "
-                          f"{batch_stats['errors']} errors")
-            
-            logger.info(f"Division sync completed. Total stats: {stats}")
-            return stats
-            
-        except Exception as e:
-            logger.error(f"Division sync failed: {str(e)}")
-            raise
+        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
         
-        finally:
-            self.client.disconnect()
+        if max_records and max_records <= 10000:
+            # For smaller datasets, use direct processing
+            logger.info(f"Processing limited dataset: {max_records} records")
+            divisions_data = self.client.get_divisions(since_date=since_date, limit=max_records)
+            stats = self._process_divisions_batch(divisions_data, force_overwrite, dry_run, stats)
+        else:
+            # For larger datasets, use chunked processing
+            stats = self._sync_chunked_divisions(since_date, force_overwrite, dry_run, max_records, stats)
+        
+        logger.info(f"Divisions sync completed - Stats: {stats}")
+        return stats
     
-    @sync_to_async
-    def _process_division_batch(self, batch: List[tuple], field_mapping: List[str], 
-                               force_overwrite: bool = False) -> Dict[str, int]:
-        """Process a batch of division records"""
+    def _sync_chunked_divisions(self, since_date: Optional[datetime], force_overwrite: bool, 
+                               dry_run: bool, max_records: Optional[int], 
+                               stats: Dict[str, Any]) -> Dict[str, Any]:
+        """Process divisions data in chunks for large datasets"""
         
-        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
+        offset = 0
+        total_processed = 0
         
-        # Preload division groups for FK validation
-        division_groups = {
-            dg.id: dg for dg in Genius_DivisionGroup.objects.all()
-        }
-        
-        # Prepare data for bulk operations
-        validated_records = []
-        
-        # First pass: transform and validate all records
-        for raw_record in batch:
-            try:
-                stats['total_processed'] += 1
+        while True:
+            # Apply max_records limit to chunk size if specified
+            current_chunk_size = self.chunk_size
+            if max_records:
+                remaining = max_records - total_processed
+                if remaining <= 0:
+                    break
+                current_chunk_size = min(self.chunk_size, remaining)
+            
+            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {current_chunk_size})")
+            
+            # Get chunked query for logging
+            query = self.client.get_chunked_query(offset, current_chunk_size, since_date)
+            logger.info(query)
+            
+            # Fetch chunk data
+            chunk_data = self.client.get_chunked_divisions(offset, current_chunk_size, since_date)
+            
+            if not chunk_data:
+                logger.info("No more data to process")
+                break
                 
-                # Transform raw data to dict
-                record_data = self.processor.transform_record(raw_record, field_mapping)
-                
-                # Validate record
-                validated_data = self.processor.validate_record(record_data)
-                
-                # Skip if required data missing
-                if not validated_data.get('id'):
-                    logger.warning("Skipping division with no ID")
-                    stats['skipped'] += 1
-                    continue
-                
-                validated_records.append(validated_data)
-                
-            except Exception as e:
-                stats['errors'] += 1
-                logger.error(f"Error processing division record: {e}")
-                logger.error(f"Record data: {raw_record}")
-        
-        if not validated_records:
-            return stats
-        
-        with transaction.atomic():
-            if force_overwrite:
-                # Force overwrite: use bulk_create with update_conflicts
-                division_objects = [Genius_Division(**data) for data in validated_records]
-                Genius_Division.objects.bulk_create(
-                    division_objects,
-                    update_conflicts=True,
-                    update_fields=['group_id', 'region_id', 'label', 'abbreviation', 'is_utility', 
-                                   'is_corp', 'is_omniscient', 'is_inactive', 'account_scheduler_id',
-                                   'created_at', 'updated_at'],
-                    unique_fields=['id'],
-                    batch_size=100
-                )
-                stats['updated'] = len(validated_records)
-                logger.debug(f"Bulk upserted {len(validated_records)} divisions with force overwrite")
-            else:
-                # Regular upsert: separate new and existing records
-                existing_ids = set(Genius_Division.objects.filter(
-                    id__in=[r['id'] for r in validated_records]
-                ).values_list('id', flat=True))
-                
-                new_records = [r for r in validated_records if r['id'] not in existing_ids]
-                existing_records = [r for r in validated_records if r['id'] in existing_ids]
-                
-                # Bulk create new records
-                if new_records:
-                    division_objects = [Genius_Division(**data) for data in new_records]
-                    Genius_Division.objects.bulk_create(division_objects, batch_size=100)
-                    stats['created'] = len(new_records)
-                    logger.debug(f"Bulk created {len(new_records)} new divisions")
-                
-                # Check existing records for updates
-                updated_count = 0
-                for validated_data in existing_records:
-                    try:
-                        division = Genius_Division.objects.get(id=validated_data['id'])
-                        if self._should_update_division(division, validated_data):
-                            for field, value in validated_data.items():
-                                if field != 'id':  # Don't update primary key
-                                    setattr(division, field, value)
-                            division.save()
-                            updated_count += 1
-                        else:
-                            stats['skipped'] += 1
-                    except Genius_Division.DoesNotExist:
-                        # Record was deleted between queries, create it
-                        Genius_Division.objects.create(**validated_data)
-                        stats['created'] += 1
-                
-                stats['updated'] = updated_count
+            logger.info(f"Processing chunk {(offset // self.chunk_size) + 1}: "
+                       f"{len(chunk_data)} records (total processed so far: {total_processed + len(chunk_data)})")
+            
+            # Process this chunk
+            chunk_stats = self._process_divisions_batch(chunk_data, force_overwrite, dry_run, stats)
+            
+            # Update running totals
+            for key in ['total_processed', 'created', 'updated', 'errors']:
+                stats[key] = chunk_stats[key]
+            
+            total_processed = stats['total_processed']
+            
+            logger.info(f"Chunk {(offset // self.chunk_size) + 1} completed - "
+                       f"Created: {chunk_stats['created'] - (stats['created'] - len([r for r in chunk_data if r]))}, "
+                       f"Updated: {chunk_stats['updated'] - (stats['updated'] - len([r for r in chunk_data if r]))}, "
+                       f"Running totals: {stats['created']} created, {stats['updated']} updated")
+            
+            # Move to next chunk
+            offset += current_chunk_size
+            
+            # Break if we got less data than requested (end of data)
+            if len(chunk_data) < current_chunk_size:
+                break
         
         return stats
     
-    def _should_update_division(self, existing: Genius_Division, new_data: Dict[str, Any]) -> bool:
-        """Check if division should be updated based on data changes"""
+    def _process_divisions_batch(self, divisions_data: list, force_overwrite: bool, 
+                                dry_run: bool, stats: Dict[str, Any]) -> Dict[str, Any]:
+        """Process a batch of divisions data using bulk operations"""
         
-        # Always update if updated_at is newer
-        if (new_data.get('updated_at') and existing.updated_at and 
-            new_data['updated_at'] > existing.updated_at):
-            return True
+        if not divisions_data:
+            return stats
+            
+        field_mapping = self.client.get_field_mapping()
         
-        # Check for actual data changes
-        fields_to_check = ['name', 'code', 'active', 'division_group_id']
-        for field in fields_to_check:
-            if field in new_data and getattr(existing, field, None) != new_data[field]:
-                return True
+        # Process in smaller batches for efficiency
+        batch_count = (len(divisions_data) + self.batch_size - 1) // self.batch_size
+        logger.info(f"Processing {len(divisions_data)} divisions in {batch_count} batches of {self.batch_size}")
         
-        return False
+        for i in range(0, len(divisions_data), self.batch_size):
+            batch_num = (i // self.batch_size) + 1
+            batch_data = divisions_data[i:i + self.batch_size]
+            
+            logger.info(f"Processing batch {batch_num}/{batch_count}: records {i+1}-{min(i+self.batch_size, len(divisions_data))}")
+            
+            try:
+                # Process batch through processor
+                batch_stats = self.processor.process_batch(
+                    batch_data, 
+                    field_mapping, 
+                    force_overwrite=force_overwrite,
+                    dry_run=dry_run
+                )
+                
+                # Update cumulative stats
+                for key, value in batch_stats.items():
+                    stats[key] += value
+                
+                logger.info(f"Batch {batch_num} completed - Created: {batch_stats['created']}, "
+                           f"Updated: {batch_stats['updated']}, Total so far: {stats['created']} created, "
+                           f"{stats['updated']} updated")
+                
+            except Exception as e:
+                logger.error(f"Error processing batch {batch_num}: {e}")
+                stats['errors'] += len(batch_data)
+        
+        return stats
