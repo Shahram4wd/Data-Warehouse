@@ -64,11 +64,10 @@ class Command(BaseCommand):
             help='Enable debug logging for detailed sync information'
         )
         
-        # Legacy argument support (deprecated)
         parser.add_argument(
             '--force',
             action='store_true',
-            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
+            help='Force overwrite mode - completely replace existing records'
         )
 
     def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
@@ -104,12 +103,9 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
+        # Handle force mode
+        if options.get('force'):
+            self.stdout.write("🔄 FORCE MODE - Overwriting existing records")
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -124,6 +120,7 @@ class Command(BaseCommand):
         try:
             result = asyncio.run(self.execute_async_sync(
                 full=options.get('full', False),
+                force=options.get('force', False),
                 since=since,
                 start_date=start_date,
                 end_date=end_date,
@@ -133,13 +130,14 @@ class Command(BaseCommand):
             ))
             
             # Display results
-            stats = result['stats']
+            stats = result
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
+            self.stdout.write(f"   📊 Processed: {stats['total_processed']} records")
             self.stdout.write(f"   ➕ Created: {stats['created']} records")
             self.stdout.write(f"   📝 Updated: {stats['updated']} records")
             self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   ⏭️ Skipped: {stats['skipped']} records")
+            self.stdout.write(f"   🆔 SyncHistory ID: None")
             
         except Exception as e:
             logger.exception("Genius marketing sources sync failed")

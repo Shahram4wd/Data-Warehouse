@@ -19,17 +19,19 @@ class GeniusMarketingSourceClient(GeniusBaseClient):
     def get_marketing_sources(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
         """Fetch marketing sources from Genius database"""
         
-        # Base query with all required fields
+        # Base query with all required fields that match the actual database structure
         query = """
         SELECT 
             ms.id,
-            ms.name,
-            ms.code,
+            ms.type_id,
+            ms.label,
             ms.description,
-            ms.marketing_source_type_id,
-            ms.active,
-            ms.sort_order,
-            ms.created_at,
+            ms.start_date,
+            ms.end_date,
+            ms.add_user_id,
+            ms.add_date,
+            ms.is_active,
+            ms.is_allow_lead_modification,
             ms.updated_at
         FROM marketing_source ms
         """
@@ -39,8 +41,8 @@ class GeniusMarketingSourceClient(GeniusBaseClient):
         if where_clause:
             query += f" {where_clause}"
         
-        # Add ordering and limit
-        query += " ORDER BY ms.sort_order, ms.id"
+        # Add ordering and limit (using fields that actually exist)
+        query += " ORDER BY ms.id"
         if limit > 0:
             query += f" LIMIT {limit}"
         
@@ -51,12 +53,14 @@ class GeniusMarketingSourceClient(GeniusBaseClient):
         """Get field mapping for transformation"""
         return [
             'id',
-            'name',
-            'code',
+            'type_id',
+            'label',
             'description',
-            'marketing_source_type_id',
-            'active',
-            'sort_order',
-            'created_at',
+            'start_date',
+            'end_date',
+            'add_user_id',
+            'add_date',
+            'is_active',
+            'is_allow_lead_modification',
             'updated_at'
         ]
