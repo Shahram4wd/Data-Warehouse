@@ -19,16 +19,13 @@ class GeniusMarketSharpSourceClient(GeniusBaseClient):
     def get_marketsharp_sources(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
         """Fetch MarketSharp sources from Genius database"""
         
-        # Base query with all required fields
+        # Base query with all required fields matching the actual database schema
         query = """
         SELECT 
             mss.id,
-            mss.name,
-            mss.code,
-            mss.description,
             mss.marketsharp_id,
-            mss.active,
-            mss.sort_order,
+            mss.source_name,
+            mss.inactive,
             mss.created_at,
             mss.updated_at
         FROM marketsharp_source mss
@@ -40,7 +37,7 @@ class GeniusMarketSharpSourceClient(GeniusBaseClient):
             query += f" {where_clause}"
         
         # Add ordering and limit
-        query += " ORDER BY mss.sort_order, mss.id"
+        query += " ORDER BY mss.id"
         if limit > 0:
             query += f" LIMIT {limit}"
         
@@ -51,12 +48,48 @@ class GeniusMarketSharpSourceClient(GeniusBaseClient):
         """Get field mapping for transformation"""
         return [
             'id',
-            'name',
-            'code',
-            'description',
             'marketsharp_id',
-            'active',
-            'sort_order',
+            'source_name',
+            'inactive',
             'created_at',
             'updated_at'
         ]
+
+    def get_marketsharp_sources_chunked(self, since_date: Optional[datetime] = None, chunk_size: int = 1000):
+        """Generator that yields chunks of marketsharp sources to handle large datasets efficiently"""
+        offset = 0
+        
+        while True:
+            # Base query with all required fields matching the actual database schema
+            query = """
+            SELECT 
+                mss.id,
+                mss.marketsharp_id,
+                mss.source_name,
+                mss.inactive,
+                mss.created_at,
+                mss.updated_at
+            FROM marketsharp_source mss
+            """
+            
+            # Add WHERE clause for incremental sync
+            where_clause = self.build_where_clause(since_date, self.table_name)
+            if where_clause:
+                query += f" {where_clause}"
+            
+            # Add ordering and pagination
+            query += f" ORDER BY mss.id LIMIT {chunk_size} OFFSET {offset}"
+            
+            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {chunk_size})")
+            chunk_results = self.execute_query(query)
+            
+            if not chunk_results:
+                # No more records, break the loop
+                break
+            
+            yield chunk_results
+            offset += chunk_size
+            
+            # If we got less than chunk_size records, we're at the end
+            if len(chunk_results) < chunk_size:
+                break
