@@ -2,7 +2,6 @@
 Django management command for syncing Genius job change order items using the new sync engine architecture.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -10,7 +9,10 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 
-from ingestion.sync.genius.engines.job_change_order_items import GeniusJobChangeOrderItemsSyncEngine
+from ingestion.sync.genius.clients.job_change_order_items import GeniusJobChangeOrderItemClient
+from ingestion.sync.genius.processors.job_change_order_items import GeniusJobChangeOrderItemProcessor
+from ingestion.models.genius import Genius_JobChangeOrderItem
+from ingestion.models import SyncHistory
 
 logger = logging.getLogger(__name__)
 

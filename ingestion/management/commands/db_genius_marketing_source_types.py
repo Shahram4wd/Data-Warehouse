@@ -2,7 +2,6 @@
 Django management command for syncing Genius marketing source types using the new sync engine architecture.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -10,7 +9,10 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 
-from ingestion.sync.genius.engines.marketing_source_types import GeniusMarketingSourceTypesSyncEngine
+from ingestion.sync.genius.clients.marketing_source_types import GeniusMarketingSourceTypeClient
+from ingestion.sync.genius.processors.marketing_source_types import GeniusMarketingSourceTypeProcessor
+from ingestion.models.genius import Genius_MarketingSourceType
+from ingestion.models import SyncHistory
 
 logger = logging.getLogger(__name__)
 
@@ -117,60 +119,93 @@ class Command(BaseCommand):
         if start_date and end_date and start_date > end_date:
             raise ValueError("Start date cannot be after end date")
         
-        # Execute sync
+        # Initialize sync tracking
+        sync_record = None
         try:
-            result = asyncio.run(self.execute_async_sync(
+            sync_record = self.create_sync_record(
                 full=options.get('full', False),
-                force=options.get('force', False),
+                since=since
+            )
+            
+            # Process data in chunks
+            client = GeniusMarketingSourceTypeClient()
+            processor = GeniusMarketingSourceTypeProcessor()
+            all_stats = {
+                'total_processed': 0,
+                'created': 0,
+                'updated': 0,
+                'errors': 0,
+                'skipped': 0
+            }
+            
+            # Get data from API
+            all_records = []
+            for chunk in client.get_chunked_data(
+                'marketingsourcetypes',
+                chunk_size=100000,
+                full=options.get('full', False),
                 since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options.get('max_records'),
-                dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
-            ))
+                max_records=options.get('max_records')
+            ):
+                all_records.extend(chunk)
+                
+                # Process in batches
+                if len(all_records) >= 500:
+                    stats = processor.process_batch(
+                        all_records,
+                        dry_run=options.get('dry_run', False),
+                        force=options.get('force', False)
+                    )
+                    
+                    # Update totals
+                    for key in all_stats:
+                        all_stats[key] += stats.get(key, 0)
+                    
+                    all_records = []  # Clear for next batch
+            
+            # Process remaining records
+            if all_records:
+                stats = processor.process_batch(
+                    all_records,
+                    dry_run=options.get('dry_run', False),
+                    force=options.get('force', False)
+                )
+                
+                # Update totals
+                for key in all_stats:
+                    all_stats[key] += stats.get(key, 0)
+            
+            # Complete sync tracking
+            if sync_record:
+                sync_record = self.complete_sync_record(
+                    sync_record,
+                    stats=all_stats,
+                    status='completed'
+                )
             
             # Display results
-            if isinstance(result, dict) and 'stats' in result:
-                stats = result['stats']
-            else:
-                # Direct stats return from engine
-                stats = result
-                
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats.get('total_processed', 0)} records")
-            self.stdout.write(f"   ➕ Created: {stats.get('created', 0)} records")
-            self.stdout.write(f"   📝 Updated: {stats.get('updated', 0)} records")
-            self.stdout.write(f"   ❌ Errors: {stats.get('errors', 0)} records")
-            self.stdout.write(f"   ⏭️ Skipped: {stats.get('skipped', 0)} records")
+            self.stdout.write(f"   📊 Processed: {all_stats.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {all_stats.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {all_stats.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {all_stats.get('errors', 0)} records")
+            self.stdout.write(f"   ⏭️ Skipped: {all_stats.get('skipped', 0)} records")
             
-            # Handle sync_id if available
-            if isinstance(result, dict) and 'sync_id' in result:
-                self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            if sync_record:
+                self.stdout.write(f"   🆔 SyncHistory ID: {sync_record.id}")
             else:
-                self.stdout.write(f"   🆔 SyncHistory ID: None")
+                self.stdout.write("   🆔 SyncHistory ID: None")
             
         except Exception as e:
+            if sync_record:
+                self.complete_sync_record(
+                    sync_record,
+                    status='failed',
+                    error_message=str(e)
+                )
             logger.exception("Genius marketing source types sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
             raise
-
-    async def execute_async_sync(self, full=False, force=False, since=None, start_date=None, 
-                                end_date=None, max_records=None, dry_run=False, 
-                                debug=False, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusMarketingSourceTypesSyncEngine()
-        return await engine.execute_sync(
-            full=full,
-            force=force,
-            since=since,
-            start_date=start_date,
-            end_date=end_date,
-            max_records=max_records,
-            dry_run=dry_run,
-            debug=debug,
-            **kwargs
-        )
 
