@@ -6,7 +6,6 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from django.utils import timezone
 from django.db import IntegrityError, transaction
-from asgiref.sync import sync_to_async
 
 logger = logging.getLogger(__name__)
 
@@ -59,11 +58,11 @@ class GeniusProspectsProcessor:
         
         return record_data
     
-    async def process_batch(self, batch_data: List[tuple], field_mapping: List[str], 
-                           force_overwrite: bool = False) -> Dict[str, int]:
+    def process_batch(self, batch_data: List[tuple], field_mapping: List[str], 
+                     force_overwrite: bool = False, dry_run: bool = False) -> Dict[str, int]:
         """Process a batch of prospects data using bulk operations"""
         
-        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'skipped': 0, 'errors': 0}
+        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
         
         try:
             # Transform batch data to model instances  
@@ -112,9 +111,14 @@ class GeniusProspectsProcessor:
             if not model_instances:
                 logger.warning("No valid model instances to process")
                 return stats
-            
+
+            # Handle dry-run mode
+            if dry_run:
+                logger.info(f"DRY-RUN: Would process {len(model_instances)} prospect records")
+                stats['created'] = len(model_instances)  # In dry-run, assume all would be created
+                return stats
+
             # Perform bulk upsert using bulk_create with update_conflicts
-            @sync_to_async
             def bulk_upsert():
                 created_count = 0
                 updated_count = 0
@@ -149,7 +153,7 @@ class GeniusProspectsProcessor:
             
             # Execute bulk operation
             try:
-                created_count, updated_count = await bulk_upsert()
+                created_count, updated_count = bulk_upsert()
                 stats['created'] = created_count
                 stats['updated'] = updated_count
                 logger.info(f"Bulk upsert completed - Created: {created_count}, Updated: {updated_count}")
