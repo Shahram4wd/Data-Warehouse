@@ -17,6 +17,15 @@ class GeniusQuoteClient(GeniusBaseClient):
         super().__init__()
         self.table_name = 'quote'
     
+    def get_field_mapping(self) -> List[str]:
+        """Return the field mapping for quotes table"""
+        return [
+            'id', 'prospect_id', 'appointment_id', 'job_id', 'client_cid',
+            'service_id', 'label', 'description', 'amount', 'expire_date',
+            'status_id', 'contract_file_id', 'estimate_file_id', 'add_user_id',
+            'add_date', 'updated_at'
+        ]
+    
     def get_quotes(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
         """Fetch quotes from Genius database"""
         

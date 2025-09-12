@@ -103,15 +103,16 @@ class Command(BaseCommand):
         if options.get('force'):
             self.stdout.write("🔄 FORCE MODE - Existing records will be completely replaced")
         since_date = self.parse_datetime_arg(options.get('since'))
-        if options.get('full'):
-            since_date = None
+        full_sync = options.get('full', False)
+        
         try:
             engine = GeniusUsersSyncEngine()
             result = engine.sync_users(
                 since_date=since_date,
                 force_overwrite=options.get('force', False),
                 dry_run=options.get('dry_run', False),
-                max_records=options.get('max_records')
+                max_records=options.get('max_records'),
+                full_sync=full_sync
             )
             self.stdout.write("✅ Sync completed successfully:")
             self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")

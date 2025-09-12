@@ -80,21 +80,27 @@ class GeniusUsersSyncEngine:
         
         sync_record.save()
     
-    def sync_users(self, since_date: Optional[datetime] = None, force_overwrite: bool = False, dry_run: bool = False, max_records: Optional[int] = None) -> Dict[str, Any]:
+    def sync_users(self, since_date: Optional[datetime] = None, force_overwrite: bool = False, 
+                   dry_run: bool = False, max_records: Optional[int] = None, 
+                   full_sync: bool = False) -> Dict[str, Any]:
         """Sync users data with chunked processing"""
         
-        # Automatically determine delta sync timestamp if not provided
-        if since_date is None and not force_overwrite:
+        # Determine sync strategy based on parameters
+        if full_sync:
+            # --full flag was used: ignore timestamps and fetch all records
+            since_date = None
+            logger.info("Full sync mode: Fetching all records (ignoring timestamps)")
+        elif since_date is not None:
+            # Explicit since_date provided
+            logger.info(f"Manual delta sync: Using provided since_date: {since_date}")
+        else:
+            # Auto delta sync: fall back to database timestamp if available
             last_sync = self.get_last_sync_timestamp()
             if last_sync:
                 since_date = last_sync
                 logger.info(f"Delta sync: Using last successful sync timestamp: {since_date}")
             else:
                 logger.info("No previous successful sync found, performing full sync")
-        elif since_date is None and force_overwrite:
-            logger.info("Force overwrite mode: Ignoring previous sync timestamps")
-        elif since_date:
-            logger.info(f"Manual delta sync: Using provided since_date: {since_date}")
         
         logger.info(f"Starting users sync - since_date: {since_date}, force_overwrite: {force_overwrite}, dry_run: {dry_run}, max_records: {max_records}")
         

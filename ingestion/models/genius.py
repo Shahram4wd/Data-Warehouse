@@ -35,6 +35,24 @@ class Genius_DivisionGroup(models.Model):
     def __str__(self):
         return self.group_label or f"DivisionGroup {self.id}"
 
+class Genius_DivisionRegion(models.Model):
+    id = models.SmallIntegerField(primary_key=True)
+    name = models.CharField(max_length=64, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_division_region'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Division Region data stored in ingestion schema'
+        verbose_name = 'Genius Division Region'
+        verbose_name_plural = 'Genius Division Regions'
+
+    def __str__(self):
+        return self.name or f"DivisionRegion {self.id}"
+
 
 class Genius_Division(models.Model):
     id = models.IntegerField(primary_key=True)

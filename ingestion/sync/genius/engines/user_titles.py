@@ -36,7 +36,7 @@ class GeniusUserTitlesSyncEngine:
         try:
             last_sync = SyncHistory.objects.filter(
                 crm_source=self.crm_source,
-                entity_type=self.entity_type,
+                sync_type=self.entity_type,
                 status='completed'
             ).order_by('-end_time').first()
             
@@ -49,10 +49,10 @@ class GeniusUserTitlesSyncEngine:
         """Create a new SyncHistory record"""
         return SyncHistory.objects.create(
             crm_source=self.crm_source,
-            entity_type=self.entity_type,
+            sync_type=self.entity_type,
             configuration=configuration,
             start_time=timezone.now(),
-            status='in_progress'
+            status='running'
         )
     
     def complete_sync_record(self, sync_record: SyncHistory, stats: Dict[str, Any], 

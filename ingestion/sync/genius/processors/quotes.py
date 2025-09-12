@@ -20,6 +20,21 @@ class GeniusQuoteProcessor:
     
     def __init__(self):
         pass
+    
+    def process_batch(self, batch_data: List[tuple], field_mapping: List[str], 
+                     force_overwrite: bool = False, dry_run: bool = False) -> Dict[str, int]:
+        """Process a batch of quotes data"""
+        
+        if dry_run:
+            logger.info(f"DRY RUN: Would process {len(batch_data)} quote records")
+            return {
+                'total_processed': len(batch_data), 
+                'created': len(batch_data), 
+                'updated': 0, 
+                'errors': 0
+            }
+        
+        return self.bulk_upsert_quotes(batch_data, force_overwrite)
     def bulk_upsert_quotes(self, quotes_data: List[tuple], force_overwrite: bool = False) -> Dict[str, Any]:
         """Bulk upsert quotes using Django bulk_create with update_conflicts"""
         

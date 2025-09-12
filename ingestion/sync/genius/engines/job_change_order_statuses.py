@@ -41,7 +41,7 @@ class GeniusJobChangeOrderStatusesSyncEngine(GeniusBaseSyncEngine):
             logger.info("Dry run mode - no actual sync performed")
         
         sync_id = await self.create_sync_history_record(
-            entity_type=self.entity_type,
+            sync_type=self.entity_type,
             status='completed',
             stats=stats
         )
