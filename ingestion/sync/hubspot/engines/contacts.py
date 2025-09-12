@@ -166,7 +166,40 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
                     "lead_type1", "lead_type2", "lead_type4", "lead_viewed_on", "lead_with_dm",
                     "lead_year_built", "lead_zip",
                     
-                    # Source fields
+                    # NEW: Analytics Fields
+                    "dedupe_record_id", "hs_analytics_average_page_views", "hs_analytics_first_timestamp",
+                    "hs_analytics_num_event_completions", "hs_analytics_num_page_views", "hs_analytics_num_visits",
+                    "hs_analytics_revenue", "hs_analytics_source", "hs_analytics_source_data_1", "hs_analytics_source_data_2",
+                    
+                    # NEW: HubSpot System Fields
+                    "hs_currently_enrolled_in_prospecting_agent", "hs_is_unworked", "hs_latest_source",
+                    "hs_latest_source_data_1", "hs_latest_source_data_2", "hs_latest_source_timestamp",
+                    "hs_marketable_status", "hs_marketable_until_renewal", "hs_membership_has_accessed_private_content",
+                    "hs_object_source_label", "hs_predictivecontactscore_v2", "hs_predictivescoringtier",
+                    "hs_registered_member", "hs_v2_date_entered_lead", "hs_timezone", "hs_updated_by_user_id",
+                    "hs_created_by_user_id", "hs_email_domain", "hs_prospecting_agent_total_enrolled_count",
+                    
+                    # NEW: Lifecycle Fields
+                    "lifecyclestage", "num_conversion_events", "num_unique_conversion_events", "currentlyinworkflow",
+                    
+                    # NEW: Additional Lead Fields
+                    "sales_rabbit_lead_id", "contact_id", "phone1_type", "phone2_type", "num_notes",
+                    "notes_last_updated", "notes_last_contacted", "num_contacted_notes",
+                    "last_scheduled_appointment_start_time", "contact_type",
+                    
+                    # NEW: Additional Prospect Fields
+                    "prospect_id", "prospect_add_date", "prospect_add_user_id", "prospect_is_address_valid",
+                    "prospect_is_year_built_valid", "prospect_phone1", "prospect_phone1_type",
+                    "prospect_phone2_type", "prospect_user_id", "prospect_year_built", "prospect_marketsharp_id",
+                    
+                    # NEW: Source and Canvasser Fields
+                    "hge_secondary_source", "hge_primary_source", "service_of_interest",
+                    "canvasser", "canvasser_email", "canvasser_id",
+                    
+                    # NEW: Additional Fields
+                    "country", "hatch_id", "address_url", "division_id",
+                    
+                    # Source fields (existing)
                     "primary_source", "secondary_source",
                     
                     # Metadata fields

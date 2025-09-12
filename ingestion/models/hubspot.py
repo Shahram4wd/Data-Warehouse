@@ -105,7 +105,85 @@ class Hubspot_Contact(models.Model):  # Updated table name
     lead_year_built = models.CharField(max_length=20, null=True, blank=True)
     lead_zip = models.CharField(max_length=20, null=True, blank=True)
     
-    # Source fields
+    # Analytics Fields
+    dedupe_record_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_analytics_average_page_views = models.IntegerField(null=True, blank=True)
+    hs_analytics_first_timestamp = models.DateTimeField(null=True, blank=True)
+    hs_analytics_num_event_completions = models.IntegerField(null=True, blank=True)
+    hs_analytics_num_page_views = models.IntegerField(null=True, blank=True)
+    hs_analytics_num_visits = models.IntegerField(null=True, blank=True)
+    hs_analytics_revenue = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
+    hs_analytics_source = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    hs_analytics_source_data_1 = models.CharField(max_length=255, null=True, blank=True)
+    hs_analytics_source_data_2 = models.CharField(max_length=255, null=True, blank=True)
+      
+    # HubSpot System Fields
+    hs_currently_enrolled_in_prospecting_agent = models.BooleanField(null=True, blank=True)
+    hs_is_unworked = models.BooleanField(null=True, blank=True)
+    hs_latest_source = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    hs_latest_source_data_1 = models.CharField(max_length=255, null=True, blank=True)
+    hs_latest_source_data_2 = models.CharField(max_length=255, null=True, blank=True)
+    hs_latest_source_timestamp = models.DateTimeField(null=True, blank=True)
+    hs_marketable_status = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    hs_marketable_until_renewal = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    hs_membership_has_accessed_private_content = models.IntegerField(null=True, blank=True)
+    hs_object_source_label = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    hs_predictivecontactscore_v2 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    hs_predictivescoringtier = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    hs_registered_member = models.IntegerField(null=True, blank=True)
+    hs_v2_date_entered_lead = models.DateTimeField(null=True, blank=True)
+    hs_timezone = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    hs_updated_by_user_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_created_by_user_id = models.CharField(max_length=255, null=True, blank=True)
+    hs_email_domain = models.CharField(max_length=255, null=True, blank=True)
+    hs_prospecting_agent_total_enrolled_count = models.IntegerField(null=True, blank=True)
+    
+    # Lifecycle Fields
+    lifecyclestage = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    num_conversion_events = models.IntegerField(null=True, blank=True)
+    num_unique_conversion_events = models.IntegerField(null=True, blank=True)
+    currentlyinworkflow = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    
+    # Additional Lead Fields
+    sales_rabbit_lead_id = models.CharField(max_length=255, null=True, blank=True)
+    contact_id = models.BigIntegerField(null=True, blank=True)
+    phone1_type = models.IntegerField(null=True, blank=True)
+    phone2_type = models.IntegerField(null=True, blank=True)
+    num_notes = models.IntegerField(null=True, blank=True)
+    notes_last_updated = models.DateTimeField(null=True, blank=True)
+    notes_last_contacted = models.DateTimeField(null=True, blank=True)
+    num_contacted_notes = models.IntegerField(null=True, blank=True)
+    last_scheduled_appointment_start_time = models.DateTimeField(null=True, blank=True)
+    contact_type = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Additional Prospect Fields
+    prospect_id = models.BigIntegerField(null=True, blank=True)
+    prospect_add_date = models.DateTimeField(null=True, blank=True)
+    prospect_add_user_id = models.BigIntegerField(null=True, blank=True)
+    prospect_is_address_valid = models.IntegerField(null=True, blank=True)
+    prospect_is_year_built_valid = models.IntegerField(null=True, blank=True)
+    prospect_phone1 = models.CharField(max_length=50, null=True, blank=True)
+    prospect_phone1_type = models.IntegerField(null=True, blank=True)
+    prospect_phone2_type = models.IntegerField(null=True, blank=True)
+    prospect_user_id = models.BigIntegerField(null=True, blank=True)
+    prospect_year_built = models.IntegerField(null=True, blank=True)
+    prospect_marketsharp_id = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Source and Canvasser Fields
+    hge_secondary_source = models.CharField(max_length=255, null=True, blank=True)
+    hge_primary_source = models.CharField(max_length=255, null=True, blank=True)
+    service_of_interest = models.CharField(max_length=255, null=True, blank=True)  # enumeration
+    canvasser = models.CharField(max_length=255, null=True, blank=True)
+    canvasser_email = models.CharField(max_length=255, null=True, blank=True)
+    canvasser_id = models.CharField(max_length=255, null=True, blank=True)
+    
+    # Additional Fields
+    country = models.CharField(max_length=255, null=True, blank=True)
+    hatch_id = models.CharField(max_length=255, null=True, blank=True)
+    address_url = models.URLField(null=True, blank=True)
+    division_id = models.BigIntegerField(null=True, blank=True)
+    
+    # Source fields (keep existing ones)
     primary_source = models.CharField(max_length=255, null=True, blank=True)
     secondary_source = models.CharField(max_length=255, null=True, blank=True)
     
