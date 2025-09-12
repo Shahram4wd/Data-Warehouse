@@ -905,7 +905,7 @@ class Genius_JobFinancing(models.Model):
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = '"genius_job_financing"'
+        db_table = 'genius_job_financing'
         managed = True
         app_label = 'ingestion'
         db_table_comment = 'Genius Job Financing data stored in ingestion schema'
