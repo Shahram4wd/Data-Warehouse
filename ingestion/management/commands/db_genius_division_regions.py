@@ -1,5 +1,5 @@
 """
-Django management command for syncing Genius appointment outcome types using the new sync engine architecture.
+Django management command for syncing Genius division regions using the new sync engine architecture.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
 import logging
@@ -7,19 +7,19 @@ from datetime import datetime
 from typing import Optional
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 
-from ingestion.sync.genius.clients.appointment_outcome_types import GeniusAppointmentOutcomeTypeClient
-from ingestion.sync.genius.processors.appointment_outcome_types import GeniusAppointmentOutcomeTypeProcessor
-from ingestion.models.genius import Genius_AppointmentOutcomeType
+from ingestion.sync.genius.clients.division_regions import GeniusDivisionRegionClient
+from ingestion.sync.genius.processors.division_regions import GeniusDivisionRegionProcessor
+from ingestion.models.genius import Genius_DivisionRegion
 from ingestion.models import SyncHistory
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Sync Genius appointment outcome types data using the standardized sync engine'
+    help = 'Sync Genius division regions data using the standardized sync engine'
 
     def add_arguments(self, parser):
         """Add command arguments following CRM sync guide standards"""
@@ -145,7 +145,7 @@ class Command(BaseCommand):
             self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
             
         except Exception as e:
-            logger.exception("Genius appointment outcome types sync failed")
+            logger.exception("Genius division regions sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
@@ -163,7 +163,7 @@ class Command(BaseCommand):
         dry_run = kwargs.get('dry_run', False)
         debug = kwargs.get('debug', False)
         
-        logger.info(f"Starting appointment outcome types sync (full={full}, dry_run={dry_run})")
+        logger.info(f"Starting division regions sync (full={full}, dry_run={dry_run})")
         
         # Initialize stats
         stats = {
@@ -185,8 +185,8 @@ class Command(BaseCommand):
         
         try:
             # Initialize client and processor
-            client = GeniusAppointmentOutcomeTypeClient()
-            processor = GeniusAppointmentOutcomeTypeProcessor(Genius_AppointmentOutcomeType)
+            client = GeniusDivisionRegionClient()
+            processor = GeniusDivisionRegionProcessor(Genius_DivisionRegion)
             
             # Determine sync timestamp
             sync_start = start_date or since
@@ -197,8 +197,8 @@ class Command(BaseCommand):
                 logger.info(f"Sync parameters: full={full}, sync_start={sync_start}")
             
             # Fetch data from Genius database
-            logger.info("Fetching appointment outcome types from Genius database...")
-            raw_records = client.get_appointment_outcome_types(
+            logger.info("Fetching division regions from Genius database...")
+            raw_records = client.get_division_regions(
                 since_date=sync_start,
                 limit=max_records or 0
             )
@@ -238,11 +238,11 @@ class Command(BaseCommand):
                 for i, record in enumerate(chunk_records, start=chunk_start):
                     try:
                         # Transform and validate record
-                        if not processor.validate_record(record):
+                        transformed_record = processor.transform_record(record, field_mapping)
+                        
+                        if not processor.validate_record(transformed_record):
                             stats['errors'] += 1
                             continue
-                        
-                        transformed_record = processor.transform_record(record)
                         
                         if debug and i < 3:  # Show first few records in debug mode
                             logger.info(f"Transformed record {i+1}: {transformed_record}")
@@ -252,9 +252,9 @@ class Command(BaseCommand):
                         if record_id:
                             # Check if record exists
                             try:
-                                if Genius_AppointmentOutcomeType.objects.filter(id=record_id).exists():
+                                if Genius_DivisionRegion.objects.filter(id=record_id).exists():
                                     # Update existing record
-                                    obj, created = Genius_AppointmentOutcomeType.objects.get_or_create(
+                                    obj, created = Genius_DivisionRegion.objects.get_or_create(
                                         id=record_id,
                                         defaults=transformed_record
                                     )
@@ -264,7 +264,7 @@ class Command(BaseCommand):
                                         objects_to_update.append(obj)
                                 else:
                                     # Create new record
-                                    objects_to_create.append(Genius_AppointmentOutcomeType(**transformed_record))
+                                    objects_to_create.append(Genius_DivisionRegion(**transformed_record))
                             except Exception as e:
                                 logger.error(f"Error checking existing record {record_id}: {e}")
                                 stats['errors'] += 1
@@ -296,7 +296,7 @@ class Command(BaseCommand):
             # Complete sync record with success
             self.complete_sync_record(sync_record, stats)
             
-            logger.info(f"Completed appointment outcome types sync: {stats['processed']} processed, "
+            logger.info(f"Completed division regions sync: {stats['processed']} processed, "
                        f"{stats['created']} created, {stats['updated']} updated, {stats['errors']} errors")
             
             return {
@@ -314,7 +314,7 @@ class Command(BaseCommand):
         """Create a new sync record"""
         return SyncHistory.objects.create(
             crm_source='genius',
-            sync_type=r'appointment_outcome_types',
+            sync_type='division_regions',
             status='running',
             start_time=timezone.now(),
             configuration=configuration
@@ -341,7 +341,7 @@ class Command(BaseCommand):
         """Get the timestamp of the last successful sync"""
         last_sync = SyncHistory.objects.filter(
             crm_source='genius',
-            sync_type=r'appointment_outcome_types',
+            sync_type='division_regions',
             status='success'
         ).order_by('-end_time').first()
         
@@ -362,16 +362,16 @@ class Command(BaseCommand):
         # Create new records
         if objects_to_create:
             try:
-                created_objects = Genius_AppointmentOutcomeType.objects.bulk_create(
+                created_objects = Genius_DivisionRegion.objects.bulk_create(
                     objects_to_create, 
                     ignore_conflicts=True
                 )
                 batch_stats['created'] = len(created_objects)
                 if debug:
-                    logger.info(f"Created {len(created_objects)} new appointment outcome type records")
+                    logger.info(f"Created {len(created_objects)} new division region records")
                     
             except Exception as e:
-                logger.error(f"Error creating appointment outcome type records: {e}")
+                logger.error(f"Error creating division region records: {e}")
                 batch_stats['errors'] += len(objects_to_create)
         
         # Update existing records
@@ -381,11 +381,10 @@ class Command(BaseCommand):
                     obj.save()
                     batch_stats['updated'] += 1
                 if debug:
-                    logger.info(f"Updated {batch_stats['updated']} existing appointment outcome type records")
+                    logger.info(f"Updated {batch_stats['updated']} existing division region records")
                     
             except Exception as e:
-                logger.error(f"Error updating appointment outcome type records: {e}")
+                logger.error(f"Error updating division region records: {e}")
                 batch_stats['errors'] += len(objects_to_update)
         
         return batch_stats
-

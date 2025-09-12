@@ -1,0 +1,66 @@
+"""
+Job Financing client for Genius CRM database access
+"""
+import logging
+from typing import Optional, Dict, Any, List
+from datetime import datetime
+from .base import GeniusBaseClient
+
+logger = logging.getLogger(__name__)
+
+
+class GeniusJobFinancingClient(GeniusBaseClient):
+    """Client for accessing Genius CRM job financing data"""
+    
+    def __init__(self):
+        super().__init__()
+        self.table_name = 'job_financing'
+    
+    def get_job_financings(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
+        """Fetch job financings from Genius database"""
+        
+        # Base query selecting all fields from job_financing table
+        query = "SELECT jf.* FROM job_financing jf"
+        
+        # Add WHERE clause for incremental sync
+        where_clause = self.build_where_clause(since_date, self.table_name)
+        if where_clause:
+            query += f" {where_clause}"
+        
+        # Add ordering and limit
+        query += " ORDER BY jf.job_id"
+        if limit > 0:
+            query += f" LIMIT {limit}"
+        
+        logger.info(f"Executing query: {query}")
+        return self.execute_query(query)
+    
+    def get_field_mapping(self) -> List[str]:
+        """Get field mapping for transformation - matches actual database columns"""
+        return [
+            'job_id',
+            'term_id',
+            'financed_amount',
+            'max_financed_amount',
+            'bid_rate',
+            'commission_reduction',
+            'signed_on',
+            'cancellation_period_expires_on',
+            'app_submission_date',
+            'is_joint_application',
+            'applicant',
+            'co_applicant',
+            'status',
+            'approved_on',
+            'loan_expiration_date',
+            'denied_on',
+            'denied_by',
+            'why_book',
+            'would_book',
+            'is_financing_factor',
+            'satisfied',
+            'docs_completed',
+            'active_stipulation_notes',
+            'is_active_stipulations_cleared',
+            'legal_app_name'
+        ]

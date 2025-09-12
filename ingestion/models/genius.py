@@ -874,3 +874,44 @@ class Genius_JobStatus(models.Model):
     def __str__(self):
         return self.label or f"Job Status {self.id}"
 
+
+class Genius_JobFinancing(models.Model):
+    job_id = models.IntegerField(primary_key=True)
+    term_id = models.IntegerField(null=True, blank=True)
+    financed_amount = models.DecimalField(max_digits=9, decimal_places=2, default=Decimal('0.00'))
+    max_financed_amount = models.DecimalField(max_digits=9, decimal_places=2, default=Decimal('0.00'))
+    bid_rate = models.DecimalField(max_digits=5, decimal_places=3, null=True, blank=True)
+    commission_reduction = models.DecimalField(max_digits=5, decimal_places=3, null=True, blank=True)
+    signed_on = models.DateTimeField(null=True, blank=True)
+    cancellation_period_expires_on = models.DateTimeField(null=True, blank=True)
+    app_submission_date = models.DateTimeField(null=True, blank=True)
+    is_joint_application = models.SmallIntegerField(default=0)
+    applicant = models.CharField(max_length=50, null=True, blank=True)
+    co_applicant = models.CharField(max_length=50, null=True, blank=True)
+    status = models.SmallIntegerField(default=1)
+    approved_on = models.DateTimeField(null=True, blank=True)
+    loan_expiration_date = models.DateTimeField(null=True, blank=True)
+    denied_on = models.DateTimeField(null=True, blank=True)
+    denied_by = models.IntegerField(null=True, blank=True)
+    why_book = models.TextField(null=True, blank=True)
+    would_book = models.SmallIntegerField(null=True, blank=True)
+    is_financing_factor = models.SmallIntegerField(null=True, blank=True)
+    satisfied = models.TextField(null=True, blank=True)
+    docs_completed = models.DateTimeField(null=True, blank=True)
+    active_stipulation_notes = models.TextField(null=True, blank=True)
+    is_active_stipulations_cleared = models.SmallIntegerField(default=0)
+    legal_app_name = models.CharField(max_length=100, null=True, blank=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = '"genius_job_financing"'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Job Financing data stored in ingestion schema'
+        verbose_name = 'Genius Job Financing'
+        verbose_name_plural = 'Genius Job Financings'
+
+    def __str__(self):
+        return f"Job Financing {self.job_id} - Term {self.term_id}"
+

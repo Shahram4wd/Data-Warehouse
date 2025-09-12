@@ -1,5 +1,5 @@
 """
-Django management command for syncing Genius appointment outcome types using the new sync engine architecture.
+Django management command for syncing Genius job financings using the new sync engine architecture.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
 import logging
@@ -7,19 +7,19 @@ from datetime import datetime
 from typing import Optional
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 
-from ingestion.sync.genius.clients.appointment_outcome_types import GeniusAppointmentOutcomeTypeClient
-from ingestion.sync.genius.processors.appointment_outcome_types import GeniusAppointmentOutcomeTypeProcessor
-from ingestion.models.genius import Genius_AppointmentOutcomeType
+from ingestion.sync.genius.clients.job_financings import GeniusJobFinancingClient
+from ingestion.sync.genius.processors.job_financings import GeniusJobFinancingProcessor
+from ingestion.models.genius import Genius_JobFinancing
 from ingestion.models import SyncHistory
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Sync Genius appointment outcome types data using the standardized sync engine'
+    help = 'Sync Genius job financings data using the standardized sync engine'
 
     def add_arguments(self, parser):
         """Add command arguments following CRM sync guide standards"""
@@ -145,7 +145,7 @@ class Command(BaseCommand):
             self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
             
         except Exception as e:
-            logger.exception("Genius appointment outcome types sync failed")
+            logger.exception("Genius job financings sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
@@ -163,7 +163,7 @@ class Command(BaseCommand):
         dry_run = kwargs.get('dry_run', False)
         debug = kwargs.get('debug', False)
         
-        logger.info(f"Starting appointment outcome types sync (full={full}, dry_run={dry_run})")
+        logger.info(f"Starting job financings sync (full={full}, dry_run={dry_run})")
         
         # Initialize stats
         stats = {
@@ -185,8 +185,8 @@ class Command(BaseCommand):
         
         try:
             # Initialize client and processor
-            client = GeniusAppointmentOutcomeTypeClient()
-            processor = GeniusAppointmentOutcomeTypeProcessor(Genius_AppointmentOutcomeType)
+            client = GeniusJobFinancingClient()
+            processor = GeniusJobFinancingProcessor(Genius_JobFinancing)
             
             # Determine sync timestamp
             sync_start = start_date or since
@@ -197,8 +197,8 @@ class Command(BaseCommand):
                 logger.info(f"Sync parameters: full={full}, sync_start={sync_start}")
             
             # Fetch data from Genius database
-            logger.info("Fetching appointment outcome types from Genius database...")
-            raw_records = client.get_appointment_outcome_types(
+            logger.info("Fetching job financings from Genius database...")
+            raw_records = client.get_job_financings(
                 since_date=sync_start,
                 limit=max_records or 0
             )
@@ -221,7 +221,7 @@ class Command(BaseCommand):
                 logger.info(f"Converted to {len(records)} dictionary records")
             
             # Process records in chunks
-            chunk_size = 100000  # 100K records per chunk
+            chunk_size = 1000    # 1K records per chunk
             batch_size = 500     # 500 records per batch for bulk operations
             
             for chunk_start in range(0, len(records), chunk_size):
@@ -238,24 +238,24 @@ class Command(BaseCommand):
                 for i, record in enumerate(chunk_records, start=chunk_start):
                     try:
                         # Transform and validate record
-                        if not processor.validate_record(record):
+                        transformed_record = processor.transform_record(record, field_mapping)
+                        
+                        if not processor.validate_record(transformed_record):
                             stats['errors'] += 1
                             continue
-                        
-                        transformed_record = processor.transform_record(record)
                         
                         if debug and i < 3:  # Show first few records in debug mode
                             logger.info(f"Transformed record {i+1}: {transformed_record}")
                         
                         # Prepare for bulk operation
-                        record_id = transformed_record.get('id')
-                        if record_id:
-                            # Check if record exists
+                        record_job_id = transformed_record.get('job_id')
+                        if record_job_id:
+                            # Check if record exists (job_id is primary key)
                             try:
-                                if Genius_AppointmentOutcomeType.objects.filter(id=record_id).exists():
+                                if Genius_JobFinancing.objects.filter(job_id=record_job_id).exists():
                                     # Update existing record
-                                    obj, created = Genius_AppointmentOutcomeType.objects.get_or_create(
-                                        id=record_id,
+                                    obj, created = Genius_JobFinancing.objects.get_or_create(
+                                        job_id=record_job_id,
                                         defaults=transformed_record
                                     )
                                     if not created:
@@ -264,9 +264,9 @@ class Command(BaseCommand):
                                         objects_to_update.append(obj)
                                 else:
                                     # Create new record
-                                    objects_to_create.append(Genius_AppointmentOutcomeType(**transformed_record))
+                                    objects_to_create.append(Genius_JobFinancing(**transformed_record))
                             except Exception as e:
-                                logger.error(f"Error checking existing record {record_id}: {e}")
+                                logger.error(f"Error checking existing record {record_job_id}: {e}")
                                 stats['errors'] += 1
                                 continue
                         
@@ -296,7 +296,7 @@ class Command(BaseCommand):
             # Complete sync record with success
             self.complete_sync_record(sync_record, stats)
             
-            logger.info(f"Completed appointment outcome types sync: {stats['processed']} processed, "
+            logger.info(f"Completed job financings sync: {stats['processed']} processed, "
                        f"{stats['created']} created, {stats['updated']} updated, {stats['errors']} errors")
             
             return {
@@ -314,7 +314,7 @@ class Command(BaseCommand):
         """Create a new sync record"""
         return SyncHistory.objects.create(
             crm_source='genius',
-            sync_type=r'appointment_outcome_types',
+            sync_type='job_financings',
             status='running',
             start_time=timezone.now(),
             configuration=configuration
@@ -341,7 +341,7 @@ class Command(BaseCommand):
         """Get the timestamp of the last successful sync"""
         last_sync = SyncHistory.objects.filter(
             crm_source='genius',
-            sync_type=r'appointment_outcome_types',
+            sync_type='job_financings',
             status='success'
         ).order_by('-end_time').first()
         
@@ -362,16 +362,16 @@ class Command(BaseCommand):
         # Create new records
         if objects_to_create:
             try:
-                created_objects = Genius_AppointmentOutcomeType.objects.bulk_create(
+                created_objects = Genius_JobFinancing.objects.bulk_create(
                     objects_to_create, 
                     ignore_conflicts=True
                 )
                 batch_stats['created'] = len(created_objects)
                 if debug:
-                    logger.info(f"Created {len(created_objects)} new appointment outcome type records")
+                    logger.info(f"Created {len(created_objects)} new job financing records")
                     
             except Exception as e:
-                logger.error(f"Error creating appointment outcome type records: {e}")
+                logger.error(f"Error creating job financing records: {e}")
                 batch_stats['errors'] += len(objects_to_create)
         
         # Update existing records
@@ -381,11 +381,10 @@ class Command(BaseCommand):
                     obj.save()
                     batch_stats['updated'] += 1
                 if debug:
-                    logger.info(f"Updated {batch_stats['updated']} existing appointment outcome type records")
+                    logger.info(f"Updated {batch_stats['updated']} existing job financing records")
                     
             except Exception as e:
-                logger.error(f"Error updating appointment outcome type records: {e}")
+                logger.error(f"Error updating job financing records: {e}")
                 batch_stats['errors'] += len(objects_to_update)
         
         return batch_stats
-

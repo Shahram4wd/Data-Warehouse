@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from ingestion.sync.genius.clients.appointment_types import GeniusAppointmentTypeClient
@@ -312,16 +313,17 @@ class Command(BaseCommand):
     def create_sync_record(self, configuration):
         """Create a new sync record"""
         return SyncHistory.objects.create(
-            sync_type='genius_appointment_types',
+            crm_source='genius',
+            sync_type=r'appointment_types',
             status='running',
-            started_at=datetime.now(),
+            start_time=timezone.now(),
             configuration=configuration
         )
     
     def complete_sync_record(self, sync_record, stats):
         """Mark sync record as completed"""
-        sync_record.status = 'completed'
-        sync_record.completed_at = datetime.now()
+        sync_record.status = 'success'
+        sync_record.end_time = timezone.now()
         sync_record.records_processed = stats['processed']
         sync_record.records_created = stats['created'] 
         sync_record.records_updated = stats['updated']
@@ -331,18 +333,19 @@ class Command(BaseCommand):
     def fail_sync_record(self, sync_record, error_message):
         """Mark sync record as failed"""
         sync_record.status = 'failed'
-        sync_record.completed_at = datetime.now()
+        sync_record.end_time = timezone.now()
         sync_record.error_message = error_message
         sync_record.save()
     
     def get_last_sync_timestamp(self):
         """Get the timestamp of the last successful sync"""
         last_sync = SyncHistory.objects.filter(
-            sync_type='genius_appointment_types',
-            status='completed'
-        ).order_by('-completed_at').first()
+            crm_source='genius',
+            sync_type=r'appointment_types',
+            status='success'
+        ).order_by('-end_time').first()
         
-        return last_sync.completed_at if last_sync else None
+        return last_sync.end_time if last_sync else None
 
     def _process_batch(self, objects_to_create, objects_to_update, dry_run, debug):
         """Process a batch of objects for creation/update"""

@@ -35,7 +35,7 @@ class Command(BaseCommand):
             }
         )
     
-    def complete_sync_record(self, sync_record, stats=None, status='completed', error_message=None):
+    def complete_sync_record(self, sync_record, stats=None, status='success', error_message=None):
         """Complete the SyncHistory record with results"""
         from django.utils import timezone
         sync_record.end_time = timezone.now()
@@ -211,7 +211,7 @@ class Command(BaseCommand):
                 sync_record = self.complete_sync_record(
                     sync_record,
                     stats=all_stats,
-                    status='completed'
+                    status='success'
                 )
             
             # Display results

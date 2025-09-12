@@ -181,7 +181,7 @@ class Command(BaseCommand):
                 sync_record = self.complete_sync_record(
                     sync_record,
                     stats=all_stats,
-                    status='completed'
+                    status='success'
                 )
             
             # Display results

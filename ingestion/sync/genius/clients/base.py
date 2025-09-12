@@ -87,11 +87,13 @@ class GeniusBaseClient:
             'prospect': 'updated_at',
             'division': 'updated_at', 
             'division_group': 'updated_at',
+            'division_region': None,  # No timestamp field
             'user_title': 'updated_at',
             'appointment': 'updated_at',
             'user': 'updated_at',
             'job': 'updated_at',
             'job_status': 'updated_at',
+            'job_financing': None,  # No timestamp field
             'lead': 'updated_at',
             'quote': 'updated_at',
             'job_change_order': 'updated_at',
@@ -108,6 +110,11 @@ class GeniusBaseClient:
         }
         
         timestamp_field = timestamp_field_map.get(table_name, 'updated_at')
+        
+        # If table has no timestamp field, skip incremental sync
+        if timestamp_field is None:
+            return ""
+        
         since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
         
         return f"WHERE {timestamp_field} > '{since_str}'"
