@@ -45,15 +45,19 @@ class GeniusBaseSyncEngine:
             configuration=configuration
         )
     
-    @sync_to_async
     def complete_sync_record(self, sync_record: SyncHistory, stats: Dict[str, int], 
                            error_message: str = None) -> None:
         """Complete SyncHistory record with results"""
+        print(f"DEBUG: Completing sync record {sync_record.id} with stats: {stats}")
+        logger.info(f"Completing sync record {sync_record.id} with stats: {stats}")
+        
         sync_record.end_time = timezone.now()
         sync_record.records_processed = stats.get('total_processed', 0)
         sync_record.records_created = stats.get('created', 0)
         sync_record.records_updated = stats.get('updated', 0)
         sync_record.records_failed = stats.get('errors', 0)
+        
+        print(f"DEBUG: Set records - processed={sync_record.records_processed}, created={sync_record.records_created}")
         
         if error_message:
             sync_record.status = 'failed'
@@ -72,7 +76,11 @@ class GeniusBaseSyncEngine:
             'success_rate': success_rate
         }
         
+        print(f"DEBUG: About to save sync record {sync_record.id}")
+        logger.info(f"Saving sync record {sync_record.id}: processed={sync_record.records_processed}, created={sync_record.records_created}")
         sync_record.save()
+        print(f"DEBUG: Sync record {sync_record.id} saved successfully")
+        logger.info(f"Sync record {sync_record.id} saved successfully")
     
     def parse_since_parameter(self, since_param: str) -> Optional[datetime]:
         """Parse --since parameter string to datetime"""

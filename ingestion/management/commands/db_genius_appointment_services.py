@@ -1,8 +1,7 @@
 """
-Django management command for syncing Genius appointment services using the new sync engine architecture.
-This command follows the CRM sync guide patterns for consistent data synchronization.
+Django management command for syncing Genius appointment services data.
+This command follows the CRM sync guide patterns with proper flag support.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -16,16 +15,22 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = 'Sync Genius appointment services data using the standardized sync engine'
+    help = 'Sync Genius appointment services data with delta updates and bulk operations'
 
     def add_arguments(self, parser):
         """Add command arguments following CRM sync guide standards"""
         
-        # Core sync options
+        # Core sync options - two distinct flags
         parser.add_argument(
             '--full',
             action='store_true',
-            help='Force full sync instead of incremental (ignores last sync timestamp)'
+            help='Perform full sync (ignore last sync timestamp) - fetches ALL records'
+        )
+        
+        parser.add_argument(
+            '--force',
+            action='store_true', 
+            help='Completely replace existing records - enables force overwrite mode'
         )
         
         parser.add_argument(
@@ -47,12 +52,6 @@ class Command(BaseCommand):
         )
         
         parser.add_argument(
-            '--end-date',
-            type=str,
-            help='End date for date range sync (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)'
-        )
-        
-        parser.add_argument(
             '--max-records',
             type=int,
             help='Maximum number of records to process (for testing/debugging)'
@@ -63,20 +62,12 @@ class Command(BaseCommand):
             action='store_true',
             help='Enable debug logging for detailed sync information'
         )
-        
-        # Legacy argument support (deprecated)
-        parser.add_argument(
-            '--force',
-            action='store_true',
-            help='DEPRECATED: Use --full instead. Forces full sync ignoring timestamps.'
-        )
 
     def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
         """Parse datetime string argument"""
         if not date_str:
             return None
             
-        # Try parsing as datetime first, then as date
         try:
             parsed = parse_datetime(date_str)
             if parsed:
@@ -100,56 +91,57 @@ class Command(BaseCommand):
             logging.getLogger().setLevel(logging.DEBUG)
             self.stdout.write("🐛 DEBUG MODE - Verbose logging enabled")
         
+        # Display sync mode based on flags
+        full_sync = options.get('full', False)
+        force_overwrite = options.get('force', False)
+        
+        if full_sync and force_overwrite:
+            self.stdout.write("� FULL SYNC MODE + FORCE OVERWRITE MODE")
+        elif full_sync:
+            self.stdout.write("🔧 FULL SYNC MODE - Ignoring last sync timestamp")
+        elif force_overwrite:
+            self.stdout.write("🔧 FORCE OVERWRITE MODE - Replacing existing records")
+        else:
+            self.stdout.write("🔧 DELTA SYNC MODE - Processing updates since last sync")
+        
         # Handle dry run
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
-        
-        # Parse datetime arguments
+        # Parse datetime arguments  
         since = self.parse_datetime_arg(options.get('since'))
         start_date = self.parse_datetime_arg(options.get('start_date'))
-        end_date = self.parse_datetime_arg(options.get('end_date'))
         
-        # Validate date range
-        if start_date and end_date and start_date > end_date:
-            raise ValueError("Start date cannot be after end date")
+        # For delta sync, use start_date if provided, otherwise since date
+        since_date = None
+        if not full_sync:
+            since_date = start_date or since
         
         # Execute sync
         try:
-            result = asyncio.run(self.execute_async_sync(
-                full=options.get('full', False),
-                since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options.get('max_records'),
+            engine = GeniusAppointmentServicesSyncEngine()
+            result = engine.sync_appointment_services(
+                since_date=since_date,
+                force_overwrite=force_overwrite,
                 dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
-            ))
+                max_records=options.get('max_records')
+            )
             
             # Display results
-            stats = result['stats']
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")
+            self.stdout.write(f"   📊 Processed: {result['total_processed']:,} records")
+            self.stdout.write(f"   ➕ Created: {result['created']:,} records")  
+            self.stdout.write(f"   📝 Updated: {result['updated']:,} records")
+            self.stdout.write(f"   ❌ Errors: {result['errors']:,} records")
+            
+            if result['errors'] > 0:
+                self.stdout.write(f"⚠️ Completed with {result['errors']} errors. Check logs for details.")
             
         except Exception as e:
-            logger.exception("Genius appointment services sync failed")
+            logger.exception("Appointment services sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
             raise
-
-    async def execute_async_sync(self, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusAppointmentServicesSyncEngine()
-        return await engine.execute_sync(**kwargs)
 
