@@ -183,10 +183,6 @@ class Hubspot_Contact(models.Model):  # Updated table name
     address_url = models.URLField(null=True, blank=True)
     division_id = models.BigIntegerField(null=True, blank=True)
     
-    # Source fields (keep existing ones)
-    primary_source = models.CharField(max_length=255, null=True, blank=True)
-    secondary_source = models.CharField(max_length=255, null=True, blank=True)
-    
     class Meta:
         db_table = 'hubspot_contact'
         managed = True

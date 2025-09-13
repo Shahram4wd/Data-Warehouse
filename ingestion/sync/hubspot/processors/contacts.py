@@ -119,9 +119,85 @@ class HubSpotContactProcessor(HubSpotBaseProcessor):
             'properties.lead_year_built': 'lead_year_built',
             'properties.lead_zip': 'lead_zip',
             
+            # Analytics Fields
+            'properties.dedupe_record_id': 'dedupe_record_id',
+            'properties.hs_analytics_average_page_views': 'hs_analytics_average_page_views',
+            'properties.hs_analytics_first_timestamp': 'hs_analytics_first_timestamp',
+            'properties.hs_analytics_num_event_completions': 'hs_analytics_num_event_completions',
+            'properties.hs_analytics_num_page_views': 'hs_analytics_num_page_views',
+            'properties.hs_analytics_num_visits': 'hs_analytics_num_visits',
+            'properties.hs_analytics_revenue': 'hs_analytics_revenue',
+            'properties.hs_analytics_source': 'hs_analytics_source',
+            'properties.hs_analytics_source_data_1': 'hs_analytics_source_data_1',
+            'properties.hs_analytics_source_data_2': 'hs_analytics_source_data_2',
+            
+            # HubSpot System Fields
+            'properties.hs_created_by_user_id': 'hs_created_by_user_id',
+            'properties.hs_currently_enrolled_in_prospecting_agent': 'hs_currently_enrolled_in_prospecting_agent',
+            'properties.hs_email_domain': 'hs_email_domain',
+            'properties.hs_is_unworked': 'hs_is_unworked',
+            'properties.hs_latest_source': 'hs_latest_source',
+            'properties.hs_latest_source_data_1': 'hs_latest_source_data_1',
+            'properties.hs_latest_source_data_2': 'hs_latest_source_data_2',
+            'properties.hs_latest_source_timestamp': 'hs_latest_source_timestamp',
+            'properties.hs_marketable_status': 'hs_marketable_status',
+            'properties.hs_marketable_until_renewal': 'hs_marketable_until_renewal',
+            'properties.hs_membership_has_accessed_private_content': 'hs_membership_has_accessed_private_content',
+            'properties.hs_object_source_label': 'hs_object_source_label',
+            'properties.hs_predictivecontactscore_v2': 'hs_predictivecontactscore_v2',
+            'properties.hs_predictivescoringtier': 'hs_predictivescoringtier',
+            'properties.hs_prospecting_agent_total_enrolled_count': 'hs_prospecting_agent_total_enrolled_count',
+            'properties.hs_registered_member': 'hs_registered_member',
+            'properties.hs_timezone': 'hs_timezone',
+            'properties.hs_updated_by_user_id': 'hs_updated_by_user_id',
+            'properties.hs_v2_date_entered_lead': 'hs_v2_date_entered_lead',
+            
+            # Lifecycle Fields
+            'properties.currentlyinworkflow': 'currentlyinworkflow',
+            'properties.lifecyclestage': 'lifecyclestage',
+            'properties.num_conversion_events': 'num_conversion_events',
+            'properties.num_unique_conversion_events': 'num_unique_conversion_events',
+            
+            # Contact Info Fields
+            'properties.contact_id': 'contact_id',
+            'properties.contact_type': 'contact_type',
+            'properties.phone1_type': 'phone1_type',
+            'properties.phone2_type': 'phone2_type',
+            'properties.num_notes': 'num_notes',
+            'properties.notes_last_updated': 'notes_last_updated',
+            'properties.notes_last_contacted': 'notes_last_contacted',
+            'properties.num_contacted_notes': 'num_contacted_notes',
+            'properties.last_scheduled_appointment_start_time': 'last_scheduled_appointment_start_time',
+            'properties.sales_rabbit_lead_id': 'sales_rabbit_lead_id',
+            
+            # Prospect Fields
+            'properties.prospect_id': 'prospect_id',
+            'properties.prospect_add_date': 'prospect_add_date',
+            'properties.prospect_add_user_id': 'prospect_add_user_id',
+            'properties.prospect_is_address_valid': 'prospect_is_address_valid',
+            'properties.prospect_is_year_built_valid': 'prospect_is_year_built_valid',
+            'properties.prospect_phone1': 'prospect_phone1',
+            'properties.prospect_phone1_type': 'prospect_phone1_type',
+            'properties.prospect_phone2_type': 'prospect_phone2_type',
+            'properties.prospect_user_id': 'prospect_user_id',
+            'properties.prospect_year_built': 'prospect_year_built',
+            'properties.prospect_marketsharp_id': 'prospect_marketsharp_id',
+            
             # Source fields
-            'properties.hge_primary_source': 'primary_source',
-            'properties.hge_secondary_source': 'secondary_source',
+            'properties.hge_primary_source': 'hge_primary_source',
+            'properties.hge_secondary_source': 'hge_secondary_source',
+            'properties.service_of_interest': 'service_of_interest',
+            
+            # Canvasser fields
+            'properties.canvasser': 'canvasser',
+            'properties.canvasser_email': 'canvasser_email',
+            'properties.canvasser_id': 'canvasser_id',
+            
+            # Additional Fields
+            'properties.country': 'country',
+            'properties.hatch_id': 'hatch_id',
+            'properties.address_url': 'address_url',
+            'properties.division_id': 'division_id',
         }
     
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
