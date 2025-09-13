@@ -80,24 +80,31 @@ class GeniusValidator:
     
     @staticmethod
     def validate_datetime_field(value: Any) -> Optional[datetime]:
-        """Validate and convert datetime fields"""
+        """Validate and convert datetime fields with timezone awareness"""
         if value is None:
             return None
         
+        from django.utils import timezone
+        from datetime import date
+        
         if isinstance(value, datetime):
+            # If already a datetime, make it timezone-aware if it's naive
+            if timezone.is_naive(value):
+                return timezone.make_aware(value)
             return value
         
         # Handle date objects (convert to datetime)
-        from datetime import date
         if isinstance(value, date):
-            return datetime.combine(value, datetime.min.time())
+            dt = datetime.combine(value, datetime.min.time())
+            return timezone.make_aware(dt)
         
         if isinstance(value, str):
             try:
                 # Try common datetime formats
                 for fmt in ['%Y-%m-%d %H:%M:%S', '%Y-%m-%d', '%Y-%m-%d %H:%M:%S.%f']:
                     try:
-                        return datetime.strptime(value, fmt)
+                        dt = datetime.strptime(value, fmt)
+                        return timezone.make_aware(dt)
                     except ValueError:
                         continue
             except Exception:
@@ -108,16 +115,22 @@ class GeniusValidator:
     
     @staticmethod
     def validate_date_field(value: Any) -> Optional[datetime]:
-        """Validate and convert date fields to datetime for Django DateField compatibility"""
+        """Validate and convert date fields to timezone-aware datetime for Django DateField compatibility"""
         if value is None:
             return None
         
-        # Handle date objects directly
+        from django.utils import timezone
         from datetime import date
+        
+        # Handle date objects directly
         if isinstance(value, date):
-            return datetime.combine(value, datetime.min.time())
+            dt = datetime.combine(value, datetime.min.time())
+            return timezone.make_aware(dt)
         
         if isinstance(value, datetime):
+            # If already a datetime, make it timezone-aware if it's naive
+            if timezone.is_naive(value):
+                return timezone.make_aware(value)
             return value
         
         if isinstance(value, str):
@@ -125,8 +138,8 @@ class GeniusValidator:
                 # Try common date formats
                 for fmt in ['%Y-%m-%d', '%Y-%m-%d %H:%M:%S']:
                     try:
-                        parsed = datetime.strptime(value, fmt)
-                        return parsed
+                        dt = datetime.strptime(value, fmt)
+                        return timezone.make_aware(dt)
                     except ValueError:
                         continue
             except Exception:
@@ -256,22 +269,142 @@ class GeniusFieldValidator:
     
     @staticmethod
     def validate_job_record(record: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate job record"""
+        """Validate job record with comprehensive field mapping"""
         from django.utils import timezone
         validated = {}
         
-        # Use 'id' as the field name (not 'genius_id') to match the Django model
+        # Basic job identification
         validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['client_cid'] = GeniusValidator.validate_id_field(record.get('client_cid'))
         validated['prospect_id'] = GeniusValidator.validate_id_field(record.get('prospect_id'))
         validated['division_id'] = GeniusValidator.validate_id_field(record.get('division_id'))
+        validated['user_id'] = GeniusValidator.validate_id_field(record.get('user_id'))
+        validated['production_user_id'] = GeniusValidator.validate_id_field(record.get('production_user_id'))
+        validated['project_coordinator_user_id'] = GeniusValidator.validate_id_field(record.get('project_coordinator_user_id'))
+        validated['production_month'] = GeniusValidator.validate_id_field(record.get('production_month'))
         
-        # Use correct field names that match the actual database schema
-        validated['status'] = GeniusValidator.validate_string_field(record.get('status'), max_length=50)
-        validated['contract_amount'] = GeniusValidator.validate_decimal_field(record.get('contract_amount'), max_digits=10, decimal_places=2)
-        validated['start_date'] = GeniusValidator.validate_datetime_field(record.get('start_date'))
-        validated['end_date'] = GeniusValidator.validate_datetime_field(record.get('end_date'))
+        # Subcontractor fields
+        validated['subcontractor_id'] = GeniusValidator.validate_id_field(record.get('subcontractor_id'))
+        validated['subcontractor_status_id'] = GeniusValidator.validate_id_field(record.get('subcontractor_status_id'))
+        validated['subcontractor_confirmed'] = GeniusValidator.validate_id_field(record.get('subcontractor_confirmed'))
+        
+        # Status fields
+        validated['status'] = GeniusValidator.validate_id_field(record.get('status'))
+        validated['is_in_progress'] = GeniusValidator.validate_id_field(record.get('is_in_progress'))
+        validated['ready_status'] = GeniusValidator.validate_id_field(record.get('ready_status'))
+        
+        # Prep status fields
+        validated['prep_status_id'] = GeniusValidator.validate_id_field(record.get('prep_status_id'))
+        validated['prep_status_set_date'] = GeniusValidator.validate_datetime_field(record.get('prep_status_set_date'))
+        validated['prep_status_is_reset'] = GeniusValidator.validate_id_field(record.get('prep_status_is_reset'))
+        validated['prep_status_notes'] = GeniusValidator.validate_string_field(record.get('prep_status_notes'))
+        validated['prep_issue_id'] = GeniusValidator.validate_string_field(record.get('prep_issue_id'), max_length=32)
+        
+        # Service and lead info
+        validated['service_id'] = GeniusValidator.validate_id_field(record.get('service_id', 8))  # Default to 8
+        validated['is_lead_pb'] = GeniusValidator.validate_id_field(record.get('is_lead_pb'))
+        
+        # Contract information
+        validated['contract_number'] = GeniusValidator.validate_string_field(record.get('contract_number'), max_length=50)
+        validated['contract_date'] = GeniusValidator.validate_date_field(record.get('contract_date'))
+        validated['contract_amount'] = GeniusValidator.validate_decimal_field(record.get('contract_amount'), max_digits=11, decimal_places=2)
+        validated['contract_amount_difference'] = GeniusValidator.validate_string_field(record.get('contract_amount_difference'))
+        validated['contract_hours'] = GeniusValidator.validate_id_field(record.get('contract_hours'))
+        validated['contract_file_id'] = GeniusValidator.validate_id_field(record.get('contract_file_id'))
+        
+        # Financial information
+        validated['job_value'] = GeniusValidator.validate_decimal_field(record.get('job_value'), max_digits=11, decimal_places=2)
+        validated['deposit_amount'] = GeniusValidator.validate_decimal_field(record.get('deposit_amount'), max_digits=11, decimal_places=2)
+        validated['deposit_type_id'] = GeniusValidator.validate_id_field(record.get('deposit_type_id'))
+        validated['is_financing'] = GeniusValidator.validate_id_field(record.get('is_financing'))
+        validated['sales_tax_rate'] = GeniusValidator.validate_decimal_field(record.get('sales_tax_rate'), max_digits=7, decimal_places=5)
+        validated['is_sales_tax_exempt'] = GeniusValidator.validate_id_field(record.get('is_sales_tax_exempt'))
+        validated['commission_payout'] = GeniusValidator.validate_decimal_field(record.get('commission_payout'), max_digits=11, decimal_places=2)
+        validated['accrued_commission_payout'] = GeniusValidator.validate_decimal_field(record.get('accrued_commission_payout'), max_digits=11, decimal_places=2)
+        
+        # Sales information - INCLUDING sold_date!
+        validated['sold_user_id'] = GeniusValidator.validate_id_field(record.get('sold_user_id'))
+        validated['sold_date'] = GeniusValidator.validate_date_field(record.get('sold_date'))
+        
+        # Scheduling information
+        validated['start_request_date'] = GeniusValidator.validate_date_field(record.get('start_request_date'))
+        validated['deadline_date'] = GeniusValidator.validate_date_field(record.get('deadline_date'))
+        validated['ready_date'] = GeniusValidator.validate_date_field(record.get('ready_date'))
+        validated['jsa_sent'] = GeniusValidator.validate_id_field(record.get('jsa_sent'))
+        validated['start_date'] = GeniusValidator.validate_date_field(record.get('start_date'))
+        validated['end_date'] = GeniusValidator.validate_date_field(record.get('end_date'))
+        
+        # Add and audit information
         validated['add_user_id'] = GeniusValidator.validate_id_field(record.get('add_user_id'))
         validated['add_date'] = GeniusValidator.validate_datetime_field(record.get('add_date'))
+        
+        # Cancellation information
+        validated['cancel_date'] = GeniusValidator.validate_date_field(record.get('cancel_date'))
+        validated['cancel_user_id'] = GeniusValidator.validate_id_field(record.get('cancel_user_id'))
+        validated['cancel_reason_id'] = GeniusValidator.validate_id_field(record.get('cancel_reason_id'))
+        
+        # Refund information
+        validated['is_refund'] = GeniusValidator.validate_id_field(record.get('is_refund'))
+        validated['refund_date'] = GeniusValidator.validate_date_field(record.get('refund_date'))
+        validated['refund_user_id'] = GeniusValidator.validate_id_field(record.get('refund_user_id'))
+        
+        # Completion information
+        validated['finish_date'] = GeniusValidator.validate_date_field(record.get('finish_date'))
+        validated['is_earned_not_paid'] = GeniusValidator.validate_id_field(record.get('is_earned_not_paid'))
+        
+        # Materials and measurement information
+        validated['materials_arrival_date'] = GeniusValidator.validate_date_field(record.get('materials_arrival_date'))
+        validated['measure_date'] = GeniusValidator.validate_date_field(record.get('measure_date'))
+        validated['measure_time'] = GeniusValidator.validate_string_field(record.get('measure_time'))
+        validated['measure_user_id'] = GeniusValidator.validate_id_field(record.get('measure_user_id'))
+        validated['time_format'] = GeniusValidator.validate_string_field(record.get('time_format'))
+        validated['materials_estimated_arrival_date'] = GeniusValidator.validate_date_field(record.get('materials_estimated_arrival_date'))
+        validated['materials_ordered'] = GeniusValidator.validate_date_field(record.get('materials_ordered'))
+        
+        # Installation information
+        validated['install_date'] = GeniusValidator.validate_date_field(record.get('install_date'))
+        validated['install_time'] = GeniusValidator.validate_string_field(record.get('install_time'))
+        validated['install_time_format'] = GeniusValidator.validate_string_field(record.get('install_time_format'))
+        
+        # Pricing and commission details
+        validated['price_level'] = GeniusValidator.validate_string_field(record.get('price_level'), max_length=32)
+        validated['price_level_goal'] = GeniusValidator.validate_id_field(record.get('price_level_goal'))
+        validated['price_level_commission'] = GeniusValidator.validate_decimal_field(record.get('price_level_commission'), max_digits=3, decimal_places=1)
+        validated['price_level_commission_reduction'] = GeniusValidator.validate_id_field(record.get('price_level_commission_reduction'))
+        validated['is_reviewed'] = GeniusValidator.validate_id_field(record.get('is_reviewed'))
+        validated['reviewed_by'] = GeniusValidator.validate_id_field(record.get('reviewed_by'))
+        
+        # Additional fields
+        validated['pp_id_updated'] = GeniusValidator.validate_id_field(record.get('pp_id_updated'))
+        validated['hoa'] = GeniusValidator.validate_id_field(record.get('hoa'))
+        validated['hoa_approved'] = GeniusValidator.validate_id_field(record.get('hoa_approved'))
+        validated['materials_ordered_old'] = GeniusValidator.validate_id_field(record.get('materials_ordered_old'))
+        validated['start_month_old'] = GeniusValidator.validate_id_field(record.get('start_month_old'))
+        validated['cogs_report_month'] = GeniusValidator.validate_string_field(record.get('cogs_report_month'), max_length=50)
+        validated['is_cogs_report_month_updated'] = GeniusValidator.validate_id_field(record.get('is_cogs_report_month_updated'))
+        validated['forecast_month'] = GeniusValidator.validate_string_field(record.get('forecast_month'), max_length=50)
+        validated['coc_sent_on'] = GeniusValidator.validate_datetime_field(record.get('coc_sent_on'))
+        validated['coc_sent_by'] = GeniusValidator.validate_id_field(record.get('coc_sent_by'))
+        validated['company_cam_link'] = GeniusValidator.validate_string_field(record.get('company_cam_link'), max_length=256)
+        validated['pm_finished_on'] = GeniusValidator.validate_date_field(record.get('pm_finished_on'))
+        validated['estimate_job_duration'] = GeniusValidator.validate_id_field(record.get('estimate_job_duration'))
+        validated['payment_not_finalized_reason'] = GeniusValidator.validate_id_field(record.get('payment_not_finalized_reason'))
+        validated['reasons_other'] = GeniusValidator.validate_string_field(record.get('reasons_other'), max_length=255)
+        validated['payment_type'] = GeniusValidator.validate_id_field(record.get('payment_type'))
+        validated['payment_amount'] = GeniusValidator.validate_decimal_field(record.get('payment_amount'), max_digits=11, decimal_places=2)
+        validated['is_payment_finalized'] = GeniusValidator.validate_id_field(record.get('is_payment_finalized'))
+        validated['is_company_cam'] = GeniusValidator.validate_id_field(record.get('is_company_cam'))
+        validated['is_five_star_review'] = GeniusValidator.validate_id_field(record.get('is_five_star_review'))
+        validated['projected_end_date'] = GeniusValidator.validate_date_field(record.get('projected_end_date'))
+        validated['is_company_cam_images_correct'] = GeniusValidator.validate_id_field(record.get('is_company_cam_images_correct'))
+        validated['post_pm_closeout_date'] = GeniusValidator.validate_date_field(record.get('post_pm_closeout_date'))
+        validated['pre_pm_closeout_date'] = GeniusValidator.validate_date_field(record.get('pre_pm_closeout_date'))
+        validated['actual_install_date'] = GeniusValidator.validate_datetime_field(record.get('actual_install_date'))
+        validated['in_progress_substatus_id'] = GeniusValidator.validate_id_field(record.get('in_progress_substatus_id'))
+        validated['is_loan_document_uptodate'] = GeniusValidator.validate_id_field(record.get('is_loan_document_uptodate'))
+        validated['is_labor_adjustment_correct'] = GeniusValidator.validate_id_field(record.get('is_labor_adjustment_correct'))
+        validated['is_change_order_correct'] = GeniusValidator.validate_id_field(record.get('is_change_order_correct'))
+        validated['is_coc_pdf_attached'] = GeniusValidator.validate_id_field(record.get('is_coc_pdf_attached'))
         
         # Workaround: Handle NULL updated_at values from Genius by setting to current time
         # TODO: Fix this in Genius database in the future
@@ -280,8 +413,6 @@ class GeniusFieldValidator:
             updated_at_value = timezone.now()
             logger.warning(f"Job {record.get('id')}: updated_at was NULL, setting to current time as workaround")
         validated['updated_at'] = updated_at_value
-        
-        validated['service_id'] = GeniusValidator.validate_id_field(record.get('service_id', 8))  # Default to 8
         
         return validated
     

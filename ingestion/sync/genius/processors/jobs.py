@@ -22,22 +22,13 @@ class GeniusJobProcessor(GeniusBaseProcessor):
         # Use the field validator from validators.py
         validated = GeniusFieldValidator.validate_job_record(record_data)
         
-        # Convert timezone awareness
-        if validated.get('add_date'):
-            validated['add_date'] = self.convert_timezone_aware(validated['add_date'])
-        
-        if validated.get('updated_at'):
-            validated['updated_at'] = self.convert_timezone_aware(validated['updated_at'])
-            
-        if validated.get('start_date'):
-            validated['start_date'] = self.convert_timezone_aware(validated['start_date'])
-            
-        if validated.get('end_date'):
-            validated['end_date'] = self.convert_timezone_aware(validated['end_date'])
-        
-        # Ensure we have required fields  
-        if not validated.get('id'):
+        # Ensure we have required fields - check for None, not just falsy values
+        if validated.get('id') is None:
             raise ValueError("Job must have an id")
+        
+        # Also reject ID = 0 as it's typically invalid in database contexts
+        if validated.get('id') == 0:
+            raise ValueError(f"Job has invalid ID: {validated.get('id')}")
         
         # Validate business rules
         relationship_errors = GeniusRecordValidator.validate_required_relationships('job', validated)
@@ -111,9 +102,51 @@ class GeniusJobProcessor(GeniusBaseProcessor):
                 update_conflicts=True,
                 unique_fields=['id'],
                 update_fields=[
-                    'prospect_id', 'division_id', 'status', 'contract_amount',
-                    'start_date', 'end_date', 'add_user_id', 'add_date', 
-                    'updated_at', 'service_id'
+                    # Basic job info
+                    'client_cid', 'prospect_id', 'division_id', 'user_id',
+                    'production_user_id', 'project_coordinator_user_id', 'production_month',
+                    'subcontractor_id', 'subcontractor_status_id', 'subcontractor_confirmed',
+                    'status', 'is_in_progress', 'ready_status', 'service_id',
+                    # Prep status info
+                    'prep_status_id', 'prep_status_set_date', 'prep_status_is_reset',
+                    'prep_status_notes', 'prep_issue_id', 'is_lead_pb',
+                    # Contract info
+                    'contract_number', 'contract_date', 'contract_amount',
+                    'contract_amount_difference', 'contract_hours', 'contract_file_id',
+                    # Financial info
+                    'job_value', 'deposit_amount', 'deposit_type_id', 'is_financing',
+                    'sales_tax_rate', 'is_sales_tax_exempt', 'commission_payout',
+                    'accrued_commission_payout',
+                    # Sales info - INCLUDING sold_date
+                    'sold_user_id', 'sold_date',
+                    # Scheduling info
+                    'start_request_date', 'deadline_date', 'ready_date', 'jsa_sent',
+                    'start_date', 'end_date',
+                    # Cancellation info  
+                    'cancel_date', 'cancel_user_id', 'cancel_reason_id',
+                    'is_refund', 'refund_date', 'refund_user_id',
+                    # Completion info
+                    'finish_date', 'is_earned_not_paid',
+                    # Materials and scheduling
+                    'materials_arrival_date', 'measure_date', 'measure_time',
+                    'measure_user_id', 'time_format', 'materials_estimated_arrival_date',
+                    'materials_ordered', 'install_date', 'install_time', 'install_time_format',
+                    # Pricing and commission
+                    'price_level', 'price_level_goal', 'price_level_commission',
+                    'price_level_commission_reduction', 'is_reviewed', 'reviewed_by',
+                    # Additional fields
+                    'pp_id_updated', 'hoa', 'hoa_approved', 'materials_ordered_old',
+                    'start_month_old', 'cogs_report_month', 'is_cogs_report_month_updated',
+                    'forecast_month', 'coc_sent_on', 'coc_sent_by', 'company_cam_link',
+                    'pm_finished_on', 'estimate_job_duration', 'payment_not_finalized_reason',
+                    'reasons_other', 'payment_type', 'payment_amount', 'is_payment_finalized',
+                    'is_company_cam', 'is_five_star_review', 'projected_end_date',
+                    'is_company_cam_images_correct', 'post_pm_closeout_date',
+                    'pre_pm_closeout_date', 'actual_install_date', 'in_progress_substatus_id',
+                    'is_loan_document_uptodate', 'is_labor_adjustment_correct',
+                    'is_change_order_correct', 'is_coc_pdf_attached',
+                    # Timestamps (excluding add_user_id and add_date as they shouldn't change)
+                    'updated_at'
                 ]
             )
             

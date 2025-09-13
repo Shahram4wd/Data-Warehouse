@@ -7,7 +7,6 @@ from datetime import datetime, time, timedelta
 from typing import Dict, List, Optional, Any
 from django.db import transaction
 from django.utils import timezone
-from asgiref.sync import sync_to_async
 
 from ingestion.models import Genius_Appointment, Genius_Prospect, Genius_ProspectSource, Genius_AppointmentType, Genius_AppointmentOutcome
 
@@ -20,13 +19,14 @@ class GeniusAppointmentsProcessor:
     def __init__(self):
         self.batch_size = 500
     
-    async def process_batch(self, records: List[Dict[str, Any]], dry_run: bool = False) -> Dict[str, int]:
+    def process_batch(self, records: List[Dict[str, Any]], field_mapping: List[str], force_overwrite: bool = False, dry_run: bool = False) -> Dict[str, int]:
         """
         Process a batch of appointment records
         
         Args:
             records: List of raw appointment records from Genius database
             dry_run: If True, don't actually save to database
+            force_overwrite: If True, delete and recreate existing records
             
         Returns:
             Dictionary with counts of created, updated, errors
@@ -41,7 +41,7 @@ class GeniusAppointmentsProcessor:
         # Process records in smaller batches for memory management
         for i in range(0, len(records), self.batch_size):
             batch = records[i:i + self.batch_size]
-            batch_stats = await self._process_single_batch(batch, dry_run)
+            batch_stats = self._process_single_batch(batch, dry_run, force_overwrite)
             
             # Aggregate stats
             for key in stats:
@@ -51,8 +51,7 @@ class GeniusAppointmentsProcessor:
         
         return stats
     
-    @sync_to_async
-    def _process_single_batch(self, records: List[Dict[str, Any]], dry_run: bool) -> Dict[str, int]:
+    def _process_single_batch(self, records: List[Dict[str, Any]], dry_run: bool, force_overwrite: bool = False) -> Dict[str, int]:
         """Process a single batch of records synchronously using bulk operations for performance"""
         stats = {'created': 0, 'updated': 0, 'errors': 0}
         
@@ -64,10 +63,10 @@ class GeniusAppointmentsProcessor:
                     if transformed:
                         # Check if record exists for dry run stats
                         exists = Genius_Appointment.objects.filter(id=record['id']).exists()
-                        if exists:
-                            stats['updated'] += 1
-                        else:
+                        if force_overwrite or not exists:
                             stats['created'] += 1
+                        else:
+                            stats['updated'] += 1
                 except Exception as e:
                     stats['errors'] += 1
             return stats
@@ -92,31 +91,46 @@ class GeniusAppointmentsProcessor:
         # Bulk upsert using Django's bulk_create with update_conflicts
         try:
             with transaction.atomic():
-                logger.info(f"Bulk upserting {len(appointment_instances)} appointment records")
+                logger.info(f"Bulk processing {len(appointment_instances)} appointment records (force_overwrite={force_overwrite})")
                 
-                # Define fields to update on conflict
-                update_fields = [
-                    'prospect_id', 'prospect_source_id', 'user_id', 'type_id',
-                    'date', 'time', 'duration', 'address1', 'address2', 'city', 
-                    'state', 'zip', 'email', 'notes', 'add_user_id', 'add_date',
-                    'assign_date', 'confirm_user_id', 'confirm_date', 'confirm_with',
-                    'spouses_present', 'is_complete', 'complete_outcome_id',
-                    'complete_user_id', 'complete_date', 'marketsharp_id',
-                    'marketsharp_appt_type', 'leap_estimate_id', 'hubspot_appointment_id',
-                    'updated_at'
-                ]
-                
-                created_appointments = Genius_Appointment.objects.bulk_create(
-                    appointment_instances,
-                    update_conflicts=True,
-                    update_fields=update_fields,
-                    unique_fields=['id']
-                )
-                
-                # Count results - bulk_create returns all instances but _state.adding indicates new records
-                batch_created = sum(1 for appt in created_appointments if appt._state.adding)
-                stats['created'] = batch_created
-                stats['updated'] = len(appointment_instances) - batch_created
+                if force_overwrite:
+                    # Force mode: Delete existing records first, then create new ones
+                    appointment_ids = [appt.id for appt in appointment_instances]
+                    deleted_count, _ = Genius_Appointment.objects.filter(id__in=appointment_ids).delete()
+                    logger.info(f"Force mode: Deleted {deleted_count} existing appointment records")
+                    
+                    # Create all records as new (don't use update_conflicts in force mode)
+                    created_appointments = Genius_Appointment.objects.bulk_create(
+                        appointment_instances,
+                        batch_size=self.batch_size
+                    )
+                    stats['created'] = len(created_appointments)
+                    stats['updated'] = 0
+                else:
+                    # Normal mode: Use bulk_create with update_conflicts for upsert
+                    # Define fields to update on conflict
+                    update_fields = [
+                        'prospect_id', 'prospect_source_id', 'user_id', 'type_id',
+                        'date', 'time', 'duration', 'address1', 'address2', 'city', 
+                        'state', 'zip', 'email', 'notes', 'add_user_id', 'add_date',
+                        'assign_date', 'confirm_user_id', 'confirm_date', 'confirm_with',
+                        'spouses_present', 'is_complete', 'complete_outcome_id',
+                        'complete_user_id', 'complete_date', 'marketsharp_id',
+                        'marketsharp_appt_type', 'leap_estimate_id', 'hubspot_appointment_id',
+                        'updated_at'
+                    ]
+                    
+                    created_appointments = Genius_Appointment.objects.bulk_create(
+                        appointment_instances,
+                        update_conflicts=True,
+                        update_fields=update_fields,
+                        unique_fields=['id']
+                    )
+                    
+                    # Count results - bulk_create returns all instances but _state.adding indicates new records
+                    batch_created = sum(1 for appt in created_appointments if appt._state.adding)
+                    stats['created'] = batch_created
+                    stats['updated'] = len(appointment_instances) - batch_created
                 
                 logger.info(f"Bulk upsert completed - Created: {stats['created']}, Updated: {stats['updated']}")
                 
