@@ -84,12 +84,6 @@ class Command(BaseCommand):
             help='Suppress non-essential output'
         )
         
-        parser.add_argument(
-            '--force',
-            action='store_true',
-            help='Force sync operation, bypass safety checks'
-        )
-        
         # Legacy compatibility arguments
         parser.add_argument(
             '--end-date', 
