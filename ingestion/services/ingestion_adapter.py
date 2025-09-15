@@ -78,13 +78,14 @@ def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
             default_args = {"full": True}
         elif mode == "delta":
             # For delta syncs, get the last sync timestamp
-            sync_type = f"{mode}_scheduled"
-            last_sync_time = SyncHistory.get_last_sync_timestamp(source_key, sync_type)
-            if last_sync_time:
-                # Format timestamp for the --since parameter
-                default_args = {"since": last_sync_time.isoformat()}
-            # If no last sync time, do a full sync as fallback
-            # (this handles the first run case)
+            sync_type = _get_genius_sync_type(model_name)
+            if sync_type:
+                last_sync_time = SyncHistory.get_last_sync_timestamp(source_key, sync_type)
+                if last_sync_time:
+                    # Format timestamp for the --since parameter
+                    default_args = {"since": last_sync_time.isoformat()}
+                # If no last sync time, do a full sync as fallback
+                # (this handles the first run case)
         
         return command, default_args
     
@@ -144,6 +145,34 @@ def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
         f"Unsupported source/mode combination: {source_key}/{mode}. "
         f"Available combinations: {available_keys}"
     )
+
+def _get_genius_sync_type(model_name: str) -> str:
+    """Get the sync_type for a Genius model by checking if it follows common patterns"""
+    # Most genius sync types follow a simple pattern: 
+    # 'Genius_Appointment' -> 'appointments'
+    # 'Genius_Lead' -> 'leads' 
+    # 'Genius_Prospect' -> 'prospects'
+    
+    if not model_name or not model_name.startswith('Genius_'):
+        return None
+        
+    # Remove 'Genius_' prefix and convert to lowercase
+    base_name = model_name.replace('Genius_', '').lower()
+    
+    # Handle pluralization - most sync types are plural
+    pluralization_map = {
+        'appointment': 'appointments',
+        'lead': 'leads',
+        'prospect': 'prospects', 
+        'quote': 'quotes',
+        'job': 'jobs',
+        'division': 'divisions',
+        'user': 'users',
+        'service': 'services',
+        # Add other irregular plurals as needed
+    }
+    
+    return pluralization_map.get(base_name, base_name)
 
 def _get_genius_command(model_name: str) -> str:
     """Get the specific command for a Genius model"""
