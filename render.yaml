@@ -3,9 +3,11 @@ services:
   - type: web
     name: data-warehouse
     env: python
-    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput
+    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput && chmod +x scripts/post_deploy_setup.sh && bash scripts/post_deploy_setup.sh
     startCommand: gunicorn data_warehouse.wsgi:application --bind 0.0.0.0:$PORT
     envVars:
+      - key: DJANGO_ENV
+        value: production
       - key: DJANGO_STATIC_ROOT
         value: /app/staticfiles
       - key: STATIC_URL
@@ -38,6 +40,8 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: celery -A data_warehouse worker --loglevel=info --without-heartbeat --without-mingle --without-gossip
     envVars:
+      - key: DJANGO_ENV
+        value: production
       - key: PYTHONUNBUFFERED
         value: "true"
       - key: CELERY_BROKER_URL
@@ -66,6 +70,8 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: celery -A data_warehouse beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     envVars:
+      - key: DJANGO_ENV
+        value: production
       - key: PYTHONUNBUFFERED
         value: "true"
       - key: CELERY_BROKER_URL
