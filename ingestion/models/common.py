@@ -151,6 +151,23 @@ class SyncSchedule(models.Model):
             self.source_key = self.crm_source
         super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        """Override delete to ensure periodic task is also deleted"""
+        # Import here to avoid circular imports
+        from ingestion.services.schedule_sync import delete_periodic_task
+        
+        try:
+            # Try to delete the periodic task first
+            delete_periodic_task(self)
+        except Exception as e:
+            # Log but don't prevent schedule deletion
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to delete periodic task for schedule {self.id}: {e}")
+        
+        # Delete the schedule itself
+        super().delete(*args, **kwargs)
+
     def get_recent_runs(self, limit=5):
         """Get recent SyncHistory records for this schedule."""
         return SyncHistory.objects.filter(

@@ -699,6 +699,14 @@ class ScheduleDetailAPIView(BaseAPIView):
         try:
             schedule = SyncSchedule.objects.get(id=schedule_id)
             schedule_name = schedule.name
+            
+            # Delete the periodic task first (this was missing!)
+            try:
+                delete_periodic_task(schedule)
+            except Exception as e:
+                logger.warning(f"Failed to remove periodic task for schedule {schedule_id}: {e}")
+                # Continue with schedule deletion even if periodic task deletion fails
+            
             schedule.delete()
             
             return self.json_response({
