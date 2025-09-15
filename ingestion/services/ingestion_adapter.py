@@ -63,13 +63,29 @@ def run_source_ingestion(source_key: str, mode: str, model_name: str = None, **o
 
 def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
     """Get the appropriate command and default args for a source/model combination"""
+    from ingestion.models.common import SyncHistory
+    from django.utils import timezone
+    
     source_key = source_key.lower()
     mode = mode.lower()
     
     # Handle Genius models with specific commands
     if source_key == 'genius' and model_name:
         command = _get_genius_command(model_name)
-        default_args = {"full": True} if mode == "full" else {}
+        default_args = {}
+        
+        if mode == "full":
+            default_args = {"full": True}
+        elif mode == "delta":
+            # For delta syncs, get the last sync timestamp
+            sync_type = f"{mode}_scheduled"
+            last_sync_time = SyncHistory.get_last_sync_timestamp(source_key, sync_type)
+            if last_sync_time:
+                # Format timestamp for the --since parameter
+                default_args = {"since": last_sync_time.isoformat()}
+            # If no last sync time, do a full sync as fallback
+            # (this handles the first run case)
+        
         return command, default_args
     
     # Handle CallRail models with specific commands
