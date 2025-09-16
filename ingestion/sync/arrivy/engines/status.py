@@ -43,16 +43,44 @@ class ArrivyStatusSyncEngine(ArrivyBaseSyncEngine):
         logger.info(f"Fetching statuses from 'statuses' endpoint with batch_size={self.batch_size}")
         
         # Only use the statuses endpoint as requested
-        async for batch in client.fetch_statuses(
+        async for all_statuses in client.fetch_statuses(
             page_size=self.batch_size,
             max_records=self.max_records,
             include_inactive=getattr(self, 'include_inactive', False)
         ):
-            if self.dry_run:
-                logger.info(f"DRY RUN: Would process {len(batch)} statuses")
+            if not all_statuses:
                 continue
-            
-            yield batch
+
+            # Apply delta filtering when last_sync is provided and records have updated_at
+            filtered = all_statuses
+            if last_sync:
+                def parse_dt(v):
+                    try:
+                        if isinstance(v, str):
+                            return datetime.fromisoformat(v.replace('Z', '+00:00'))
+                        return v
+                    except Exception:
+                        return None
+                filtered = []
+                for s in all_statuses:
+                    updated_at = s.get('updated_at') or s.get('modified_at') or s.get('modifiedAt')
+                    dt = parse_dt(updated_at)
+                    # If no timestamp, skip in incremental mode
+                    if dt is None:
+                        continue
+                    if dt >= last_sync:
+                        filtered.append(s)
+
+                logger.info(f"Delta filter applied: {len(filtered)}/{len(all_statuses)} statuses after {last_sync}")
+
+            # Implement artificial chunking to respect batch_size
+            batch_size = max(1, int(self.batch_size or 100))
+            for i in range(0, len(filtered), batch_size):
+                batch = filtered[i:i + batch_size]
+                if self.dry_run:
+                    logger.info(f"DRY RUN: Would process chunk with {len(batch)} statuses")
+                    continue
+                yield batch
     
     async def execute_sync(self, **kwargs) -> Dict[str, Any]:
         """

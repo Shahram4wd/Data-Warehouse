@@ -492,11 +492,50 @@ class ArrivyBaseSyncEngine(BaseSyncEngine):
             Overwrite results
         """
         logger.debug(f"Performing force overwrite for {len(batch)} records")
-        
-        # TODO: Implement force overwrite logic
-        # This would typically delete existing records and create new ones
-        
-        return {'created': len(batch), 'updated': 0, 'failed': 0}
+
+        results = {'created': 0, 'updated': 0, 'failed': 0}
+        if not batch:
+            return results
+
+        # Determine unique field for matching
+        unique_field = self.processor.get_unique_field_name() if hasattr(self.processor, 'get_unique_field_name') else 'id'
+
+        try:
+            # Build objects and collect keys
+            model_objects = []
+            keys = []
+            for record in batch:
+                key = record.get(unique_field)
+                if key is None:
+                    results['failed'] += 1
+                    continue
+                keys.append(key)
+                try:
+                    model_objects.append(model_class(**record))
+                except Exception as e:
+                    logger.warning(f"Failed to create model object for overwrite {key}: {e}")
+                    results['failed'] += 1
+
+            if not model_objects:
+                return results
+
+            # Delete existing matching records then create new ones
+            async def _do_overwrite():
+                with transaction.atomic():
+                    if keys:
+                        model_class.objects.filter(**{f"{unique_field}__in": keys}).delete()
+                    model_class.objects.bulk_create(model_objects, batch_size=self.batch_size)
+
+            await sync_to_async(_do_overwrite)()
+
+            results['created'] = len(model_objects)
+            logger.info(f"Force overwrite completed: {results['created']} created, {results['failed']} failed")
+        except Exception as e:
+            logger.error(f"Force overwrite failed: {e}")
+            results['failed'] = len(batch)
+            results['created'] = 0
+
+        return results
     
     # Implementation of abstract methods from BaseSyncEngine
     

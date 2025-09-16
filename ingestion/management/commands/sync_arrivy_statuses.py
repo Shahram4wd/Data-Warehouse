@@ -62,7 +62,9 @@ class Command(BaseSyncCommand):
             dry_run=options.get('dry_run', False),
             batch_size=options.get('batch_size', 100),
             max_records=options.get('max_records', 0),
-            debug=options.get('debug', False)
+            debug=options.get('debug', False),
+            # Distinct semantics: --force controls overwrite behavior in the engine
+            force_overwrite=options.get('force', False)
         )
         
         # Prepare sync options manually

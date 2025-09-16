@@ -503,6 +503,10 @@ class CRMDiscoveryService:
             name = name[7:]  # Remove 'Arrivy_'
         
         name = name.lower()
+
+        # Handle irregular plurals
+        if name == 'status':
+            return 'statuses'
         if name.endswith('y'):
             return name[:-1] + 'ies'
         if name.endswith('s'):
