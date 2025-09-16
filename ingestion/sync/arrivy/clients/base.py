@@ -42,9 +42,9 @@ async def async_retry_with_backoff(
     """
     if config is None:
         config = RetryConfig(
-            max_retries=3,
+            max_retries=5,
             initial_delay=1.0,
-            max_delay=60.0,
+            max_delay=120.0,
             backoff_factor=2.0,
             retryable_exceptions=(APIClientException, RateLimitException, RetryableException, asyncio.TimeoutError)
         )
