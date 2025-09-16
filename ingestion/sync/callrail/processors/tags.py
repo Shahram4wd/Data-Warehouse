@@ -37,6 +37,12 @@ class TagsProcessor(CallRailBaseProcessor):
                 if source_field in record:
                     value = record[source_field]
                     
+                    # Normalize id and name fields to avoid dupes
+                    if source_field == 'id' and value is not None:
+                        value = str(value).strip()
+                    if source_field == 'name' and value is not None:
+                        value = str(value).strip()
+
                     # Handle JSON fields
                     if source_field == 'configuration' and value is not None:
                         # Ensure configuration is a dict
