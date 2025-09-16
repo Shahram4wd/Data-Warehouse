@@ -1,5 +1,5 @@
 """
-Management command to sync CallRail companies
+Management command to sync CallRail companies, aligned with CRM sync guide
 """
 import logging
 import asyncio
@@ -13,94 +13,76 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseSyncCommand):
-    help = 'Sync CallRail companies data'
-    crm_name = 'CallRail'
+    help = 'Sync CallRail companies data with standardized flags'
+    crm_name = 'callrail'
     entity_name = 'companies'
-    
+
     def handle(self, *args, **options):
-        """Handle the management command"""
         try:
-            # Check if CallRail API key is configured
+            # Validate arguments using BaseSyncCommand
+            self.validate_arguments(options)
+
+            # Check API key
             api_key = getattr(settings, 'CALLRAIL_API_KEY', None) or os.getenv('CALLRAIL_API_KEY')
             if not api_key:
-                raise CommandError("CALLRAIL_API_KEY not configured in settings or environment")
-            
+                raise CommandError('CALLRAIL_API_KEY not configured in settings or environment')
+
+            # Standard flags
             full_sync = options['full']
+            force_overwrite = options['force']
+            start_date = options.get('start_date')
+            end_date = options.get('end_date')
             dry_run = options.get('dry_run', False)
-            
-            self.stdout.write(
-                self.style.SUCCESS('Starting CallRail companies sync')
+            batch_size = options.get('batch_size', 100)
+            max_records = options.get('max_records', 0)
+            quiet = options.get('quiet', False)
+
+            if not quiet:
+                self.stdout.write(self.style.SUCCESS('Starting CallRail companies sync...'))
+                if dry_run:
+                    self.stdout.write(self.style.WARNING('DRY RUN MODE - No data will be saved'))
+                if start_date:
+                    self.stdout.write(f'Start date: {start_date}')
+                if end_date:
+                    self.stdout.write(f'End date: {end_date}')
+                if batch_size != 100:
+                    self.stdout.write(f'Batch size: {batch_size}')
+
+            # Prepare params
+            sync_params = {}
+            if start_date:
+                sync_params['start_date'] = start_date
+            if end_date:
+                sync_params['end_date'] = end_date
+
+            # Run
+            result = asyncio.run(
+                self._run_sync(full_sync, force_overwrite, dry_run, max_records, batch_size, **sync_params)
             )
-            
-            if dry_run:
-                self.stdout.write(
-                    self.style.WARNING('DRY RUN MODE - No data will be saved')
-                )
-            
-            # Run the sync
-            sync_result = asyncio.run(
-                self._run_sync(full_sync, dry_run)
-            )
-            
-            # Display results
-            self._display_sync_results(sync_result)
-            
+
+            # Output
+            self.output_results(result)
+
+            if not result.get('success', True):
+                raise CommandError('CallRail companies sync failed')
+
         except Exception as e:
-            logger.error(f"CallRail companies sync failed: {e}")
-            raise CommandError(f"Sync failed: {e}")
-    
-    async def _run_sync(self, full_sync, dry_run):
-        """Run the actual sync process"""
-        companies_engine = CompaniesSyncEngine()
-        
-        if dry_run:
-            self.stdout.write("Dry run mode not fully implemented yet")
-        
-        return await companies_engine.sync_companies(
-            full_sync=full_sync
-        )
-    
-    def _display_sync_results(self, sync_result):
-        """Display sync results in a formatted way"""
-        self.stdout.write("\n" + "="*50)
-        self.stdout.write(self.style.SUCCESS("SYNC RESULTS"))
-        self.stdout.write("="*50)
-        
-        self.stdout.write(f"Entity: companies")
-        self.stdout.write(f"Full Sync: {sync_result.get('full_sync', False)}")
-        
-        self.stdout.write("\nCounts:")
-        self.stdout.write(f"  Fetched: {sync_result.get('total_fetched', 0)}")
-        self.stdout.write(f"  Processed: {sync_result.get('total_processed', 0)}")
-        self.stdout.write(f"  Created: {sync_result.get('total_created', 0)}")
-        self.stdout.write(f"  Updated: {sync_result.get('total_updated', 0)}")
-        
-        error_count = len(sync_result.get('errors', []))
-        if error_count > 0:
-            self.stdout.write(
-                self.style.ERROR(f"  Errors: {error_count}")
-            )
-            
-            errors = sync_result.get('errors', [])
-            if errors:
-                self.stdout.write("\nError Details:")
-                for error in errors[:5]:
-                    self.stdout.write(f"  - {error}")
-                
-                if len(errors) > 5:
-                    self.stdout.write(f"  ... and {len(errors) - 5} more errors")
+            logger.error(f'CallRail companies sync failed: {e}')
+            raise CommandError(f'Sync failed: {e}')
+
+    async def _run_sync(self, full_sync, force_overwrite, dry_run, max_records, batch_size, **sync_params):
+        engine = CompaniesSyncEngine(dry_run=dry_run, batch_size=batch_size)
+        return await engine.sync_companies(full_sync=full_sync, force_overwrite=force_overwrite, max_records=max_records, **sync_params)
+
+    def output_results(self, result):
+        success = result.get('success', True)
+        if success:
+            self.stdout.write(self.style.SUCCESS('✓ CallRail companies sync completed successfully!'))
         else:
-            self.stdout.write(
-                self.style.SUCCESS("  Errors: 0")
-            )
-        
-        self.stdout.write("="*50)
-        
-        if error_count == 0:
-            self.stdout.write(
-                self.style.SUCCESS("✓ Sync completed successfully!")
-            )
-        else:
-            self.stdout.write(
-                self.style.WARNING("⚠ Sync completed with errors")
-            )
+            self.stdout.write(self.style.ERROR('✗ CallRail companies sync failed'))
+
+        self.stdout.write(f"Companies: {result.get('total_processed', 0)} processed ({result.get('total_created', 0)} created, {result.get('total_updated', 0)} updated, {result.get('total_errors', 0)} failed)")
+        duration = result.get('duration', 0)
+        if hasattr(duration, 'total_seconds'):
+            duration = duration.total_seconds()
+        self.stdout.write(f"Duration: {duration:.2f} seconds")

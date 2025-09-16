@@ -13,7 +13,7 @@ class CallsClient(CallRailBaseClient):
     """Client for CallRail calls API endpoint"""
     
     def get_date_filter_field(self) -> Optional[str]:
-        """CallRail calls use 'start_time' for date filtering"""
+        # CallRail calls use 'start_time' for date filtering
         return 'start_time'
     
     def extract_data_from_response(self, response: Dict[str, Any]) -> List[Dict[str, Any]]:

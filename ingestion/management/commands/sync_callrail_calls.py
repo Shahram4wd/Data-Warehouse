@@ -46,6 +46,7 @@ class Command(BaseSyncCommand):
             end_date = options.get('end_date')     # Now from standardized flags
             dry_run = options.get('dry_run', False)
             batch_size = options.get('batch_size', 100)
+            max_records = options.get('max_records', 0)
             quiet = options.get('quiet', False)
             
             # Parse CallRail-specific arguments
@@ -89,7 +90,7 @@ class Command(BaseSyncCommand):
             
             # Run the sync
             sync_result = asyncio.run(
-                self._run_sync(full_sync, force_overwrite, dry_run, **sync_params)
+                self._run_sync(full_sync, force_overwrite, dry_run, max_records, batch_size, **sync_params)
             )
             
             # Display results
@@ -102,9 +103,10 @@ class Command(BaseSyncCommand):
             logger.error(f"CallRail calls sync failed: {e}")
             raise CommandError(f"Sync failed: {e}")
     
-    async def _run_sync(self, full_sync, force_overwrite, dry_run, **sync_params):
+    async def _run_sync(self, full_sync, force_overwrite, dry_run, max_records, batch_size, **sync_params):
         """Run the actual sync process"""
-        sync_engine = CallsSyncEngine()
+        # Initialize engine with runtime flags so it can honor dry_run and batching
+        sync_engine = CallsSyncEngine(dry_run=dry_run, batch_size=batch_size)
         
         if dry_run:
             # For dry run, we'd modify the engine to not save data
@@ -114,6 +116,7 @@ class Command(BaseSyncCommand):
         return await sync_engine.sync_calls(
             full_sync=full_sync,
             force_overwrite=force_overwrite,
+            max_records=max_records,
             **sync_params
         )
     

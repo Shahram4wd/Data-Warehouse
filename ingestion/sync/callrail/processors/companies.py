@@ -23,9 +23,9 @@ class CompaniesProcessor(CallRailBaseProcessor):
             'name': 'name',
             'status': 'status',
             'time_zone': 'time_zone',
-            'created_at': 'created_at',
-            'updated_at': 'updated_at',
-            'account_id': 'account_id',
+            # API timestamps mapped to model fields
+            'created_at': 'api_created_at',
+            # Note: model has no api_updated_at; skip 'updated_at' to avoid invalid field
         }
         
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -40,11 +40,10 @@ class CompaniesProcessor(CallRailBaseProcessor):
                 if source_field in record:
                     value = record[source_field]
                     
-                    # Handle datetime fields
-                    if source_field in ['created_at', 'updated_at'] and value:
+                    # Handle datetime fields for those we map
+                    if source_field in ['created_at'] and value:
                         if isinstance(value, str):
                             try:
-                                # Parse ISO datetime string
                                 value = datetime.fromisoformat(value.replace('Z', '+00:00'))
                             except ValueError:
                                 logger.warning(f"Invalid datetime format: {value}")

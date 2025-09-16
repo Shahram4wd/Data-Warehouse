@@ -35,7 +35,8 @@ class Command(BaseSyncCommand):
             # Parse standard CRM sync arguments
             dry_run = options['dry_run']
             full_sync = options['full']
-            force_overwrite = options['force_overwrite']
+            # Standard flag naming: --force
+            force_overwrite = options.get('force', False)
             since = options.get('since')
             batch_size = options['batch_size']
             max_records = options['max_records']
@@ -163,7 +164,8 @@ class Command(BaseSyncCommand):
             # Prepare sync parameters
             sync_params = {
                 'full_sync': kwargs['full_sync'],
-                'force_overwrite': kwargs['force_overwrite'],
+                # Engine expects 'force' parameter
+                'force': kwargs['force_overwrite'],
                 'since_date': kwargs['since_date'],
                 'max_records': kwargs['max_records']
             }

@@ -24,12 +24,13 @@ class AccountsSyncEngine(CallRailBaseSyncEngine):
     
     @sync_to_async
     def get_last_sync_timestamp(self) -> Optional[datetime]:
-        """Get the last sync timestamp for accounts"""
-        from ingestion.models.callrail import CallRail_Account
-        latest_account = (CallRail_Account.objects
-                         .order_by('-sync_updated_at')
-                         .first())
-        return latest_account.sync_updated_at if latest_account else None
+        """Get last successful SyncHistory end_time for delta sync"""
+        from ingestion.models.common import SyncHistory
+        last = (SyncHistory.objects
+                .filter(crm_source='callrail', sync_type='accounts', status='success')
+                .order_by('-end_time')
+                .first())
+        return last.end_time if last else None
     
     async def sync_accounts(self, **kwargs) -> Dict[str, Any]:
         """Sync accounts from CallRail API"""
@@ -45,62 +46,74 @@ class AccountsSyncEngine(CallRailBaseSyncEngine):
         
         try:
             async with AccountsClient() as client:
-                # Get last sync timestamp for delta sync
+                # Determine delta vs full
                 since_date = kwargs.get('since_date')
-                if not since_date and not kwargs.get('force', False):
+                force = kwargs.get('force', False)
+                full_sync = kwargs.get('full_sync', False)
+
+                if not since_date and not full_sync and not force:
                     since_date = await self.get_last_sync_timestamp()
-                    logger.info(f"Delta sync since: {since_date}")
-                
-                # Fetch accounts data
-                # Filter out sync engine params - only pass API-relevant parameters
-                api_params = {k: v for k, v in kwargs.items() 
-                             if k not in ['since_date', 'force', 'max_records', 'dry_run', 'batch_size']}
-                
-                # Add batch_size as per_page for API
-                if 'batch_size' in kwargs:
-                    api_params['per_page'] = kwargs['batch_size']
-                
+                    if since_date:
+                        logger.info(f"Delta sync since: {since_date}")
+
+                # Build API params
+                api_params = {}
+                if self.batch_size:
+                    api_params['per_page'] = int(self.batch_size)
+
+                max_records = kwargs.get('max_records') or 0
+                processed_total = 0
+
                 async for accounts_batch in client.fetch_accounts(
                     since_date=since_date,
                     **api_params
                 ):
                     if not accounts_batch:
                         continue
-                        
+
+                    # Enforce max_records across batches
+                    if max_records and (processed_total + len(accounts_batch)) > max_records:
+                        take = max_records - processed_total
+                        if take <= 0:
+                            break
+                        accounts_batch = accounts_batch[:take]
+
                     sync_stats['total_fetched'] += len(accounts_batch)
+
                     logger.info(f"Processing {len(accounts_batch)} accounts...")
-                    
-                    # Process accounts batch
+
+                    # Transform/validate
                     processed_accounts = []
                     for account in accounts_batch:
                         try:
-                            # Transform account data
                             transformed = self.processor.transform_record(account)
-                            
-                            # Validate transformed data
                             if self.processor.validate_record(transformed):
                                 processed_accounts.append(transformed)
-                                sync_stats['total_processed'] += 1
                             else:
                                 logger.warning(f"Account validation failed: {account.get('id', 'unknown')}")
-                                
                         except Exception as e:
                             error_msg = f"Error processing account {account.get('id', 'unknown')}: {e}"
                             logger.error(error_msg)
                             sync_stats['errors'].append(error_msg)
-                            continue
-                    
-                    # Save processed accounts
-                    if processed_accounts:
+
+                    # Save
+                    if processed_accounts and not getattr(self, 'dry_run', False):
                         from ingestion.models.callrail import CallRail_Account
-                        save_stats = await self.bulk_save_records(
-                            processed_accounts,
-                            CallRail_Account,
-                            'id'
-                        )
-                        sync_stats['total_created'] += save_stats['created']
-                        sync_stats['total_updated'] += save_stats['updated']
-                
+                        if force:
+                            # emulate overwrite: delete then recreate keys in this chunk
+                            # reuse bulk_save_records upsert (safe), or implement custom if needed later
+                            save_stats = await self.bulk_save_records(processed_accounts, CallRail_Account, 'id')
+                        else:
+                            save_stats = await self.bulk_save_records(processed_accounts, CallRail_Account, 'id')
+                        sync_stats['total_created'] += save_stats.get('created', 0)
+                        sync_stats['total_updated'] += save_stats.get('updated', 0)
+
+                    processed_total += len(accounts_batch)
+
+                    if max_records and processed_total >= max_records:
+                        logger.info(f"Reached max_records={max_records}; stopping.")
+                        break
+
                 logger.info(f"Accounts sync completed: {sync_stats}")
                 return sync_stats
                 

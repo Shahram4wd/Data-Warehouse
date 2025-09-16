@@ -131,16 +131,59 @@ class CallsSyncEngine(CallRailBaseSyncEngine):
                 
                 # Fetch and process calls in batches (client now handles all accounts)
                 # Filter out parameters that shouldn't go to API client
-                # Remove since_date (passed separately) and boolean flags that API doesn't accept
-                client_kwargs = {k: v for k, v in kwargs.items() 
-                               if k not in ['since_date', 'full_sync', 'force_overwrite', 'force']}
+                # Remove since_date (passed separately) and internal/control flags that API doesn't accept
+                excluded_keys = {
+                    'since_date', 'full_sync', 'force_overwrite', 'force',
+                    'max_records', 'batch_size', 'start_date', 'end_date',
+                    'dry_run', 'quiet'
+                }
+                client_kwargs = {k: v for k, v in kwargs.items() if k not in excluded_keys}
+
+                # Map engine batch_size to API per_page if provided
+                if getattr(self, 'batch_size', None):
+                    try:
+                        client_kwargs['per_page'] = int(self.batch_size)
+                    except Exception:
+                        # Fallback to default in client if conversion fails
+                        pass
                 
+                max_records = kwargs.get('max_records') or 0
+                processed_total = 0
+
                 async for call_batch in client.fetch_calls(
                     since_date=since_date,
                     **client_kwargs
                 ):
                     if not call_batch:
                         continue
+
+                    # Defensive local filter: ensure delta by 'start_time' if API returns older rows
+                    if since_date:
+                        try:
+                            filtered = []
+                            for c in call_batch:
+                                ts = c.get('start_time')
+                                if not ts:
+                                    continue
+                                # Accept ISO strings with or without microseconds; assume UTC if Z
+                                from datetime import datetime as dt
+                                from django.utils.dateparse import parse_datetime
+                                parsed = parse_datetime(ts) or dt.fromisoformat(ts.replace('Z', '+00:00'))
+                                if parsed and parsed >= since_date:
+                                    filtered.append(c)
+                            call_batch = filtered
+                            if not call_batch:
+                                logger.info("No calls >= since_date on this page; stopping pagination early.")
+                                break
+                        except Exception:
+                            # If parsing fails, proceed without local filter
+                            pass
+                    # Trim to respect max_records across batches
+                    if max_records and (processed_total + len(call_batch)) > max_records:
+                        take = max_records - processed_total
+                        if take <= 0:
+                            break
+                        call_batch = call_batch[:take]
                     
                     sync_stats['total_fetched'] += len(call_batch)
                     logger.info(f"Processing batch of {len(call_batch)} calls")
@@ -165,7 +208,7 @@ class CallsSyncEngine(CallRailBaseSyncEngine):
                             sync_stats['errors'].append(f"Call {call_data.get('id', 'unknown')}: {str(e)}")
                     
                     # Save processed calls
-                    if processed_calls:
+                    if processed_calls and not getattr(self, 'dry_run', False):
                         from ingestion.models.callrail import CallRail_Call
                         save_stats = await self.bulk_save_records(
                             processed_calls,
@@ -176,6 +219,10 @@ class CallsSyncEngine(CallRailBaseSyncEngine):
                         sync_stats['total_updated'] += save_stats['updated']
                         sync_stats['total_errors'] += save_stats['errors']
                         sync_stats['errors'].extend(save_stats['error_details'])
+                    processed_total += len(call_batch)
+                    if max_records and processed_total >= max_records:
+                        logger.info(f"Reached max_records={max_records}; stopping.")
+                        break
             
             sync_stats['end_time'] = timezone.now()
             sync_stats['duration'] = (sync_stats['end_time'] - sync_stats['start_time']).total_seconds()

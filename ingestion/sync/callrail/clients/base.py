@@ -95,8 +95,8 @@ class CallRailBaseClient(BaseAPIClient):
             # CallRail uses different date field names for different endpoints
             date_field = self.get_date_filter_field()
             if date_field:
-                # Format datetime for CallRail API (ISO 8601)
-                params[date_field] = since_date.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                # Format datetime for CallRail API (ISO 8601, drop microseconds)
+                params[date_field] = since_date.strftime('%Y-%m-%dT%H:%M:%SZ')
                 logger.info(f"CallRail delta sync: filtering {date_field} >= {since_date}")
         
         while True:

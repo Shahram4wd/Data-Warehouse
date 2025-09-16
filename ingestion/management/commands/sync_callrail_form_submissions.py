@@ -1,5 +1,5 @@
 """
-Management command to sync CallRail form submissions
+Management command to sync CallRail form submissions (enterprise pattern)
 """
 import logging
 import asyncio
@@ -13,99 +13,88 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseSyncCommand):
-    help = 'Sync CallRail form submissions data'
-    crm_name = 'CallRail'
+    help = 'Sync CallRail form submissions data with standardized flags'
+    crm_name = 'callrail'
     entity_name = 'form_submissions'
 
     def handle(self, *args, **options):
-        """Handle the command execution"""
         try:
+            # Standardized setup
+            self.configure_logging(options)
+            self.validate_arguments(options)
+
             # Check for API key
             api_key = getattr(settings, 'CALLRAIL_API_KEY', None) or os.getenv('CALLRAIL_API_KEY')
             if not api_key:
                 raise CommandError('CALLRAIL_API_KEY not configured in settings or environment')
-            
-            # Parse command line options
-            dry_run = options['dry_run']
-            full_sync = options['full']
-            since_date = options.get('start_date')
-            
-            self.stdout.write(
-                self.style.SUCCESS('Starting CallRail form submissions sync')
-            )
-            
-            if dry_run:
-                self.stdout.write(self.style.WARNING('Running in DRY-RUN mode'))
-            
-            # Parse since date if provided
-            if since_date:
-                from datetime import datetime
-                try:
-                    since_date = datetime.strptime(since_date, '%Y-%m-%d')
-                except ValueError:
-                    raise CommandError(f'Invalid date format: {since_date}. Use YYYY-MM-DD format.')
-            
-            # Run the sync
-            result = asyncio.run(self._run_sync(
-                dry_run=dry_run,
-                full_sync=full_sync,
-                since_date=since_date
-            ))
-            
-            # Display results
-            if result.get('success', False):
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Sync completed successfully!\n"
-                        f"Records fetched: {result.get('records_fetched', 0)}\n"
-                        f"Records processed: {result.get('records_processed', 0)}\n"
-                        f"Records created: {result.get('records_created', 0)}\n"
-                        f"Records updated: {result.get('records_updated', 0)}\n"
-                        f"Errors: {len(result.get('errors', []))}"
-                    )
-                )
-            else:
-                error_msg = result.get('error', 'Unknown error occurred')
-                self.stdout.write(
-                    self.style.ERROR(f"Sync failed: {error_msg}")
-                )
-                raise CommandError(f"Sync failed: {error_msg}")
-                
-        except Exception as e:
-            logger.error(f"Command execution failed: {e}")
-            raise CommandError(f"Command execution failed: {e}")
 
-    async def _run_sync(self, **kwargs):
-        """Run the actual sync operation"""
-        try:
-            # Initialize the sync engine
-            engine = FormSubmissionsSyncEngine(
-                dry_run=kwargs['dry_run']
-            )
-            
-            # Prepare sync parameters - filter out boolean values for API
+            # Flags
+            full_sync = options.get('full', False)
+            force_overwrite = options.get('force', False)
+            start_date = options.get('start_date')
+            end_date = options.get('end_date')
+            dry_run = options.get('dry_run', False)
+            batch_size = options.get('batch_size', 100)
+            max_records = options.get('max_records', 0)
+            quiet = options.get('quiet', False)
+
+            if not quiet:
+                self.stdout.write(self.style.SUCCESS('Starting CallRail form submissions sync...'))
+                if dry_run:
+                    self.stdout.write(self.style.WARNING('DRY RUN MODE - No data will be saved'))
+                if start_date:
+                    self.stdout.write(f'Start date: {start_date}')
+                if end_date:
+                    self.stdout.write(f'End date: {end_date}')
+                if batch_size != 100:
+                    self.stdout.write(f'Batch size: {batch_size}')
+
+            # Prepare params (map start_date to since_date for engine)
             sync_params = {}
-            if kwargs.get('since_date'):
-                sync_params['since_date'] = kwargs['since_date']
-            if kwargs.get('full_sync'):
-                sync_params['force'] = True
-            
-            # Run the sync
-            result = await engine.sync_form_submissions(**sync_params)
-            
-            return {
-                'success': True,
-                'records_fetched': result.get('total_fetched', 0),
-                'records_processed': result.get('total_processed', 0),
-                'records_created': result.get('total_created', 0),
-                'records_updated': result.get('total_updated', 0),
-                'errors': result.get('errors', [])
-            }
-            
+            if start_date:
+                sync_params['since_date'] = start_date
+            if end_date:
+                sync_params['end_date'] = end_date
+
+            # Run sync
+            result = asyncio.run(
+                self._run_sync(full_sync, force_overwrite, dry_run, max_records, batch_size, **sync_params)
+            )
+
+            # Output results
+            self._output_results(result)
+
+            if result.get('error'):
+                raise CommandError(result['error'])
+
         except Exception as e:
-            logger.error(f"Sync operation failed: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'records_processed': 0
-            }
+            logger.error(f"CallRail form submissions sync failed: {e}")
+            raise CommandError(f"Sync failed: {e}")
+
+    async def _run_sync(self, full_sync, force_overwrite, dry_run, max_records, batch_size, **sync_params):
+        engine = FormSubmissionsSyncEngine(dry_run=dry_run, batch_size=batch_size)
+        return await engine.sync_form_submissions(
+            full_sync=full_sync,
+            force_overwrite=force_overwrite,
+            max_records=max_records,
+            **sync_params
+        )
+
+    def _output_results(self, result):
+        success = not result.get('error')
+        if success:
+            self.stdout.write(self.style.SUCCESS('✓ CallRail form submissions sync completed successfully!'))
+        else:
+            self.stdout.write(self.style.ERROR('✗ CallRail form submissions sync failed'))
+
+        self.stdout.write(
+            f"Form submissions: {result.get('total_processed', 0)} processed "
+            f"({result.get('total_created', 0)} created, {result.get('total_updated', 0)} updated, "
+            f"{result.get('total_errors', 0)} failed)"
+        )
+        duration = result.get('duration', 0)
+        try:
+            duration_val = duration.total_seconds() if hasattr(duration, 'total_seconds') else float(duration)
+        except Exception:
+            duration_val = 0.0
+        self.stdout.write(f"Duration: {duration_val:.2f} seconds")
