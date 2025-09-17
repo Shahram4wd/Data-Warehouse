@@ -7,8 +7,6 @@ from .clients import (
     CustomerClient,
     EstimatesClient,
     CreditApplicationsClient,
-    PaymentsClient,
-    UserActivitiesClient
 )
 
 from .engines import (
@@ -17,8 +15,6 @@ from .engines import (
     CustomerSyncEngine,
     EstimatesSyncEngine,
     CreditApplicationsSyncEngine,
-    PaymentsSyncEngine,
-    UserActivitiesSyncEngine
 )
 
 from .processors.base import SalesProBaseProcessor
@@ -34,8 +30,6 @@ __all__ = [
     'CustomerClient', 
     'EstimatesClient',
     'CreditApplicationsClient',
-    'PaymentsClient',
-    'UserActivitiesClient',
     
     # Engines
     'SalesProBaseSyncEngine',
@@ -43,8 +37,6 @@ __all__ = [
     'CustomerSyncEngine',
     'EstimatesSyncEngine', 
     'CreditApplicationsSyncEngine',
-    'PaymentsSyncEngine',
-    'UserActivitiesSyncEngine',
     
     # Processors
     'SalesProBaseProcessor',

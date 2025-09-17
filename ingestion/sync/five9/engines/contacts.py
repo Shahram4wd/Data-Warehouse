@@ -39,7 +39,7 @@ class ContactsSyncEngine(BaseSyncEngine):
             raise Exception("Failed to connect to Five9 API")
     
     async def fetch_data(self, **kwargs) -> AsyncGenerator[List[Dict[str, Any]], None]:
-        """Fetch contact data from Five9 list by list and process immediately"""
+        """Fetch contact data from Five9 list by list with delta and batching"""
         try:
             # Get contact lists first
             logger.info("Fetching Five9 contact lists...")
@@ -52,6 +52,31 @@ class ContactsSyncEngine(BaseSyncEngine):
             max_records_per_list = kwargs.get('max_records_per_list', Five9Config.MAX_BATCH_SIZE)
             logger.info(f"Processing {len(contact_lists)} contact lists")
             
+            # Determine delta window
+            since = kwargs.get('since')
+            full = kwargs.get('full', False)
+            force_overwrite = kwargs.get('force_overwrite', False)
+
+            if not full and not since:
+                # Default to last successful SyncHistory end_time with lookback
+                last_end = await sync_to_async(self._get_last_success_end_time)()
+                if last_end:
+                    lookback = DELTA_SYNC_CONFIG.get('lookback_hours', 24)
+                    since = last_end - timedelta(hours=lookback)
+                    logger.info(f"Delta mode: since={since.isoformat()} (lookback {lookback}h)")
+                else:
+                    # Initial window to avoid full blast
+                    days = DELTA_SYNC_CONFIG.get('initial_sync_days', 30)
+                    since = timezone.now() - timedelta(days=days)
+                    logger.info(f"Initial delta window: last {days} days ({since.isoformat()})")
+
+            if force_overwrite:
+                since = None
+                logger.info("Force overwrite requested; fetching all lists without delta filter")
+            elif full:
+                since = None
+                logger.info("Full sync requested; fetching all lists without delta filter")
+
             # Process each list individually to avoid memory overload
             for i, (list_name, record_count) in enumerate(contact_lists.items(), 1):
                 try:
@@ -76,6 +101,41 @@ class ContactsSyncEngine(BaseSyncEngine):
                     for contact in list_contacts:
                         contact['list_name'] = list_name
                     
+                    # Optional local delta filtering by timestamp fields
+                    if since:
+                        ts_fields = [
+                            DELTA_SYNC_CONFIG.get('timestamp_field', 'sys_last_disposition_time'),
+                            *DELTA_SYNC_CONFIG.get('fallback_timestamp_fields', [])
+                        ]
+                        filtered = []
+                        for rec in list_contacts:
+                            ts_val = None
+                            for f in ts_fields:
+                                if f in rec and rec[f]:
+                                    ts_val = rec[f]
+                                    break
+                            if not ts_val:
+                                continue
+                            try:
+                                # Accept ISO or epoch-like strings
+                                if isinstance(ts_val, str):
+                                    try:
+                                        parsed = timezone.datetime.fromisoformat(ts_val)
+                                    except ValueError:
+                                        parsed = None
+                                elif isinstance(ts_val, datetime):
+                                    parsed = ts_val
+                                else:
+                                    parsed = None
+                                if parsed and timezone.is_naive(parsed):
+                                    parsed = timezone.make_aware(parsed)
+                                if parsed and parsed >= since:
+                                    filtered.append(rec)
+                            except Exception:
+                                continue
+                        logger.info(f"Delta-filtered {len(filtered)}/{len(list_contacts)} records in {list_name}")
+                        list_contacts = filtered
+
                     # Yield contacts from this list in batches immediately
                     batch_size = min(self.batch_size, 500)
                     logger.info(f"Successfully retrieved {len(list_contacts)} records from {list_name}")
@@ -226,6 +286,15 @@ class ContactsSyncEngine(BaseSyncEngine):
             'updated': updated_count, 
             'skipped': skipped_count
         }
+
+    def _get_last_success_end_time(self) -> Optional[datetime]:
+        try:
+            last = (SyncHistory.objects
+                    .filter(crm_source=self.crm_source, sync_type=self.sync_type, status='success', end_time__isnull=False)
+                    .order_by('-end_time').first())
+            return last.end_time if last else None
+        except Exception:
+            return None
     
     async def cleanup(self) -> None:
         """Cleanup Five9 client resources"""
@@ -236,9 +305,12 @@ class ContactsSyncEngine(BaseSyncEngine):
     def sync_data(self, force_full: bool = False, **kwargs) -> Dict[str, Any]:
         """Legacy sync method - wraps async sync process"""
         import asyncio
-        return asyncio.run(self.run_sync_async(force_full=force_full, **kwargs))
+        # Normalize flags for run
+        full = kwargs.pop('full', False) or force_full
+        force_overwrite = kwargs.pop('force_overwrite', False)
+        return asyncio.run(self.run_sync_async(full=full, force_overwrite=force_overwrite, **kwargs))
     
-    async def run_sync_async(self, force_full: bool = False, **kwargs) -> Dict[str, Any]:
+    async def run_sync_async(self, full: bool = False, force_overwrite: bool = False, **kwargs) -> Dict[str, Any]:
         """Run the complete sync process asynchronously"""
         results = {
             'success': False,
@@ -251,13 +323,13 @@ class ContactsSyncEngine(BaseSyncEngine):
         
         try:
             # Start sync and create history record
-            await self.start_sync(**kwargs)
+            await self.start_sync(full=full, force_overwrite=force_overwrite, **kwargs)
             
             # Initialize client
             await self.initialize_client()
             
             # Process data in batches
-            async for raw_batch in self.fetch_data(**kwargs):
+            async for raw_batch in self.fetch_data(full=full, force_overwrite=force_overwrite, **kwargs):
                 try:
                     # Transform data
                     transformed_batch = await self.transform_data(raw_batch)
@@ -289,7 +361,13 @@ class ContactsSyncEngine(BaseSyncEngine):
             
             # Update sync history
             if hasattr(self, 'sync_history') and self.sync_history:
-                # complete_sync is already an async method in the base class
-                await self.complete_sync(results)
+                # Map results to BaseSyncEngine expected keys for metrics
+                mapped = {
+                    'processed': results.get('total_processed', 0),
+                    'created': results.get('created', 0),
+                    'updated': results.get('updated', 0),
+                    'failed': len(results.get('errors', []))
+                }
+                await self.complete_sync(mapped)
         
         return results

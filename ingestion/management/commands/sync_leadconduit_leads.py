@@ -44,11 +44,6 @@ class Command(BaseSyncCommand):
             type=str,
             help='(DEPRECATED) Use --start-date instead. Manual sync start date (YYYY-MM-DD format)'
         )
-        parser.add_argument(
-            '--force',
-            action='store_true',
-            help='(DEPRECATED) Use --force instead. Completely replace existing records'
-        )
     
     def handle(self, *args, **options):
         """Handle the sync command following standardized patterns"""
@@ -73,8 +68,8 @@ class Command(BaseSyncCommand):
                 )
             
             end_date = self.parse_date(options.get('end_date'))
-            # Handle backward compatibility for force_overwrite -> force
-            force_overwrite = options.get('force', False) or options.get('force_overwrite', False)
+            # Use standardized parameter names
+            force_overwrite = options.get('force', False)
             full_sync = options.get('full', False)
             dry_run = options.get('dry_run', False)
             batch_size = options.get('batch_size', 100)

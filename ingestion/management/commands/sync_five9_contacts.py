@@ -82,7 +82,8 @@ class Command(BaseSyncCommand):
         try:
             # Prepare sync parameters
             sync_params = {
-                'force_full': options['full'],
+                'full': options['full'],
+                'force_overwrite': options.get('force', False),
                 'max_records_per_list': options['max_records_per_list'],
                 'dry_run': options['dry_run'],
             }

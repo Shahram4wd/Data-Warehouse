@@ -143,24 +143,34 @@ class LeadConduitSyncEngine:
         
         try:
             # Determine sync strategy following guide priority:
-            # 1. --since parameter (manual override)
-            # 2. --force flag (None = fetch all)
-            # 3. --full flag (None = fetch all)
-            # 4. SyncHistory table last successful sync timestamp
-            # 5. Default: None (full sync)
+            # 1. --start-date parameter (manual override) 
+            # 2. --force flag (None = fetch all, ignore history)
+            # 3. --full flag (None = fetch all, ignore history) 
+            # 4. SyncHistory table last successful sync timestamp with lookback
+            # 5. Default: last 7 days (bounded initial sync)
             
             if not since_date and not full_sync and not force_overwrite:
                 # Get last successful sync timestamp from SyncHistory
                 last_sync_time = await self.get_last_sync_timestamp()
                 if last_sync_time:
-                    since_date = last_sync_time
-                    logger.info(f"Using last sync timestamp: {since_date}")
+                    # Apply lookback for safety (LeadConduit data may have delays)
+                    lookback_hours = 2  # Small lookback for LeadConduit
+                    since_date = last_sync_time - timedelta(hours=lookback_hours)
+                    logger.info(f"Delta sync: using last sync {last_sync_time} with {lookback_hours}h lookback = {since_date}")
                 else:
-                    logger.info("No previous sync found, performing full sync")
+                    # Initial bounded sync (avoid full history on first run)
+                    since_date = datetime.now(timezone.utc) - timedelta(days=7)
+                    logger.info(f"Initial sync: last 7 days from {since_date}")
+            elif force_overwrite:
+                since_date = None
+                logger.info("Force overwrite: fetching all data")
+            elif full_sync:
+                since_date = None  
+                logger.info("Full sync: fetching all data")
             
-            # Set default date range if not provided
+            # Set fallback date range for bounded sync
             if not since_date:
-                since_date = datetime.now(timezone.utc) - timedelta(days=1)
+                since_date = datetime.now(timezone.utc) - timedelta(days=7)  # Default 7-day window
             if not end_date:
                 end_date = datetime.now(timezone.utc)
             

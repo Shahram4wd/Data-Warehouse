@@ -93,14 +93,18 @@ data integrity and relationships."""
         common_kwargs = {}
         
         # Pass through all relevant options
-        for option in ['full', 'debug', 'dry_run', 'batch_size', 'max_records', 'since', 'force_overwrite']:
+        for option in ['full', 'debug', 'dry_run', 'batch_size', 'max_records', 'start_date', 'force']:
             if options.get(option):
                 if option == 'dry_run':
-                    common_kwargs['dry-run'] = True
-                elif option == 'force_overwrite':
-                    common_kwargs['force'] = True
+                    common_kwargs['dry_run'] = True
+                elif option == 'batch_size':
+                    common_kwargs['batch_size'] = options[option]
+                elif option == 'max_records':
+                    common_kwargs['max_records'] = options[option]  
+                elif option == 'start_date':
+                    common_kwargs['start_date'] = options[option]
                 else:
-                    common_kwargs[option.replace('_', '-')] = options[option]
+                    common_kwargs[option] = options[option]
         
         sync_results = {}
         
