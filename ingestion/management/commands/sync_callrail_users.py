@@ -1,5 +1,5 @@
 """
-Management command to sync CallRail users
+Management command to sync CallRail users data
 """
 import logging
 import asyncio
@@ -13,107 +13,126 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseSyncCommand):
-    help = 'Sync CallRail users data'
-    crm_name = 'CallRail'
+    help = 'Sync CallRail users data with standardized flags'
+    crm_name = 'callrail'
     entity_name = 'users'
+    
+    def add_arguments(self, parser):
+        # Add standardized flags from BaseSyncCommand
+        super().add_arguments(parser)
+        
+        # CallRail-specific arguments (none for users currently)
+        pass
 
     def handle(self, *args, **options):
-        """Handle the command execution"""
+        """Handle the management command"""
         try:
-            # Check for API key
+            # Validate arguments using BaseSyncCommand
+            self.validate_arguments(options)
+            
+            # Check if CallRail API key is configured
             api_key = getattr(settings, 'CALLRAIL_API_KEY', None) or os.getenv('CALLRAIL_API_KEY')
             if not api_key:
-                raise CommandError('CALLRAIL_API_KEY not configured in settings or environment')
+                raise CommandError("CALLRAIL_API_KEY not configured in settings or environment")
             
-            # Parse command line options
-            dry_run = options['dry_run']
+            # Parse standardized arguments
             full_sync = options['full']
-            since_date = options.get('start_date')
-            batch_size = options['batch_size']
-            max_records = options['max_records']
+            force_overwrite = options['force']  
+            start_date = options.get('start_date')
+            end_date = options.get('end_date')     
+            dry_run = options.get('dry_run', False)
+            batch_size = options.get('batch_size', 100)
+            max_records = options.get('max_records', 0)
+            quiet = options.get('quiet', False)
             
-            self.stdout.write(
-                self.style.SUCCESS('Starting CallRail users sync')
-            )
+            # Display sync summary using BaseSyncCommand method
+            if not quiet:
+                self.stdout.write(
+                    self.style.SUCCESS('Starting CallRail users sync...')
+                )
             
             if dry_run:
-                self.stdout.write(self.style.WARNING('Running in DRY-RUN mode'))
+                self.stdout.write(
+                    self.style.WARNING('DRY RUN MODE - No data will be saved')
+                )
             
-            # Parse since_date date if provided
-            since_date_date = None
-            if since_date:
-                from datetime import datetime
-                try:
-                    since_date_date = datetime.strptime(since_date, '%Y-%m-%d')
-                except ValueError:
-                    raise CommandError(f'Invalid date format: {since_date}. Use YYYY-MM-DD format.')
+            # Prepare sync parameters following CRM sync guide
+            sync_params = {}
+            
+            # Standard CRM sync parameters
+            if start_date:
+                sync_params['since_date'] = start_date  # Map to engine's expected parameter
+                if not quiet:
+                    self.stdout.write(f'Start date: {start_date}')
+            
+            if end_date:
+                sync_params['end_date'] = end_date
+                if not quiet:
+                    self.stdout.write(f'End date: {end_date}')
+            
+            if batch_size != 100:
+                sync_params['batch_size'] = batch_size
+                if not quiet:
+                    self.stdout.write(f'Batch size: {batch_size}')
             
             # Run the sync
-            result = asyncio.run(self._run_sync(
-                dry_run=dry_run,
-                full_sync=full_sync,
-                since_date_date=since_date_date,
-                batch_size=batch_size,
-                max_records=max_records
-            ))
-            
-            # Display results
-            if result.get('success', False):
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Sync completed successfully!\n"
-                        f"Records fetched: {result.get('records_fetched', 0)}\n"
-                        f"Records processed: {result.get('records_processed', 0)}\n"
-                        f"Records created: {result.get('records_created', 0)}\n"
-                        f"Records updated: {result.get('records_updated', 0)}\n"
-                        f"Errors: {len(result.get('errors', []))}"
-                    )
-                )
-            else:
-                error_msg = result.get('error', 'Unknown error occurred')
-                self.stdout.write(
-                    self.style.ERROR(f"Sync failed: {error_msg}")
-                )
-                raise CommandError(f"Sync failed: {error_msg}")
-                
-        except Exception as e:
-            logger.error(f"Command execution failed: {e}")
-            raise CommandError(f"Command execution failed: {e}")
-
-    async def _run_sync(self, **kwargs):
-        """Run the actual sync operation"""
-        try:
-            # Initialize the sync engine
-            engine = UsersSyncEngine(
-                dry_run=kwargs['dry_run'],
-                batch_size=kwargs['batch_size']
+            sync_result = asyncio.run(
+                self._run_sync(full_sync, force_overwrite, dry_run, max_records, **sync_params)
             )
             
-            # Prepare sync parameters - filter out boolean values for API
-            sync_params = {}
-            if kwargs.get('since_date_date'):
-                sync_params['since_date_date'] = kwargs['since_date_date']
-            if kwargs.get('max_records'):
-                sync_params['max_records'] = kwargs['max_records']
-            if kwargs.get('full_sync'):
-                sync_params['force'] = True
+            # Display results
+            self.output_results(sync_result)
             
-            # Run the sync
-            result = await engine.sync_users(**sync_params)
-            
-            return {
-                'success': True,
-                'records_fetched': result.get('total_fetched', 0),
-                'records_processed': result.get('total_processed', 0),
-                'records_created': result.get('total_created', 0),
-                'records_updated': result.get('total_updated', 0),
-                'errors': result.get('errors', [])
-            }
+            if not sync_result.get('success', True):
+                raise CommandError('CallRail users sync failed')
             
         except Exception as e:
-            logger.error(f"Sync operation failed: {e}")
-            return {
-                'success': False,
-                'error': str(e),
-                'records_processed': 0
-            }
+            logger.error(f"CallRail users sync failed: {e}")
+            raise CommandError(f"Sync failed: {e}")
+
+    async def _run_sync(self, full_sync, force_overwrite, dry_run, max_records, **sync_params):
+        """Run the actual sync process"""
+        # Get batch_size from sync_params if provided
+        batch_size = sync_params.get('batch_size', 100)
+        
+        # Initialize engine with runtime flags so it can honor dry_run and batching
+        sync_engine = UsersSyncEngine(dry_run=dry_run, batch_size=batch_size)
+        
+        if dry_run:
+            # For dry run, we'd modify the engine to not save data
+            # This is a simplified implementation
+            self.stdout.write("Dry run mode not fully implemented yet")
+        
+        return await sync_engine.sync_users(
+            full_sync=full_sync,
+            force_overwrite=force_overwrite,
+            max_records=max_records,
+            **sync_params
+        )
+    
+    def output_results(self, result):
+        """Output sync results following BaseSyncCommand pattern"""
+        success = result.get('success', True)
+        
+        if success:
+            self.stdout.write(
+                self.style.SUCCESS('✓ CallRail users sync completed successfully!')
+            )
+        else:
+            self.stdout.write(
+                self.style.ERROR('✗ CallRail users sync failed')
+            )
+        
+        # Show statistics
+        total_processed = result.get('total_processed', 0)
+        total_created = result.get('total_created', 0)
+        total_updated = result.get('total_updated', 0)
+        total_errors = result.get('total_errors', 0)
+        
+        self.stdout.write(f"Users: {total_processed} processed ({total_created} created, {total_updated} updated, {total_errors} failed)")
+        
+        # Show duration
+        duration = result.get('duration', 0)
+        if hasattr(duration, 'total_seconds'):
+            duration = duration.total_seconds()
+        self.stdout.write(f"Duration: {duration:.2f} seconds")
