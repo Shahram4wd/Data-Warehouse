@@ -171,6 +171,8 @@ class SalesPro_Estimate(models.Model):
     down_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     has_credit_app = models.BooleanField(default=False)
     document_count = models.BigIntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(blank=True, null=True, help_text="Original creation date from SalesPro")
+    updated_at = models.DateTimeField(blank=True, null=True, help_text="Original last update date from SalesPro")
     sync_created_at = models.DateTimeField(default=timezone.now)
     sync_updated_at = models.DateTimeField(auto_now=True)
 

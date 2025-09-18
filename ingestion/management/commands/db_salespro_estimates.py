@@ -85,15 +85,9 @@ class SalesProEstimateSyncEngine(SalesProBaseSyncEngine):
                         'down_payment': self._parse_decimal(record[21]) if len(record) > 21 else None,
                         'has_credit_app': bool(record[22]) if len(record) > 22 and record[22] is not None else False,
                         'document_count': int(record[23]) if len(record) > 23 and record[23] is not None else None,
-                        'sync_created_at': self._parse_datetime(record[24]) if len(record) > 24 else None,
-                        'sync_updated_at': self._parse_datetime(record[25]) if len(record) > 25 else None,
+                        'created_at': self._parse_datetime(record[24]) if len(record) > 24 else None,
+                        'updated_at': self._parse_datetime(record[25]) if len(record) > 25 else None,
                     }
-                    
-                    # Remove null timestamp fields to let Django model defaults apply
-                    if transformed['sync_created_at'] is None:
-                        transformed.pop('sync_created_at', None)
-                    if transformed['sync_updated_at'] is None:
-                        transformed.pop('sync_updated_at', None)
                     
                     logger.info(f"Transformed from tuple: {transformed}")
                     return transformed
@@ -131,15 +125,9 @@ class SalesProEstimateSyncEngine(SalesProBaseSyncEngine):
                 'down_payment': self._parse_decimal(record.get('down_payment')),
                 'has_credit_app': bool(record.get('has_credit_app', False)),
                 'document_count': int(record.get('document_count')) if record.get('document_count') is not None else None,
-                'sync_created_at': self._parse_datetime(record.get('created_at')),
-                'sync_updated_at': self._parse_datetime(record.get('updated_at')),
+                'created_at': self._parse_datetime(record.get('created_at')),
+                'updated_at': self._parse_datetime(record.get('updated_at')),
             }
-            
-            # Remove null timestamp fields to let Django model defaults apply
-            if transformed['sync_created_at'] is None:
-                transformed.pop('sync_created_at', None)
-            if transformed['sync_updated_at'] is None:
-                transformed.pop('sync_updated_at', None)
             
             logger.debug(f"Transformed estimate record: ID={estimate_id}, customer={transformed['customer_first_name']} {transformed['customer_last_name']}, amount=${transformed['sale_amount']}")
             return transformed
