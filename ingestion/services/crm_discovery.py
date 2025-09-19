@@ -479,7 +479,8 @@ class CRMDiscoveryService:
             'CallRail_Tag': 'tags',
             'CallRail_TextMessage': 'text_messages',
             'CallRail_Tracker': 'trackers',
-            'CallRail_User': 'users'
+            'CallRail_User': 'users',
+            'Five9Contact': 'contacts'
         }
         
         if model_name in model_mappings:

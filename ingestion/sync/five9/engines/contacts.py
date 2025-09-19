@@ -24,7 +24,7 @@ class ContactsSyncEngine(BaseSyncEngine):
     """Sync engine for Five9 contact records"""
     
     def __init__(self, **kwargs):
-        super().__init__(crm_source="Five9", sync_type="contacts", **kwargs)
+        super().__init__(crm_source="five9", sync_type="contacts", **kwargs)
         self.processor = ContactsProcessor()
     
     def get_default_batch_size(self) -> int:
