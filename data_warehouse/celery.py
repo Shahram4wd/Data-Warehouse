@@ -23,9 +23,18 @@ if DJANGO_ENV == 'production':
             'task': 'ingestion.tasks.generate_automation_reports',
             'schedule': crontab(hour=4, minute=0),   # 4:00 AM UTC daily
         },
+        'worker-pool-monitor': {
+            'task': 'ingestion.tasks.worker_pool_monitor',
+            'schedule': crontab(minute='*/2'),  # Every 2 minutes
+        },
     }
 else:
-    # No scheduled tasks for local development
-    app.conf.beat_schedule = {}
+    # Limited scheduled tasks for local development
+    app.conf.beat_schedule = {
+        'worker-pool-monitor': {
+            'task': 'ingestion.tasks.worker_pool_monitor',
+            'schedule': crontab(minute='*/5'),  # Every 5 minutes in development
+        },
+    }
 
 app.conf.timezone = 'UTC'

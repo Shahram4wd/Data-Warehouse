@@ -55,6 +55,22 @@ try:
 except ImportError:
     monitoring_available = False
 
+# Import worker pool API views
+try:
+    from ingestion.views.worker_pool_api import (
+        WorkerPoolStatusView,
+        SubmitSyncTaskView,
+        TaskStatusView,
+        CancelTaskView,
+        WorkerPoolConfigView,
+        ProcessQueueView,
+        get_worker_pool_stats,
+        submit_sync_task
+    )
+    worker_pool_api_available = True
+except ImportError:
+    worker_pool_api_available = False
+
 """CRM Dashboard URLs (defined here to avoid separate module).
 If the CRM views fail to import, expose an empty list to keep URLConf stable.
 """
@@ -72,6 +88,18 @@ crm_dashboard_urlpatterns = [
     path('api/sync/history/', SyncHistoryAPIView.as_view(), name='api_sync_history'),
     path('api/sync/validate/', ValidateParametersAPIView.as_view(), name='api_validate_parameters'),
     path('api/sync/schemas/', SyncSchemasAPIView.as_view(), name='api_sync_schemas'),
+    
+    # Worker Pool API endpoints
+    path('api/worker-pool/status/', WorkerPoolStatusView.as_view(), name='api_worker_pool_status'),
+    path('api/worker-pool/submit/', SubmitSyncTaskView.as_view(), name='api_worker_pool_submit'),
+    path('api/worker-pool/tasks/<str:task_id>/', TaskStatusView.as_view(), name='api_worker_pool_task_status'),
+    path('api/worker-pool/tasks/<str:task_id>/cancel/', CancelTaskView.as_view(), name='api_worker_pool_cancel_task'),
+    path('api/worker-pool/config/', WorkerPoolConfigView.as_view(), name='api_worker_pool_config'),
+    path('api/worker-pool/process-queue/', ProcessQueueView.as_view(), name='api_worker_pool_process_queue'),
+    
+    # Worker Pool compatibility endpoints
+    path('api/worker-pool/stats/', get_worker_pool_stats, name='api_worker_pool_stats_compat'),
+    path('api/worker-pool/sync/submit/', submit_sync_task, name='api_worker_pool_sync_submit_compat'),
 
     # Schedule management API endpoints
     path('api/schedules/', AllSchedulesAPIView.as_view(), name='api_all_schedules'),

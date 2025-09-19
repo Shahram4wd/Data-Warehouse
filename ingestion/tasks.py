@@ -1,5 +1,6 @@
 """
 Celery tasks for automation reporting and CRM sync operations
+Enhanced with worker pool integration for proper queuing and worker limit enforcement.
 """
 from celery import shared_task
 from django.utils import timezone
@@ -10,13 +11,63 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def _update_worker_pool_status(celery_task_id, status_str, error_message=None):
+    """Helper function to update worker pool task status"""
+    try:
+        from ingestion.services.worker_pool import get_worker_pool, TaskStatus
+        
+        # Convert string to TaskStatus enum
+        status_map = {
+            'running': TaskStatus.RUNNING,
+            'completed': TaskStatus.COMPLETED,
+            'failed': TaskStatus.FAILED,
+            'cancelled': TaskStatus.CANCELLED
+        }
+        status = status_map.get(status_str, TaskStatus.FAILED)
+        
+        worker_pool = get_worker_pool()
+        for task_id, worker_task in worker_pool.active_workers.items():
+            if worker_task.celery_task_id == celery_task_id:
+                worker_pool.update_task_status(task_id, status, error_message)
+                break
+    except Exception as e:
+        logger.debug(f"Could not update worker pool status: {e}")
+
+
+def _task_wrapper(task_func, celery_task_id):
+    """Wrapper function for tasks to integrate with worker pool"""
+    def wrapper(*args, **kwargs):
+        try:
+            # Mark as running
+            _update_worker_pool_status(celery_task_id, 'running')
+            
+            # Execute the task
+            result = task_func(*args, **kwargs)
+            
+            # Mark as completed
+            _update_worker_pool_status(celery_task_id, 'completed')
+            
+            return result
+            
+        except Exception as e:
+            # Mark as failed
+            _update_worker_pool_status(celery_task_id, 'failed', str(e))
+            raise
+    
+    return wrapper
+
 @shared_task(bind=True, name='ingestion.tasks.generate_automation_reports')
 def generate_automation_reports(self):
     """
     Celery task to generate comprehensive automation reports for all CRMs.
     Scheduled to run daily at 9:00 PM and 4:00 AM UTC.
+    Enhanced with worker pool integration.
     """
     try:
+        # Update worker pool status
+        _update_worker_pool_status(self.request.id, 'running')
+        
         start_time = timezone.now()
         logger.info(f"Starting scheduled automation reports generation at {start_time}")
         
@@ -34,7 +85,8 @@ def generate_automation_reports(self):
         duration = (end_time - start_time).total_seconds()
         
         logger.info(f"Automation reports generation completed successfully in {duration:.2f} seconds")
-        return {
+        
+        result = {
             'status': 'success',
             'start_time': start_time.isoformat(),
             'end_time': end_time.isoformat(),
@@ -42,8 +94,17 @@ def generate_automation_reports(self):
             'message': 'Automation reports generated successfully'
         }
         
+        # Update worker pool status
+        _update_worker_pool_status(self.request.id, 'completed')
+        
+        return result
+        
     except Exception as e:
         logger.error(f"Failed to generate automation reports: {e}", exc_info=True)
+        
+        # Update worker pool status
+        _update_worker_pool_status(self.request.id, 'failed', str(e))
+        
         return {
             'status': 'error',
             'error': str(e),
@@ -304,3 +365,31 @@ def run_ingestion(self, schedule_id: int):
             'error': str(e),
             'message': 'Unexpected error occurred'
         }
+
+
+# Worker pool management tasks
+@shared_task(bind=True, name='ingestion.tasks.worker_pool_monitor')
+def worker_pool_monitor(self):
+    """Monitor worker pool and update task statuses"""
+    try:
+        from ingestion.services.worker_pool import get_worker_pool
+        
+        worker_pool = get_worker_pool()
+        
+        # Check Celery task statuses
+        worker_pool.check_celery_task_statuses()
+        
+        # Cleanup old completed tasks
+        worker_pool.cleanup_completed_tasks()
+        
+        # Process any pending tasks
+        worker_pool.process_queue()
+        
+        stats = worker_pool.get_stats()
+        logger.debug(f"Worker pool monitor: {stats['active_count']} active, {stats['queued_count']} queued")
+        
+        return {'status': 'success', 'stats': stats}
+        
+    except Exception as e:
+        logger.error(f"Worker pool monitor error: {e}")
+        raise

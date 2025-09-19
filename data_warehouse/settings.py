@@ -203,6 +203,10 @@ except Exception as e:
     CELERY_BROKER_URL = 'memory://'
     CELERY_RESULT_BACKEND = 'cache+memory://'
 
+# Worker Pool Configuration
+# Maximum number of concurrent sync workers (can be overridden by environment variable)
+MAX_SYNC_WORKERS = config('MAX_SYNC_WORKERS', default=1, cast=int)
+
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
