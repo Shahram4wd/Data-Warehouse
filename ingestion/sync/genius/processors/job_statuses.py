@@ -16,15 +16,15 @@ class GeniusJobStatusProcessor(GeniusBaseProcessor):
     def __init__(self, model_class):
         super().__init__(model_class)
     
-    def validate_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and clean job status record data"""
         
         validated = {}
         
         # Validate each field using GeniusValidator
-        validated['id'] = GeniusValidator.validate_id_field(record_data.get('id'))
-        validated['label'] = GeniusValidator.validate_string_field(record_data.get('label'), max_length=50)
-        validated['is_system'] = GeniusValidator.validate_id_field(record_data.get('is_system'))
+        validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['label'] = GeniusValidator.validate_string_field(record.get('label'), max_length=50)
+        validated['is_system'] = GeniusValidator.validate_id_field(record.get('is_system'))
         
         # Ensure we have required fields
         if not validated.get('id'):
@@ -36,16 +36,16 @@ class GeniusJobStatusProcessor(GeniusBaseProcessor):
         
         return validated
     
-    def transform_record(self, raw_data: tuple, field_mapping: List[str]) -> Dict[str, Any]:
+    def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform raw job status data to dictionary"""
         
-        # Use base class transformation
-        record = super().transform_record(raw_data, field_mapping)
+        # Use direct record processing since input is already a dictionary
+        transformed_record = record
         
         # Job status-specific transformations
         
         # Convert is_system to int
-        if 'is_system' in record and record['is_system'] is not None:
-            record['is_system'] = int(record['is_system'])
+        if 'is_system' in transformed_record and transformed_record['is_system'] is not None:
+            transformed_record['is_system'] = int(transformed_record['is_system'])
         
-        return record
+        return transformed_record

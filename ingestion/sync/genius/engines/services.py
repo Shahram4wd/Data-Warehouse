@@ -66,7 +66,7 @@ class GeniusServicesSyncEngine:
             sync_record.status = 'failed'
             sync_record.error_message = error_message
         else:
-            sync_record.status = 'completed'
+            sync_record.status = 'success'
         
         sync_record.save()
     

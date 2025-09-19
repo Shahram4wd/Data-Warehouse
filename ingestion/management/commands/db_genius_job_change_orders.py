@@ -162,7 +162,7 @@ class Command(BaseCommand):
             
             # Process data in chunks
             client = GeniusJobChangeOrderClient()
-            processor = GeniusJobChangeOrderProcessor()
+            processor = GeniusJobChangeOrderProcessor(Genius_JobChangeOrder)
             all_stats = {
                 'total_processed': 0,
                 'created': 0,

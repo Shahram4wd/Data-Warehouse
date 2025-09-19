@@ -92,16 +92,16 @@ class GeniusBaseClient:
             'appointment': 'updated_at',
             'user': 'updated_at',
             'job': 'updated_at',
-            'job_status': 'updated_at',
+            'job_status': None,  # Reference table, no timestamp field
             'job_financing': None,  # No timestamp field
             'lead': 'updated_at',
             'quote': 'updated_at',
             'job_change_order': 'updated_at',
-            'appointment_type': 'updated_at',
+            'appointment_type': None,  # Reference table, no timestamp field
             'appointment_outcome': 'updated_at',
-            'appointment_outcome_type': 'updated_at',
+            'appointment_outcome_type': None,  # Reference table, no timestamp field
             'marketing_source': 'updated_at',
-            'marketing_source_type': 'updated_at',
+            'marketing_source_type': None,  # Reference table, no timestamp field
             'prospect_source': 'updated_at',
             'marketsharp_sources': 'updated_at',
             'marketsharp_marketing_source_map': 'updated_at',

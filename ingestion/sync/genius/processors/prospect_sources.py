@@ -17,27 +17,23 @@ class GeniusProspectSourceProcessor:
     def __init__(self, model_class):
         self.model_class = model_class
     
-    def validate_record(self, record_tuple: tuple, field_mapping: List[str]) -> Optional[Dict[str, Any]]:
+    def validate_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Validate and transform a single prospect source record following CRM sync guide patterns.
         
         Args:
-            record_tuple: Raw database record as tuple
-            field_mapping: Field names corresponding to tuple positions
+            record: Record data as dictionary
             
         Returns:
             Validated dictionary record or None if invalid
         """
         try:
-            # Convert tuple to dictionary using field mapping
-            record = dict(zip(field_mapping, record_tuple))
-            
-            # Validate and transform the record
+            # Validate and transform the record directly
             return self._validate_and_transform_record(record)
             
         except Exception as e:
             logger.error(f"Error validating Prospect Source record: {e}")
-            logger.error(f"Problematic record: {record_tuple}")
+            logger.error(f"Problematic record: {record}")
             return None
     
     def _validate_and_transform_record(self, record: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -126,3 +122,9 @@ class GeniusProspectSourceProcessor:
             pass
             
         return None
+
+    def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform raw prospect source data to dictionary"""
+        
+        # Use direct record processing since input is already a dictionary
+        return record

@@ -37,16 +37,18 @@ class GeniusAppointmentTypeProcessor(GeniusBaseProcessor):
         
         return validated
     
-    def transform_record(self, raw_data: tuple, field_mapping: List[str]) -> Dict[str, Any]:
-        """Transform raw appointment type data to dictionary"""
+    def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Transform appointment type record data"""
         
-        # Use base class transformation
-        record = super().transform_record(raw_data, field_mapping)
-        
-        # Appointment type-specific transformations
+        # Apply basic transformations
+        transformed = record.copy()
         
         # Convert is_active flag to boolean if needed
-        if 'is_active' in record:
-            record['is_active'] = bool(record['is_active'])
+        if 'is_active' in transformed:
+            transformed['is_active'] = bool(transformed['is_active'])
         
-        return record
+        # Ensure all required fields exist
+        if 'id' not in transformed or transformed['id'] is None:
+            raise ValueError("Appointment type record must have an id")
+        
+        return transformed

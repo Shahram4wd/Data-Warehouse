@@ -16,18 +16,18 @@ class GeniusAppointmentOutcomeTypeProcessor(GeniusBaseProcessor):
     def __init__(self, model_class):
         super().__init__(model_class)
     
-    def validate_record(self, record_data: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Validate and clean appointment outcome type record data"""
         
         validated = {}
         
         # Validate each field using GeniusValidator - use exact model field names
-        validated['id'] = GeniusValidator.validate_id_field(record_data.get('id'))
-        validated['label'] = GeniusValidator.validate_string_field(record_data.get('label'), max_length=50, required=True)
-        validated['sort_idx'] = GeniusValidator.validate_id_field(record_data.get('sort_idx'))
-        validated['is_active'] = GeniusValidator.validate_boolean_field(record_data.get('is_active'))
-        validated['created_at'] = GeniusValidator.validate_datetime_field(record_data.get('created_at'))
-        validated['updated_at'] = GeniusValidator.validate_datetime_field(record_data.get('updated_at'))
+        validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
+        validated['label'] = GeniusValidator.validate_string_field(record.get('label'), max_length=50, required=True)
+        validated['sort_idx'] = GeniusValidator.validate_id_field(record.get('sort_idx'))
+        validated['is_active'] = GeniusValidator.validate_boolean_field(record.get('is_active'))
+        validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
         
         # Convert timezone awareness
         if validated.get('created_at'):
@@ -53,11 +53,11 @@ class GeniusAppointmentOutcomeTypeProcessor(GeniusBaseProcessor):
         
         return validated
     
-    def transform_record(self, raw_data: tuple, field_mapping: List[str]) -> Dict[str, Any]:
+    def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
         """Transform raw appointment outcome type data to dictionary"""
         
-        # Use base class transformation
-        record = super().transform_record(raw_data, field_mapping)
+        # Use direct record processing since input is already a dictionary
+        transformed_record = record
         
         # No field name mapping needed since we're already selecting correct field names from database
         transformed_record = record
