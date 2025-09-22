@@ -139,44 +139,79 @@ class Command(BaseCommand):
                 'skipped': 0
             }
             
-            # Get data from API
-            all_records = []
+            # Get data from database
+            debug = options.get('debug', False)
+            if debug:
+                logger.info("Fetching marketing source types from Genius database...")
+                
+            raw_records = []
             for chunk in client.get_marketing_source_types_chunked(
                 since_date=since,
                 chunk_size=1000
             ):
-                all_records.extend(chunk)
+                raw_records.extend(chunk)
                 
                 # Respect max_records limit if specified
-                if options.get('max_records') and len(all_records) >= options['max_records']:
-                    all_records = all_records[:options['max_records']]
+                if options.get('max_records') and len(raw_records) >= options['max_records']:
+                    raw_records = raw_records[:options['max_records']]
                     break
-                
-                # Process in batches
-                if len(all_records) >= 500:
-                    stats = processor.process_batch(
-                        all_records,
-                        dry_run=options.get('dry_run', False),
-                        force=options.get('force', False)
-                    )
-                    
-                    # Update totals
-                    for key in all_stats:
-                        all_stats[key] += stats.get(key, 0)
-                    
-                    all_records = []  # Clear for next batch
             
-            # Process remaining records
-            if all_records:
-                stats = processor.process_batch(
-                    all_records,
-                    dry_run=options.get('dry_run', False),
-                    force=options.get('force', False)
-                )
+            if debug:
+                logger.info(f"Retrieved {len(raw_records)} raw records")
+            
+            # Convert tuples to dictionaries using field mapping
+            field_mapping = client.get_field_mapping()
+            records = []
+            for raw_record in raw_records:
+                if len(raw_record) != len(field_mapping):
+                    logger.warning(f"Field count mismatch: got {len(raw_record)} fields, expected {len(field_mapping)}")
+                    continue
                 
-                # Update totals
-                for key in all_stats:
-                    all_stats[key] += stats.get(key, 0)
+                record_dict = dict(zip(field_mapping, raw_record))
+                records.append(record_dict)
+            
+            if debug:
+                logger.info(f"Converted to {len(records)} dictionary records")
+            
+            # Process records individually (following appointment_types pattern)
+            for i, record in enumerate(records):
+                try:
+                    # For now, let's use the validate_record method that returns the processed dict
+                    # This handles both validation and transformation in one step
+                    processed_record = processor.validate_record(raw_records[i], field_mapping)
+                    if not processed_record:
+                        all_stats['errors'] += 1
+                        continue
+                    
+                    if debug and i < 3:  # Show first few records in debug mode
+                        logger.info(f"Processed record {i+1}: {processed_record}")
+                    
+                    # Check if record already exists
+                    try:
+                        existing_obj = processor.model_class.objects.get(id=processed_record['id'])
+                        # Update existing record unless we want to skip updates
+                        if options.get('force', False) or not existing_obj:
+                            for field, value in processed_record.items():
+                                if field != 'id':  # Don't update ID field
+                                    setattr(existing_obj, field, value)
+                            if not options.get('dry_run', False):
+                                existing_obj.save()
+                            all_stats['updated'] += 1
+                        else:
+                            all_stats['skipped'] += 1
+                            
+                    except processor.model_class.DoesNotExist:
+                        # Create new record
+                        if not options.get('dry_run', False):
+                            processor.model_class.objects.create(**processed_record)
+                        all_stats['created'] += 1
+                    
+                    all_stats['total_processed'] += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error processing record {i+1}: {e}")
+                    all_stats['errors'] += 1
+                    continue
             
             # Complete sync tracking
             if sync_record:

@@ -124,6 +124,27 @@ class Command(BaseCommand):
         except Exception as e:
             raise ValueError(f"Invalid datetime format '{date_str}': {e}")
 
+    def parse_datetime_arg(self, date_str):
+        """Parse datetime string argument with flexible format support"""
+        if not date_str:
+            return None
+            
+        # Try parsing as datetime first, then as date
+        try:
+            parsed = parse_datetime(date_str)
+            if parsed:
+                return parsed
+                
+            # If no time component, try parsing as date and add time
+            from django.utils.dateparse import parse_date
+            date_obj = parse_date(date_str)
+            if date_obj:
+                return datetime.combine(date_obj, datetime.min.time())
+                
+            raise ValueError(f"Could not parse datetime: {date_str}")
+        except Exception as e:
+            raise ValueError(f"Invalid datetime format '{date_str}': {e}")
+
     def handle(self, *args, **options):
         """Main command handler"""
         
@@ -136,12 +157,11 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
+        # Show flag modes
+        if options.get('force'):
+            self.stdout.write("🔄 FORCE MODE - Overwriting existing records")
+        if options.get('full'):
+            self.stdout.write("📋 FULL SYNC - Ignoring last sync timestamp")
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -162,7 +182,7 @@ class Command(BaseCommand):
             
             # Process data in chunks
             client = GeniusJobChangeOrderTypeClient()
-            processor = GeniusJobChangeOrderTypeProcessor()
+            processor = GeniusJobChangeOrderTypeProcessor(Genius_JobChangeOrderType)
             all_stats = {
                 'total_processed': 0,
                 'created': 0,
@@ -171,50 +191,83 @@ class Command(BaseCommand):
                 'skipped': 0
             }
             
-            # Get data from API
-            all_records = []
-            for chunk in client.get_chunked_data(
-                'jobchangeordertypes',
-                chunk_size=100000,
-                full=options.get('full', False),
-                since=since,
-                max_records=options.get('max_records')
+            # Get data from database
+            debug = options.get('debug', False)
+            if debug:
+                logger.info("Fetching job change order types from Genius database...")
+                
+            raw_records = []
+            for chunk in client.get_job_change_order_types_chunked(
+                since_date=since,
+                chunk_size=1000
             ):
-                all_records.extend(chunk)
+                raw_records.extend(chunk)
                 
-                # Process in batches
-                if len(all_records) >= 500:
-                    stats = processor.process_batch(
-                        all_records,
-                        dry_run=options.get('dry_run', False),
-                        force=options.get('force', False)
-                    )
-                    
-                    # Update totals
-                    for key in all_stats:
-                        all_stats[key] += stats.get(key, 0)
-                    
-                    all_records = []  # Clear for next batch
+                # Respect max_records limit if specified
+                if options.get('max_records') and len(raw_records) >= options['max_records']:
+                    raw_records = raw_records[:options['max_records']]
+                    break
             
-            # Process remaining records
-            if all_records:
-                stats = processor.process_batch(
-                    all_records,
-                    dry_run=options.get('dry_run', False),
-                    force=options.get('force', False)
-                )
+            if debug:
+                logger.info(f"Retrieved {len(raw_records)} raw records")
+            
+            # Convert tuples to dictionaries using field mapping
+            field_mapping = client.get_field_mapping()
+            records = []
+            for raw_record in raw_records:
+                if len(raw_record) != len(field_mapping):
+                    logger.warning(f"Field count mismatch: got {len(raw_record)} fields, expected {len(field_mapping)}")
+                    continue
                 
-                # Update totals
-                for key in all_stats:
-                    all_stats[key] += stats.get(key, 0)
+                record_dict = dict(zip(field_mapping, raw_record))
+                records.append(record_dict)
+            
+            if debug:
+                logger.info(f"Converted to {len(records)} dictionary records")
+            
+            # Process records individually (following appointment_types pattern)
+            for i, record in enumerate(records):
+                try:
+                    # For now, let's use the validate_record method that returns the processed dict
+                    # This handles both validation and transformation in one step
+                    processed_record = processor.validate_record(raw_records[i], field_mapping)
+                    if not processed_record:
+                        all_stats['errors'] += 1
+                        continue
+                    
+                    if debug and i < 3:  # Show first few records in debug mode
+                        logger.info(f"Processed record {i+1}: {processed_record}")
+                    
+                    # Check if record already exists
+                    try:
+                        existing_obj = processor.model_class.objects.get(id=processed_record['id'])
+                        # Update existing record unless we want to skip updates
+                        if options.get('force', False) or not existing_obj:
+                            for field, value in processed_record.items():
+                                if field != 'id':  # Don't update ID field
+                                    setattr(existing_obj, field, value)
+                            if not options.get('dry_run', False):
+                                existing_obj.save()
+                            all_stats['updated'] += 1
+                        else:
+                            all_stats['skipped'] += 1
+                            
+                    except processor.model_class.DoesNotExist:
+                        # Create new record
+                        if not options.get('dry_run', False):
+                            processor.model_class.objects.create(**processed_record)
+                        all_stats['created'] += 1
+                    
+                    all_stats['total_processed'] += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error processing record {i+1}: {e}")
+                    all_stats['errors'] += 1
+                    continue
             
             # Complete sync tracking
             if sync_record:
-                sync_record = self.complete_sync_record(
-                    sync_record,
-                    stats=all_stats,
-                    status='success'
-                )
+                self.complete_sync_record(sync_record, all_stats)
             
             # Display results
             self.stdout.write("✅ Sync completed successfully:")
@@ -231,11 +284,7 @@ class Command(BaseCommand):
             
         except Exception as e:
             if sync_record:
-                self.complete_sync_record(
-                    sync_record,
-                    status='failed',
-                    error_message=str(e)
-                )
+                self.complete_sync_record(sync_record, status='failed', error_message=str(e))
             logger.exception("Genius job change order types sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")

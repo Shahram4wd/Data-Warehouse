@@ -170,50 +170,82 @@ class Command(BaseCommand):
                 'skipped': 0
             }
             
-            # Get data from API
-            all_records = []
-            for chunk in client.get_chunked_data(
-                'jobchangeorderitems',
-                chunk_size=100000,
-                full=options.get('full', False),
-                since=since,
-                max_records=options.get('max_records')
+            # Get data from database
+            debug = options.get('debug', False)
+            if debug:
+                logger.info("Fetching job change order items from Genius database...")
+                
+            raw_records = []
+            for chunk in client.get_job_change_order_items_chunked(
+                since_date=since,
+                chunk_size=1000
             ):
-                all_records.extend(chunk)
+                raw_records.extend(chunk)
                 
-                # Process in batches
-                if len(all_records) >= 500:
-                    stats = processor.process_batch(
-                        all_records,
-                        dry_run=options.get('dry_run', False),
-                        force=options.get('force', False)
-                    )
-                    
-                    # Update totals
-                    for key in all_stats:
-                        all_stats[key] += stats.get(key, 0)
-                    
-                    all_records = []  # Clear for next batch
+                # Respect max_records limit if specified
+                if options.get('max_records') and len(raw_records) >= options['max_records']:
+                    raw_records = raw_records[:options['max_records']]
+                    break
             
-            # Process remaining records
-            if all_records:
-                stats = processor.process_batch(
-                    all_records,
-                    dry_run=options.get('dry_run', False),
-                    force=options.get('force', False)
-                )
+            if debug:
+                logger.info(f"Retrieved {len(raw_records)} raw records")
+            
+            # Convert tuples to dictionaries using field mapping
+            field_mapping = client.get_field_mapping()
+            records = []
+            for raw_record in raw_records:
+                if len(raw_record) != len(field_mapping):
+                    logger.warning(f"Field count mismatch: got {len(raw_record)} fields, expected {len(field_mapping)}")
+                    continue
                 
-                # Update totals
-                for key in all_stats:
-                    all_stats[key] += stats.get(key, 0)
+                record_dict = dict(zip(field_mapping, raw_record))
+                records.append(record_dict)
+            
+            if debug:
+                logger.info(f"Converted to {len(records)} dictionary records")
+            
+            # Process records individually (following appointment_types pattern)
+            for i, record in enumerate(records):
+                try:
+                    # This processor expects a dictionary, not tuple and field_mapping
+                    processed_record = processor.validate_record(record)
+                    if not processed_record:
+                        all_stats['errors'] += 1
+                        continue
+                    
+                    if debug and i < 3:  # Show first few records in debug mode
+                        logger.info(f"Processed record {i+1}: {processed_record}")
+                    
+                    # Check if record already exists
+                    try:
+                        existing_obj = processor.model_class.objects.get(id=processed_record['id'])
+                        # Update existing record unless we want to skip updates
+                        if options.get('force', False) or not existing_obj:
+                            for field, value in processed_record.items():
+                                if field != 'id':  # Don't update ID field
+                                    setattr(existing_obj, field, value)
+                            if not options.get('dry_run', False):
+                                existing_obj.save()
+                            all_stats['updated'] += 1
+                        else:
+                            all_stats['skipped'] += 1
+                            
+                    except processor.model_class.DoesNotExist:
+                        # Create new record
+                        if not options.get('dry_run', False):
+                            processor.model_class.objects.create(**processed_record)
+                        all_stats['created'] += 1
+                    
+                    all_stats['total_processed'] += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error processing record {i+1}: {e}")
+                    all_stats['errors'] += 1
+                    continue
             
             # Complete sync tracking
             if sync_record:
-                sync_record = self.complete_sync_record(
-                    sync_record,
-                    stats=all_stats,
-                    status='success'
-                )
+                self.complete_sync_record(sync_record, all_stats)
             
             # Display results
             self.stdout.write("✅ Sync completed successfully:")
@@ -230,11 +262,7 @@ class Command(BaseCommand):
             
         except Exception as e:
             if sync_record:
-                self.complete_sync_record(
-                    sync_record,
-                    status='failed',
-                    error_message=str(e)
-                )
+                self.complete_sync_record(sync_record, status='failed', error_message=str(e))
             logger.exception("Genius job change order items sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
