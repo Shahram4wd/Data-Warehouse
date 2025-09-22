@@ -278,7 +278,7 @@ def run_ingestion(self, schedule_id: int):
             # Record a skipped run in SyncHistory
             SyncHistory.objects.create(
                 crm_source=schedule.source_key,
-                sync_type=f"{schedule.mode}_scheduled",
+                sync_type=schedule.model_name,
                 start_time=timezone.now(),
                 end_time=timezone.now(),
                 status='failed',  # represent skip as failed/partial if needed
@@ -297,7 +297,7 @@ def run_ingestion(self, schedule_id: int):
         started = timezone.now()
         history = SyncHistory.objects.create(
             crm_source=schedule.source_key,
-            sync_type=f"{schedule.mode}_scheduled",
+            sync_type=schedule.model_name,
             start_time=started,
             status='running',
             configuration={"schedule_id": schedule.id, **(schedule.options or {})},
