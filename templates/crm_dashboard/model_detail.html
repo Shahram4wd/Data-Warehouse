@@ -842,7 +842,26 @@ function showSyncModal() {
     new bootstrap.Modal(document.getElementById('syncModal')).show();
 }
 
+// Global flag to prevent multiple sync executions across the entire page
+let syncInProgress = false;
+
 function executeSync() {
+    // Global check to prevent multiple sync executions
+    if (syncInProgress) {
+        console.warn('Sync already in progress, ignoring duplicate request');
+        return;
+    }
+
+    const syncButton = document.querySelector('#syncModal .btn-primary');
+    
+    // Prevent double submissions by checking if already in progress
+    if (syncButton.disabled) {
+        return;
+    }
+    
+    // Set global flag and button state
+    syncInProgress = true;
+    
     const crm = document.getElementById('syncCrmName').value;
     const model = document.getElementById('syncModelName').value;
     const force = document.getElementById('syncForce').checked;
@@ -860,6 +879,13 @@ function executeSync() {
         parameters: params
     };
 
+    // Disable button and show loading state
+    syncButton.disabled = true;
+    const originalText = syncButton.innerHTML;
+    syncButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Starting...';
+
+    console.log('Sending sync request:', payload);
+
     fetch('/ingestion/crm-dashboard/api/sync/execute/', {
         method: 'POST',
         headers: {
@@ -870,17 +896,30 @@ function executeSync() {
     })
     .then(response => response.json())
     .then(data => {
+        console.log('Sync response received:', data);
         if (data.success) {
             showSuccess('Sync started successfully');
             bootstrap.Modal.getInstance(document.getElementById('syncModal')).hide();
             setTimeout(refreshData, 2000);
         } else {
-            showError('Failed to start sync: ' + data.message);
+            let errorMsg = 'Failed to start sync: ' + (data.error || data.message || 'Unknown error');
+            if (data.duplicate_cancelled) {
+                errorMsg = 'Duplicate sync prevented: ' + data.error;
+            }
+            showError(errorMsg);
         }
     })
     .catch(error => {
         console.error('Error starting sync:', error);
-        showError('Failed to start sync');
+        showError('Failed to start sync: ' + error.message);
+    })
+    .finally(() => {
+        // Re-enable button and restore original text
+        syncButton.disabled = false;
+        syncButton.innerHTML = originalText;
+        // Clear global flag
+        syncInProgress = false;
+        console.log('Sync request completed, flag cleared');
     });
 }
 

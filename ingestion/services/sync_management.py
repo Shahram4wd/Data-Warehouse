@@ -10,7 +10,7 @@ import os
 import signal
 import threading
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.utils import timezone
 from django.conf import settings
 from ingestion.models.common import SyncHistory
@@ -25,6 +25,7 @@ class SyncManagementService:
     
     def __init__(self):
         self.running_processes = {}  # Track running sync processes
+        self.sync_locks = {}  # Track ongoing sync operations to prevent race conditions
         self.management_commands_dir = os.path.join(
             os.path.dirname(__file__), '..', 'management', 'commands'
         )
@@ -199,61 +200,125 @@ class SyncManagementService:
     
     def execute_sync_command(self, crm_source: str, sync_type: str, parameters: Dict) -> Dict[str, Any]:
         """Execute a sync command asynchronously and return execution info"""
+        sync_key = f"{crm_source}:{sync_type}"
+        
         try:
-            # Validate parameters first
-            validation = self.validate_sync_parameters(parameters)
-            if not validation['valid']:
+            # Check for in-memory lock first (prevents race conditions within same process)
+            if sync_key in self.sync_locks:
+                logger.warning(f"Sync already in progress for {sync_key} (in-memory lock)")
                 return {
                     'success': False,
-                    'error': 'Parameter validation failed',
-                    'validation_errors': validation['errors'],
+                    'error': f'Another sync for {crm_source} {sync_type} is already being processed. Please wait.',
                     'sync_id': None
                 }
             
-            # Check for concurrent syncs
-            concurrent_check = self._check_concurrent_syncs(crm_source, sync_type)
-            if not concurrent_check['can_proceed']:
-                return {
-                    'success': False,
-                    'error': concurrent_check['message'],
-                    'sync_id': None
-                }
+            # Set temporary lock
+            self.sync_locks[sync_key] = timezone.now()
             
-            # Build command
-            command = self.build_sync_command(crm_source, sync_type, validation['sanitized_params'])
-            if not command:
+            try:
+                # Validate parameters first
+                validation = self.validate_sync_parameters(parameters)
+                if not validation['valid']:
+                    return {
+                        'success': False,
+                        'error': 'Parameter validation failed',
+                        'validation_errors': validation['errors'],
+                        'sync_id': None
+                    }
+                
+                # Check for concurrent syncs in database
+                concurrent_check = self._check_concurrent_syncs(crm_source, sync_type)
+                if not concurrent_check['can_proceed']:
+                    return {
+                        'success': False,
+                        'error': concurrent_check['message'],
+                        'sync_id': None
+                    }
+                
+                # Build command
+                command = self.build_sync_command(crm_source, sync_type, validation['sanitized_params'])
+                if not command:
+                    return {
+                        'success': False,
+                        'error': 'Failed to build command',
+                        'sync_id': None
+                    }
+                
+                # Log sync initiation for debugging
+                logger.info(f"Initiating sync for {sync_key} with command: {command}")
+                
+                # Create SyncHistory record with additional race condition protection
+                try:
+                    sync_record = SyncHistory.objects.create(
+                        crm_source=crm_source,
+                        sync_type=sync_type,
+                        status='running',
+                        start_time=timezone.now(),
+                        configuration={
+                            'command': command,
+                            'parameters': validation['sanitized_params'],
+                            'validation_warnings': validation['warnings'],
+                            'execution_method': 'manual_sync_api',
+                            'sync_key': sync_key
+                        }
+                    )
+                    
+                    # Double-check for race condition after creation
+                    recent_syncs = SyncHistory.objects.filter(
+                        crm_source=crm_source,
+                        sync_type=sync_type,
+                        status='running',
+                        start_time__gte=timezone.now() - timedelta(seconds=5)
+                    ).order_by('start_time')
+                    
+                    if recent_syncs.count() > 1:
+                        # Race condition detected - keep only the first one
+                        first_sync = recent_syncs.first()
+                        if sync_record.id != first_sync.id:
+                            logger.warning(f"Race condition detected for {sync_key}. Cancelling duplicate sync {sync_record.id}")
+                            sync_record.status = 'failed'
+                            sync_record.end_time = timezone.now()
+                            sync_record.error_message = f'Cancelled due to concurrent sync detection. First sync ID: {first_sync.id}'
+                            sync_record.save()
+                            
+                            return {
+                                'success': False,
+                                'error': f'Another sync for {crm_source} {sync_type} started simultaneously. Please wait for it to complete.',
+                                'sync_id': sync_record.id,
+                                'duplicate_cancelled': True
+                            }
+                    
+                    logger.info(f"Created SyncHistory record {sync_record.id} for {sync_key}")
+                    
+                except Exception as e:
+                    logger.error(f"Error creating SyncHistory record for {sync_key}: {e}")
+                    return {
+                        'success': False,
+                        'error': 'Failed to create sync record',
+                        'sync_id': None
+                    }
+                
+                # Execute command in background
+                self._execute_command_async(sync_record.id, command)
+                
                 return {
-                    'success': False,
-                    'error': 'Failed to build command',
-                    'sync_id': None
-                }
-            
-            # Create SyncHistory record
-            sync_record = SyncHistory.objects.create(
-                crm_source=crm_source,
-                sync_type=sync_type,
-                status='running',
-                start_time=timezone.now(),
-                configuration={
+                    'success': True,
+                    'sync_id': sync_record.id,
                     'command': command,
-                    'parameters': validation['sanitized_params'],
-                    'validation_warnings': validation['warnings']
+                    'warnings': validation['warnings'],
+                    'message': f'Sync started successfully for {crm_source} {sync_type}'
                 }
-            )
-            
-            # Execute command in background
-            self._execute_command_async(sync_record.id, command)
-            
-            return {
-                'success': True,
-                'sync_id': sync_record.id,
-                'command': command,
-                'warnings': validation['warnings'],
-                'message': f'Sync started successfully for {crm_source} {sync_type}'
-            }
+                
+            finally:
+                # Always remove the in-memory lock after processing
+                if sync_key in self.sync_locks:
+                    del self.sync_locks[sync_key]
             
         except Exception as e:
-            logger.error(f"Error executing sync command: {e}")
+            # Ensure lock is removed even if there's an error
+            if sync_key in self.sync_locks:
+                del self.sync_locks[sync_key]
+            logger.error(f"Error executing sync command for {sync_key}: {e}")
             return {
                 'success': False,
                 'error': str(e),
