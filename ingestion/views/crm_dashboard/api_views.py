@@ -219,7 +219,6 @@ class SyncExecuteAPIView(BaseAPIView):
         except json.JSONDecodeError:
             return self.error_response("Invalid JSON in request body", 400)
         except Exception as e:
-            logger.error(f"Error executing sync: {e}")
             return self.error_response(str(e), 500)
 
 

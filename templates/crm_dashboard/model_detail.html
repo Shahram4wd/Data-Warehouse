@@ -842,13 +842,12 @@ function showSyncModal() {
     new bootstrap.Modal(document.getElementById('syncModal')).show();
 }
 
-// Global flag to prevent multiple sync executions across the entire page
+// Global flag to prevent multiple sync executions
 let syncInProgress = false;
 
 function executeSync() {
-    // Global check to prevent multiple sync executions
+    // Check to prevent multiple sync executions
     if (syncInProgress) {
-        console.warn('Sync already in progress, ignoring duplicate request');
         return;
     }
 
@@ -884,8 +883,6 @@ function executeSync() {
     const originalText = syncButton.innerHTML;
     syncButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Starting...';
 
-    console.log('Sending sync request:', payload);
-
     fetch('/ingestion/crm-dashboard/api/sync/execute/', {
         method: 'POST',
         headers: {
@@ -896,7 +893,6 @@ function executeSync() {
     })
     .then(response => response.json())
     .then(data => {
-        console.log('Sync response received:', data);
         if (data.success) {
             showSuccess('Sync started successfully');
             bootstrap.Modal.getInstance(document.getElementById('syncModal')).hide();
@@ -910,7 +906,6 @@ function executeSync() {
         }
     })
     .catch(error => {
-        console.error('Error starting sync:', error);
         showError('Failed to start sync: ' + error.message);
     })
     .finally(() => {
@@ -919,7 +914,6 @@ function executeSync() {
         syncButton.innerHTML = originalText;
         // Clear global flag
         syncInProgress = false;
-        console.log('Sync request completed, flag cleared');
     });
 }
 
@@ -1252,8 +1246,6 @@ function saveScheduleEdit() {
         payload.day_of_month = document.getElementById('editDayOfMonth').value || '*';
         payload.month_of_year = '*';
     }
-    
-    console.log('Updating schedule with payload:', payload);
     
     fetch(`/ingestion/crm-dashboard/api/schedules/${scheduleId}/`, {
         method: 'PUT',

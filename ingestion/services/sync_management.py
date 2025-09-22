@@ -205,7 +205,6 @@ class SyncManagementService:
         try:
             # Check for in-memory lock first (prevents race conditions within same process)
             if sync_key in self.sync_locks:
-                logger.warning(f"Sync already in progress for {sync_key} (in-memory lock)")
                 return {
                     'success': False,
                     'error': f'Another sync for {crm_source} {sync_type} is already being processed. Please wait.',
@@ -244,8 +243,8 @@ class SyncManagementService:
                         'sync_id': None
                     }
                 
-                # Log sync initiation for debugging
-                logger.info(f"Initiating sync for {sync_key} with command: {command}")
+                # Add flag to indicate this is called from API service to prevent duplicate SyncHistory creation
+                command += " --called-from-api"
                 
                 # Create SyncHistory record with additional race condition protection
                 try:
@@ -275,7 +274,6 @@ class SyncManagementService:
                         # Race condition detected - keep only the first one
                         first_sync = recent_syncs.first()
                         if sync_record.id != first_sync.id:
-                            logger.warning(f"Race condition detected for {sync_key}. Cancelling duplicate sync {sync_record.id}")
                             sync_record.status = 'failed'
                             sync_record.end_time = timezone.now()
                             sync_record.error_message = f'Cancelled due to concurrent sync detection. First sync ID: {first_sync.id}'
@@ -288,10 +286,7 @@ class SyncManagementService:
                                 'duplicate_cancelled': True
                             }
                     
-                    logger.info(f"Created SyncHistory record {sync_record.id} for {sync_key}")
-                    
                 except Exception as e:
-                    logger.error(f"Error creating SyncHistory record for {sync_key}: {e}")
                     return {
                         'success': False,
                         'error': 'Failed to create sync record',
@@ -318,7 +313,6 @@ class SyncManagementService:
             # Ensure lock is removed even if there's an error
             if sync_key in self.sync_locks:
                 del self.sync_locks[sync_key]
-            logger.error(f"Error executing sync command for {sync_key}: {e}")
             return {
                 'success': False,
                 'error': str(e),

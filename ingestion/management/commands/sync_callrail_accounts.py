@@ -41,34 +41,41 @@ class Command(BaseSyncCommand):
             batch_size = options['batch_size']
             max_records = options['max_records']
             debug = options.get('debug', False)
+            called_from_api = options.get('called_from_api', False)
             
-            # Create SyncHistory record for tracking
-            sync_record = SyncHistory.objects.create(
-                crm_source='callrail',
-                sync_type='accounts',
-                status='running',
-                start_time=timezone.now(),
-                configuration={
-                    'command': 'sync_callrail_accounts',
-                    'parameters': {
-                        'dry_run': dry_run,
-                        'full_sync': full_sync,
-                        'force_overwrite': force_overwrite,
-                        'since': since,
-                        'batch_size': batch_size,
-                        'max_records': max_records,
-                        'debug': debug
-                    },
-                    'execution_method': 'management_command'
-                }
-            )
+            # Create SyncHistory record for tracking (only if NOT called from API)
+            # When called from API, the SyncManagementService already created the record
+            sync_record = None
+            if not called_from_api:
+                sync_record = SyncHistory.objects.create(
+                    crm_source='callrail',
+                    sync_type='accounts',
+                    status='running',
+                    start_time=timezone.now(),
+                    configuration={
+                        'command': 'sync_callrail_accounts',
+                        'parameters': {
+                            'dry_run': dry_run,
+                            'full_sync': full_sync,
+                            'force_overwrite': force_overwrite,
+                            'since': since,
+                            'batch_size': batch_size,
+                            'max_records': max_records,
+                            'debug': debug
+                        },
+                        'execution_method': 'management_command'
+                    }
+                )
+            else:
+                # When called from API, log that we're skipping SyncHistory creation
+                self.stdout.write("Skipping SyncHistory creation (called from API service)")
             
             # Set up debug logging if requested
             if debug:
                 logging.getLogger('ingestion.sync.callrail').setLevel(logging.DEBUG)
             
             self.stdout.write(
-                self.style.SUCCESS(f'Starting CallRail accounts sync (Sync ID: {sync_record.id})')
+                self.style.SUCCESS(f'Starting CallRail accounts sync (Sync ID: {sync_record.id if sync_record else "API-managed"})')
             )
             
             if dry_run:
@@ -103,22 +110,23 @@ class Command(BaseSyncCommand):
             
             # Display results
             if result.get('success', False):
-                # Update sync record on success
-                sync_record.status = 'success'
-                sync_record.end_time = timezone.now()
-                sync_record.records_processed = result.get('records_processed', 0)
-                sync_record.records_created = result.get('records_created', 0)
-                sync_record.records_updated = result.get('records_updated', 0)
-                sync_record.records_failed = len(result.get('errors', []))
-                sync_record.performance_metrics = {
-                    'total_fetched': result.get('records_fetched', 0),
-                    'execution_method': 'management_command'
-                }
-                sync_record.save()
+                # Update sync record on success (only if we created one)
+                if sync_record:
+                    sync_record.status = 'success'
+                    sync_record.end_time = timezone.now()
+                    sync_record.records_processed = result.get('records_processed', 0)
+                    sync_record.records_created = result.get('records_created', 0)
+                    sync_record.records_updated = result.get('records_updated', 0)
+                    sync_record.records_failed = len(result.get('errors', []))
+                    sync_record.performance_metrics = {
+                        'total_fetched': result.get('records_fetched', 0),
+                        'execution_method': 'management_command'
+                    }
+                    sync_record.save()
                 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Sync completed successfully! (Sync ID: {sync_record.id})\n"
+                        f"Sync completed successfully! (Sync ID: {sync_record.id if sync_record else 'API-managed'})\n"
                         f"Records fetched: {result.get('records_fetched', 0)}\n"
                         f"Records processed: {result.get('records_processed', 0)}\n"
                         f"Records created: {result.get('records_created', 0)}\n"
