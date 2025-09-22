@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Optional
 
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from ingestion.sync.genius.clients.marketing_source_types import GeniusMarketingSourceTypeClient
@@ -129,7 +130,7 @@ class Command(BaseCommand):
             
             # Process data in chunks
             client = GeniusMarketingSourceTypeClient()
-            processor = GeniusMarketingSourceTypeProcessor()
+            processor = GeniusMarketingSourceTypeProcessor(Genius_MarketingSourceType)
             all_stats = {
                 'total_processed': 0,
                 'created': 0,
@@ -140,14 +141,16 @@ class Command(BaseCommand):
             
             # Get data from API
             all_records = []
-            for chunk in client.get_chunked_data(
-                'marketingsourcetypes',
-                chunk_size=100000,
-                full=options.get('full', False),
-                since=since,
-                max_records=options.get('max_records')
+            for chunk in client.get_marketing_source_types_chunked(
+                since_date=since,
+                chunk_size=1000
             ):
                 all_records.extend(chunk)
+                
+                # Respect max_records limit if specified
+                if options.get('max_records') and len(all_records) >= options['max_records']:
+                    all_records = all_records[:options['max_records']]
+                    break
                 
                 # Process in batches
                 if len(all_records) >= 500:
@@ -177,11 +180,7 @@ class Command(BaseCommand):
             
             # Complete sync tracking
             if sync_record:
-                sync_record = self.complete_sync_record(
-                    sync_record,
-                    stats=all_stats,
-                    status='success'
-                )
+                self.complete_sync_record(sync_record, all_stats)
             
             # Display results
             self.stdout.write("✅ Sync completed successfully:")
@@ -198,14 +197,47 @@ class Command(BaseCommand):
             
         except Exception as e:
             if sync_record:
-                self.complete_sync_record(
-                    sync_record,
-                    status='failed',
-                    error_message=str(e)
-                )
+                self.fail_sync_record(sync_record, str(e))
             logger.exception("Genius marketing source types sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
             raise
+
+    def create_sync_record(self, **kwargs):
+        """Create a new sync record"""
+        return SyncHistory.objects.create(
+            crm_source='genius',
+            sync_type='marketing_source_types',
+            status='running',
+            start_time=timezone.now(),
+            configuration=kwargs
+        )
+    
+    def complete_sync_record(self, sync_record, stats):
+        """Mark sync record as completed"""
+        sync_record.status = 'success'
+        sync_record.end_time = timezone.now()
+        sync_record.records_processed = stats.get('total_processed', 0)
+        sync_record.records_created = stats.get('created', 0) 
+        sync_record.records_updated = stats.get('updated', 0)
+        sync_record.records_failed = stats.get('errors', 0)
+        sync_record.save()
+    
+    def fail_sync_record(self, sync_record, error_message):
+        """Mark sync record as failed"""
+        sync_record.status = 'failed'
+        sync_record.end_time = timezone.now()
+        sync_record.error_message = error_message
+        sync_record.save()
+    
+    def get_last_sync_timestamp(self):
+        """Get the timestamp of the last successful sync"""
+        last_sync = SyncHistory.objects.filter(
+            crm_source='genius',
+            sync_type='marketing_source_types',
+            status='success'
+        ).order_by('-end_time').first()
+        
+        return last_sync.end_time if last_sync else None
 
