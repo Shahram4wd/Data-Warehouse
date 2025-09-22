@@ -133,11 +133,6 @@
                 <button class="btn btn-warning" onclick="showSyncModal()">
                     <i class="fas fa-play me-1"></i>Sync Now
                 </button>
-                {% if user.is_staff %}
-                <a class="btn btn-outline-light ms-2" href="/ingestion/schedules/{{ crm_source }}/">
-                    <i class="fas fa-calendar-alt me-1"></i>Set up schedule
-                </a>
-                {% endif %}
             </div>
         </div>
     </div>
