@@ -348,6 +348,70 @@ class SyncHistoryAPIView(BaseAPIView):
             return self.error_response(str(e), 500)
 
 
+class SyncHistoryDetailAPIView(BaseAPIView):
+    """API endpoint for getting detailed sync history for a specific sync"""
+    
+    def get(self, request, sync_id):
+        try:
+            sync = SyncHistory.objects.get(id=sync_id)
+            
+            # Calculate duration in a more readable format
+            duration_text = "N/A"
+            if sync.start_time and sync.end_time:
+                duration_seconds = (sync.end_time - sync.start_time).total_seconds()
+                if duration_seconds < 60:
+                    duration_text = f"{duration_seconds:.1f} seconds"
+                elif duration_seconds < 3600:
+                    minutes = duration_seconds / 60
+                    duration_text = f"{minutes:.1f} minutes"
+                else:
+                    hours = duration_seconds / 3600
+                    duration_text = f"{hours:.1f} hours"
+            
+            # Format timestamps for display
+            start_time_display = sync.start_time.strftime('%Y-%m-%d %H:%M:%S') if sync.start_time else 'N/A'
+            end_time_display = sync.end_time.strftime('%Y-%m-%d %H:%M:%S') if sync.end_time else 'N/A'
+            
+            # Parse configuration and performance metrics if they exist
+            configuration = sync.configuration if sync.configuration else {}
+            performance_metrics = sync.performance_metrics if sync.performance_metrics else {}
+            
+            data = {
+                'id': sync.id,
+                'crm_source': sync.crm_source,
+                'sync_type': sync.sync_type,
+                'status': sync.status,
+                'start_time': start_time_display,
+                'end_time': end_time_display,
+                'duration': duration_text,
+                'records_processed': sync.records_processed or 0,
+                'records_created': sync.records_created or 0,
+                'records_updated': sync.records_updated or 0,
+                'records_failed': sync.records_failed or 0,
+                'error_message': sync.error_message,
+                'configuration': configuration,
+                'performance_metrics': performance_metrics,
+                'success_rate': 0
+            }
+            
+            # Calculate success rate
+            total_records = sync.records_processed or 0
+            if total_records > 0:
+                successful_records = (sync.records_created or 0) + (sync.records_updated or 0)
+                data['success_rate'] = round((successful_records / total_records) * 100, 2)
+            
+            return self.json_response({
+                'success': True,
+                'data': data
+            })
+            
+        except SyncHistory.DoesNotExist:
+            return self.error_response(f"Sync history with ID {sync_id} not found", 404)
+        except Exception as e:
+            logger.error(f"Error getting sync history detail for ID {sync_id}: {e}")
+            return self.error_response(str(e), 500)
+
+
 class AvailableCommandsAPIView(BaseAPIView):
     """API endpoint for getting available sync commands for a CRM"""
     

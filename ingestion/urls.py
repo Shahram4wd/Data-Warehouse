@@ -26,6 +26,7 @@ try:
         SyncStopAPIView,
         RunningSyncsAPIView,
         SyncHistoryAPIView,
+        SyncHistoryDetailAPIView,
         AvailableCommandsAPIView,
         ValidateParametersAPIView,
         SyncSchemasAPIView,
@@ -86,6 +87,7 @@ crm_dashboard_urlpatterns = [
     path('api/sync/<int:sync_id>/stop/', SyncStopAPIView.as_view(), name='api_sync_stop'),
     path('api/sync/running/', RunningSyncsAPIView.as_view(), name='api_running_syncs'),
     path('api/sync/history/', SyncHistoryAPIView.as_view(), name='api_sync_history'),
+    path('api/sync/history/<int:sync_id>/', SyncHistoryDetailAPIView.as_view(), name='api_sync_history_detail'),
     path('api/sync/validate/', ValidateParametersAPIView.as_view(), name='api_validate_parameters'),
     path('api/sync/schemas/', SyncSchemasAPIView.as_view(), name='api_sync_schemas'),
     

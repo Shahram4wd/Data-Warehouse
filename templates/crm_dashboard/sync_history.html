@@ -5,58 +5,106 @@
 
 {% block extra_css %}
 <style>
-    .history-timeline {
-        position: relative;
-        padding-left: 2rem;
-    }
-    .history-timeline::before {
-        content: '';
-        position: absolute;
-        left: 1rem;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background: linear-gradient(to bottom, #667eea, #764ba2);
-    }
-    .timeline-item {
-        position: relative;
-        margin-bottom: 2rem;
+    .table-container {
         background: white;
         border-radius: 12px;
-        padding: 1.5rem;
+        overflow: hidden;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        margin-left: 1rem;
+        margin-bottom: 2rem;
     }
-    .timeline-item::before {
-        content: '';
-        position: absolute;
-        left: -2.5rem;
-        top: 1.5rem;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: white;
-        border: 3px solid;
-        z-index: 2;
-    }
-    .timeline-item.success::before { border-color: #28a745; }
-    .timeline-item.error::before { border-color: #dc3545; }
-    .timeline-item.running::before { border-color: #007bff; }
-    .timeline-item.warning::before { border-color: #ffc107; }
     
-    .sync-status {
+    .table {
+        margin-bottom: 0;
+    }
+    
+    .table thead th {
+        background: #6c757d;
+        color: white;
+        border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        padding: 1rem;
+        white-space: nowrap;
+    }
+    
+    .table tbody td {
+        border: none;
+        border-bottom: 1px solid #f1f3f4;
+        vertical-align: middle;
+        padding: 1rem;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .status-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
         display: inline-flex;
         align-items: center;
-        padding: 0.4rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
+        gap: 0.25rem;
     }
-    .sync-status.success { background: #d4edda; color: #155724; }
-    .sync-status.error { background: #f8d7da; color: #721c24; }
-    .sync-status.running { background: #cce7ff; color: #004085; }
-    .sync-status.warning { background: #fff3cd; color: #856404; }
+    
+    .status-badge.success {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .status-badge.failed {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .status-badge.running {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .crm-badge {
+        background: #6c757d;
+        color: white;
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .sync-type-badge {
+        background: #17a2b8;
+        color: white;
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #007bff;
+        background: transparent;
+        color: #007bff;
+        transition: all 0.2s;
+    }
+    
+    .action-btn:hover {
+        background: #007bff;
+        color: white;
+    }
     
     .filters-card {
         background: white;
@@ -65,90 +113,69 @@
         margin-bottom: 2rem;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
+    
     .breadcrumb {
         background: none;
         padding: 0;
         margin-bottom: 1.5rem;
     }
+    
     .breadcrumb-item + .breadcrumb-item::before {
         content: "›";
         color: #6c757d;
     }
-    .metric-badge {
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        font-weight: 600;
+    
+    /* Modal styles */
+    .info-card {
+        border: 1px solid #e9ecef;
     }
-    .duration-text {
-        color: #6c757d;
-        font-size: 0.9rem;
-    }
-    .records-count {
-        font-weight: 600;
-        color: #495057;
-    }
-    .error-details {
-        background: #f8f9fa;
-        border-left: 4px solid #dc3545;
-        padding: 1rem;
-        border-radius: 0 8px 8px 0;
-        margin-top: 1rem;
-        font-family: 'Courier New', monospace;
-        font-size: 0.85rem;
-        white-space: pre-wrap;
+    
+    .performance-metrics, .configuration-details {
         max-height: 200px;
         overflow-y: auto;
     }
-    .command-display {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 0.75rem;
-        margin-top: 0.5rem;
-        font-family: 'Courier New', monospace;
-        font-size: 0.85rem;
-        color: #495057;
+    
+    .performance-metrics .d-flex, .configuration-details .d-flex {
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .performance-metrics .d-flex:last-child, .configuration-details .d-flex:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    #syncDetailsModal .modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
     }
 </style>
 {% endblock %}
 
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'ingestion:crm_dashboard:crm_dashboard' %}">Dashboard</a></li>
+<li class="breadcrumb-item active" aria-current="page">Sync History</li>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
-    <!-- Breadcrumb Navigation -->
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{% url 'ingestion:crm_dashboard:crm_dashboard' %}" class="text-decoration-none">
-                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                </a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">Sync History</li>
-        </ol>
-    </nav>
-
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-2">
-                        <i class="fas fa-history me-2 text-primary"></i>
-                        Sync History
-                    </h1>
-                    <p class="text-muted mb-0">View and monitor all CRM synchronization activities</p>
-                </div>
-                <div>
-                    <button class="btn btn-outline-primary me-2" onclick="refreshHistory()">
-                        <i class="fas fa-sync-alt me-1"></i>Refresh
-                    </button>
-                    <button class="btn btn-primary" onclick="exportHistory()">
-                        <i class="fas fa-download me-1"></i>Export
-                    </button>
-                </div>
-            </div>
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">
+                <i class="fas fa-history me-2"></i>Sync History
+            </h2>
+            <p class="text-muted mb-0">View and monitor all CRM synchronization activities</p>
+        </div>
+        <div>
+            <button class="btn btn-outline-primary me-2" onclick="refreshHistory()">
+                <i class="fas fa-sync-alt me-1"></i>Refresh
+            </button>
+            <button class="btn btn-primary" onclick="exportHistory()">
+                <i class="fas fa-download me-1"></i>Export
+            </button>
         </div>
     </div>
 
@@ -172,9 +199,8 @@
                 <select class="form-select" id="statusFilter">
                     <option value="">All Statuses</option>
                     <option value="success">Success</option>
-                    <option value="error">Error</option>
+                    <option value="failed">Failed</option>
                     <option value="running">Running</option>
-                    <option value="warning">Warning</option>
                 </select>
             </div>
             <div class="col-md-2">
@@ -202,17 +228,25 @@
         <p class="mt-2 text-muted">Loading sync history...</p>
     </div>
 
-    <!-- Timeline Container -->
-    <div id="historyContainer" style="display: none;">
-        <div class="history-timeline" id="historyTimeline">
-            <!-- History items will be loaded here -->
-        </div>
-        
-        <!-- Load More Button -->
-        <div class="text-center mt-4" id="loadMoreContainer" style="display: none;">
-            <button class="btn btn-outline-primary" onclick="loadMoreHistory()">
-                <i class="fas fa-chevron-down me-1"></i>Load More
-            </button>
+    <!-- Table Container -->
+    <div id="historyContainer" class="table-container" style="display: none;">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>CRM</th>
+                        <th>SYNC TYPE</th>
+                        <th>STATUS</th>
+                        <th>STARTED</th>
+                        <th>DURATION</th>
+                        <th>RECORDS</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <!-- Data will be loaded here -->
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -223,6 +257,29 @@
         <p class="text-muted">No synchronization activities match your current filters.</p>
     </div>
 </div>
+
+<!-- Sync Details Modal -->
+<div class="modal fade" id="syncDetailsModal" tabindex="-1" aria-labelledby="syncDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="syncDetailsModalLabel">Sync Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="syncDetailsContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading sync details...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -239,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadFilters() {
     // Load CRM sources for filter
-    fetch('/ingestion/api/crm/')
+    fetch('/ingestion/crm-dashboard/api/crms/')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -247,7 +304,7 @@ function loadFilters() {
                 data.crm_sources.forEach(crm => {
                     const option = document.createElement('option');
                     option.value = crm.name;
-                    option.textContent = crm.display_name;
+                    option.textContent = crm.display_name || crm.name;
                     crmFilter.appendChild(option);
                 });
             }
@@ -262,24 +319,29 @@ function loadHistory(reset = true) {
     if (reset) {
         currentPage = 1;
         showLoading();
-        document.getElementById('historyTimeline').innerHTML = '';
+        document.getElementById('historyTableBody').innerHTML = '';
     }
     
     const params = new URLSearchParams({
-        page: currentPage,
-        page_size: 20,
-        crm_name: document.getElementById('crmFilter').value,
-        model_name: document.getElementById('modelFilter').value,
-        status: document.getElementById('statusFilter').value,
-        date_range: document.getElementById('dateFilter').value
+        limit: 20,
+        offset: (currentPage - 1) * 20,
+        crm_source: document.getElementById('crmFilter').value,
+        sync_type: document.getElementById('modelFilter').value,
+        status: document.getElementById('statusFilter').value
     });
     
-    fetch(`/ingestion/api/sync/history/?${params}`)
+    // Only add date_range if it's supported by the API
+    const dateRange = document.getElementById('dateFilter').value;
+    if (dateRange && dateRange !== 'all') {
+        params.set('date_range', dateRange);
+    }
+    
+    fetch(`/ingestion/crm-dashboard/api/sync/history/?${params}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                renderHistory(data.history, reset);
-                hasMorePages = data.pagination.has_next;
+                renderHistory(data.data, reset);
+                hasMorePages = data.has_more;
                 updateLoadMoreButton();
             } else {
                 showError('Failed to load history: ' + data.message);
@@ -296,9 +358,13 @@ function loadHistory(reset = true) {
 }
 
 function renderHistory(historyItems, reset = true) {
-    const timeline = document.getElementById('historyTimeline');
+    const tableBody = document.getElementById('historyTableBody');
     const container = document.getElementById('historyContainer');
     const emptyState = document.getElementById('emptyState');
+    
+    if (reset) {
+        tableBody.innerHTML = '';
+    }
     
     if (!historyItems || historyItems.length === 0) {
         if (reset) {
@@ -312,76 +378,322 @@ function renderHistory(historyItems, reset = true) {
     container.style.display = 'block';
     
     historyItems.forEach(item => {
-        const timelineItem = createTimelineItem(item);
-        timeline.appendChild(timelineItem);
+        const row = createTableRow(item);
+        tableBody.appendChild(row);
     });
 }
 
-function createTimelineItem(item) {
-    const div = document.createElement('div');
-    div.className = `timeline-item ${item.status}`;
+function createTableRow(item) {
+    const row = document.createElement('tr');
     
-    const statusText = item.status.charAt(0).toUpperCase() + item.status.slice(1);
-    const duration = item.duration ? formatDuration(item.duration) : 'N/A';
-    const recordsText = item.records_processed ? formatNumber(item.records_processed) : '0';
+    const statusClass = item.status === 'success' ? 'success' : (item.status === 'failed' ? 'failed' : 'running');
+    const statusIcon = getStatusIcon(item.status);
+    const duration = item.duration ? formatDuration(item.duration) : '-';
+    const recordsText = item.records_processed ? formatNumber(item.records_processed) : '-';
+    const timeAgo = getTimeAgo(item.start_time);
     
-    div.innerHTML = `
-        <div class="d-flex justify-content-between align-items-start mb-2">
-            <div>
-                <span class="sync-status ${item.status}">
-                    <i class="fas fa-${getStatusIcon(item.status)} me-1"></i>
-                    ${statusText}
-                </span>
-                <h6 class="mb-1">${item.crm_name} → ${item.model_name}</h6>
-            </div>
-            <small class="text-muted">${formatDateTime(item.started_at)}</small>
-        </div>
-        
-        <div class="row mb-2">
-            <div class="col-md-6">
-                <small class="duration-text">
-                    <i class="fas fa-clock me-1"></i>Duration: ${duration}
-                </small>
-            </div>
-            <div class="col-md-6">
-                <small class="records-count">
-                    <i class="fas fa-database me-1"></i>Records: ${recordsText}
-                </small>
-            </div>
-        </div>
-        
-        ${item.command ? `
-            <div class="mb-2">
-                <small class="text-muted">Command:</small>
-                <div class="command-display">${item.command}</div>
-            </div>
-        ` : ''}
-        
-        ${item.status === 'error' && item.error_message ? `
-            <div class="error-details">
-                <strong>Error Details:</strong><br>
-                ${item.error_message}
-            </div>
-        ` : ''}
-        
-        ${item.metadata && Object.keys(item.metadata).length > 0 ? `
-            <div class="mt-2">
-                <small class="text-muted">Additional Info:</small>
-                <div class="d-flex flex-wrap gap-2 mt-1">
-                    ${Object.entries(item.metadata).map(([key, value]) => 
-                        `<span class="metric-badge">${key}: ${value}</span>`
-                    ).join('')}
-                </div>
-            </div>
-        ` : ''}
+    row.innerHTML = `
+        <td>
+            <span class="crm-badge">${escapeHtml(item.crm_name || item.crm_source)}</span>
+        </td>
+        <td>
+            <span class="sync-type-badge">${escapeHtml((item.model_name || item.sync_type).replace(/_/g, ' '))}</span>
+        </td>
+        <td>
+            <span class="status-badge ${statusClass}">
+                <i class="fas fa-${statusIcon}"></i>
+                ${item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+            </span>
+        </td>
+        <td>
+            <span class="text-muted">${timeAgo}</span>
+        </td>
+        <td>
+            <strong>${duration}</strong>
+        </td>
+        <td>
+            <strong>${recordsText}</strong>
+        </td>
+        <td>
+            <button class="action-btn" onclick="viewSyncDetails(${item.id})" title="View Details">
+                <i class="fas fa-eye"></i>
+            </button>
+        </td>
     `;
     
-    return div;
+    return row;
+}
+
+// Helper functions
+function getStatusIcon(status) {
+    switch (status) {
+        case 'success': return 'check';
+        case 'failed': return 'times';
+        case 'running': return 'spinner fa-spin';
+        default: return 'question';
+    }
+}
+
+function getTimeAgo(dateString) {
+    if (!dateString) return '-';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
+}
+
+function formatDuration(seconds) {
+    if (!seconds || seconds < 1) return '0s';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+        return `${minutes}m ${secs}s`;
+    } else {
+        return `${secs}s`;
+    }
+}
+
+function formatNumber(num) {
+    if (!num || num === 0) return '0';
+    if (num < 1000) return num.toString();
+    if (num < 1000000) return `${(num/1000).toFixed(1)}K`;
+    return `${(num/1000000).toFixed(1)}M`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function viewSyncDetails(syncId) {
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('syncDetailsModal'));
+    modal.show();
+    
+    // Reset content to loading state
+    document.getElementById('syncDetailsContent').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading sync details...</p>
+        </div>
+    `;
+    
+    // Fetch sync details
+    fetch(`/ingestion/crm-dashboard/api/sync/history/${syncId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displaySyncDetails(data.data);
+            } else {
+                throw new Error(data.error || 'Failed to load sync details');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading sync details:', error);
+            document.getElementById('syncDetailsContent').innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+        });
+}
+
+function getStatusClass(status) {
+    switch (status?.toLowerCase()) {
+        case 'success': return 'success';
+        case 'failed': return 'danger';
+        case 'running': return 'warning';
+        case 'pending': return 'secondary';
+        default: return 'secondary';
+    }
+}
+
+function getStatusIcon(status) {
+    switch (status?.toLowerCase()) {
+        case 'success': return 'check';
+        case 'failed': return 'times';
+        case 'running': return 'spinner fa-spin';
+        case 'pending': return 'clock';
+        default: return 'question';
+    }
+}
+
+function displaySyncDetails(syncData) {
+    const statusClass = getStatusClass(syncData.status);
+    const statusIcon = getStatusIcon(syncData.status);
+    
+    const totalRecords = syncData.records_processed || 0;
+    const successfulRecords = (syncData.records_created || 0) + (syncData.records_updated || 0);
+    const failedRecords = syncData.records_failed || 0;
+    
+    let performanceHtml = '';
+    if (syncData.performance_metrics && Object.keys(syncData.performance_metrics).length > 0) {
+        performanceHtml = `
+            <div class="col-12 mt-3">
+                <h6><i class="fas fa-chart-line me-2"></i>Performance Metrics</h6>
+                <div class="performance-metrics p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    ${Object.entries(syncData.performance_metrics).map(([key, value]) => `
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                            <span class="fw-bold">${value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    let configurationHtml = '';
+    if (syncData.configuration && Object.keys(syncData.configuration).length > 0) {
+        configurationHtml = `
+            <div class="col-12 mt-3">
+                <h6><i class="fas fa-cog me-2"></i>Configuration</h6>
+                <div class="configuration-details p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    ${Object.entries(syncData.configuration).map(([key, value]) => `
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span>
+                            <span class="fw-bold">${JSON.stringify(value)}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    let errorHtml = '';
+    if (syncData.error_message) {
+        errorHtml = `
+            <div class="col-12 mt-3">
+                <h6><i class="fas fa-exclamation-triangle me-2 text-danger"></i>Error Details</h6>
+                <div class="alert alert-danger">
+                    ${syncData.error_message}
+                </div>
+            </div>
+        `;
+    }
+    
+    document.getElementById('syncDetailsContent').innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
+                <div class="info-card p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Sync ID:</span>
+                        <span class="fw-bold">#${syncData.id}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">CRM Source:</span>
+                        <span class="fw-bold">${syncData.crm_source || 'N/A'}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Sync Type:</span>
+                        <span class="fw-bold">${syncData.sync_type || 'N/A'}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Status:</span>
+                        <span class="status-badge status-${syncData.status}">
+                            <i class="fas fa-${statusIcon}"></i> ${syncData.status?.toUpperCase() || 'N/A'}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Duration:</span>
+                        <span class="fw-bold">${syncData.duration || 'N/A'}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Success Rate:</span>
+                        <span class="fw-bold ${syncData.success_rate >= 90 ? 'text-success' : syncData.success_rate >= 50 ? 'text-warning' : 'text-danger'}">${syncData.success_rate}%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h6><i class="fas fa-clock me-2"></i>Timing</h6>
+                <div class="info-card p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Start Time:</span>
+                        <span class="fw-bold">${syncData.start_time}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">End Time:</span>
+                        <span class="fw-bold">${syncData.end_time}</span>
+                    </div>
+                </div>
+                
+                <h6 class="mt-3"><i class="fas fa-database me-2"></i>Record Statistics</h6>
+                <div class="info-card p-3" style="background: #f8f9fa; border-radius: 8px;">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Total Processed:</span>
+                        <span class="fw-bold">${totalRecords.toLocaleString()}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Created:</span>
+                        <span class="fw-bold text-success">${(syncData.records_created || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Updated:</span>
+                        <span class="fw-bold text-info">${(syncData.records_updated || 0).toLocaleString()}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Failed:</span>
+                        <span class="fw-bold text-danger">${failedRecords.toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+            ${configurationHtml}
+            ${performanceHtml}
+            ${errorHtml}
+        </div>
+    `;
+}
+
+function exportHistory() {
+    const params = new URLSearchParams({
+        crm_source: document.getElementById('crmFilter').value,
+        sync_type: document.getElementById('modelFilter').value,
+        status: document.getElementById('statusFilter').value,
+        export: 'csv'
+    });
+    
+    const dateRange = document.getElementById('dateFilter').value;
+    if (dateRange && dateRange !== 'all') {
+        params.set('date_range', dateRange);
+    }
+    
+    window.open(`/ingestion/crm-dashboard/api/sync/history/?${params}`);
+}
+
+function showLoading() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('historyContainer').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'none';
+}
+
+function hideLoading() {
+    document.getElementById('loading').style.display = 'none';
 }
 
 function updateLoadMoreButton() {
     const container = document.getElementById('loadMoreContainer');
-    container.style.display = hasMorePages ? 'block' : 'none';
+    if (container) {
+        container.style.display = hasMorePages ? 'block' : 'none';
+    }
 }
 
 function loadMoreHistory() {
@@ -397,116 +709,8 @@ function refreshHistory() {
     loadHistory(true);
 }
 
-function exportHistory() {
-    const params = new URLSearchParams({
-        crm_name: document.getElementById('crmFilter').value,
-        model_name: document.getElementById('modelFilter').value,
-        status: document.getElementById('statusFilter').value,
-        date_range: document.getElementById('dateFilter').value,
-        export: 'csv'
-    });
-    
-    window.open(`/ingestion/api/sync/history/?${params}`);
-}
-
-function showLoading() {
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('historyContainer').style.display = 'none';
-    document.getElementById('emptyState').style.display = 'none';
-}
-
-function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
-}
-
-// Utility functions
-function getStatusIcon(status) {
-    const icons = {
-        'success': 'check-circle',
-        'error': 'exclamation-circle',
-        'running': 'spinner',
-        'warning': 'exclamation-triangle'
-    };
-    return icons[status] || 'question-circle';
-}
-
-function formatDateTime(dateStr) {
-    if (!dateStr) return 'Unknown';
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffMinutes = Math.floor(diffTime / (1000 * 60));
-    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffMinutes < 1) {
-        return 'Just now';
-    } else if (diffMinutes < 60) {
-        return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-    } else if (diffHours < 24) {
-        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-    } else if (diffDays < 7) {
-        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-    } else {
-        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    }
-}
-
-function formatDuration(seconds) {
-    if (!seconds || seconds <= 0) return 'N/A';
-    
-    // Convert to integer to avoid decimals
-    const totalSeconds = Math.floor(seconds);
-    
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const secs = totalSeconds % 60;
-    
-    const parts = [];
-    
-    if (days > 0) {
-        parts.push(`${days}d`);
-        if (hours > 0) {
-            parts.push(`${hours}h`);
-        }
-        if (minutes > 0 && days === 0) {
-            parts.push(`${minutes}m`);
-        }
-    } else if (hours > 0) {
-        parts.push(`${hours}h`);
-        if (minutes > 0) {
-            parts.push(`${minutes}m`);
-        }
-    } else if (minutes > 0) {
-        parts.push(`${minutes}m`);
-        if (secs > 0) {
-            parts.push(`${secs}s`);
-        }
-    } else {
-        parts.push(`${secs}s`);
-    }
-    
-    return parts.join(' ');
-}
-
-function formatNumber(num) {
-    if (!num && num !== 0) return '0';
-    
-    const count = parseInt(num);
-    
-    if (count < 1000) {
-        return count.toString();
-    } else if (count < 1000000) {
-        return `${(count/1000).toFixed(1)}K`;
-    } else if (count < 1000000000) {
-        return `${(count/1000000).toFixed(1)}M`;
-    } else {
-        return `${(count/1000000000).toFixed(1)}B`;
-    }
-}
-
 function showError(message) {
+    console.error('Error:', message);
     alert('Error: ' + message);
 }
 </script>
