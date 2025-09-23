@@ -489,7 +489,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 stop: '{% url "ingestion:crm_dashboard:api_sync_stop" 0 %}',
                 status: '{% url "ingestion:crm_dashboard:api_sync_status" 0 %}'
             },
-            maxConcurrentSyncs: 3,
+            maxConcurrentSyncs: 2,
             confirmDestructive: true
         });
     }

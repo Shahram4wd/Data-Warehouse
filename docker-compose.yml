@@ -14,7 +14,7 @@ services:
 
   celery:
     build: .
-    command: celery -A data_warehouse worker -l info
+    command: celery -A data_warehouse worker -l info --concurrency=2 -Q dw-local
     volumes:
       - .:/app
     env_file:
@@ -24,7 +24,7 @@ services:
 
   celery-beat:
     build: .
-    command: celery -A data_warehouse beat -l info
+    command: celery -A data_warehouse beat -l info -S django
     volumes:
       - .:/app
     env_file:

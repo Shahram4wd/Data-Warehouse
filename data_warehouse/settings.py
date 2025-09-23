@@ -205,7 +205,8 @@ except Exception as e:
 
 # Worker Pool Configuration
 # Maximum number of concurrent sync workers (can be overridden by environment variable)
-MAX_SYNC_WORKERS = config('MAX_SYNC_WORKERS', default=1, cast=int)
+# Default to 2 to align with dashboard expectation of running two syncs concurrently
+MAX_SYNC_WORKERS = config('MAX_SYNC_WORKERS', default=2, cast=int)
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'

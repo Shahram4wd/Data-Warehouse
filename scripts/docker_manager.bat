@@ -119,15 +119,18 @@ goto PAUSE_RETURN
 :START_WORKER
 echo.
 echo Starting Celery Worker...
-docker-compose exec -d web celery -A data_warehouse worker --loglevel=info
-echo Celery worker started in background
+REM Use the dedicated celery service to avoid spawning extra workers in the web container
+REM Concurrency is controlled in docker-compose.yml (e.g., --concurrency=2)
+docker-compose up -d celery
+echo Celery worker service started in background
 goto PAUSE_RETURN
 
 :START_BEAT
 echo.
 echo Starting Celery Beat Scheduler...
-docker-compose exec -d web celery -A data_warehouse beat --loglevel=info
-echo Celery beat scheduler started in background
+REM Use the dedicated celery-beat service rather than running inside the web container
+docker-compose up -d celery-beat
+echo Celery beat scheduler service started in background
 echo This will run automation reports at 9:00 PM and 4:00 AM UTC daily
 goto PAUSE_RETURN
 

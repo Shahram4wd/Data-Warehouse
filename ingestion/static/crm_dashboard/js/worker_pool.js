@@ -8,7 +8,7 @@
 class WorkerPoolManager {
     constructor() {
         this.apiBaseUrl = '/ingestion/crm-dashboard/api/worker-pool/';
-        this.maxWorkers = 1; // Default, will be loaded from server
+        this.maxWorkers = 2; // Default, will be loaded from server
         this.updateInterval = 2000; // 2 seconds
         this.statusUpdateTimer = null;
         
@@ -66,6 +66,8 @@ class WorkerPoolManager {
     
     async submitSyncTask(crmSource, syncType, parameters = {}, priority = 0) {
         try {
+            // Guard against undefined or falsy syncType
+            const safeSyncType = syncType || parameters.sync_type || 'all';
             const response = await fetch(`${this.apiBaseUrl}submit/`, {
                 method: 'POST',
                 headers: {
@@ -74,7 +76,7 @@ class WorkerPoolManager {
                 },
                 body: JSON.stringify({
                     crm_source: crmSource,
-                    sync_type: syncType,
+                    sync_type: safeSyncType,
                     parameters: parameters,
                     priority: priority
                 })
@@ -84,7 +86,7 @@ class WorkerPoolManager {
                 const result = await response.json();
                 if (result.success) {
                     this.showNotification(
-                        `Task submitted: ${crmSource}.${syncType} (Status: ${result.status})`,
+                        `Task submitted: ${crmSource}.${safeSyncType} (Status: ${result.status})`,
                         'success'
                     );
                     
@@ -419,10 +421,23 @@ class WorkerPoolManager {
             
             window.syncManager.executeSync = async (crmSource, modelName, command, parameters = {}) => {
                 try {
+                    // Resolve syncType from modelName when possible, fallback to provided parameters or 'all'
+                    let resolvedSyncType = null;
+                    try {
+                        if (typeof window.modelNameToSyncType === 'function') {
+                            resolvedSyncType = window.modelNameToSyncType(modelName);
+                        }
+                    } catch (e) {
+                        // ignore mapping errors, fallback below
+                    }
+                    if (!resolvedSyncType) {
+                        resolvedSyncType = parameters.sync_type || modelName || 'all';
+                    }
+
                     // Use worker pool submission instead of direct execution
                     const result = await this.submitSyncTask(
                         crmSource, 
-                        modelName, 
+                        resolvedSyncType, 
                         parameters
                     );
                     

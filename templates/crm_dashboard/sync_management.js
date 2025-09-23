@@ -6,7 +6,7 @@ class AdvancedSyncManager {
     constructor() {
         this.activeSyncs = new Map();
         this.syncQueue = [];
-        this.maxConcurrentSyncs = 3;
+    this.maxConcurrentSyncs = 2;
         this.syncHistory = [];
         this.parameterSchemas = new Map();
         
