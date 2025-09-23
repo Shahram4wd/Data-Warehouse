@@ -265,6 +265,27 @@ class SyncStopAPIView(BaseAPIView):
             return self.error_response(str(e), 500)
 
 
+class SyncStopAllAPIView(BaseAPIView):
+    """Stop all running legacy syncs"""
+    @method_decorator(csrf_exempt)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def post(self, request):
+        try:
+            sync_management = SyncManagementService()
+            running = sync_management.get_running_syncs() or []
+            stopped = 0
+            for item in running:
+                res = sync_management.stop_sync(item.get('id'))
+                if res.get('success'):
+                    stopped += 1
+            return self.json_response({'success': True, 'stopped': stopped})
+        except Exception as e:
+            logger.error(f"Error stopping all syncs: {e}")
+            return self.error_response(str(e), 500)
+
+
 class RunningSyncsAPIView(BaseAPIView):
     """API endpoint for getting all running syncs"""
     

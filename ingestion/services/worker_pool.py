@@ -352,6 +352,36 @@ class WorkerPoolService:
                 for i, task in enumerate(self.task_queue)
             ]
         }
+
+    def cancel_all(self) -> Dict[str, int]:
+        """Cancel all active and queued tasks; returns counts of cancelled items"""
+        cancelled_active = 0
+        cancelled_queued = 0
+
+        # Cancel queued tasks
+        while self.task_queue:
+            task = self.task_queue.pop(0)
+            task.status = TaskStatus.CANCELLED
+            task.completed_at = datetime.utcnow()
+            cancelled_queued += 1
+
+        # Cancel active tasks (revoke Celery tasks where possible)
+        for task_id in list(self.active_workers.keys()):
+            task = self.active_workers[task_id]
+            if task.celery_task_id:
+                try:
+                    current_app.control.revoke(task.celery_task_id, terminate=True)
+                    logger.info(f"Revoked Celery task {task.celery_task_id}")
+                except Exception as e:
+                    logger.error(f"Failed to revoke Celery task {task.celery_task_id}: {e}")
+            task.status = TaskStatus.CANCELLED
+            task.completed_at = datetime.utcnow()
+            del self.active_workers[task_id]
+            cancelled_active += 1
+
+        # Persist and return stats
+        self._save_state()
+        return {"cancelled_active": cancelled_active, "cancelled_queued": cancelled_queued}
     
     def cleanup_completed_tasks(self, max_age_minutes: int = 60):
         """Clean up old completed tasks from memory"""

@@ -308,3 +308,21 @@ def submit_sync_task(request):
     """Submit sync task - compatibility function"""
     view = SubmitSyncTaskView()
     return view.post(request)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class CancelAllTasksView(WorkerPoolAPIView):
+    """Cancel all active and queued worker-pool tasks"""
+
+    def post(self, request):
+        try:
+            worker_pool = get_worker_pool()
+            stats = worker_pool.cancel_all()
+            return JsonResponse({
+                'success': True,
+                'message': 'All worker-pool tasks were cancelled',
+                'stats': stats,
+            })
+        except Exception as e:
+            logger.error(f"Error cancelling all tasks: {e}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)

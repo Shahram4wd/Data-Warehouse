@@ -267,11 +267,14 @@
     </div>
     <div class="col-lg-6">
         <div class="card">
-            <div class="card-header">
+            <div class="card-header d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">
                     <i class="fas fa-cogs me-2"></i>Active Sync Processes
                     <span class="badge bg-primary active-syncs-count ms-2">0</span>
                 </h6>
+                <button id="killAllBtn" class="btn btn-sm btn-outline-danger" title="Kill all running syncs">
+                    <i class="fas fa-skull-crossbones me-1"></i> Kill All
+                </button>
             </div>
             <div class="card-body">
                 <div id="active-syncs-container">
@@ -557,6 +560,12 @@ function setupEventHandlers() {
             }
         });
     }
+
+    // Kill All button
+    const killAllBtn = document.getElementById('killAllBtn');
+    if (killAllBtn) {
+        killAllBtn.addEventListener('click', handleKillAll);
+    }
 }
 
 async function handleStopSync(syncId) {
@@ -604,6 +613,45 @@ function handleViewSyncDetails(syncId) {
     // Open sync details modal or navigate to details page
     console.log('Viewing details for sync:', syncId);
     // TODO: Implement sync details modal
+}
+
+async function handleKillAll() {
+    // Call legacy stop-all
+    let legacyOk = false;
+    try {
+        const resp = await fetch('{% url "ingestion:crm_dashboard:api_sync_stop_all" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        legacyOk = resp.ok;
+    } catch (e) { legacyOk = false; }
+
+    // Call worker-pool cancel-all
+    let poolOk = false;
+    try {
+        const resp2 = await fetch('{% url "ingestion:crm_dashboard:api_worker_pool_cancel_all" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        poolOk = resp2.ok;
+    } catch (e) { poolOk = false; }
+
+    if (legacyOk || poolOk) {
+        showNotification('Kill All requested. Active tasks will stop shortly.', 'warning');
+        if (window.dashboardManager) {
+            dashboardManager.refreshData();
+        }
+        if (window.workerPoolManager) {
+            workerPoolManager.updateUI();
+        }
+    } else {
+        showNotification('Unable to kill tasks. Please try again.', 'danger');
+    }
+}
+
+function getCsrfToken() {
+    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
 }
 
 function handleQuickAction(action, crm) {
