@@ -272,9 +272,18 @@
                     <i class="fas fa-cogs me-2"></i>Active Sync Processes
                     <span class="badge bg-primary active-syncs-count ms-2">0</span>
                 </h6>
-                <button id="killAllBtn" class="btn btn-sm btn-outline-danger" title="Kill all running syncs">
-                    <i class="fas fa-skull-crossbones me-1"></i> Kill All
-                </button>
+                <div class="btn-group">
+                    <button id="killAllBtn" class="btn btn-sm btn-outline-danger" 
+                            data-bs-toggle="tooltip" data-bs-placement="top"
+                            title="Gracefully cancel all active & queued tasks (tries to let tasks stop cleanly).">
+                        <i class="fas fa-skull-crossbones me-1"></i> Kill All
+                    </button>
+                    <button id="resetPoolBtn" class="btn btn-sm btn-outline-secondary" 
+                            data-bs-toggle="tooltip" data-bs-placement="top"
+                            title="Forcefully wipe worker pool state (use if Kill All leaves ghosts).">
+                        <i class="fas fa-broom"></i>
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div id="active-syncs-container">
@@ -566,6 +575,18 @@ function setupEventHandlers() {
     if (killAllBtn) {
         killAllBtn.addEventListener('click', handleKillAll);
     }
+    const resetPoolBtn = document.getElementById('resetPoolBtn');
+    if (resetPoolBtn) {
+        resetPoolBtn.addEventListener('click', handleResetPool);
+    }
+
+    // Initialize Bootstrap tooltips if available
+    if (window.bootstrap && typeof bootstrap.Tooltip === 'function') {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(el => {
+            try { new bootstrap.Tooltip(el); } catch(e) { /* noop */ }
+        });
+    }
 }
 
 async function handleStopSync(syncId) {
@@ -646,6 +667,47 @@ async function handleKillAll() {
         }
     } else {
         showNotification('Unable to kill tasks. Please try again.', 'danger');
+    }
+}
+
+async function handleResetPool() {
+    if (!confirm('This will forcefully clear all active and queued tasks. Continue?')) {
+        return;
+    }
+    const btn = document.getElementById('resetPoolBtn');
+    let originalHtml;
+    if (btn) {
+        originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.classList.add('disabled');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+    try {
+        const resp = await fetch('{% url "ingestion:crm_dashboard:api_worker_pool_reset" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        if (resp.ok) {
+            showNotification('Worker pool reset requested.', 'warning');
+            if (window.workerPoolManager) {
+                workerPoolManager.updateUI();
+            }
+            if (window.dashboardManager) {
+                dashboardManager.refreshData();
+            }
+        } else {
+            showNotification('Reset failed.', 'danger');
+        }
+    } catch (e) {
+        showNotification('Reset error: ' + e.message, 'danger');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('disabled');
+            if (originalHtml) {
+                btn.innerHTML = originalHtml;
+            }
+        }
     }
 }
 

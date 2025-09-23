@@ -175,8 +175,16 @@ class WorkerPoolService:
         Returns:
             Task ID
         """
+        # Always refresh state before mutating to avoid cross-process drift
+        self._load_state()
+
         if parameters is None:
             parameters = {}
+        # Normalize inputs
+        crm_source = (crm_source or '').strip()
+        sync_type = (sync_type or '').strip().lower()
+        if not sync_type or sync_type == 'undefined':
+            sync_type = 'all'
         
         # Generate unique task ID
         task_id = str(uuid.uuid4())
@@ -221,10 +229,15 @@ class WorkerPoolService:
             worker_task.started_at = datetime.utcnow()
             
             # Submit to Celery
-            celery_task = current_app.send_task(
-                worker_task.task_name,
-                kwargs=worker_task.parameters
-            )
+            task_name = worker_task.task_name
+            # If task name contains undefined, attempt to fallback to '*_all'
+            if task_name.endswith('_undefined'):
+                fallback_key = (worker_task.crm_source.lower(), 'all')
+                fallback_name = self.task_mappings.get(fallback_key)
+                if fallback_name:
+                    logger.info(f"Replacing undefined task '{task_name}' with fallback '{fallback_name}'")
+                    task_name = fallback_name
+            celery_task = current_app.send_task(task_name, kwargs=worker_task.parameters)
             
             worker_task.celery_task_id = celery_task.id
             self.active_workers[worker_task.id] = worker_task
@@ -239,6 +252,8 @@ class WorkerPoolService:
     
     def process_queue(self):
         """Process pending tasks in the queue"""
+        # Refresh state to operate on latest
+        self._load_state()
         while len(self.active_workers) < self.max_workers and self.task_queue:
             next_task = self.task_queue.pop(0)  # Get highest priority task
             self._start_task(next_task)
@@ -266,6 +281,8 @@ class WorkerPoolService:
     
     def cancel_task(self, task_id: str) -> bool:
         """Cancel a task"""
+        # Refresh state to operate on latest
+        self._load_state()
         # Check if task is queued
         for i, task in enumerate(self.task_queue):
             if task.id == task_id:
@@ -300,6 +317,8 @@ class WorkerPoolService:
             logger.info(f"Cancelled active task {task_id}")
             return True
         
+        # If not found in either active or queue
+        self._save_state()
         return False
     
     def get_task_status(self, task_id: str) -> Optional[WorkerTask]:
@@ -325,6 +344,8 @@ class WorkerPoolService:
     
     def get_stats(self) -> Dict[str, Any]:
         """Get worker pool statistics"""
+        # Refresh state to reflect any changes from other processes
+        self._load_state()
         return {
             'max_workers': self.max_workers,
             'active_count': len(self.active_workers),
@@ -355,6 +376,8 @@ class WorkerPoolService:
 
     def cancel_all(self) -> Dict[str, int]:
         """Cancel all active and queued tasks; returns counts of cancelled items"""
+        # Refresh state to operate on latest
+        self._load_state()
         cancelled_active = 0
         cancelled_queued = 0
 
@@ -382,6 +405,21 @@ class WorkerPoolService:
         # Persist and return stats
         self._save_state()
         return {"cancelled_active": cancelled_active, "cancelled_queued": cancelled_queued}
+
+    def reset_state(self) -> Dict[str, int]:
+        """Forcefully clear all worker-pool state (active + queued) and cancel tasks.
+
+        Returns counts of active and queued tasks cleared. This is more aggressive than
+        cancel_all because it does not attempt graceful revocation beyond a best effort.
+        """
+        self._load_state()
+        stats = self.cancel_all()
+        # After cancel_all, clear any remnants
+        self.active_workers.clear()
+        self.task_queue.clear()
+        self._save_state()
+        logger.warning("Worker pool state was forcefully reset")
+        return stats
     
     def cleanup_completed_tasks(self, max_age_minutes: int = 60):
         """Clean up old completed tasks from memory"""

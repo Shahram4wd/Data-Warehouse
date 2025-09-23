@@ -65,6 +65,7 @@ try:
         TaskStatusView,
         CancelTaskView,
         CancelAllTasksView,
+        ResetWorkerPoolView,
         WorkerPoolConfigView,
         ProcessQueueView,
         get_worker_pool_stats,
@@ -100,6 +101,7 @@ crm_dashboard_urlpatterns = [
     path('api/worker-pool/tasks/<str:task_id>/', TaskStatusView.as_view(), name='api_worker_pool_task_status'),
     path('api/worker-pool/tasks/<str:task_id>/cancel/', CancelTaskView.as_view(), name='api_worker_pool_cancel_task'),
     path('api/worker-pool/cancel-all/', CancelAllTasksView.as_view(), name='api_worker_pool_cancel_all'),
+    path('api/worker-pool/reset/', ResetWorkerPoolView.as_view(), name='api_worker_pool_reset'),
     path('api/worker-pool/config/', WorkerPoolConfigView.as_view(), name='api_worker_pool_config'),
     path('api/worker-pool/process-queue/', ProcessQueueView.as_view(), name='api_worker_pool_process_queue'),
     

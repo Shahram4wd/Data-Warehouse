@@ -419,33 +419,40 @@ class WorkerPoolManager {
             // Override the executeSync method to use worker pool
             const originalExecuteSync = window.syncManager.executeSync.bind(window.syncManager);
             
-            window.syncManager.executeSync = async (crmSource, modelName, command, parameters = {}) => {
+            window.syncManager.executeSync = async (...args) => {
                 try {
-                    // Resolve syncType from modelName when possible, fallback to provided parameters or 'all'
-                    let resolvedSyncType = null;
-                    try {
-                        if (typeof window.modelNameToSyncType === 'function') {
-                            resolvedSyncType = window.modelNameToSyncType(modelName);
+                    // Support both forms:
+                    // 1) executeSync(crmSource, modelName, command, parameters)
+                    // 2) executeSync({ crm_source, sync_type, parameters })
+                    if (args.length === 1 && typeof args[0] === 'object') {
+                        const payload = args[0] || {};
+                        const crmSource = payload.crm_source || payload.source || '';
+                        const syncType = (payload.sync_type && payload.sync_type !== 'undefined') ? payload.sync_type : 'all';
+                        const params = payload.parameters || {};
+                        const result = await this.submitSyncTask(crmSource, syncType, params);
+                        return result;
+                    } else {
+                        const [crmSource, modelName, command, parameters = {}] = args;
+                        // Resolve syncType from modelName when possible, fallback to provided parameters or 'all'
+                        let resolvedSyncType = null;
+                        try {
+                            if (typeof window.modelNameToSyncType === 'function') {
+                                resolvedSyncType = window.modelNameToSyncType(modelName);
+                            }
+                        } catch (e) {
+                            // ignore mapping errors, fallback below
                         }
-                    } catch (e) {
-                        // ignore mapping errors, fallback below
+                        if (!resolvedSyncType) {
+                            resolvedSyncType = (parameters.sync_type && parameters.sync_type !== 'undefined') ? parameters.sync_type : (modelName || 'all');
+                        }
+                        const result = await this.submitSyncTask(crmSource, resolvedSyncType, parameters);
+                        return result;
                     }
-                    if (!resolvedSyncType) {
-                        resolvedSyncType = parameters.sync_type || modelName || 'all';
-                    }
-
-                    // Use worker pool submission instead of direct execution
-                    const result = await this.submitSyncTask(
-                        crmSource, 
-                        resolvedSyncType, 
-                        parameters
-                    );
                     
-                    return result;
                 } catch (error) {
                     console.error('Worker pool sync execution failed:', error);
                     // Fallback to original method
-                    return await originalExecuteSync(crmSource, modelName, command, parameters);
+                    return await originalExecuteSync(...args);
                 }
             };
         }

@@ -326,3 +326,19 @@ class CancelAllTasksView(WorkerPoolAPIView):
         except Exception as e:
             logger.error(f"Error cancelling all tasks: {e}")
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ResetWorkerPoolView(WorkerPoolAPIView):
+    """Hard reset worker pool state (admin use)"""
+    def post(self, request):
+        try:
+            worker_pool = get_worker_pool()
+            stats = worker_pool.reset_state()
+            return JsonResponse({
+                'success': True,
+                'message': 'Worker pool reset successfully',
+                'stats': stats
+            })
+        except Exception as e:
+            logger.error(f"Error resetting worker pool: {e}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
