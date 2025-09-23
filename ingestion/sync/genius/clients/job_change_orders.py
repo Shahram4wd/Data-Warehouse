@@ -54,7 +54,7 @@ class GeniusJobChangeOrderClient(GeniusBaseClient):
         
         # Add ordering and limit
         query += " ORDER BY jco.id"
-        if limit > 0:
+        if limit and limit > 0:
             query += f" LIMIT {limit}"
         
         logger.info(f"Executing query: {query}")
