@@ -106,6 +106,76 @@ class GeniusLeadClient(GeniusBaseClient):
             
             offset += chunk_size
     
+    def get_chunked_leads(self, offset: int, chunk_size: int, since_date: Optional[datetime] = None) -> List[tuple]:
+        """Get chunked leads data"""
+        # Base query with all required fields
+        query = """
+        SELECT 
+            l.lead_id,
+            l.first_name,
+            l.last_name,
+            l.email,
+            l.phone1 as phone,
+            l.address1 as address,
+            l.city,
+            l.state,
+            l.zip as zip_code,
+            l.source as prospect_source_id,
+            l.added_by as user_id,
+            l.division as division_id,
+            l.notes,
+            l.status,
+            l.copied_to_id as converted_to_prospect_id,
+            l.added_on as created_at,
+            l.updated_at
+        FROM `lead` l
+        """
+        
+        # Add WHERE clause for incremental sync - handle both updated_at and added_on
+        if since_date:
+            since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+            query += f" WHERE (l.updated_at > '{since_str}' OR (l.updated_at IS NULL AND l.added_on > '{since_str}'))"
+        
+        # Add ordering and pagination
+        query += f" ORDER BY l.lead_id LIMIT {chunk_size} OFFSET {offset}"
+        
+        return self.execute_query(query)
+
+    def get_chunked_query(self, offset: int, chunk_size: int, since_date: Optional[datetime] = None) -> str:
+        """Get the chunked query for logging purposes"""
+        # Base query with all required fields
+        query = """
+        SELECT 
+            l.lead_id,
+            l.first_name,
+            l.last_name,
+            l.email,
+            l.phone1 as phone,
+            l.address1 as address,
+            l.city,
+            l.state,
+            l.zip as zip_code,
+            l.source as prospect_source_id,
+            l.added_by as user_id,
+            l.division as division_id,
+            l.notes,
+            l.status,
+            l.copied_to_id as converted_to_prospect_id,
+            l.added_on as created_at,
+            l.updated_at
+        FROM `lead` l
+        """
+        
+        # Add WHERE clause for incremental sync - handle both updated_at and added_on
+        if since_date:
+            since_str = since_date.strftime('%Y-%m-%d %H:%M:%S')
+            query += f" WHERE (l.updated_at > '{since_str}' OR (l.updated_at IS NULL AND l.added_on > '{since_str}'))"
+        
+        # Add ordering and pagination
+        query += f" ORDER BY l.lead_id LIMIT {chunk_size} OFFSET {offset}"
+        
+        return query
+
     def get_field_mapping(self) -> List[str]:
         """Get field mapping for transformation"""
         return [

@@ -89,6 +89,120 @@ class GeniusLeadProcessor(GeniusBaseProcessor):
             logger.error(f"Error processing lead record: {e}")
             return None
     
+    def process_batch(self, batch_data: List[tuple], field_mapping: List[str], 
+                     force_overwrite: bool = False, dry_run: bool = False) -> Dict[str, int]:
+        """Process a batch of leads data using bulk operations"""
+        
+        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+        
+        try:
+            # Transform batch data to model instances  
+            model_instances = []
+            for raw_row in batch_data:
+                try:
+                    # Validate and transform record
+                    record_data = self.validate_record(raw_row, field_mapping)
+                    
+                    if record_data is None:
+                        stats['errors'] += 1
+                        continue
+                    
+                    # Create model instance
+                    instance = self.model_class(
+                        lead_id=record_data['lead_id'],
+                        first_name=record_data.get('first_name'),
+                        last_name=record_data.get('last_name'),
+                        email=record_data.get('email'),
+                        phone1=record_data.get('phone1'),
+                        address1=record_data.get('address1'),
+                        city=record_data.get('city'),
+                        state=record_data.get('state'),
+                        zip=record_data.get('zip'),
+                        source=record_data.get('source'),
+                        added_by=record_data.get('added_by'),
+                        division_id=record_data.get('division_id'),
+                        notes=record_data.get('notes'),
+                        status=record_data.get('status'),
+                        copied_to_id=record_data.get('copied_to_id'),
+                        added_on=record_data.get('added_on'),
+                        updated_at=record_data.get('updated_at'),
+                        sync_updated_at=record_data.get('sync_updated_at')
+                    )
+                    
+                    model_instances.append(instance)
+                    stats['total_processed'] += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error transforming lead record {raw_row[0] if raw_row else 'unknown'}: {e}")
+                    stats['errors'] += 1
+            
+            if not model_instances:
+                logger.warning("No valid model instances to process")
+                return stats
+
+            # Handle dry-run mode
+            if dry_run:
+                logger.info(f"DRY-RUN: Would process {len(model_instances)} lead records")
+                stats['created'] = len(model_instances)  # In dry-run, assume all would be created
+                return stats
+
+            # Perform bulk upsert using bulk_create with update_conflicts
+            def bulk_upsert():
+                created_count = 0
+                updated_count = 0
+                
+                try:
+                    # Use bulk_create with update_conflicts for efficient upsert
+                    results = self.model_class.objects.bulk_create(
+                        model_instances,
+                        update_conflicts=True,
+                        update_fields=[
+                            'first_name', 'last_name', 'email', 'phone1', 'address1',
+                            'city', 'state', 'zip', 'source', 'added_by', 'division_id',
+                            'notes', 'status', 'copied_to_id', 'added_on', 'updated_at',
+                            'sync_updated_at'
+                        ],
+                        unique_fields=['lead_id'],
+                        batch_size=500
+                    )
+                    
+                    # Count created vs updated (bulk_create returns created objects)
+                    created_count = len([obj for obj in results if obj.pk])
+                    updated_count = len(model_instances) - created_count
+                    
+                except Exception as e:
+                    logger.error(f"Bulk upsert failed: {e}")
+                    # Fallback: assume all were updates for counting purposes
+                    created_count = 0
+                    updated_count = len(model_instances)
+                    raise
+                
+                return created_count, updated_count
+            
+            # Execute bulk operation
+            try:
+                created_count, updated_count = bulk_upsert()
+                stats['created'] = created_count
+                stats['updated'] = updated_count
+                logger.info(f"Bulk upsert completed - Created: {created_count}, Updated: {updated_count}")
+            
+            except Exception as e:
+                logger.error(f"Bulk operation failed: {e}")
+                # For error counting, assume processing failed
+                stats['errors'] = len(model_instances)
+                stats['total_processed'] = 0
+                stats['created'] = 0
+                stats['updated'] = 0
+        
+        except Exception as e:
+            logger.error(f"Batch processing failed: {e}", exc_info=True)
+            stats['errors'] = len(batch_data)
+        
+        # Log validation summary at the end
+        self.log_validation_summary()
+        
+        return stats
+
     def log_validation_summary(self):
         """Log a summary of validation issues instead of individual warnings"""
         if self.validation_stats['processed_count'] > 0:
