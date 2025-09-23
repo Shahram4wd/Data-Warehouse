@@ -204,7 +204,7 @@
                     <div class="d-flex align-items-center">
                         <span class="badge bg-info me-2">{{ sync.crm_source }}</span>
                         <span class="small">{{ sync.sync_type }} - {{ sync.elapsed_seconds|floatformat:0 }}s</span>
-                        <button class="btn btn-sm btn-outline-danger ms-auto sync-action-btn" data-action="stop" data-sync-id="{{ sync.id }}">
+                        <button class="btn btn-sm btn-outline-danger ms-auto sync-action-btn" data-action="stop" data-sync-id="{{ sync.id }}" data-crm="{{ sync.crm_source }}" data-sync-type="{{ sync.sync_type }}">
                             <i class="fas fa-stop"></i>
                         </button>
                     </div>
@@ -350,7 +350,7 @@
                                 </td>
                                 <td>
                                     {% if sync.status == 'running' %}
-                                    <button class="btn btn-sm btn-outline-danger sync-action-btn" data-action="stop" data-sync-id="{{ sync.id }}">
+                                    <button class="btn btn-sm btn-outline-danger sync-action-btn" data-action="stop" data-sync-id="{{ sync.id }}" data-crm="{{ sync.crm_source }}" data-sync-type="{{ sync.sync_type }}">
                                         <i class="fas fa-stop"></i>
                                     </button>
                                     {% else %}
@@ -559,16 +559,44 @@ function setupEventHandlers() {
     }
 }
 
-function handleStopSync(syncId) {
-    if (window.syncManager) {
-        syncManager.stopSync(syncId).then(success => {
-            if (success) {
-                showNotification('Sync stopped successfully', 'success');
-                if (window.dashboardManager) {
-                    dashboardManager.refreshData();
-                }
+async function handleStopSync(syncId) {
+    const btn = document.querySelector(`.sync-action-btn[data-sync-id="${syncId}"]`);
+    const crm = btn ? btn.getAttribute('data-crm') : null;
+    const syncType = btn ? btn.getAttribute('data-sync-type') : null;
+
+    // Try legacy stop first
+    let stopped = false;
+    if (window.syncManager && typeof syncManager.stopSync === 'function') {
+        try {
+            stopped = await syncManager.stopSync(syncId);
+        } catch (e) {
+            stopped = false;
+        }
+    }
+
+    // Fallback: try worker-pool cancellation by matching an active task
+    if (!stopped && window.workerPoolManager && typeof workerPoolManager.getWorkerPoolStatus === 'function') {
+        try {
+            const status = await workerPoolManager.getWorkerPoolStatus();
+            const match = status && status.active_tasks ? status.active_tasks.find(t => {
+                return (!crm || t.crm_source === crm) && (!syncType || t.sync_type === syncType);
+            }) : null;
+            if (match) {
+                const res = await workerPoolManager.cancelTask(match.id);
+                stopped = !!res;
             }
-        });
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    if (stopped) {
+        showNotification('Sync stopped successfully', 'success');
+        if (window.dashboardManager) {
+            dashboardManager.refreshData();
+        }
+    } else {
+        showNotification('Unable to stop this sync. It may have already finished.', 'warning');
     }
 }
 
