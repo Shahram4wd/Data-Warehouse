@@ -223,12 +223,11 @@ class ContactsSyncEngine(BaseSyncEngine):
             # EFFICIENT APPROACH: Use bulk create with proper conflict resolution
             # Get all existing contacts in one query to avoid conflicts
             existing_contacts = {}
-            existing_qs = Five9Contact.objects.filter(
-                Q(*[
-                    Q(number1=key[0], list_name=key[1]) 
-                    for key in contact_keys
-                ])
-            ).values('number1', 'list_name', 'id')
+            # Build OR query across (number1, list_name) pairs
+            query = Q()
+            for num, lst in contact_keys:
+                query |= Q(number1=num, list_name=lst)
+            existing_qs = Five9Contact.objects.filter(query).values('number1', 'list_name', 'id') if contact_keys else []
             
             for contact in existing_qs:
                 key = (contact['number1'], contact['list_name'])
@@ -249,7 +248,14 @@ class ContactsSyncEngine(BaseSyncEngine):
             # Bulk create new contacts
             if contacts_to_create:
                 try:
-                    new_contacts = [Five9Contact(**data) for data in contacts_to_create]
+                    now_ts = timezone.now()
+                    new_contacts = []
+                    for data in contacts_to_create:
+                        obj = Five9Contact(**data)
+                        # Explicitly set timestamps to satisfy NOT NULL constraints and be consistent
+                        obj.sync_created_at = now_ts
+                        obj.sync_updated_at = now_ts
+                        new_contacts.append(obj)
                     Five9Contact.objects.bulk_create(new_contacts, batch_size=500, ignore_conflicts=True)
                     created_count = len(new_contacts)
                     logger.info(f"Bulk created {created_count} new contacts")
@@ -260,14 +266,20 @@ class ContactsSyncEngine(BaseSyncEngine):
             # Bulk update existing contacts
             if contacts_to_update:
                 try:
-                    update_fields = [f for f in valid_fields if f not in ['id', 'number1', 'list_name']]
+                    # Exclude non-updatable fields; never update auto_now_add field
+                    non_updateable = {'id', 'number1', 'list_name', 'sync_created_at'}
+                    update_fields = [f for f in valid_fields if f not in non_updateable]
                     contacts_to_bulk_update = []
+                    now_ts = timezone.now()
                     
                     for contact_data in contacts_to_update:
                         contact = Five9Contact(id=contact_data.pop('id'))
                         for field, value in contact_data.items():
                             if field in update_fields:
                                 setattr(contact, field, value)
+                        # Ensure updated-at is advanced on bulk updates
+                        if 'sync_updated_at' in update_fields:
+                            setattr(contact, 'sync_updated_at', now_ts)
                         contacts_to_bulk_update.append(contact)
                     
                     Five9Contact.objects.bulk_update(contacts_to_bulk_update, update_fields, batch_size=500)
