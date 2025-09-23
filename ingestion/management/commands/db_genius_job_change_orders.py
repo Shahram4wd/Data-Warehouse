@@ -1,7 +1,8 @@
 """
-Django management command for syncing Genius job change orders using the new sync engine architecture.
+Django management command for syncing Genius job change orders using the sync engine architecture.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
+import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -9,46 +10,13 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 
-from ingestion.sync.genius.clients.job_change_orders import GeniusJobChangeOrderClient
-from ingestion.sync.genius.processors.job_change_orders import GeniusJobChangeOrderProcessor
-from ingestion.models.genius import Genius_JobChangeOrder
-from ingestion.models import SyncHistory
+from ingestion.sync.genius.engines.job_change_orders import GeniusJobChangeOrdersSyncEngine
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
     help = 'Sync Genius job change orders data using the standardized sync engine'
-
-    def create_sync_record(self, full=False, since=None):
-        """Create a SyncHistory record for tracking"""
-        from django.utils import timezone
-        return SyncHistory.objects.create(
-            crm_source='genius',
-            sync_type='job_change_orders',
-            status='running',
-            start_time=timezone.now(),
-            configuration={
-                'full': full,
-                'since': since.isoformat() if since else None,
-                'command': 'db_genius_job_change_orders'
-            }
-        )
-    
-    def complete_sync_record(self, sync_record, stats=None, status='success', error_message=None):
-        """Complete the SyncHistory record with results"""
-        from django.utils import timezone
-        sync_record.end_time = timezone.now()
-        sync_record.status = status
-        if stats:
-            sync_record.records_processed = stats.get('total_processed', 0)
-            sync_record.records_created = stats.get('created', 0) 
-            sync_record.records_updated = stats.get('updated', 0)
-            sync_record.records_failed = stats.get('errors', 0)
-        if error_message:
-            sync_record.error_message = error_message
-        sync_record.save()
-        return sync_record
 
     def add_arguments(self, parser):
         """Add command arguments following CRM sync guide standards"""
@@ -152,90 +120,28 @@ class Command(BaseCommand):
         if start_date and end_date and start_date > end_date:
             raise ValueError("Start date cannot be after end date")
         
-        # Initialize sync tracking
-        sync_record = None
         try:
-            sync_record = self.create_sync_record(
-                full=options.get('full', False),
-                since=since
-            )
+            engine = GeniusJobChangeOrdersSyncEngine()
             
-            # Process data in chunks
-            client = GeniusJobChangeOrderClient()
-            processor = GeniusJobChangeOrderProcessor(Genius_JobChangeOrder)
-            all_stats = {
-                'total_processed': 0,
-                'created': 0,
-                'updated': 0,
-                'errors': 0,
-                'skipped': 0
-            }
+            # Determine since_date for sync
+            since_date = None if options.get('full') else since
             
-            # Get data from API
-            all_records = []
-            for chunk in client.get_chunked_data(
-                'jobchangeorders',
-                chunk_size=100000,
-                full=options.get('full', False),
-                since=since,
+            # Run the async method
+            result = asyncio.run(engine.sync_job_change_orders(
+                since_date=since_date,
+                force_overwrite=options.get('force', False),
+                dry_run=options.get('dry_run', False),
                 max_records=options.get('max_records')
-            ):
-                all_records.extend(chunk)
-                
-                # Process in batches
-                if len(all_records) >= 500:
-                    stats = processor.process_batch(
-                        all_records,
-                        dry_run=options.get('dry_run', False),
-                        force=options.get('force', False)
-                    )
-                    
-                    # Update totals
-                    for key in all_stats:
-                        all_stats[key] += stats.get(key, 0)
-                    
-                    all_records = []  # Clear for next batch
-            
-            # Process remaining records
-            if all_records:
-                stats = processor.process_batch(
-                    all_records,
-                    dry_run=options.get('dry_run', False),
-                    force=options.get('force', False)
-                )
-                
-                # Update totals
-                for key in all_stats:
-                    all_stats[key] += stats.get(key, 0)
-            
-            # Complete sync tracking
-            if sync_record:
-                sync_record = self.complete_sync_record(
-                    sync_record,
-                    stats=all_stats,
-                    status='success'
-                )
+            ))
             
             # Display results
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {all_stats.get('total_processed', 0)} records")
-            self.stdout.write(f"   ➕ Created: {all_stats.get('created', 0)} records")
-            self.stdout.write(f"   📝 Updated: {all_stats.get('updated', 0)} records")
-            self.stdout.write(f"   ❌ Errors: {all_stats.get('errors', 0)} records")
-            self.stdout.write(f"   ⏭️ Skipped: {all_stats.get('skipped', 0)} records")
-            
-            if sync_record:
-                self.stdout.write(f"   🆔 SyncHistory ID: {sync_record.id}")
-            else:
-                self.stdout.write("   🆔 SyncHistory ID: None")
+            self.stdout.write(f"   📊 Processed: {result.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {result.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {result.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {result.get('errors', 0)} records")
             
         except Exception as e:
-            if sync_record:
-                self.complete_sync_record(
-                    sync_record,
-                    status='failed',
-                    error_message=str(e)
-                )
             logger.exception("Genius job change orders sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
