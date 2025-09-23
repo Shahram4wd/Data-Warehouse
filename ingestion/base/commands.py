@@ -111,13 +111,6 @@ class BaseSyncCommand(BaseCommand, ABC):
             action='store_true',
             help='Disable progress bar display'
         )
-        
-        # Internal API flag - not shown in help
-        parser.add_argument(
-            '--called-from-api',
-            action='store_true',
-            help='Internal flag indicating command called from API service'
-        )
     
     def validate_arguments(self, options):
         """

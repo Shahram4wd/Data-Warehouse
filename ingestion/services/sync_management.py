@@ -243,10 +243,8 @@ class SyncManagementService:
                         'sync_id': None
                     }
                 
-                # Add flag to indicate this is called from API service to prevent duplicate SyncHistory creation
-                command += " --called-from-api"
-                
-                # Create SyncHistory record with additional race condition protection
+                # Create minimal SyncHistory record for concurrent sync detection
+                # The actual command will update this record with full details
                 try:
                     sync_record = SyncHistory.objects.create(
                         crm_source=crm_source,
@@ -258,42 +256,17 @@ class SyncManagementService:
                             'parameters': validation['sanitized_params'],
                             'validation_warnings': validation['warnings'],
                             'execution_method': 'manual_sync_api',
-                            'sync_key': sync_key
+                            'managed_by': 'sync_management_service'
                         }
                     )
-                    
-                    # Double-check for race condition after creation
-                    recent_syncs = SyncHistory.objects.filter(
-                        crm_source=crm_source,
-                        sync_type=sync_type,
-                        status='running',
-                        start_time__gte=timezone.now() - timedelta(seconds=5)
-                    ).order_by('start_time')
-                    
-                    if recent_syncs.count() > 1:
-                        # Race condition detected - keep only the first one
-                        first_sync = recent_syncs.first()
-                        if sync_record.id != first_sync.id:
-                            sync_record.status = 'failed'
-                            sync_record.end_time = timezone.now()
-                            sync_record.error_message = f'Cancelled due to concurrent sync detection. First sync ID: {first_sync.id}'
-                            sync_record.save()
-                            
-                            return {
-                                'success': False,
-                                'error': f'Another sync for {crm_source} {sync_type} started simultaneously. Please wait for it to complete.',
-                                'sync_id': sync_record.id,
-                                'duplicate_cancelled': True
-                            }
-                    
                 except Exception as e:
                     return {
                         'success': False,
-                        'error': 'Failed to create sync record',
+                        'error': f'Failed to create sync tracking record: {str(e)}',
                         'sync_id': None
                     }
                 
-                # Execute command in background
+                # Execute command directly - command will NOT create its own SyncHistory (since one exists)
                 self._execute_command_async(sync_record.id, command)
                 
                 return {
@@ -606,14 +579,24 @@ class SyncManagementService:
             db_running_syncs = SyncHistory.objects.filter(status='running').order_by('-start_time')
             
             for sync_record in db_running_syncs:
-                # Verify if actually running
-                is_actually_running = sync_record.id in self.running_processes
-                if is_actually_running:
+                # For syncs that have been running for more than 5 minutes without updates,
+                # check if the process is actually still running
+                elapsed_time = (timezone.now() - sync_record.start_time).total_seconds()
+                
+                # If sync is very recent (less than 30 seconds), assume it's still starting up
+                if elapsed_time < 30:
+                    is_actually_running = True
+                # If we have process tracking and the process exists, check it
+                elif sync_record.id in self.running_processes:
                     process = self.running_processes[sync_record.id]
                     is_actually_running = process.poll() is None
+                # For longer running syncs, give them the benefit of the doubt
+                # Commands manage their own SyncHistory status updates
+                else:
+                    is_actually_running = True
                 
                 if not is_actually_running:
-                    # Update stale record
+                    # Update stale record only if we're certain it's not running
                     sync_record.status = 'failed'
                     sync_record.end_time = timezone.now()
                     sync_record.error_message = 'Sync process terminated unexpectedly'
@@ -625,7 +608,7 @@ class SyncManagementService:
                     'crm_source': sync_record.crm_source,
                     'sync_type': sync_record.sync_type,
                     'start_time': sync_record.start_time,
-                    'elapsed_seconds': (timezone.now() - sync_record.start_time).total_seconds(),
+                    'elapsed_seconds': elapsed_time,
                     'configuration': sync_record.configuration
                 })
             

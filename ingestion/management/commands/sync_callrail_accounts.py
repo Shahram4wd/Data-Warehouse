@@ -41,12 +41,22 @@ class Command(BaseSyncCommand):
             batch_size = options['batch_size']
             max_records = options['max_records']
             debug = options.get('debug', False)
-            called_from_api = options.get('called_from_api', False)
             
-            # Create SyncHistory record for tracking (only if NOT called from API)
-            # When called from API, the SyncManagementService already created the record
-            sync_record = None
-            if not called_from_api:
+            # Check if there's already a SyncHistory record for this sync
+            # (happens when called from SyncManagementService via UI)
+            existing_sync = SyncHistory.objects.filter(
+                crm_source='callrail',
+                sync_type='accounts',
+                status='running',
+                configuration__managed_by='sync_management_service'
+            ).order_by('-start_time').first()
+            
+            if existing_sync:
+                # Use existing record created by SyncManagementService
+                sync_record = existing_sync
+                self.stdout.write("Using existing SyncHistory record (called from API)")
+            else:
+                # Create new SyncHistory record for direct command execution
                 sync_record = SyncHistory.objects.create(
                     crm_source='callrail',
                     sync_type='accounts',
@@ -66,16 +76,14 @@ class Command(BaseSyncCommand):
                         'execution_method': 'management_command'
                     }
                 )
-            else:
-                # When called from API, log that we're skipping SyncHistory creation
-                self.stdout.write("Skipping SyncHistory creation (called from API service)")
+            
             
             # Set up debug logging if requested
             if debug:
                 logging.getLogger('ingestion.sync.callrail').setLevel(logging.DEBUG)
             
             self.stdout.write(
-                self.style.SUCCESS(f'Starting CallRail accounts sync (Sync ID: {sync_record.id if sync_record else "API-managed"})')
+                self.style.SUCCESS(f'Starting CallRail accounts sync (Sync ID: {sync_record.id})')
             )
             
             if dry_run:
@@ -110,23 +118,22 @@ class Command(BaseSyncCommand):
             
             # Display results
             if result.get('success', False):
-                # Update sync record on success (only if we created one)
-                if sync_record:
-                    sync_record.status = 'success'
-                    sync_record.end_time = timezone.now()
-                    sync_record.records_processed = result.get('records_processed', 0)
-                    sync_record.records_created = result.get('records_created', 0)
-                    sync_record.records_updated = result.get('records_updated', 0)
-                    sync_record.records_failed = len(result.get('errors', []))
-                    sync_record.performance_metrics = {
-                        'total_fetched': result.get('records_fetched', 0),
-                        'execution_method': 'management_command'
-                    }
-                    sync_record.save()
+                # Update sync record on success
+                sync_record.status = 'success'
+                sync_record.end_time = timezone.now()
+                sync_record.records_processed = result.get('records_processed', 0)
+                sync_record.records_created = result.get('records_created', 0)
+                sync_record.records_updated = result.get('records_updated', 0)
+                sync_record.records_failed = len(result.get('errors', []))
+                sync_record.performance_metrics = {
+                    'total_fetched': result.get('records_fetched', 0),
+                    'execution_method': 'management_command'
+                }
+                sync_record.save()
                 
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f"Sync completed successfully! (Sync ID: {sync_record.id if sync_record else 'API-managed'})\n"
+                        f"Sync completed successfully! (Sync ID: {sync_record.id})\n"
                         f"Records fetched: {result.get('records_fetched', 0)}\n"
                         f"Records processed: {result.get('records_processed', 0)}\n"
                         f"Records created: {result.get('records_created', 0)}\n"
@@ -138,24 +145,22 @@ class Command(BaseSyncCommand):
                 error_msg = result.get('error', 'Unknown error occurred')
                 
                 # Update sync record on failure
-                if sync_record:
-                    sync_record.status = 'failed'
-                    sync_record.end_time = timezone.now()
-                    sync_record.error_message = error_msg
-                    sync_record.save()
+                sync_record.status = 'failed'
+                sync_record.end_time = timezone.now()
+                sync_record.error_message = error_msg
+                sync_record.save()
                 
                 self.stdout.write(
-                    self.style.ERROR(f"Sync failed (Sync ID: {sync_record.id if sync_record else 'N/A'}): {error_msg}")
+                    self.style.ERROR(f"Sync failed (Sync ID: {sync_record.id}): {error_msg}")
                 )
                 raise CommandError(f"Sync failed: {error_msg}")
                 
         except Exception as e:
             # Update sync record on exception
-            if sync_record:
-                sync_record.status = 'failed'
-                sync_record.end_time = timezone.now()
-                sync_record.error_message = str(e)
-                sync_record.save()
+            sync_record.status = 'failed'
+            sync_record.end_time = timezone.now()
+            sync_record.error_message = str(e)
+            sync_record.save()
             
             logger.error(f"Command execution failed: {e}")
             raise CommandError(f"Command execution failed: {e}")
