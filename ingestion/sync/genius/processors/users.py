@@ -104,6 +104,7 @@ class GeniusUsersProcessor:
                     inactive_on=record_data.get('inactive_on'),
                     inactive_reason_id=record_data.get('inactive_reason_id'),
                     inactive_reason_other=record_data.get('inactive_reason_other'),
+                    primary_user_id=record_data.get('primary_user_id'),
                     inactive_transfer_division_id=record_data.get('inactive_transfer_division_id'),
                     updated_at=record_data.get('updated_at')
                 )
@@ -122,7 +123,7 @@ class GeniusUsersProcessor:
                             'division_id', 'title_id', 'manager_user_id', 'first_name', 'first_name_alt', 'last_name',
                             'email', 'personal_email', 'birth_date', 'gender_id', 'marital_status_id', 'time_zone_name',
                             'hired_on', 'start_date', 'add_user_id', 'add_datetime', 'is_inactive', 'inactive_on',
-                            'inactive_reason_id', 'inactive_reason_other', 'inactive_transfer_division_id', 'updated_at'
+                            'inactive_reason_id', 'inactive_reason_other', 'primary_user_id', 'inactive_transfer_division_id', 'updated_at'
                         ],
                         unique_fields=['id']
                     )

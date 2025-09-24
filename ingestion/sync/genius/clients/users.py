@@ -15,32 +15,35 @@ class GeniusUsersClient(GeniusBaseClient):
         
     def get_query(self, where_clause: str = "", limit: Optional[int] = None) -> str:
         """Build the complete query for user data"""
+        # Added LEFT JOIN to users_userassociations to pull primary_user_id.
         base_query = f"""
         SELECT 
-            user_id,
-            division_id,
-            title_id,
-            manager_user_id,
-            first_name,
-            first_name_alt,
-            last_name,
-            email,
-            personal_email,
-            birth_date,
-            gender_id,
-            marital_status_id,
-            time_zone_name,
-            hired_on,
-            start_date,
-            add_user_id,
-            add_datetime,
-            updated_at,
-            is_inactive,
-            inactive_on,
-            inactive_reason_id,
-            inactive_reason_other,
-            inactive_transfer_division_id
-        FROM {self.table_name}
+            u.user_id,
+            u.division_id,
+            u.title_id,
+            u.manager_user_id,
+            u.first_name,
+            u.first_name_alt,
+            u.last_name,
+            u.email,
+            u.personal_email,
+            u.birth_date,
+            u.gender_id,
+            u.marital_status_id,
+            u.time_zone_name,
+            u.hired_on,
+            u.start_date,
+            u.add_user_id,
+            u.add_datetime,
+            u.updated_at,
+            u.is_inactive,
+            u.inactive_on,
+            u.inactive_reason_id,
+            u.inactive_reason_other,
+            ua.primary_user_id,
+            u.inactive_transfer_division_id
+        FROM {self.table_name} u
+        LEFT JOIN users_userassociations ua ON ua.id = u.user_associations_id
         """
         
         if where_clause:
@@ -60,30 +63,32 @@ class GeniusUsersClient(GeniusBaseClient):
             where_clause = f"updated_at >= '{since_date.strftime('%Y-%m-%d %H:%M:%S')}'"
         query = f"""
         SELECT 
-            user_id,
-            division_id,
-            title_id,
-            manager_user_id,
-            first_name,
-            first_name_alt,
-            last_name,
-            email,
-            personal_email,
-            birth_date,
-            gender_id,
-            marital_status_id,
-            time_zone_name,
-            hired_on,
-            start_date,
-            add_user_id,
-            add_datetime,
-            updated_at,
-            is_inactive,
-            inactive_on,
-            inactive_reason_id,
-            inactive_reason_other,
-            inactive_transfer_division_id
-        FROM {self.table_name}
+            u.user_id,
+            u.division_id,
+            u.title_id,
+            u.manager_user_id,
+            u.first_name,
+            u.first_name_alt,
+            u.last_name,
+            u.email,
+            u.personal_email,
+            u.birth_date,
+            u.gender_id,
+            u.marital_status_id,
+            u.time_zone_name,
+            u.hired_on,
+            u.start_date,
+            u.add_user_id,
+            u.add_datetime,
+            u.updated_at,
+            u.is_inactive,
+            u.inactive_on,
+            u.inactive_reason_id,
+            u.inactive_reason_other,
+            ua.primary_user_id,
+            u.inactive_transfer_division_id
+        FROM {self.table_name} u
+        LEFT JOIN users_userassociations ua ON ua.id = u.user_associations_id
         """
         if where_clause:
             query += f" WHERE {where_clause}"
@@ -97,30 +102,32 @@ class GeniusUsersClient(GeniusBaseClient):
             where_clause = f"updated_at >= '{since_date.strftime('%Y-%m-%d %H:%M:%S')}'"
         query = f"""
         SELECT 
-            user_id,
-            division_id,
-            title_id,
-            manager_user_id,
-            first_name,
-            first_name_alt,
-            last_name,
-            email,
-            personal_email,
-            birth_date,
-            gender_id,
-            marital_status_id,
-            time_zone_name,
-            hired_on,
-            start_date,
-            add_user_id,
-            add_datetime,
-            updated_at,
-            is_inactive,
-            inactive_on,
-            inactive_reason_id,
-            inactive_reason_other,
-            inactive_transfer_division_id
-        FROM {self.table_name}
+            u.user_id,
+            u.division_id,
+            u.title_id,
+            u.manager_user_id,
+            u.first_name,
+            u.first_name_alt,
+            u.last_name,
+            u.email,
+            u.personal_email,
+            u.birth_date,
+            u.gender_id,
+            u.marital_status_id,
+            u.time_zone_name,
+            u.hired_on,
+            u.start_date,
+            u.add_user_id,
+            u.add_datetime,
+            u.updated_at,
+            u.is_inactive,
+            u.inactive_on,
+            u.inactive_reason_id,
+            u.inactive_reason_other,
+            ua.primary_user_id,
+            u.inactive_transfer_division_id
+        FROM {self.table_name} u
+        LEFT JOIN users_userassociations ua ON ua.id = u.user_associations_id
         """
         if where_clause:
             query += f" WHERE {where_clause}"
@@ -174,5 +181,6 @@ class GeniusUsersClient(GeniusBaseClient):
             'inactive_on': 19,
             'inactive_reason_id': 20,
             'inactive_reason_other': 21,
-            'inactive_transfer_division_id': 22
+            'primary_user_id': 22,
+            'inactive_transfer_division_id': 23
         }

@@ -126,8 +126,20 @@ def get_mysql_connection():
                 
             except mysql.connector.errors.DatabaseError as e:
                 error_code = getattr(e, 'errno', 'Unknown')
+                # Special handling for expired password (MySQL error 1862)
+                if error_code == 1862:
+                    logger.error(
+                        "MySQL error 1862: Password expired. Please reset the MySQL user's password. "
+                        "Suggested fix: \n"
+                        "  1. Log into MySQL with an admin account.\n"
+                        f"  2. ALTER USER '{db_user}'@'%' IDENTIFIED BY '<NewStrongPassword>';\n"
+                        f"  3. (If required) ALTER USER '{db_user}'@'%' PASSWORD EXPIRE NEVER;\n"
+                        "  4. Update ENV variable GENIUS_DB_PASSWORD (and any secret stores).\n"
+                        "  5. Rebuild/restart the container: docker-compose restart web worker."
+                    )
                 logger.warning(f"Database connection to {host} attempt {attempt + 1} failed (Error {error_code}): {e}")
-                if attempt < max_retries - 1:
+                if attempt < max_retries - 1 and error_code != 1862:
+                    # Only retry if not a fatal (non-recoverable) condition like password expired
                     logger.info(f"Retrying connection to {host} in {retry_delay} seconds...")
                     time.sleep(retry_delay)
                 else:
