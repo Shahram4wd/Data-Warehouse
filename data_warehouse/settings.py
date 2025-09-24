@@ -207,6 +207,8 @@ except Exception as e:
 # Maximum number of concurrent sync workers (can be overridden by environment variable)
 # Default to 2 to align with dashboard expectation of running two syncs concurrently
 MAX_SYNC_WORKERS = config('MAX_SYNC_WORKERS', default=2, cast=int)
+# Stale heartbeat timeout (minutes) before a task is considered failed/orphaned
+WORKER_POOL_STALE_MINUTES = config('WORKER_POOL_STALE_MINUTES', default=30, cast=int)
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -425,15 +427,38 @@ if not DEBUG:
     # Reduce worker timeout issues
     DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
     FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
-    
-    # Cache configuration
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-            'LOCATION': 'unique-snowflake',
-            'TIMEOUT': 300,
-            'OPTIONS': {
-                'MAX_ENTRIES': 1000,
+
+    # Shared cache configuration
+    # IMPORTANT: The worker_pool service persists its in-memory state using Django's cache.
+    # Using LocMemCache caused each process (web, worker, beat) to keep an isolated copy,
+    # leading to dashboard counts drifting from actual Celery queues. We switch to Redis
+    # (same instance as broker/result if separate CACHE_URL not provided) so state is
+    # consistent across processes and survives restarts briefly.
+    CACHE_URL = os.getenv("CACHE_URL") or os.getenv("REDIS_URL") or CELERY_BROKER_URL
+    # Celery broker URLs may include a scheme like redis://:password@host:port/db. Django-redis
+    # expects LOCATION to be that URL. If broker is not redis (e.g. amqp://) we silently
+    # fall back to LocMem.
+    if CACHE_URL.startswith("redis://"):
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+                'LOCATION': CACHE_URL,
+                'TIMEOUT': 3600,  # retain worker pool state for an hour
+                'OPTIONS': {
+                    'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                }
             }
         }
-    }
+    else:
+        # Fallback: still define a LocMem cache but with a clear warning in logs.
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "Using LocMemCache (no redis CACHE_URL/REDIS_URL); worker pool state will not be shared across processes.")
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'worker-pool-local',
+                'TIMEOUT': 300,
+                'OPTIONS': {'MAX_ENTRIES': 1000}
+            }
+        }

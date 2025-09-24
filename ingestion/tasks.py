@@ -381,12 +381,14 @@ def worker_pool_monitor(self):
         
         # Cleanup old completed tasks
         worker_pool.cleanup_completed_tasks()
+        # Cleanup stale active tasks (no heartbeat)
+        stale = worker_pool.cleanup_stale_active_tasks()
         
         # Process any pending tasks
         worker_pool.process_queue()
         
         stats = worker_pool.get_stats()
-        logger.debug(f"Worker pool monitor: {stats['active_count']} active, {stats['queued_count']} queued")
+        logger.debug(f"Worker pool monitor: {stats['active_count']} active, {stats['queued_count']} queued, stale_cleaned={stale}")
         
         return {'status': 'success', 'stats': stats}
         

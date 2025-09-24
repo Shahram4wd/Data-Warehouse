@@ -44,6 +44,7 @@ class WorkerTask:
     completed_at: datetime = None
     celery_task_id: str = None
     error_message: str = None
+    last_heartbeat: datetime = None
     
     def __post_init__(self):
         if self.queued_at is None:
@@ -80,20 +81,45 @@ class WorkerPoolService:
     def _load_state(self):
         """Load worker pool state from cache"""
         try:
+            def _deserialize(task_dict: Dict[str, Any]) -> WorkerTask:
+                # Ensure backward compatibility with older cached structure (strings)
+                td = dict(task_dict)
+                # Convert enum string back to TaskStatus
+                status_val = td.get('status')
+                if isinstance(status_val, str):
+                    try:
+                        td['status'] = TaskStatus(status_val)
+                    except Exception:
+                        td['status'] = TaskStatus.FAILED
+                # Parse datetimes if they are strings
+                for key in ['queued_at', 'started_at', 'completed_at', 'last_heartbeat']:
+                    if isinstance(td.get(key), str):
+                        try:
+                            td[key] = datetime.fromisoformat(td[key])
+                        except Exception:
+                            td[key] = None
+                return WorkerTask(**td)
+
             # Load active workers
-            active_data = cache.get(self.ACTIVE_WORKERS_KEY, {})
+            active_data = cache.get(self.ACTIVE_WORKERS_KEY, {}) or {}
+            self.active_workers = {}
             for task_id, task_data in active_data.items():
-                task = WorkerTask(**task_data)
-                self.active_workers[task_id] = task
-            
+                try:
+                    self.active_workers[task_id] = _deserialize(task_data)
+                except Exception as inner_e:
+                    logger.warning(f"Skipping corrupt active task {task_id}: {inner_e}")
+
             # Load task queue
-            queue_data = cache.get(self.TASK_QUEUE_KEY, [])
+            queue_data = cache.get(self.TASK_QUEUE_KEY, []) or []
+            self.task_queue = []
             for task_data in queue_data:
-                task = WorkerTask(**task_data)
-                self.task_queue.append(task)
-                
+                try:
+                    self.task_queue.append(_deserialize(task_data))
+                except Exception as inner_e:
+                    logger.warning(f"Skipping corrupt queued task: {inner_e}")
+
             logger.info(f"Loaded worker pool state: {len(self.active_workers)} active, {len(self.task_queue)} queued")
-            
+
         except Exception as e:
             logger.error(f"Error loading worker pool state: {e}")
             self.active_workers = {}
@@ -111,11 +137,12 @@ class WorkerPoolService:
                     'crm_source': task.crm_source,
                     'sync_type': task.sync_type,
                     'parameters': task.parameters,
-                    'status': task.status.value,
+                    'status': task.status.value if isinstance(task.status, TaskStatus) else str(task.status),
                     'priority': task.priority,
                     'queued_at': task.queued_at.isoformat() if task.queued_at else None,
                     'started_at': task.started_at.isoformat() if task.started_at else None,
                     'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+                    'last_heartbeat': task.last_heartbeat.isoformat() if getattr(task, 'last_heartbeat', None) else None,
                     'celery_task_id': task.celery_task_id,
                     'error_message': task.error_message
                 }
@@ -130,11 +157,12 @@ class WorkerPoolService:
                     'crm_source': task.crm_source,
                     'sync_type': task.sync_type,
                     'parameters': task.parameters,
-                    'status': task.status.value,
+                    'status': task.status.value if isinstance(task.status, TaskStatus) else str(task.status),
                     'priority': task.priority,
                     'queued_at': task.queued_at.isoformat() if task.queued_at else None,
                     'started_at': task.started_at.isoformat() if task.started_at else None,
                     'completed_at': task.completed_at.isoformat() if task.completed_at else None,
+                    'last_heartbeat': task.last_heartbeat.isoformat() if getattr(task, 'last_heartbeat', None) else None,
                     'celery_task_id': task.celery_task_id,
                     'error_message': task.error_message
                 })
@@ -227,6 +255,7 @@ class WorkerPoolService:
         try:
             worker_task.status = TaskStatus.RUNNING
             worker_task.started_at = datetime.utcnow()
+            worker_task.last_heartbeat = worker_task.started_at
             
             # Submit to Celery
             task_name = worker_task.task_name
@@ -266,6 +295,7 @@ class WorkerPoolService:
             task = self.active_workers[task_id]
             task.status = status
             task.error_message = error_message
+            task.last_heartbeat = datetime.utcnow()
             
             if status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
                 task.completed_at = datetime.utcnow()
@@ -429,6 +459,31 @@ class WorkerPoolService:
         # Additional cleanup can be added here if needed
         
         logger.debug(f"Cleanup completed for tasks older than {max_age_minutes} minutes")
+
+    def cleanup_stale_active_tasks(self, max_stale_minutes: int = None):
+        """Mark tasks with no heartbeat for a long time as FAILED and remove them.
+
+        Prevents dashboard from showing phantom active tasks if worker died.
+        """
+        if max_stale_minutes is None:
+            try:
+                from django.conf import settings as dj_settings
+                max_stale_minutes = getattr(dj_settings, 'WORKER_POOL_STALE_MINUTES', 30)
+            except Exception:
+                max_stale_minutes = 30
+        stale_cutoff = datetime.utcnow() - timedelta(minutes=max_stale_minutes)
+        stale_count = 0
+        for task_id, task in list(self.active_workers.items()):
+            if task.last_heartbeat and task.last_heartbeat < stale_cutoff:
+                logger.warning(f"Marking stale task {task_id} (no heartbeat since {task.last_heartbeat}) as FAILED")
+                task.status = TaskStatus.FAILED
+                task.error_message = task.error_message or 'Stale task heartbeat timeout'
+                task.completed_at = datetime.utcnow()
+                del self.active_workers[task_id]
+                stale_count += 1
+        if stale_count:
+            self._save_state()
+        return stale_count
     
     def check_celery_task_statuses(self):
         """Check Celery task statuses and update accordingly"""
@@ -444,6 +499,10 @@ class WorkerPoolService:
                         self.update_task_status(task_id, TaskStatus.FAILED, error_msg)
                     elif result.state == 'REVOKED':
                         self.update_task_status(task_id, TaskStatus.CANCELLED)
+                    else:
+                        # heartbeat for active states (PENDING / STARTED)
+                        worker_task.last_heartbeat = datetime.utcnow()
+                        self._save_state()
                         
                 except Exception as e:
                     logger.error(f"Error checking Celery task {worker_task.celery_task_id}: {e}")
