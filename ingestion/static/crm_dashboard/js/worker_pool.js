@@ -224,10 +224,37 @@ class WorkerPoolManager {
         try {
             const status = await this.getWorkerPoolStatus();
             if (status) {
-                this.updateWorkerPoolDisplay(status);
-                this.updateActiveSyncsDisplay(status.active_tasks);
-                this.updateQueueDisplay(status.queued_tasks);
-                this.updateCounters(status);
+                // Prefer Celery real-time stats for truthy counts
+                const cel = status.celery || null;
+                const effective = {
+                    active_count: cel && typeof cel.active === 'number' ? cel.active : status.active_count,
+                    queued_count: cel && typeof cel.total_queued === 'number' ? cel.total_queued : status.queued_count,
+                    max_workers: status.max_workers,
+                    available_workers: status.max_workers - (cel && typeof cel.active === 'number' ? cel.active : status.active_count),
+                };
+
+                this.updateWorkerPoolDisplay({
+                    ...status,
+                    ...effective,
+                });
+                // Display active tasks: prefer Celery active task names if provided
+                const activeTasks = (status.active_tasks && status.active_tasks.length)
+                    ? status.active_tasks
+                    : (cel && Array.isArray(cel.active_tasks)) ? cel.active_tasks.map((t, i) => ({
+                        id: t.id || `celery-${i}`,
+                        crm_source: (t.name || '').split('.')?.[1] || 'celery',
+                        sync_type: (t.name || '').split('.')?.slice(-1)[0] || 'task',
+                        started_at: null,
+                        status: 'running',
+                    })) : [];
+                this.updateActiveSyncsDisplay(activeTasks);
+
+                // Queue list is maintained by our worker-pool; broker depth is just a number
+                this.updateQueueDisplay(status.queued_tasks || []);
+                this.updateCounters({
+                    active_count: effective.active_count,
+                    queued_count: effective.queued_count,
+                });
             }
         } catch (error) {
             console.error('Error updating UI:', error);

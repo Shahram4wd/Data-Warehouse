@@ -57,6 +57,26 @@ def _task_wrapper(task_func, celery_task_id):
     
     return wrapper
 
+
+@shared_task(bind=True, name='ingestion.tasks.cleanup_stale_syncs')
+def cleanup_stale_syncs(self, minutes: int | None = None, dry_run: bool = False):
+    """Run the cleanup_stale_syncs management command.
+
+    Defaults to settings.WORKER_POOL_STALE_MINUTES when minutes is None.
+    """
+    try:
+        args = []
+        if minutes is not None:
+            args += ["--minutes", str(minutes)]
+        if dry_run:
+            args += ["--dry-run"]
+
+        call_command("cleanup_stale_syncs", *args)
+        return {"status": "success", "dry_run": dry_run, "minutes": minutes}
+    except Exception as e:
+        logger.error(f"cleanup_stale_syncs task failed: {e}", exc_info=True)
+        return {"status": "error", "error": str(e)}
+
 @shared_task(bind=True, name='ingestion.tasks.generate_automation_reports')
 def generate_automation_reports(self):
     """

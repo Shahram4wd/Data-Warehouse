@@ -27,6 +27,10 @@ if DJANGO_ENV == 'production':
             'task': 'ingestion.tasks.worker_pool_monitor',
             'schedule': crontab(minute='*/2'),  # Every 2 minutes
         },
+        'cleanup-stale-syncs-0330utc': {
+            'task': 'ingestion.tasks.cleanup_stale_syncs',
+            'schedule': crontab(hour=3, minute=30),  # 03:30 UTC nightly
+        },
     }
 else:
     # Limited scheduled tasks for local development
@@ -34,6 +38,10 @@ else:
         'worker-pool-monitor': {
             'task': 'ingestion.tasks.worker_pool_monitor',
             'schedule': crontab(minute='*/5'),  # Every 5 minutes in development
+        },
+        'cleanup-stale-syncs-0330utc': {
+            'task': 'ingestion.tasks.cleanup_stale_syncs',
+            'schedule': crontab(hour=3, minute=30),  # 03:30 UTC nightly (dev)
         },
     }
 

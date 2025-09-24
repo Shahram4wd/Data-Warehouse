@@ -14,6 +14,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.conf import settings
 from ingestion.services.worker_pool import get_worker_pool, TaskStatus
+from ingestion.services.celery_stats import get_celery_stats
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,22 @@ class WorkerPoolStatusView(WorkerPoolAPIView):
         try:
             worker_pool = get_worker_pool()
             stats = worker_pool.get_stats()
+
+            # Enrich with real-time Celery stats to avoid stale DB- or cache-based ghost counts
+            try:
+                cel = get_celery_stats()
+            except Exception as e:
+                logger.warning(f"Celery stats unavailable: {e}")
+                cel = None
+
+            if cel:
+                # Prefer Celery-derived numbers when present
+                stats["celery"] = cel
+                # If Celery can tell us active and queued counts, override the badges
+                stats["active_count"] = cel.get("active", stats.get("active_count", 0))
+                # Use broker queue depth when available; fall back to in-memory queue length
+                if isinstance(cel.get("total_queued"), int):
+                    stats["queued_count"] = cel["total_queued"]
             
             return JsonResponse({
                 'success': True,
