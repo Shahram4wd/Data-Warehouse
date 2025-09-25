@@ -1031,16 +1031,14 @@ function modelNameToSyncType(modelName) {
         name = name.substring(9); // Remove 'CallRail_'
     } else if (name.startsWith('Genius_')) {
         name = name.substring(7); // Remove 'Genius_'
-    } else if (name.startsWith('Genius')) {
-        name = name.substring(6); // Remove 'Genius'
-    } else if (name.startsWith('Hubspot') || name.startsWith('HubSpot')) {
-        name = name.substring(7); // Remove 'Hubspot'/'HubSpot'
-    } else if (name.startsWith('Salespro')) {
-        name = name.substring(8); // Remove 'Salespro'
-    } else if (name.startsWith('Salesrabbit')) {
-        name = name.substring(11); // Remove 'Salesrabbit'
-    } else if (name.startsWith('Arrivy')) {
-        name = name.substring(6); // Remove 'Arrivy'
+    } else if (name.startsWith('Hubspot_') || name.startsWith('HubSpot_')) {
+        name = name.substring(8); // Remove 'Hubspot_'/'HubSpot_'
+    } else if (name.startsWith('Salespro_')) {
+        name = name.substring(9); // Remove 'Salespro_'
+    } else if (name.startsWith('Salesrabbit_')) {
+        name = name.substring(12); // Remove 'Salesrabbit_'
+    } else if (name.startsWith('Arrivy_')) {
+        name = name.substring(7); // Remove 'Arrivy_'
     }
     
     name = name.toLowerCase();

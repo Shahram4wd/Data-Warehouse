@@ -480,7 +480,37 @@ class CRMDiscoveryService:
             'CallRail_TextMessage': 'text_messages',
             'CallRail_Tracker': 'trackers',
             'CallRail_User': 'users',
-            'Five9Contact': 'contacts'
+            'Five9Contact': 'contacts',
+            # Genius mappings based on standardized sync_types
+            'Genius_Appointment': 'appointments',
+            'Genius_AppointmentOutcome': 'appointment_outcomes',
+            'Genius_AppointmentOutcomeType': 'appointment_outcome_types',
+            'Genius_AppointmentService': 'appointment_services',
+            'Genius_AppointmentType': 'appointment_types',
+            'Genius_AppointmentUser': 'appointment_users',
+            'Genius_Contact': 'contacts',
+            'Genius_Division': 'divisions',
+            'Genius_DivisionGroup': 'division_groups',
+            'Genius_DivisionRegion': 'division_regions',
+            'Genius_Job': 'jobs',
+            'Genius_JobChangeOrderType': 'job_change_order_types',
+            'Genius_JobType': 'job_types',
+            'Genius_Lead': 'leads',
+            'Genius_MarketingSource': 'marketing_sources',
+            'Genius_MarketingSourceType': 'marketing_source_types',
+            'Genius_MarketSharpMarketingSourceMap': 'marketsharp_marketing_source_maps',
+            'Genius_MarketSharpSource': 'marketsharp_sources',
+            'Genius_Prospect': 'prospects',
+            'Genius_ProspectSource': 'prospect_sources',
+            'Genius_Quote': 'quotes',
+            'Genius_Rep': 'reps',
+            'Genius_RepTeam': 'rep_teams',
+            'Genius_Service': 'services',
+            'Genius_Task': 'tasks',
+            'Genius_User': 'users',
+            'Genius_UserAssociation': 'user_associations',
+            'Genius_UserData': 'user_data',
+            'Genius_UserTitle': 'user_titles'
         }
         
         if model_name in model_mappings:

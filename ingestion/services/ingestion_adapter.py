@@ -169,17 +169,36 @@ def _get_genius_sync_type(model_name: str) -> str:
     # Remove 'Genius_' prefix and convert to lowercase
     base_name = model_name.replace('Genius_', '').lower()
     
-    # Handle pluralization - most sync types are plural
+    # Handle pluralization and special mappings - most sync types are plural
     pluralization_map = {
         'appointment': 'appointments',
+        'appointmentoutcome': 'appointment_outcomes',
+        'appointmentoutcometype': 'appointment_outcome_types', 
+        'appointmentservice': 'appointment_services',
+        'appointmenttype': 'appointment_types',
         'lead': 'leads',
         'prospect': 'prospects', 
         'quote': 'quotes',
         'job': 'jobs',
+        'jobfinancing': 'job_financings',
+        'jobstatus': 'job_statuses',
+        'jobchangeorder': 'job_change_orders',
+        'jobchangeorderitem': 'job_change_order_items',
+        'jobchangeordertype': 'job_change_order_types',
+        'jobchangeorderreason': 'job_change_order_reasons',
         'division': 'divisions',
+        'divisiongroup': 'division_groups',
+        'divisionregion': 'division_regions',
         'user': 'users',
+        'userdata': 'users',  # Genius_UserData -> users
+        'usertitle': 'user_titles',
+        'userassociation': 'user_associations',
         'service': 'services',
-        # Add other irregular plurals as needed
+        # Keep as-is (already correct format)
+        'marketingsourcetype': 'marketing_source_types',
+        'marketingsource': 'marketing_sources',
+        'marketsharp': 'marketsharp_sources',
+        'prospectssource': 'prospect_sources',
     }
     
     return pluralization_map.get(base_name, base_name)
