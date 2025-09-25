@@ -24,9 +24,12 @@ class ArrivyTasksClient(ArrivyBaseClient):
         """
         Fetch tasks from Arrivy API with delta sync support
         
+        Uses Arrivy's 'from' and 'to' parameters for date filtering and proper order_by handling.
+        API Example: https://app.arrivy.com/api/tasks?from=2025-09-22T00:00:00%2B05:00&to=2025-09-26T23:59:59%2B05:00&items_per_page=100&page=1&unscheduled=false&order_by=CREATED
+        
         Args:
-            last_sync: Last sync timestamp for delta sync
-            start_date: Filter tasks from this date
+            last_sync: Last sync timestamp for delta sync (uses as 'from' parameter)
+            start_date: Filter tasks from this date (overrides last_sync if provided)
             end_date: Filter tasks until this date
             page_size: Records per page
             max_records: Maximum records to fetch (optional)
@@ -34,21 +37,39 @@ class ArrivyTasksClient(ArrivyBaseClient):
         Yields:
             Batches of task records
         """
-        logger.info(f"Fetching tasks with page_size={page_size}, last_sync={last_sync}")
+        # Determine date range for delta sync
+        from_date = start_date or last_sync
+        to_date = end_date
+        
+        logger.info(f"Fetching tasks with page_size={page_size}, from_date={from_date}, to_date={to_date}")
         
         params = {}
         
-        # Add date range filters if provided
-        if start_date:
-            params["start_date"] = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
-        if end_date:
-            params["end_date"] = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        # Use Arrivy's 'from' and 'to' parameters for date filtering
+        if from_date:
+            # Format datetime in the format expected by Arrivy API (ISO with timezone)
+            params["from"] = from_date.strftime("%Y-%m-%dT%H:%M:%S%z")
+            if not params["from"].endswith('+00:00') and not params["from"].endswith('Z'):
+                # Add UTC timezone if not present
+                params["from"] = from_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        
+        if to_date:
+            params["to"] = to_date.strftime("%Y-%m-%dT%H:%M:%S%z")
+            if not params["to"].endswith('+00:00') and not params["to"].endswith('Z'):
+                # Add UTC timezone if not present  
+                params["to"] = to_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        
+        # Set additional parameters for proper task filtering
+        params["unscheduled"] = "false"  # Focus on scheduled tasks as per user example
+        params["order_by"] = "CREATED"   # Use CREATED ordering as suggested by user
+        params["items_per_page"] = page_size
         
         records_fetched = 0
         
+        # Pass the properly formatted parameters to the paginated data fetcher
         async for batch in self.fetch_paginated_data(
             endpoint="tasks",  # Use tasks endpoint for tasks data
-            last_sync=last_sync,
+            last_sync=None,    # Don't use last_sync here since we're using 'from'/'to' params
             page_size=page_size,
             **params
         ):
@@ -130,14 +151,20 @@ class ArrivyTasksClient(ArrivyBaseClient):
         Returns:
             Total task count
         """
-        params = {"page_size": 1, "page": 1}
+        params = {"page_size": 1, "page": 1, "unscheduled": "false"}
         
+        # Use Arrivy's 'from' and 'to' parameters for date filtering
         if start_date:
-            params["start_date"] = start_date.strftime("%Y-%m-%dT%H:%M:%SZ")
-        if end_date:
-            params["end_date"] = end_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+            params["from"] = start_date.strftime("%Y-%m-%dT%H:%M:%S%z")
+            if not params["from"].endswith('+00:00') and not params["from"].endswith('Z'):
+                params["from"] = start_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
         
-        result = await self._make_request("bookings", params)
+        if end_date:
+            params["to"] = end_date.strftime("%Y-%m-%dT%H:%M:%S%z")
+            if not params["to"].endswith('+00:00') and not params["to"].endswith('Z'):
+                params["to"] = end_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        
+        result = await self._make_request("tasks", params)
         pagination = result.get('pagination')
         if pagination:
             return pagination.get('total_count', 0)

@@ -306,8 +306,10 @@ class ArrivyBaseClient(BaseAPIClient):
                 **kwargs
             }
             
-            # Add delta sync filter if provided (though Arrivy API may ignore it)
-            if last_sync:
+            # Add delta sync filter if provided - prefer 'from'/'to' parameters over 'updated_after'
+            # The 'from'/'to' parameters should be passed in kwargs, not added here
+            if last_sync and 'from' not in kwargs and 'to' not in kwargs:
+                # Fallback to updated_after only if 'from'/'to' not already specified
                 last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
                 api_params["updated_after"] = last_sync_str
             

@@ -80,7 +80,7 @@ class Command(BaseSyncCommand):
             # Prepare sync options (updated for standardized flags)
             sync_options = {
                 'force_full': options.get('full', False),
-                'since_param': options.get('start_date'),  # Fixed: use since_param for delta sync
+                'since_param': options.get('start_date'),  # Use 'start_date' parameter for delta sync consistency
             }
             
             # Add date filters if provided

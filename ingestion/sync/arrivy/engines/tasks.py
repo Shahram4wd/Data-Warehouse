@@ -42,12 +42,18 @@ class ArrivyTasksSyncEngine(ArrivyBaseSyncEngine):
         """
         client = await self.initialize_client()
         
-        logger.info(f"Fetching tasks with last_sync={last_sync}, batch_size={self.batch_size}")
+        # Use instance attributes for date filters if they were set during execute_sync
+        start_date = getattr(self, 'start_date', None) or last_sync
+        end_date = getattr(self, 'end_date', None)
         
-        # Use tasks endpoint
-        logger.info("Using tasks endpoint")
+        logger.info(f"Fetching tasks with start_date={start_date}, end_date={end_date}, batch_size={self.batch_size}")
+        
+        # Use tasks endpoint with proper date filtering
+        logger.info("Using tasks endpoint with delta sync support")
         async for batch in client.fetch_tasks(
             last_sync=last_sync,
+            start_date=start_date,
+            end_date=end_date,
             page_size=self.batch_size,
             max_records=self.max_records
         ):
