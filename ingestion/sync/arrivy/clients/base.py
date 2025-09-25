@@ -312,6 +312,9 @@ class ArrivyBaseClient(BaseAPIClient):
                 # Fallback to updated_after only if 'from'/'to' not already specified
                 last_sync_str = last_sync.strftime("%Y-%m-%dT%H:%M:%SZ")
                 api_params["updated_after"] = last_sync_str
+                logger.debug(f"Using fallback updated_after parameter: {last_sync_str}")
+            elif 'from' in kwargs and 'to' in kwargs:
+                logger.debug(f"Using from/to range parameters for delta sync")
             
             try:
                 start_time = time.time()

@@ -21,6 +21,11 @@ class ArrivyEntitiesClient(ArrivyBaseClient):
         """
         Fetch entities from Arrivy API with delta sync support
         
+        Uses proper Arrivy API delta sync pattern:
+        - from/to date range parameters for time-based filtering
+        - order_by=CREATED for consistent chronological ordering
+        - Efficient server-side filtering instead of client-side
+        
         Args:
             last_sync: Last sync timestamp for delta sync
             page_size: Records per page
@@ -30,10 +35,40 @@ class ArrivyEntitiesClient(ArrivyBaseClient):
         """
         logger.info(f"Fetching entities with page_size={page_size}, last_sync={last_sync}")
         
+        # Prepare API parameters for delta sync following Arrivy's recommended pattern
+        api_kwargs = {}
+        
+        if last_sync:
+            # Use from/to range with order_by=CREATED as recommended by Arrivy API
+            from django.utils import timezone
+            
+            # From: last sync timestamp
+            # To: current time to get all updates since last sync
+            current_time = timezone.now()
+            
+            # Format timestamps for Arrivy API (ISO format with timezone)
+            from_timestamp = last_sync.strftime("%Y-%m-%dT%H:%M:%S%z")
+            to_timestamp = current_time.strftime("%Y-%m-%dT%H:%M:%S%z")
+            
+            # URL encode the + sign in timezone offset
+            from_timestamp = from_timestamp.replace('+', '%2B')
+            to_timestamp = to_timestamp.replace('+', '%2B')
+            
+            api_kwargs['from'] = from_timestamp
+            api_kwargs['to'] = to_timestamp
+            api_kwargs['order_by'] = 'CREATED'  # Ensures chronological order for reliable delta sync
+            
+            logger.info(f"Delta sync: from={from_timestamp}, to={to_timestamp}, order_by=CREATED")
+        else:
+            # For full sync, use order_by=CREATED for consistent ordering
+            api_kwargs['order_by'] = 'CREATED'
+            logger.info("Full sync: order_by=CREATED")
+        
         async for batch in self.fetch_paginated_data(
             endpoint="entities",
-            last_sync=last_sync,
-            page_size=page_size
+            last_sync=None,  # Don't pass last_sync since we're using from/to parameters
+            page_size=page_size,
+            **api_kwargs
         ):
             logger.debug(f"Fetched batch of {len(batch)} entities")
             yield batch
