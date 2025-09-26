@@ -156,21 +156,7 @@ def run_ingestion(self, schedule_id: int):
     from ingestion.models import SyncSchedule
     from ingestion.models.common import SyncHistory
     from ingestion.services.worker_pool import get_worker_pool
-    from ingestion.services.ingestion_adapter import _get_genius_sync_type
-    
-    # Helper function to convert model names to proper sync_type format
-    def _normalize_sync_type(crm_source: str, model_name: str) -> str:
-        """Convert model names to standardized sync_type format"""
-        if not model_name:
-            return 'all'
-        
-        # For Genius models, convert from legacy format to new format
-        if crm_source == 'genius' and model_name.startswith('Genius_'):
-            normalized = _get_genius_sync_type(model_name)
-            if normalized:
-                return normalized
-        
-        return model_name
+    from ingestion.services.ingestion_adapter import normalize_sync_type
     
     # Lock key to prevent overlapping runs for the same source and mode
     def _lock_key(source_key: str, mode: str) -> str:
@@ -189,7 +175,7 @@ def run_ingestion(self, schedule_id: int):
             # Record a skipped run in SyncHistory
             SyncHistory.objects.create(
                 crm_source=schedule.source_key,
-                sync_type=_normalize_sync_type(schedule.source_key, schedule.model_name),
+                sync_type=normalize_sync_type(schedule.source_key, schedule.model_name),
                 start_time=timezone.now(),
                 end_time=timezone.now(),
                 status='failed',  # represent skip as failed/partial if needed
@@ -210,7 +196,7 @@ def run_ingestion(self, schedule_id: int):
         # Submit task to worker pool with schedule information
         task_id = worker_pool.submit_task(
             crm_source=schedule.source_key,
-            sync_type=_normalize_sync_type(schedule.source_key, schedule.model_name),
+            sync_type=normalize_sync_type(schedule.source_key, schedule.model_name),
             parameters=schedule.options or {},
             priority=0
         )
@@ -221,7 +207,7 @@ def run_ingestion(self, schedule_id: int):
         started = timezone.now()
         history = SyncHistory.objects.create(
             crm_source=schedule.source_key,
-            sync_type=_normalize_sync_type(schedule.source_key, schedule.model_name),
+            sync_type=normalize_sync_type(schedule.source_key, schedule.model_name),
             start_time=started,
             status='running',
             configuration={"schedule_id": schedule.id, "worker_pool_task_id": task_id, **(schedule.options or {})},

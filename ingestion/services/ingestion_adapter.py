@@ -156,6 +156,93 @@ def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
         f"Available combinations: {available_keys}"
     )
 
+def normalize_sync_type(crm_source: str, sync_type: str) -> str:
+    """
+    Normalize sync_type to standardized format for any CRM system.
+    This is the main function that should be used across the entire application.
+    
+    Args:
+        crm_source: The CRM source (e.g., 'genius', 'callrail', 'five9', 'arrivy')
+        sync_type: The sync_type to normalize
+        
+    Returns:
+        Normalized sync_type in standardized format
+    """
+    if not sync_type:
+        return 'all'
+    
+    # Route to appropriate normalizer based on CRM source
+    if crm_source == 'genius':
+        return _get_genius_sync_type(sync_type) or sync_type
+    elif crm_source == 'callrail':
+        return _get_callrail_sync_type(sync_type) or sync_type
+    elif crm_source == 'five9':
+        return _get_five9_sync_type(sync_type) or sync_type
+    elif crm_source == 'arrivy':
+        return _get_arrivy_sync_type(sync_type) or sync_type
+    elif crm_source == 'hubspot':
+        return _get_hubspot_sync_type(sync_type) or sync_type
+    
+    return sync_type
+
+def _get_callrail_sync_type(sync_type: str) -> str:
+    """Normalize CallRail sync_type from legacy format"""
+    if not sync_type or not sync_type.startswith('CallRail_'):
+        return None
+        
+    base_name = sync_type.replace('CallRail_', '').lower()
+    pluralization_map = {
+        'account': 'accounts',
+        'call': 'calls',
+        'company': 'companies', 
+        'tag': 'tags',
+        'tracker': 'trackers',
+        'user': 'users'
+    }
+    return pluralization_map.get(base_name, base_name)
+
+def _get_five9_sync_type(sync_type: str) -> str:
+    """Normalize Five9 sync_type from legacy format"""
+    if not sync_type or not sync_type.startswith('Five9'):
+        return None
+        
+    base_name = sync_type.replace('Five9', '').lower()
+    pluralization_map = {
+        'contact': 'contacts'
+    }
+    return pluralization_map.get(base_name, base_name)
+
+def _get_arrivy_sync_type(sync_type: str) -> str:
+    """Normalize Arrivy sync_type from legacy format"""
+    if not sync_type or not sync_type.startswith('Arrivy_'):
+        return None
+        
+    base_name = sync_type.replace('Arrivy_', '').lower()
+    pluralization_map = {
+        'booking': 'bookings',
+        'group': 'groups',
+        'status': 'statuses'
+    }
+    return pluralization_map.get(base_name, base_name)
+
+def _get_hubspot_sync_type(sync_type: str) -> str:
+    """Normalize HubSpot sync_type from legacy format"""
+    if not sync_type or not sync_type.startswith('HubSpot_'):
+        return None
+        
+    base_name = sync_type.replace('HubSpot_', '').lower()
+    
+    # Handle special HubSpot naming conventions
+    conversion_map = {
+        'associationscontactappointment': 'associations_contact_appointment',
+        'contact': 'contacts',
+        'deal': 'deals',
+        'appointment': 'appointments',
+        'division': 'divisions',
+        'geniususer': 'genius_users'
+    }
+    return conversion_map.get(base_name, base_name)
+
 def _get_genius_sync_type(model_name: str) -> str:
     """Get the sync_type for a Genius model by checking if it follows common patterns"""
     # Most genius sync types follow a simple pattern: 
