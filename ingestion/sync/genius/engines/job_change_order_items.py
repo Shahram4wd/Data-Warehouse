@@ -11,7 +11,7 @@ from asgiref.sync import sync_to_async
 from .base import GeniusBaseSyncEngine
 from ..clients.job_change_order_items import GeniusJobChangeOrderItemClient
 from ..processors.job_change_order_items import GeniusJobChangeOrderItemProcessor
-from ingestion.models import Genius_JobChangeOrderItem
+from ingestion.models import Genius_JobChangeOrderItem, SyncHistory
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +24,27 @@ class GeniusJobChangeOrderItemsSyncEngine(GeniusBaseSyncEngine):
         self.client = GeniusJobChangeOrderItemClient()
         self.processor = GeniusJobChangeOrderItemProcessor(Genius_JobChangeOrderItem)
     
-    async def sync_job_change_order_items(self, since_date=None, force_overwrite=False, 
-                           dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
-        """Main sync method for job change order items"""
+    def sync_job_change_order_items(self, since_date=None, force_overwrite=False, 
+                           dry_run=False, max_records=0, full_sync=False, **kwargs) -> Dict[str, Any]:
+        """Main sync method for job change order items with delta sync support"""
+        
+        # Create sync history record
+        sync_history = SyncHistory.objects.create(
+            crm_source='genius',
+            sync_type='job_change_order_items',
+            start_time=timezone.now(),
+            status='running'
+        )
+        
+        # Auto-detect delta sync if since_date not provided, not full sync, and not forcing overwrite
+        if since_date is None and not full_sync and not force_overwrite:
+            since_date = self.get_last_sync_timestamp()
+        
+        logger.info(f"🚀 Starting job change order items sync")
+        logger.info(f"   📅 Since date: {since_date}")
+        logger.info(f"   🔄 Force overwrite: {force_overwrite}")
+        logger.info(f"   🧪 Dry run: {dry_run}")
+        logger.info(f"   📊 Max records: {max_records or 'unlimited'}")
         
         stats = {
             'total_processed': 0,
@@ -37,11 +55,17 @@ class GeniusJobChangeOrderItemsSyncEngine(GeniusBaseSyncEngine):
         }
         
         try:
-            # Get job change order items from source
-            raw_data = await sync_to_async(self.client.get_job_change_order_items)(
-                since_date=since_date,
-                limit=max_records
-            )
+            # Get total count for progress tracking  
+            total_count = self.client.get_total_count(since_date)
+            logger.info(f"Total job change order items to process: {total_count:,}")
+            
+            # Get job change order items from source using cursor-based pagination
+            raw_data = []
+            for chunk in self.client.get_chunked_items(chunk_size=10000, since=since_date):
+                raw_data.extend(chunk)
+                if max_records and len(raw_data) >= max_records:
+                    raw_data = raw_data[:max_records]
+                    break
             
             logger.info(f"Fetched {len(raw_data)} job change order items from Genius")
             
@@ -50,119 +74,97 @@ class GeniusJobChangeOrderItemsSyncEngine(GeniusBaseSyncEngine):
                 stats['total_processed'] = len(raw_data)
                 return stats
             
-            # Process records in batches
-            batch_size = 100
+            if not raw_data:
+                logger.info("No job change order items to sync")
+                return stats
+            
+            logger.info(f"Processing {len(raw_data)} job change order items in batches")
+            
+            # Get field mapping for data transformation
             field_mapping = self.client.get_field_mapping()
             
+            # Process in batches for better performance
+            batch_size = 10000
             for i in range(0, len(raw_data), batch_size):
                 batch = raw_data[i:i + batch_size]
-                batch_stats = await self._process_job_change_order_item_batch(
-                    batch, field_mapping, force_overwrite
-                )
+                batch_num = (i // batch_size) + 1
+                total_batches = (len(raw_data) + batch_size - 1) // batch_size
                 
-                # Update overall stats
-                for key in stats:
-                    stats[key] += batch_stats[key]
+                logger.info(f"📦 Processing batch {batch_num}/{total_batches} ({len(batch)} items)")
                 
-                logger.info(f"Processed batch {i//batch_size + 1}: "
-                          f"{batch_stats['created']} created, "
-                          f"{batch_stats['updated']} updated, "
-                          f"{batch_stats['errors']} errors")
+                try:
+                    # Transform raw tuples to dictionaries
+                    transformed_batch = []
+                    for raw_record in batch:
+                        try:
+                            record_dict = self.processor.transform_record(raw_record, field_mapping)
+                            transformed_batch.append(record_dict)
+                        except Exception as e:
+                            logger.error(f"Validation failed for record {raw_record}: {e}")
+                            stats['errors'] += 1
+                            continue
+                    
+                    if not dry_run and transformed_batch:
+                        batch_stats = self.processor.process_batch(transformed_batch, force_overwrite=force_overwrite)
+                        stats['created'] += batch_stats['created']
+                        stats['updated'] += batch_stats['updated']
+                        stats['errors'] += batch_stats['errors']
+                    
+                    stats['total_processed'] += len(transformed_batch)
+                    
+                except Exception as e:
+                    logger.error(f"Error processing batch {batch_num}: {e}")
+                    stats['errors'] += len(batch)
+                    
+            logger.info(f"✅ Job change order items sync completed. Stats: {stats}")
             
-            logger.info(f"Job change order item sync completed. Total stats: {stats}")
+            # Update sync history
+            if not dry_run:
+                self.complete_sync_record(sync_history, stats)
+            
             return stats
             
         except Exception as e:
             logger.error(f"Job change order item sync failed: {str(e)}")
+            # Mark sync as failed
+            sync_history.end_time = timezone.now()
+            sync_history.status = 'failed'
+            sync_history.save()
             raise
         
         finally:
-            self.client.disconnect()
+            # Connection cleanup is handled automatically by the client
+            pass
     
-    @sync_to_async
-    def _process_job_change_order_item_batch(self, batch: List[tuple], field_mapping: List[str], 
-                               force_overwrite: bool = False) -> Dict[str, int]:
-        """Process a batch of job change order item records"""
-        
-        stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
-        
-        # Prepare data for bulk operations
-        validated_records = []
-        
-        # First pass: transform and validate all records
-        for raw_record in batch:
-            try:
-                stats['total_processed'] += 1
-                
-                # Transform raw data to dict
-                record_data = self.processor.transform_record(raw_record, field_mapping)
-                
-                # Validate the record
-                validated_record = self.processor.validate_record(record_data)
-                
-                validated_records.append(validated_record)
-                
-            except Exception as e:
-                logger.error(f"Error processing job change order item record {raw_record}: {e}")
-                stats['errors'] += 1
-                continue
-        
-        if validated_records:
-            # Perform bulk upsert
-            upsert_stats = self._bulk_upsert_records(validated_records, force_overwrite)
-            stats['created'] += upsert_stats['created']
-            stats['updated'] += upsert_stats['updated']
-        
-        return stats
-    
-    def _bulk_upsert_records(self, records: List[Dict[str, Any]], force: bool = False) -> Dict[str, int]:
-        """Bulk upsert records with conflict resolution"""
-        created_count = 0
-        updated_count = 0
-        
-        if not records:
-            return {'created': created_count, 'updated': updated_count}
-        
-        logger.info(f"Bulk upserting {len(records)} job change order item records (force={force})")
-        
-        # Prepare model instances
-        model_instances = []
-        for record in records:
-            instance = Genius_JobChangeOrderItem(**record)
-            model_instances.append(instance)
-        
-        with transaction.atomic():
-            # Get existing IDs BEFORE the operation to calculate created vs updated
-            existing_ids = set(
-                Genius_JobChangeOrderItem.objects.filter(
-                    id__in=[r['id'] for r in records]
-                ).values_list('id', flat=True)
-            )
+    def get_last_sync_timestamp(self):
+        """Get the timestamp of the last successful sync"""
+        try:
+            last_sync = SyncHistory.objects.filter(
+                crm_source='genius',
+                sync_type='job_change_order_items',
+                status='success'
+            ).order_by('-end_time').first()
             
-            if force:
-                # Force mode: overwrite all fields including sync timestamps
-                Genius_JobChangeOrderItem.objects.bulk_create(
-                    model_instances,
-                    batch_size=100,
-                    update_conflicts=True,
-                    unique_fields=['id'],
-                    update_fields=['change_order_id', 'description', 'amount', 'created_at', 'updated_at', 'sync_created_at', 'sync_updated_at']
-                )
-                logger.info(f"Force mode: completely overwriting records")
+            if last_sync and last_sync.end_time:
+                logger.info(f"📅 Last successful sync: {last_sync.end_time}")
+                return last_sync.end_time
             else:
-                # Normal mode: standard upsert, preserve sync timestamps
-                Genius_JobChangeOrderItem.objects.bulk_create(
-                    model_instances,
-                    batch_size=100,
-                    update_conflicts=True,
-                    unique_fields=['id'],
-                    update_fields=['change_order_id', 'description', 'amount', 'created_at', 'updated_at']
-                )
-            
-            # Calculate created vs updated counts
-            created_count = len([r for r in records if r['id'] not in existing_ids])
-            updated_count = len(records) - created_count
-        
-        logger.info(f"Bulk upsert completed: {created_count} created, {updated_count} updated")
-        return {'created': created_count, 'updated': updated_count}
+                logger.info("📅 No previous successful sync found, performing full sync")
+                return None
+        except Exception as e:
+            logger.error(f"Error getting last sync timestamp: {e}")
+            return None
+    
+    def complete_sync_record(self, sync_history, stats):
+        """Complete the sync history record"""
+        try:
+            sync_history.end_time = timezone.now()
+            sync_history.status = 'success'
+            sync_history.records_processed = stats['total_processed']
+            sync_history.records_created = stats['created']
+            sync_history.records_updated = stats['updated']
+            sync_history.save()
+            logger.info(f"✅ Sync history updated: {sync_history.id}")
+        except Exception as e:
+            logger.error(f"Error updating sync history: {e}")
 

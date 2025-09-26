@@ -87,3 +87,72 @@ class GeniusJobChangeOrderItemClient(GeniusBaseClient):
             # If we got less than chunk_size records, we're at the end
             if len(chunk_results) < chunk_size:
                 break
+
+    def get_chunked_items(self, chunk_size: int = 1000, since: Optional[datetime] = None):
+        """
+        Generator that yields chunks using cursor-based pagination for better performance
+        
+        Args:
+            chunk_size: Number of records to fetch per page
+            since: Get records modified since this datetime
+            
+        Yields:
+            Lists of job change order item records
+        """
+        last_id = 0
+        total_fetched = 0
+        
+        while True:
+            # Build cursor-based query
+            query = """
+            SELECT 
+                jcoi.id,
+                jcoi.change_order_id,
+                jcoi.description,
+                jcoi.amount,
+                jcoi.created_at,
+                jcoi.updated_at
+            FROM job_change_order_item jcoi
+            WHERE jcoi.id > %s
+            """
+            
+            params = [last_id]
+            
+            # Add since_date filter if provided
+            if since:
+                query += " AND jcoi.updated_at >= %s"
+                params.append(since.strftime('%Y-%m-%d %H:%M:%S'))
+            
+            query += f" ORDER BY jcoi.id LIMIT {chunk_size}"
+            
+            logger.debug(f"Cursor-based query: {query} with params: {params}")
+            chunk_results = self.execute_query(query, tuple(params))
+            
+            if not chunk_results:
+                # No more records, break the loop
+                break
+            
+            total_fetched += len(chunk_results)
+            logger.debug(f"Fetched chunk of {len(chunk_results)} items (total: {total_fetched})")
+            
+            yield chunk_results
+            
+            # Update cursor for next iteration (last record's ID)
+            last_id = chunk_results[-1][0]  # Assuming ID is the first field
+            
+            # If we got less than chunk_size records, we're at the end
+            if len(chunk_results) < chunk_size:
+                break
+
+    def get_total_count(self, since_date: Optional[datetime] = None) -> int:
+        """Get total count of job change order items matching the criteria"""
+        
+        query = "SELECT COUNT(*) FROM job_change_order_item jcoi"
+        
+        # Add WHERE clause for incremental sync
+        where_clause = self.build_where_clause(since_date, self.table_name)
+        if where_clause:
+            query += f" {where_clause}"
+        
+        result = self.execute_query(query)
+        return result[0][0] if result else 0
