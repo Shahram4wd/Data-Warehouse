@@ -144,12 +144,17 @@ class GeniusUsersSyncEngine:
     def _sync_chunked_users(self, since_date: Optional[datetime], force_overwrite: bool, 
                            dry_run: bool, max_records: Optional[int], 
                            stats: Dict[str, Any]) -> Dict[str, Any]:
-        """Process users data in chunks for large datasets"""
+        """Process users data in chunks using cursor-based pagination for better performance"""
         
-        offset = 0
+        cursor = None
+        chunk_num = 0
         total_processed = 0
         
+        logger.info("🚀 Using optimized cursor-based pagination for better performance")
+        
         while True:
+            chunk_num += 1
+            
             # Apply max_records limit to chunk size if specified
             current_chunk_size = self.chunk_size
             if max_records:
@@ -158,21 +163,29 @@ class GeniusUsersSyncEngine:
                     break
                 current_chunk_size = min(self.chunk_size, remaining)
             
-            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {current_chunk_size})")
+            logger.info(f"📦 Fetching chunk {chunk_num} with cursor-based pagination (chunk_size: {current_chunk_size})")
             
-            # Get chunked query for logging
-            query = self.client.get_chunked_query(offset, current_chunk_size, since_date)
-            logger.info(query)
-            
-            # Fetch chunk data
-            chunk_data = self.client.get_chunked_users(offset, current_chunk_size, since_date)
+            # Fetch chunk data using cursor-based pagination
+            try:
+                chunk_data, next_cursor = self.client.get_cursor_based_users(
+                    chunk_size=current_chunk_size,
+                    last_cursor=cursor,
+                    since_date=since_date
+                )
+            except Exception as e:
+                logger.warning(f"Cursor-based pagination failed for chunk {chunk_num}: {e}")
+                logger.info("⚠️ Falling back to OFFSET-based pagination")
+                # Fallback to offset-based method
+                offset = (chunk_num - 1) * self.chunk_size
+                chunk_data = self.client.get_chunked_users(offset, current_chunk_size, since_date)
+                next_cursor = None if len(chunk_data) < current_chunk_size else True
             
             if not chunk_data:
-                logger.info("No more data to process")
+                logger.info("✅ No more data to process")
                 break
                 
-            logger.info(f"Processing chunk {(offset // self.chunk_size) + 1}: "
-                       f"{len(chunk_data)} records (total processed so far: {total_processed + len(chunk_data)})")
+            logger.info(f"⚙️  Processing chunk {chunk_num}: {len(chunk_data)} records "
+                       f"(total processed so far: {total_processed + len(chunk_data)})")
             
             # Process this chunk
             chunk_stats = self._process_users_batch(chunk_data, force_overwrite, dry_run, stats)
@@ -183,18 +196,21 @@ class GeniusUsersSyncEngine:
             
             total_processed = stats['total_processed']
             
-            logger.info(f"Chunk {(offset // self.chunk_size) + 1} completed - "
-                       f"Created: {chunk_stats['created'] - (stats['created'] - len([r for r in chunk_data if r]))}, "
-                       f"Updated: {chunk_stats['updated'] - (stats['updated'] - len([r for r in chunk_data if r]))}, "
-                       f"Running totals: {stats['created']} created, {stats['updated']} updated")
+            logger.info(f"✅ Chunk {chunk_num} completed - "
+                       f"Processed: {len(chunk_data)}, "
+                       f"Running totals: {stats['created']} created, {stats['updated']} updated, "
+                       f"{stats['errors']} errors")
             
-            # Move to next chunk
-            offset += current_chunk_size
+            # Update cursor for next iteration
+            cursor = next_cursor
             
-            # Break if we got less data than requested (end of data)
-            if len(chunk_data) < current_chunk_size:
+            # Break if no more data (cursor is None)
+            if cursor is None:
+                logger.info("🏁 Reached end of data (cursor is None)")
                 break
         
+        logger.info(f"🎯 Completed chunked processing: {chunk_num} chunks processed, "
+                   f"{total_processed} total records")
         return stats
     
     def _process_users_batch(self, users_data: list, force_overwrite: bool, 

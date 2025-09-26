@@ -55,18 +55,32 @@ class GeniusAppointmentServicesSyncEngine:
     
     def complete_sync_record(self, sync_record: SyncHistory, stats: Dict[str, Any], 
                            error_message: Optional[str] = None):
-        """Complete the SyncHistory record"""
+        """Complete the SyncHistory record with proper performance metrics"""
         sync_record.end_time = timezone.now()
-        sync_record.total_processed = stats.get('total_processed', 0)
-        sync_record.successful_count = stats.get('created', 0) + stats.get('updated', 0)
-        sync_record.error_count = stats.get('errors', 0)
-        sync_record.statistics = stats
+        sync_record.records_processed = stats.get('total_processed', 0)
+        sync_record.records_created = stats.get('created', 0)
+        sync_record.records_updated = stats.get('updated', 0)
+        sync_record.records_failed = stats.get('errors', 0)
+        
+        # Calculate performance metrics
+        duration = (sync_record.end_time - sync_record.start_time).total_seconds()
+        total_records = sync_record.records_processed
+        successful_records = sync_record.records_created + sync_record.records_updated
+        
+        performance_metrics = {
+            'duration_seconds': duration,
+            'records_per_second': total_records / duration if duration > 0 else 0,
+            'success_rate': successful_records / total_records if total_records > 0 else 0,
+            'chunk_size': getattr(self, 'chunk_size', 100000),
+            'batch_size': getattr(self, 'batch_size', 500)
+        }
+        sync_record.performance_metrics = performance_metrics
         
         if error_message:
             sync_record.status = 'failed'
             sync_record.error_message = error_message
         else:
-            sync_record.status = 'success'
+            sync_record.status = 'success' if stats.get('errors', 0) == 0 else 'partial'
         
         sync_record.save()
     
@@ -141,15 +155,21 @@ class GeniusAppointmentServicesSyncEngine:
         Returns:
             Dictionary containing sync statistics
         """
-        logger.info(f"Starting appointment services sync - since_date: {since_date}, force_overwrite: {force_overwrite}, "
-                   f"dry_run: {dry_run}, max_records: {max_records}")
+        start_time = timezone.now()
+        logger.info(f"🚀 Starting appointment services sync at {start_time}")
+        logger.info(f"   📅 Since date: {since_date}")
+        logger.info(f"   🔄 Force overwrite: {force_overwrite}")
+        logger.info(f"   🧪 Dry run: {dry_run}")
+        logger.info(f"   📊 Max records: {max_records or 'unlimited'}")
         
         # Create SyncHistory record
         configuration = {
             'since_date': since_date.isoformat() if since_date else None,
             'force_overwrite': force_overwrite,
             'dry_run': dry_run,
-            'max_records': max_records
+            'max_records': max_records,
+            'chunk_size': self.chunk_size,
+            'batch_size': self.batch_size
         }
         sync_record = self.create_sync_record(configuration)
         
@@ -169,12 +189,23 @@ class GeniusAppointmentServicesSyncEngine:
                 # For larger datasets, use chunked processing
                 stats = self._sync_chunked_appointment_services(since_date, force_overwrite, dry_run, max_records, stats)
             
-            logger.info(f"Appointment services sync completed - Stats: {stats}")
+            end_time = timezone.now()
+            duration = end_time - start_time
+            
+            logger.info(f"✅ Appointment services sync completed successfully!")
+            logger.info(f"   ⏱️  Duration: {duration.total_seconds():.2f} seconds")
+            logger.info(f"   📊 Total processed: {stats['total_processed']:,}")
+            logger.info(f"   ➕ Created: {stats['created']:,}")
+            logger.info(f"   📝 Updated: {stats['updated']:,}")
+            logger.info(f"   ❌ Errors: {stats['errors']:,}")
+            
+            if stats['total_processed'] > 0:
+                records_per_second = stats['total_processed'] / duration.total_seconds()
+                logger.info(f"   🚀 Performance: {records_per_second:.2f} records/second")
             
             # Complete sync record with success
-            logger.info(f"Calling complete_sync_record for sync_record {sync_record.id}")
+            logger.debug(f"Updating SyncHistory record {sync_record.id}")
             self.complete_sync_record(sync_record, stats)
-            logger.info(f"complete_sync_record finished for sync_record {sync_record.id}")
             
             # Return stats with sync_id for compatibility
             result = stats.copy()
@@ -190,12 +221,17 @@ class GeniusAppointmentServicesSyncEngine:
     def _sync_chunked_appointment_services(self, since_date: Optional[datetime], force_overwrite: bool, 
                                          dry_run: bool, max_records: Optional[int], 
                                          stats: Dict[str, Any]) -> Dict[str, Any]:
-        """Process appointment services data in chunks for large datasets"""
+        """Process appointment services data in chunks using cursor-based pagination for better performance"""
         
-        offset = 0
+        cursor = None
+        chunk_num = 0
         total_processed = 0
         
+        logger.info("Using optimized cursor-based pagination for better performance")
+        
         while True:
+            chunk_num += 1
+            
             # Apply max_records limit to chunk size if specified
             current_chunk_size = self.chunk_size
             if max_records:
@@ -204,21 +240,29 @@ class GeniusAppointmentServicesSyncEngine:
                     break
                 current_chunk_size = min(self.chunk_size, remaining)
             
-            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {current_chunk_size})")
+            logger.info(f"Fetching chunk {chunk_num} with cursor-based pagination (chunk_size: {current_chunk_size})")
             
-            # Get chunked query for logging
-            query = self.client.get_chunked_query(offset, current_chunk_size, since_date)
-            logger.info(query)
-            
-            # Fetch chunk data
-            chunk_data = self.client.get_chunked_appointment_services(offset, current_chunk_size, since_date)
+            # Fetch chunk data using cursor-based pagination
+            try:
+                chunk_data, next_cursor = self.client.get_cursor_based_appointment_services(
+                    chunk_size=current_chunk_size,
+                    last_cursor=cursor,
+                    since_date=since_date
+                )
+            except Exception as e:
+                logger.error(f"Failed to fetch chunk {chunk_num}: {e}")
+                logger.info("Falling back to OFFSET-based pagination")
+                # Fallback to offset-based method
+                offset = (chunk_num - 1) * self.chunk_size
+                chunk_data = self.client.get_chunked_appointment_services(offset, current_chunk_size, since_date)
+                next_cursor = None if len(chunk_data) < current_chunk_size else True
             
             if not chunk_data:
                 logger.info("No more data to process")
                 break
                 
-            logger.info(f"Processing chunk {(offset // self.chunk_size) + 1}: "
-                       f"{len(chunk_data)} records (total processed so far: {total_processed + len(chunk_data)})")
+            logger.info(f"Processing chunk {chunk_num}: {len(chunk_data)} records "
+                       f"(total processed so far: {total_processed + len(chunk_data)})")
             
             # Process this chunk
             chunk_stats = self._process_appointment_services_batch(chunk_data, force_overwrite, dry_run, stats)
@@ -229,18 +273,21 @@ class GeniusAppointmentServicesSyncEngine:
             
             total_processed = stats['total_processed']
             
-            logger.info(f"Chunk {(offset // self.chunk_size) + 1} completed - "
-                       f"Created: {chunk_stats['created'] - (stats['created'] - len([r for r in chunk_data if r]))}, "
-                       f"Updated: {chunk_stats['updated'] - (stats['updated'] - len([r for r in chunk_data if r]))}, "
-                       f"Running totals: {stats['created']} created, {stats['updated']} updated")
+            logger.info(f"Chunk {chunk_num} completed - "
+                       f"Processed: {len(chunk_data)}, "
+                       f"Running totals: {stats['created']} created, {stats['updated']} updated, "
+                       f"{stats['errors']} errors")
             
-            # Move to next chunk
-            offset += current_chunk_size
+            # Update cursor for next iteration
+            cursor = next_cursor
             
-            # Break if we got less data than requested (end of data)
-            if len(chunk_data) < current_chunk_size:
+            # Break if no more data (cursor is None)
+            if cursor is None:
+                logger.info("Reached end of data (cursor is None)")
                 break
         
+        logger.info(f"Completed chunked processing: {chunk_num} chunks processed, "
+                   f"{total_processed} total records")
         return stats
     
     def _process_appointment_services_batch(self, appointment_services_data: list, force_overwrite: bool, 
