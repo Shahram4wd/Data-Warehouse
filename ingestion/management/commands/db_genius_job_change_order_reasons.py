@@ -1,8 +1,7 @@
 """
-Django management command for syncing Genius job change order reasons using the new sync engine architecture.
+Django management command for syncing Genius job change order reasons using the sync engine architecture.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -129,79 +128,33 @@ class Command(BaseCommand):
         if start_date and end_date and start_date > end_date:
             raise ValueError("Start date cannot be after end date")
         
-        # Execute sync
         try:
-            result = asyncio.run(self.execute_async_sync(
-                full=options.get('full', False),
-                since=since,
-                start_date=start_date,
-                end_date=end_date,
-                max_records=options.get('max_records'),
+            engine = GeniusJobChangeOrderReasonsSyncEngine()
+            
+            # Determine since_date for sync
+            since_date = None if options.get('full') else since
+            
+            # Run the sync method
+            result = engine.sync_job_change_order_reasons(
+                since_date=since_date,
+                force_overwrite=options.get('force', False),
                 dry_run=options.get('dry_run', False),
-                debug=options.get('debug', False)
-            ))
+                max_records=options.get('max_records'),
+                full_sync=options.get('full', False)
+            )
             
             # Display results
-            stats = result['stats']
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   📊 Processed: {stats['processed']} records")
-            self.stdout.write(f"   ➕ Created: {stats['created']} records")
-            self.stdout.write(f"   📝 Updated: {stats['updated']} records")
-            self.stdout.write(f"   ❌ Errors: {stats['errors']} records")
-            self.stdout.write(f"   🆔 SyncHistory ID: {result['sync_id']}")
+            self.stdout.write(f"   📊 Processed: {result.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {result.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {result.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {result.get('errors', 0)} records")
             
         except Exception as e:
             logger.exception("Genius job change order reasons sync failed")
             self.stdout.write(
                 self.style.ERROR(f"❌ Sync failed: {str(e)}")
             )
-            raise
 
-    async def execute_async_sync(self, full=False, since=None, start_date=None, 
-                                end_date=None, max_records=None, dry_run=False, 
-                                debug=False, **kwargs):
-        """Execute the async sync operation"""
-        engine = GeniusJobChangeOrderReasonsSyncEngine()
-        
-        # Prepare sync parameters  
-        sync_params = {
-            'since_date': since or start_date,
-            'force_overwrite': full,  # --full flag becomes force_overwrite
-            'dry_run': dry_run,
-            'max_records': max_records or 0,
-        }
-        
-        # Create sync history record
-        sync_record = await engine.create_sync_record(
-            configuration={
-                'full': full,
-                'since': since.isoformat() if since else None,
-                'start_date': start_date.isoformat() if start_date else None,
-                'end_date': end_date.isoformat() if end_date else None,
-                'max_records': max_records,
-                'dry_run': dry_run
-            }
-        )
-        
-        try:
-            # Execute the sync
-            stats = await engine.sync_job_change_order_reasons(**sync_params)
-            
-            # Complete sync history with success
-            await engine.complete_sync_record(sync_record, stats)
-            
-            return {
-                'stats': {
-                    'processed': stats.get('total_processed', 0),
-                    'created': stats.get('created', 0),
-                    'updated': stats.get('updated', 0),
-                    'errors': stats.get('errors', 0)
-                },
-                'sync_id': sync_record.id
-            }
-            
-        except Exception as e:
-            # Complete sync history with failure
-            await engine.complete_sync_record(sync_record, {}, error_message=str(e))
-            raise
+
 
