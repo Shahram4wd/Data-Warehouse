@@ -98,8 +98,13 @@ class Command(BaseCommand):
             self.stdout.write("🐛 DEBUG MODE - Verbose logging enabled")
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
+        
+        # Determine sync mode and display appropriate message
         if options.get('full'):
-            self.stdout.write("📂 FULL SYNC MODE - Ignoring last sync timestamp (fetches ALL records)")
+            self.stdout.write("� FULL SYNC MODE - Ignoring last sync timestamp")
+        else:
+            self.stdout.write("🔧 DELTA SYNC MODE - Processing updates since last sync")
+            
         if options.get('force'):
             self.stdout.write("🔄 FORCE MODE - Existing records will be completely replaced")
         
@@ -113,7 +118,8 @@ class Command(BaseCommand):
                 since_date=since_date,
                 force_overwrite=options.get('force', False),
                 dry_run=options.get('dry_run', False),
-                max_records=options.get('max_records')
+                max_records=options.get('max_records'),
+                full_sync=options.get('full', False)
             )
             
             self.stdout.write("✅ Sync completed successfully:")

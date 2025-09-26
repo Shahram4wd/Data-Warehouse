@@ -35,14 +35,19 @@ class GeniusJobSyncEngine:
         
         try:
             last_sync = SyncHistory.objects.filter(
-                crm_source=self.crm_source,
-                entity_type=self.entity_type,
-                status='completed'
+                crm_source='genius',
+                sync_type='jobs',
+                status='success'
             ).order_by('-end_time').first()
             
-            return last_sync.end_time if last_sync else None
+            if last_sync and last_sync.end_time:
+                logger.info(f"📅 Last successful sync: {last_sync.end_time}")
+                return last_sync.end_time
+            else:
+                logger.info("📅 No previous successful sync found, performing full sync")
+                return None
         except Exception as e:
-            logger.warning(f"Could not retrieve last sync timestamp: {e}")
+            logger.error(f"Error getting last sync timestamp: {e}")
             return None
     
     def create_sync_record(self, configuration: Dict[str, Any]) -> SyncHistory:
@@ -75,153 +80,145 @@ class GeniusJobSyncEngine:
     def sync_jobs(self, since_date: Optional[datetime] = None, 
                  force_overwrite: bool = False, 
                  dry_run: bool = False,
-                 max_records: Optional[int] = None) -> Dict[str, Any]:
+                 max_records: Optional[int] = None,
+                 full_sync: bool = False) -> Dict[str, Any]:
         """
-        Sync jobs data with chunked processing
+        Sync jobs data with cursor-based pagination and delta sync support
         
         Args:
             since_date: Optional datetime to sync from (for delta updates)
             force_overwrite: Whether to force overwrite existing records
             dry_run: Whether to perform a dry run without database changes
             max_records: Maximum number of records to process (for testing)
+            full_sync: Whether to perform a full sync ignoring delta detection
             
         Returns:
             Dictionary containing sync statistics
         """
-        logger.info(f"Starting jobs sync - since_date: {since_date}, force_overwrite: {force_overwrite}, "
-                   f"dry_run: {dry_run}, max_records: {max_records}")
+        # Create sync history record
+        sync_history = SyncHistory.objects.create(
+            crm_source='genius',
+            sync_type='jobs',
+            start_time=timezone.now(),
+            status='running'
+        )
         
-        # Create SyncHistory record
-        configuration = {
-            'since_date': since_date.isoformat() if since_date else None,
-            'force_overwrite': force_overwrite,
-            'dry_run': dry_run,
-            'max_records': max_records
+        # Auto-detect delta sync if since_date not provided, not full sync, and not forcing overwrite
+        if since_date is None and not full_sync and not force_overwrite:
+            since_date = self.get_last_sync_timestamp()
+        
+        logger.info(f"🚀 Starting jobs sync")
+        logger.info(f"   📅 Since date: {since_date}")
+        logger.info(f"   🔄 Force overwrite: {force_overwrite}")
+        logger.info(f"   🧪 Dry run: {dry_run}")
+        logger.info(f"   📊 Max records: {max_records or 'unlimited'}")
+        
+        stats = {
+            'total_processed': 0,
+            'created': 0,
+            'updated': 0,
+            'errors': 0,
+            'skipped': 0
         }
-        sync_record = self.create_sync_record(configuration)
         
         try:
-            stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+            # Get total count for progress tracking  
+            total_count = self.client.get_total_count(since_date)
+            logger.info(f"Total jobs to process: {total_count:,}")
             
-            if max_records and max_records <= 10000:
-                # For smaller datasets, use direct processing
-                logger.info(f"Processing limited dataset: {max_records} records")
-                jobs_data = self.client.get_jobs(since_date=since_date, limit=max_records)
-                stats = self._process_jobs_batch(jobs_data, force_overwrite, dry_run, stats)
-            else:
-                # For larger datasets, use chunked processing
-                stats = self._sync_chunked_jobs(since_date, force_overwrite, dry_run, max_records, stats)
-            
-            logger.info(f"Jobs sync completed - Stats: {stats}")
-            
-            # Complete sync record with success
-            self.complete_sync_record(sync_record, stats)
-            
-            # Return stats with sync_id for compatibility
-            result = stats.copy()
-            result['sync_id'] = sync_record.id
-            return result
-            
-        except Exception as e:
-            # Complete sync record with error
-            error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}
-            self.complete_sync_record(sync_record, error_stats, error_message=str(e))
-            raise
-    
-    def _sync_chunked_jobs(self, since_date: Optional[datetime], force_overwrite: bool, 
-                          dry_run: bool, max_records: Optional[int], 
-                          stats: Dict[str, Any]) -> Dict[str, Any]:
-        """Process jobs data in chunks for large datasets"""
-        
-        offset = 0
-        total_processed = 0
-        
-        while True:
-            # Apply max_records limit to chunk size if specified
-            current_chunk_size = self.chunk_size
-            if max_records:
-                remaining = max_records - total_processed
-                if remaining <= 0:
+            # Get jobs from source using cursor-based pagination
+            raw_data = []
+            for chunk in self.client.get_chunked_items(chunk_size=10000, since=since_date):
+                raw_data.extend(chunk)
+                if max_records and len(raw_data) >= max_records:
+                    raw_data = raw_data[:max_records]
                     break
-                current_chunk_size = min(self.chunk_size, remaining)
             
-            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {current_chunk_size})")
+            logger.info(f"Fetched {len(raw_data)} jobs from Genius")
             
-            # Get chunked query for logging
-            query = self.client.get_chunked_query(offset, current_chunk_size, since_date)
-            logger.info(query)
+            if dry_run:
+                logger.info("DRY RUN: Would process jobs but making no changes")
+                stats['total_processed'] = len(raw_data)
+                return stats
             
-            # Fetch chunk data
-            chunk_data = self.client.get_chunked_jobs(offset, current_chunk_size, since_date)
+            if not raw_data:
+                logger.info("No jobs to sync")
+                return stats
             
-            if not chunk_data:
-                logger.info("No more data to process")
-                break
+            logger.info(f"Processing {len(raw_data)} jobs in batches")
+            
+            # Get field mapping for data transformation
+            field_mapping = self.client.get_field_mapping()
+            
+            # Process in batches for better performance
+            batch_size = 10000
+            for i in range(0, len(raw_data), batch_size):
+                batch = raw_data[i:i + batch_size]
+                batch_num = (i // batch_size) + 1
+                total_batches = (len(raw_data) + batch_size - 1) // batch_size
                 
-            logger.info(f"Processing chunk {(offset // self.chunk_size) + 1}: "
-                       f"{len(chunk_data)} records (total processed so far: {total_processed + len(chunk_data)})")
+                logger.info(f"📦 Processing batch {batch_num}/{total_batches} ({len(batch)} items)")
+                
+                try:
+                    # Transform raw tuples to dictionaries using field mapping
+                    transformed_batch = []
+                    for raw_record in batch:
+                        try:
+                            # Convert tuple to dictionary using field mapping
+                            record_dict = {}
+                            for field_name, column_index in field_mapping.items():
+                                if column_index < len(raw_record):
+                                    record_dict[field_name] = raw_record[column_index]
+                            
+                            transformed_batch.append(record_dict)
+                        except Exception as e:
+                            logger.error(f"Transform failed for record {raw_record}: {e}")
+                            stats['errors'] += 1
+                            continue
+                    
+                    if not dry_run and transformed_batch:
+                        batch_stats = self.processor.process_batch(transformed_batch, force_overwrite=force_overwrite)
+                        stats['created'] += batch_stats['created']
+                        stats['updated'] += batch_stats['updated']
+                        stats['errors'] += batch_stats['errors']
+                    
+                    stats['total_processed'] += len(transformed_batch)
+                    
+                except Exception as e:
+                    logger.error(f"Error processing batch {batch_num}: {e}")
+                    stats['errors'] += len(batch)
+                    
+            logger.info(f"✅ Jobs sync completed. Stats: {stats}")
             
-            # Process this chunk
-            chunk_stats = self._process_jobs_batch(chunk_data, force_overwrite, dry_run, stats)
+            # Update sync history
+            if not dry_run:
+                self.complete_sync_record(sync_history, stats)
             
-            # Update running totals
-            for key in ['total_processed', 'created', 'updated', 'errors']:
-                stats[key] = chunk_stats[key]
-            
-            total_processed = stats['total_processed']
-            
-            logger.info(f"Chunk {(offset // self.chunk_size) + 1} completed - "
-                       f"Created: {chunk_stats['created'] - (stats['created'] - len([r for r in chunk_data if r]))}, "
-                       f"Updated: {chunk_stats['updated'] - (stats['updated'] - len([r for r in chunk_data if r]))}, "
-                       f"Running totals: {stats['created']} created, {stats['updated']} updated")
-            
-            # Move to next chunk
-            offset += current_chunk_size
-            
-            # Break if we got less data than requested (end of data)
-            if len(chunk_data) < current_chunk_size:
-                break
-        
-        return stats
-    
-    def _process_jobs_batch(self, jobs_data: list, force_overwrite: bool, 
-                           dry_run: bool, stats: Dict[str, Any]) -> Dict[str, Any]:
-        """Process a batch of jobs data using bulk operations"""
-        
-        if not jobs_data:
             return stats
             
-        field_mapping = self.client.get_field_mapping()
+        except Exception as e:
+            logger.error(f"Job sync failed: {str(e)}")
+            # Mark sync as failed
+            sync_history.end_time = timezone.now()
+            sync_history.status = 'failed'
+            sync_history.save()
+            raise
         
-        # Process in smaller batches for efficiency
-        batch_count = (len(jobs_data) + self.batch_size - 1) // self.batch_size
-        logger.info(f"Processing {len(jobs_data)} jobs in {batch_count} batches of {self.batch_size}")
-        
-        for i in range(0, len(jobs_data), self.batch_size):
-            batch_num = (i // self.batch_size) + 1
-            batch_data = jobs_data[i:i + self.batch_size]
-            
-            logger.info(f"Processing batch {batch_num}/{batch_count}: records {i+1}-{min(i+self.batch_size, len(jobs_data))}")
-            
-            try:
-                # Process batch through processor
-                batch_stats = self.processor.process_batch(
-                    batch_data, 
-                    field_mapping, 
-                    force_overwrite=force_overwrite,
-                    dry_run=dry_run
-                )
-                
-                # Update cumulative stats
-                for key, value in batch_stats.items():
-                    stats[key] += value
-                
-                logger.info(f"Batch {batch_num} completed - Created: {batch_stats['created']}, "
-                           f"Updated: {batch_stats['updated']}, Total so far: {stats['created']} created, "
-                           f"{stats['updated']} updated")
-                
-            except Exception as e:
-                logger.error(f"Error processing batch {batch_num}: {e}")
-                stats['errors'] += len(batch_data)
-        
-        return stats
+        finally:
+            # Connection cleanup is handled automatically by the client
+            pass
+    
+    def complete_sync_record(self, sync_history, stats):
+        """Complete the sync history record"""
+        try:
+            sync_history.end_time = timezone.now()
+            sync_history.status = 'success'
+            sync_history.records_processed = stats['total_processed']
+            sync_history.records_created = stats['created']
+            sync_history.records_updated = stats['updated']
+            sync_history.save()
+            logger.info(f"✅ Sync history updated: {sync_history.id}")
+        except Exception as e:
+            logger.error(f"Error updating sync history: {e}")
+    
+

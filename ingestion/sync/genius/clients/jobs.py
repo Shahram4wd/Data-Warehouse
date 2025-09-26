@@ -365,3 +365,172 @@ class GeniusJobClient(GeniusBaseClient):
             'is_coc_pdf_attached': 98,
             'updated_at': 99
         }
+    
+    def get_chunked_items(self, chunk_size: int = 10000, since: Optional[datetime] = None):
+        """
+        Generator that yields chunks of jobs using cursor-based pagination for better performance
+        
+        Args:
+            chunk_size: Number of records per chunk
+            since: Optional datetime to filter records updated after this time
+            
+        Yields:
+            Lists of job tuples in chunks
+        """
+        last_id = 0
+        total_fetched = 0
+        
+        while True:
+            # Build the cursor-based query
+            query = """
+            SELECT
+                j.id,
+                j.client_cid,
+                j.prospect_id,
+                j.division_id,
+                j.user_id,
+                j.production_user_id,
+                j.project_coordinator_user_id,
+                j.production_month,
+                j.subcontractor_id,
+                j.subcontractor_status_id,
+                j.subcontractor_confirmed,
+                j.status,
+                j.is_in_progress,
+                j.ready_status,
+                j.prep_status_id,
+                j.prep_status_set_date,
+                j.prep_status_is_reset,
+                j.prep_status_notes,
+                j.prep_issue_id,
+                j.service_id,
+                j.is_lead_pb,
+                j.contract_number,
+                j.contract_date,
+                j.contract_amount,
+                j.contract_amount_difference,
+                j.contract_hours,
+                j.contract_file_id,
+                j.job_value,
+                j.deposit_amount,
+                j.deposit_type_id,
+                j.is_financing,
+                j.sales_tax_rate,
+                j.is_sales_tax_exempt,
+                j.commission_payout,
+                j.accrued_commission_payout,
+                j.sold_user_id,
+                j.sold_date,
+                j.start_request_date,
+                j.deadline_date,
+                j.ready_date,
+                j.jsa_sent,
+                j.start_date,
+                j.end_date,
+                j.add_user_id,
+                j.add_date,
+                j.cancel_date,
+                j.cancel_user_id,
+                j.cancel_reason_id,
+                j.is_refund,
+                j.refund_date,
+                j.refund_user_id,
+                j.finish_date,
+                j.is_earned_not_paid,
+                j.materials_arrival_date,
+                j.measure_date,
+                j.measure_time,
+                j.measure_user_id,
+                j.time_format,
+                j.materials_estimated_arrival_date,
+                j.materials_ordered,
+                j.install_date,
+                j.install_time,
+                j.install_time_format,
+                j.price_level,
+                j.price_level_goal,
+                j.price_level_commission,
+                j.price_level_commission_reduction,
+                j.is_reviewed,
+                j.reviewed_by,
+                j.pp_id_updated,
+                j.hoa,
+                j.hoa_approved,
+                j.materials_ordered_old,
+                j.start_month_old,
+                j.cogs_report_month,
+                j.is_cogs_report_month_updated,
+                j.forecast_month,
+                j.coc_sent_on,
+                j.coc_sent_by,
+                j.company_cam_link,
+                j.pm_finished_on,
+                j.estimate_job_duration,
+                j.payment_not_finalized_reason,
+                j.reasons_other,
+                j.payment_type,
+                j.payment_amount,
+                j.is_payment_finalized,
+                j.is_company_cam,
+                j.is_five_star_review,
+                j.projected_end_date,
+                j.is_company_cam_images_correct,
+                j.post_pm_closeout_date,
+                j.pre_pm_closeout_date,
+                j.actual_install_date,
+                j.in_progress_substatus_id,
+                j.is_loan_document_uptodate,
+                j.is_labor_adjustment_correct,
+                j.is_change_order_correct,
+                j.is_coc_pdf_attached,
+                j.updated_at
+            FROM job j
+            WHERE j.id > %s
+            """
+            
+            params = [last_id]
+            
+            # Add date filter if provided
+            if since:
+                query += " AND j.updated_at >= %s"
+                params.append(since.strftime('%Y-%m-%d %H:%M:%S'))
+            
+            query += " ORDER BY j.id LIMIT %s"
+            params.append(chunk_size)
+            
+            logger.debug(f"Cursor-based query: {query} with params: {params}")
+            
+            # Execute query
+            chunk = self.execute_query(query, tuple(params))
+            
+            if not chunk:
+                logger.debug("No more data found, ending pagination")
+                break
+            
+            # Update cursor for next iteration
+            last_id = chunk[-1][0]  # First field is ID
+            total_fetched += len(chunk)
+            
+            logger.debug(f"Fetched chunk of {len(chunk)} items (total: {total_fetched})")
+            
+            yield chunk
+    
+    def get_total_count(self, since: Optional[datetime] = None) -> int:
+        """
+        Get total count of jobs matching the criteria
+        
+        Args:
+            since: Optional datetime to filter records updated after this time
+            
+        Returns:
+            Total count of matching records
+        """
+        query = "SELECT COUNT(*) FROM job j"
+        params = []
+        
+        if since:
+            query += " WHERE j.updated_at >= %s"
+            params.append(since.strftime('%Y-%m-%d %H:%M:%S'))
+        
+        result = self.execute_query(query, tuple(params))
+        return result[0][0] if result else 0
