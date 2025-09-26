@@ -2,7 +2,6 @@
 Django management command for syncing Genius job change orders using the sync engine architecture.
 This command follows the CRM sync guide patterns for consistent data synchronization.
 """
-import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -104,12 +103,14 @@ class Command(BaseCommand):
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        # Handle legacy arguments
-        if options.get('force_overwrite'):
-            self.stdout.write(
-                self.style.WARNING("⚠️  --force is deprecated, use --full instead")
-            )
-            options['full'] = True
+        # Determine sync mode and display appropriate message
+        if options.get('full'):
+            self.stdout.write("🔧 FULL SYNC MODE - Ignoring last sync timestamp")
+        else:
+            self.stdout.write("🔧 DELTA SYNC MODE - Processing updates since last sync")
+            
+        if options.get('force'):
+            self.stdout.write("🔄 FORCE MODE - Existing records will be completely replaced")
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -126,13 +127,14 @@ class Command(BaseCommand):
             # Determine since_date for sync
             since_date = None if options.get('full') else since
             
-            # Run the async method
-            result = asyncio.run(engine.sync_job_change_orders(
+            # Run the sync method
+            result = engine.sync_job_change_orders(
                 since_date=since_date,
                 force_overwrite=options.get('force', False),
                 dry_run=options.get('dry_run', False),
-                max_records=options.get('max_records')
-            ))
+                max_records=options.get('max_records'),
+                full_sync=options.get('full', False)
+            )
             
             # Display results
             self.stdout.write("✅ Sync completed successfully:")

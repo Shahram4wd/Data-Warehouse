@@ -86,3 +86,94 @@ class GeniusJobChangeOrderClient(GeniusBaseClient):
             'financing_note',
             'updated_at'
         ]
+    
+    def get_chunked_items(self, chunk_size: int = 10000, since: Optional[datetime] = None):
+        """
+        Generator that yields chunks of job change orders using cursor-based pagination for better performance
+        
+        Args:
+            chunk_size: Number of records per chunk
+            since: Optional datetime to filter records updated after this time
+            
+        Yields:
+            Lists of job change order tuples in chunks
+        """
+        last_id = 0
+        total_fetched = 0
+        
+        while True:
+            # Build the cursor-based query
+            query = """
+            SELECT
+                jco.id,
+                jco.job_id,
+                jco.number,
+                jco.status_id,
+                jco.type_id,
+                jco.adjustment_change_order_id,
+                jco.effective_date,
+                jco.total_amount,
+                jco.add_user_id,
+                jco.add_date,
+                jco.sold_user_id,
+                jco.sold_date,
+                jco.cancel_user_id,
+                jco.cancel_date,
+                jco.reason_id,
+                jco.envelope_id,
+                jco.total_contract_amount,
+                jco.total_pre_change_orders_amount,
+                jco.signer_name,
+                jco.signer_email,
+                jco.financing_note,
+                jco.updated_at
+            FROM job_change_order jco
+            WHERE jco.id > %s
+            """
+            
+            params = [last_id]
+            
+            # Add date filter if provided
+            if since:
+                query += " AND jco.updated_at >= %s"
+                params.append(since.strftime('%Y-%m-%d %H:%M:%S'))
+            
+            query += " ORDER BY jco.id LIMIT %s"
+            params.append(chunk_size)
+            
+            logger.debug(f"Cursor-based query: {query} with params: {params}")
+            
+            # Execute query
+            chunk = self.execute_query(query, tuple(params))
+            
+            if not chunk:
+                logger.debug("No more data found, ending pagination")
+                break
+            
+            # Update cursor for next iteration
+            last_id = chunk[-1][0]  # First field is ID
+            total_fetched += len(chunk)
+            
+            logger.debug(f"Fetched chunk of {len(chunk)} items (total: {total_fetched})")
+            
+            yield chunk
+    
+    def get_total_count(self, since: Optional[datetime] = None) -> int:
+        """
+        Get total count of job change orders matching the criteria
+        
+        Args:
+            since: Optional datetime to filter records updated after this time
+            
+        Returns:
+            Total count of matching records
+        """
+        query = "SELECT COUNT(*) FROM job_change_order jco"
+        params = []
+        
+        if since:
+            query += " WHERE jco.updated_at >= %s"
+            params.append(since.strftime('%Y-%m-%d %H:%M:%S'))
+        
+        result = self.execute_query(query, tuple(params))
+        return result[0][0] if result else 0
