@@ -99,6 +99,19 @@ class Command(BaseCommand):
             logging.getLogger().setLevel(logging.DEBUG)
             self.stdout.write("🐛 DEBUG MODE - Verbose logging enabled")
         
+        # Display sync mode based on flags
+        full_sync = options.get('full', False)
+        force_overwrite = options.get('force', False)
+        
+        if full_sync and force_overwrite:
+            self.stdout.write("🔧 FULL SYNC MODE + FORCE OVERWRITE MODE")
+        elif full_sync:
+            self.stdout.write("🔧 FULL SYNC MODE - Ignoring last sync timestamp")
+        elif force_overwrite:
+            self.stdout.write("🔧 FORCE OVERWRITE MODE - Replacing existing records")
+        else:
+            self.stdout.write("🔧 DELTA SYNC MODE - Processing updates since last sync")
+        
         # Handle dry run
         if options['dry_run']:
             self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
@@ -108,7 +121,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.WARNING("⚠️  --force is deprecated, use --full instead")
             )
-            options['full'] = True
+            full_sync = True
         
         # Parse datetime arguments
         since = self.parse_datetime_arg(options.get('since'))
@@ -119,18 +132,21 @@ class Command(BaseCommand):
         if start_date and end_date and start_date > end_date:
             raise ValueError("Start date cannot be after end date")
         
+        # For delta sync, use start_date if provided, otherwise since date
+        since_date = None
+        if not full_sync:
+            since_date = start_date or since
+            
         # Execute sync
         try:
             engine = GeniusAppointmentsSyncEngine()
             
-            # Determine since_date for sync
-            since_date = None if options.get('full') else since
-            
             result = engine.sync_appointments(
                 since_date=since_date,
-                force_overwrite=options.get('force', False),
+                force_overwrite=force_overwrite,
                 dry_run=options.get('dry_run', False),
-                max_records=options.get('max_records')
+                max_records=options.get('max_records'),
+                full_sync=full_sync
             )
             
             # Display results
