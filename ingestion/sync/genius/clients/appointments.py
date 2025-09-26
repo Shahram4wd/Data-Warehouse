@@ -4,7 +4,7 @@ Handles data retrieval from the Genius appointments table
 """
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Generator
 
 from ingestion.sync.genius.clients.base import GeniusBaseClient
 
@@ -21,15 +21,21 @@ class GeniusAppointmentsClient(GeniusBaseClient):
     
     def execute_query_dict(self, query: str, params: tuple = None) -> List[Dict[str, Any]]:
         """Execute SQL query and return results as dictionaries"""
-        self.connect()
-        cursor = self.connection.cursor()
+        connection = None
+        cursor = None
+        
         try:
+            connection = self.get_connection()
+            cursor = connection.cursor()
             cursor.execute(query, params or ())
             columns = [desc[0] for desc in cursor.description]
             rows = cursor.fetchall()
             return [dict(zip(columns, row)) for row in rows]
         finally:
-            cursor.close()
+            if cursor:
+                cursor.close()
+            if connection:
+                connection.close()  # Returns to pool if using pooled connection
 
     def get_appointments(self, 
                         since: Optional[datetime] = None,
@@ -81,6 +87,125 @@ class GeniusAppointmentsClient(GeniusBaseClient):
         
         # Execute query and return results as dictionaries
         return self.execute_query_dict(query)
+
+    def get_cursor_based_appointments(self, 
+                                     chunk_size: int = 1000,
+                                     last_cursor: Optional[Dict] = None,
+                                     since: Optional[datetime] = None) -> tuple:
+        """
+        Get appointments using cursor-based pagination for better performance
+        
+        Args:
+            chunk_size: Number of records to fetch per page
+            last_cursor: Cursor from previous page (contains updated_at and id)
+            since: Get records modified since this datetime
+            
+        Returns:
+            Tuple of (records_list, next_cursor_dict)
+        """
+        # Build WHERE clause for incremental sync
+        conditions = []
+        
+        if since:
+            conditions.append(f"a.updated_at >= '{since.strftime('%Y-%m-%d %H:%M:%S')}'")
+        
+        # Add cursor conditions for pagination
+        if last_cursor and 'updated_at' in last_cursor:
+            cursor_conditions = []
+            cursor_conditions.append(f"a.updated_at > '{last_cursor['updated_at']}'")
+            if 'id' in last_cursor:
+                cursor_conditions.append(f"(a.updated_at = '{last_cursor['updated_at']}' AND a.id > {last_cursor['id']})")
+            conditions.append(f"({' OR '.join(cursor_conditions)})")
+        
+        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        
+        # Build the query with cursor-based pagination
+        query = f"""
+            SELECT a.id, a.prospect_id, a.prospect_source_id, a.user_id, a.type_id, 
+                   a.date, a.time, a.duration, a.address1, a.address2, a.city, a.state, a.zip, 
+                   a.email, a.notes, a.add_user_id, a.add_date, a.assign_date, 
+                   a.confirm_user_id, a.confirm_date, a.confirm_with, a.spouses_present, 
+                   a.is_complete, a.complete_outcome_id, a.complete_user_id, a.complete_date, 
+                   a.updated_at, a.marketsharp_id, a.marketsharp_appt_type, a.leap_estimate_id, 
+                   tps.third_party_id AS hubspot_appointment_id
+            FROM {self.table_name} AS a
+            LEFT JOIN third_party_source AS tps 
+              ON tps.id = a.third_party_source_id
+            LEFT JOIN third_party_source_type AS tpst 
+              ON tpst.id = tps.third_party_source_type_id AND tpst.label = 'hubspot'
+            {where_clause}
+            ORDER BY a.updated_at, a.id
+            LIMIT {chunk_size + 1}
+        """
+        
+        logger.debug(f"Cursor-based query: {query}")
+        
+        # Execute query
+        records = self.execute_query_dict(query)
+        
+        # Determine if there are more records and prepare next cursor
+        has_more = len(records) > chunk_size
+        data = records[:chunk_size] if has_more else records
+        
+        next_cursor = None
+        if has_more and data:
+            # Create cursor from last record
+            last_record = data[-1]
+            next_cursor = {
+                'updated_at': last_record['updated_at'],
+                'id': last_record['id']
+            }
+        
+        return data, next_cursor
+
+    def get_chunked_appointments(self, 
+                                chunk_size: int = 1000,
+                                since: Optional[datetime] = None) -> Generator[List[Dict[str, Any]], None, None]:
+        """
+        Generator method to yield appointment chunks using cursor-based pagination
+        
+        Args:
+            chunk_size: Size of each chunk
+            since: Get records modified since this datetime
+            
+        Yields:
+            Lists of appointment records
+        """
+        cursor = None
+        total_fetched = 0
+        
+        while True:
+            # Get next chunk
+            chunk_data, next_cursor = self.get_cursor_based_appointments(
+                chunk_size=chunk_size,
+                last_cursor=cursor,
+                since=since
+            )
+            
+            if not chunk_data:
+                break
+                
+            total_fetched += len(chunk_data)
+            logger.debug(f"Fetched chunk of {len(chunk_data)} appointments (total: {total_fetched})")
+            
+            yield chunk_data
+            
+            # Update cursor for next iteration
+            cursor = next_cursor
+            if not cursor:
+                break  # No more data
+
+    def get_recommended_indexes(self) -> List[str]:
+        """Return recommended database indexes for optimal appointments sync performance"""
+        return [
+            "CREATE INDEX IF NOT EXISTS idx_appointment_updated_at ON appointment (updated_at)",
+            "CREATE INDEX IF NOT EXISTS idx_appointment_updated_at_id ON appointment (updated_at, id)",
+            "CREATE INDEX IF NOT EXISTS idx_appointment_prospect_id ON appointment (prospect_id)",
+            "CREATE INDEX IF NOT EXISTS idx_appointment_user_id ON appointment (user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_appointment_type_id ON appointment (type_id)",
+            "CREATE INDEX IF NOT EXISTS idx_third_party_source_id ON appointment (third_party_source_id)",
+            "CREATE INDEX IF NOT EXISTS idx_third_party_source_type_label ON third_party_source_type (label)",
+        ]
     
     def get_appointments_count(self, 
                               since: Optional[datetime] = None,

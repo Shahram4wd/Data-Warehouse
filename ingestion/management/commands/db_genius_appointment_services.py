@@ -124,7 +124,8 @@ class Command(BaseCommand):
                 since_date=since_date,
                 force_overwrite=force_overwrite,
                 dry_run=options.get('dry_run', False),
-                max_records=options.get('max_records')
+                max_records=options.get('max_records'),
+                full_sync=full_sync
             )
             
             # Display results

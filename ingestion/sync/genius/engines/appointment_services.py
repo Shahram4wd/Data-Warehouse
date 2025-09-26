@@ -35,10 +35,15 @@ class GeniusAppointmentServicesSyncEngine:
             last_sync = SyncHistory.objects.filter(
                 crm_source=self.crm_source,
                 sync_type=self.entity_type,
-                status='completed'
+                status__in=['completed', 'success']  # Handle both possible success statuses
             ).order_by('-end_time').first()
             
-            return last_sync.end_time if last_sync else None
+            if last_sync:
+                logger.info(f"Found last successful sync at {last_sync.end_time} (ID: {last_sync.id})")
+                return last_sync.end_time
+            else:
+                logger.info("No previous successful sync found - performing full sync")
+                return None
         except Exception as e:
             logger.warning(f"Could not retrieve last sync timestamp: {e}")
             return None
@@ -142,20 +147,27 @@ class GeniusAppointmentServicesSyncEngine:
     def sync_appointment_services(self, since_date: Optional[datetime] = None, 
                                 force_overwrite: bool = False, 
                                 dry_run: bool = False,
-                                max_records: Optional[int] = None) -> Dict[str, Any]:
+                                max_records: Optional[int] = None,
+                                full_sync: bool = False) -> Dict[str, Any]:
         """
         Sync appointment services data with chunked processing
         
         Args:
-            since_date: Optional datetime to sync from (for delta updates)
+            since_date: Optional datetime to sync from (for delta updates). If None, will auto-detect from last successful sync (unless full_sync=True)
             force_overwrite: Whether to force overwrite existing records
             dry_run: Whether to perform a dry run without database changes
             max_records: Maximum number of records to process (for testing)
+            full_sync: Whether to perform a full sync (ignoring last sync timestamp)
             
         Returns:
             Dictionary containing sync statistics
         """
         start_time = timezone.now()
+        
+        # Auto-detect delta sync if since_date not provided, not full sync, and not forcing overwrite
+        if since_date is None and not full_sync and not force_overwrite:
+            since_date = self.get_last_sync_timestamp(force_overwrite)
+        
         logger.info(f"🚀 Starting appointment services sync at {start_time}")
         logger.info(f"   📅 Since date: {since_date}")
         logger.info(f"   🔄 Force overwrite: {force_overwrite}")
