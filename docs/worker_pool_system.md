@@ -43,6 +43,12 @@ This system provides intelligent task queuing and worker management for CRM sync
 - Cache failure fallbacks
 - Comprehensive error logging
 
+### 7. Task Registration Reliability
+- Explicit task module imports to ensure Celery autodiscovery
+- Development and production environment compatibility
+- Automatic task registration validation
+- Enhanced debugging capabilities for task discovery issues
+
 ## System Architecture
 
 ### Core Components
@@ -131,6 +137,24 @@ app.conf.beat_schedule = {
     },
     # Additional scheduled tasks...
 }
+```
+
+### Enhanced Task Registration
+
+To ensure reliable task discovery in all environments:
+
+```python
+# Force discovery of tasks from Django apps
+from django.conf import settings
+app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+
+# Explicitly import task modules to ensure they're loaded
+try:
+    import ingestion.tasks
+    import ingestion.tasks_enhanced
+except ImportError as e:
+    import logging
+    logging.getLogger(__name__).warning(f"Could not import ingestion tasks: {e}")
 ```
 
 ## Data Structures and State Management
@@ -392,7 +416,42 @@ python manage.py manage_worker_pool list-tasks
 python manage.py manage_worker_pool process-queue
 ```
 
-**2. High Memory Usage**
+**2. Tasks Not Registered with Celery (CRITICAL)**
+This is a common issue where tasks are submitted but never execute because they're not registered with Celery workers.
+
+**Symptoms:**
+- Tasks showing "running" status in database but never completing
+- Celery worker shows "empty" when inspected
+- Worker pool submits tasks but they fail silently
+
+**Diagnosis:**
+```bash
+# Check if ingestion tasks are registered
+python -c "from celery import current_app; print(f'Ingestion tasks: {len([t for t in current_app.tasks.keys() if \"ingestion\" in t])}')"
+
+# Should show 12+ ingestion tasks. If 0, tasks are not registered.
+```
+
+**Solution:**
+1. Ensure `data_warehouse/celery.py` has explicit task imports:
+```python
+# Force discovery of tasks from Django apps
+from django.conf import settings
+app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+
+# Explicitly import task modules to ensure they're loaded
+try:
+    import ingestion.tasks
+    import ingestion.tasks_enhanced
+except ImportError as e:
+    import logging
+    logging.getLogger(__name__).warning(f"Could not import ingestion tasks: {e}")
+```
+
+2. **Restart Celery worker processes** (this is essential after the fix)
+3. Verify fix with the diagnosis command above
+
+**3. High Memory Usage**
 ```bash
 # Check active task count
 python manage.py manage_worker_pool status
@@ -404,7 +463,7 @@ python manage.py manage_worker_pool config --max-workers 1
 python manage.py manage_worker_pool fix-stuck
 ```
 
-**3. Stale Task Detection**
+**4. Stale Task Detection**
 ```bash
 # Check for stale tasks
 python manage.py manage_worker_pool monitor
@@ -413,7 +472,7 @@ python manage.py manage_worker_pool monitor
 python manage.py cleanup_stale_syncs --minutes 15
 ```
 
-**4. Cache Issues**
+**5. Cache Issues**
 ```bash
 # Check Redis connectivity
 redis-cli ping
@@ -439,6 +498,9 @@ celery -A data_warehouse inspect active
 
 # Fix stuck tasks automatically
 python manage.py manage_worker_pool fix-stuck
+
+# CRITICAL: Verify task registration
+python -c "from celery import current_app; tasks = [t for t in current_app.tasks.keys() if 'ingestion' in t]; print(f'Registered ingestion tasks: {len(tasks)}'); [print(f'  ✓ {t}') for t in sorted(tasks)]"
 ```
 
 ### Log Locations
@@ -532,6 +594,8 @@ The worker pool integrates with the existing SyncHistory model:
 - [ ] Celery broker and result backend configured
 - [ ] Proper queue routing (production vs development)
 - [ ] Monitoring tasks scheduled in beat
+- [ ] **Task registration verified** (12+ ingestion tasks should be registered)
+- [ ] **Celery workers restarted** after configuration changes
 
 ### Development Setup
 
@@ -570,6 +634,9 @@ python manage.py cleanup_stale_syncs --minutes 0
 # 4. Restart services
 sudo systemctl start celery-worker
 sudo systemctl restart celery-beat
+
+# 5. Verify task registration
+python -c "from celery import current_app; print(f'Ingestion tasks: {len([t for t in current_app.tasks.keys() if \"ingestion\" in t])}')"
 ```
 
 ### Recover from Stuck State
@@ -585,6 +652,22 @@ python manage.py manage_worker_pool fix-stuck
 
 # 4. Reset max workers if needed
 python manage.py manage_worker_pool config --max-workers 1
+```
+
+### Fix Task Registration Issues (Production)
+```bash
+# 1. Verify the issue
+python -c "from celery import current_app; print(f'Ingestion tasks: {len([t for t in current_app.tasks.keys() if \"ingestion\" in t])}')"
+
+# 2. If 0 tasks found, check Celery configuration
+cat data_warehouse/celery.py | grep -A 10 "autodiscover_tasks"
+
+# 3. Deploy the fix and restart Celery workers
+# On Render.com: Deploy the updated code and restart the service
+
+# 4. Verify the fix
+python -c "from celery import current_app; print(f'Ingestion tasks: {len([t for t in current_app.tasks.keys() if \"ingestion\" in t])}')"
+# Should show 12+ tasks
 ```
 
 ## Integration Examples
