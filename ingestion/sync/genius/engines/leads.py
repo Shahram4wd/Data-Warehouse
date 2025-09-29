@@ -37,7 +37,7 @@ class GeniusLeadsSyncEngine:
             last_sync = SyncHistory.objects.filter(
                 crm_source=self.crm_source,
                 sync_type=self.entity_type,
-                status='completed'
+                status='success'
             ).order_by('-end_time').first()
             
             return last_sync.end_time if last_sync else None
@@ -88,6 +88,15 @@ class GeniusLeadsSyncEngine:
         Returns:
             Dictionary containing sync statistics
         """
+        # Auto-determine since_date from last successful sync if not provided
+        original_since_date = since_date
+        if since_date is None and not force_overwrite:
+            since_date = self.get_last_sync_timestamp(force_overwrite=False)
+            if since_date:
+                logger.info(f"Auto-determined since_date from last successful sync: {since_date}")
+            else:
+                logger.info("No previous successful sync found, performing full sync")
+        
         logger.info(f"Starting leads sync - since_date: {since_date}, force_overwrite: {force_overwrite}, "
                    f"dry_run: {dry_run}, max_records: {max_records}")
         
@@ -96,7 +105,8 @@ class GeniusLeadsSyncEngine:
             'since_date': since_date.isoformat() if since_date else None,
             'force_overwrite': force_overwrite,
             'dry_run': dry_run,
-            'max_records': max_records
+            'max_records': max_records,
+            'auto_determined_since': original_since_date is None and since_date is not None
         }
         sync_record = self.create_sync_record(configuration)
         

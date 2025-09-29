@@ -31,6 +31,56 @@ class GeniusMarketsharpMarketingSourceMapsSyncEngine(GeniusBaseSyncEngine):
         self.DEFAULT_CHUNK_SIZE = 1000
         self.BATCH_SIZE = 500
     
+    def sync_marketsharp_marketing_source_maps(self, 
+                                                   sync_mode: str = 'incremental',
+                                                   batch_size: int = 1000,
+                                                   max_records: Optional[int] = None,
+                                                   dry_run: bool = False,
+                                                   debug: bool = False,
+                                                   skip_validation: bool = False,
+                                                   since_date: Optional[datetime] = None,
+                                                   start_date: Optional[datetime] = None,
+                                                   **kwargs) -> Dict[str, Any]:
+        """
+        Synchronous wrapper for async sync method - compatible with CRM sync guide patterns
+        """
+        import asyncio
+        
+        # Map sync_mode to existing parameters
+        force_overwrite = (sync_mode == 'force')
+        full_sync = (sync_mode == 'full')
+        
+        # Determine since_date based on sync mode
+        if full_sync:
+            effective_since_date = None
+        elif since_date:
+            effective_since_date = since_date
+        elif start_date:
+            effective_since_date = start_date
+        else:
+            effective_since_date = since_date
+        
+        # Set up parameters for async method
+        sync_params = {
+            'since_date': effective_since_date,
+            'force_overwrite': force_overwrite,
+            'dry_run': dry_run,
+            'max_records': max_records or 0,
+            **kwargs
+        }
+        
+        # Run the async method synchronously
+        try:
+            return asyncio.run(self.sync_marketsharp_marketing_source_maps_async(**sync_params))
+        except RuntimeError as e:
+            if "asyncio.run() cannot be called from a running event loop" in str(e):
+                # Already in an event loop, use different approach
+                import asyncio
+                loop = asyncio.get_event_loop()
+                return loop.run_until_complete(self.sync_marketsharp_marketing_source_maps_async(**sync_params))
+            else:
+                raise
+    
     async def execute_sync(self, 
                           full: bool = False,
                           force: bool = False,
@@ -45,14 +95,14 @@ class GeniusMarketsharpMarketingSourceMapsSyncEngine(GeniusBaseSyncEngine):
         # Determine since_date based on full flag
         since_date = None if full else since
         
-        return await self.sync_marketsharp_marketing_source_maps(
+        return await self.sync_marketsharp_marketing_source_maps_async(
             since_date=since_date, 
             force_overwrite=force,
             dry_run=dry_run, 
             max_records=max_records or 0
         )
     
-    async def sync_marketsharp_marketing_source_maps(self, since_date=None, force_overwrite=False, 
+    async def sync_marketsharp_marketing_source_maps_async(self, since_date=None, force_overwrite=False, 
                         dry_run=False, max_records=0, **kwargs) -> Dict[str, Any]:
         """Main sync method for marketsharp marketing source maps with chunked processing for large datasets"""
         
@@ -143,7 +193,7 @@ class GeniusMarketsharpMarketingSourceMapsSyncEngine(GeniusBaseSyncEngine):
                               f"Running totals: {stats['created']} created, {stats['updated']} updated")
             
         except Exception as e:
-            logger.error(f"Error in sync_marketsharp_marketing_source_maps: {e}")
+            logger.error(f"Error in sync_marketsharp_marketing_source_maps_async: {e}")
             stats['errors'] += 1
             raise
         
