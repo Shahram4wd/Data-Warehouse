@@ -37,13 +37,17 @@ class GeniusProspectsSyncEngine:
             last_sync = SyncHistory.objects.filter(
                 crm_source=self.crm_source,
                 sync_type=self.entity_type,
-                status='completed'
+                status__in=['success', 'completed']
             ).order_by('-end_time').first()
             
             return last_sync.end_time if last_sync else None
         except Exception as e:
             logger.warning(f"Could not retrieve last sync timestamp: {e}")
             return None
+    
+    def sync_prospects(self, **kwargs) -> Dict[str, Any]:
+        """Synchronous wrapper for the prospects sync method"""
+        return self.sync_prospects_async(**kwargs)
     
     def create_sync_record(self, configuration: Dict[str, Any]) -> SyncHistory:
         """Create a new SyncHistory record"""
@@ -59,10 +63,14 @@ class GeniusProspectsSyncEngine:
                            error_message: Optional[str] = None):
         """Complete the SyncHistory record"""
         sync_record.end_time = timezone.now()
-        sync_record.total_processed = stats.get('total_processed', 0)
-        sync_record.successful_count = stats.get('created', 0) + stats.get('updated', 0)
-        sync_record.error_count = stats.get('errors', 0)
-        sync_record.statistics = stats
+        sync_record.records_processed = stats.get('total_processed', 0)
+        sync_record.records_created = stats.get('created', 0)
+        sync_record.records_updated = stats.get('updated', 0)
+        sync_record.records_failed = stats.get('errors', 0)
+        sync_record.performance_metrics = {
+            'duration_seconds': (sync_record.end_time - sync_record.start_time).total_seconds() if sync_record.end_time and sync_record.start_time else 0,
+            'records_per_second': stats.get('total_processed', 0) / max(1, (sync_record.end_time - sync_record.start_time).total_seconds()) if sync_record.end_time and sync_record.start_time else 0
+        }
         
         if error_message:
             sync_record.status = 'failed'
@@ -72,36 +80,54 @@ class GeniusProspectsSyncEngine:
         
         sync_record.save()
     
-    def sync_prospects(self, since_date: Optional[datetime] = None, 
-                      force_overwrite: bool = False, 
-                      dry_run: bool = False,
-                      max_records: Optional[int] = None) -> Dict[str, Any]:
+    def sync_prospects_async(self, sync_mode: str = 'incremental', batch_size: int = 500,
+                           max_records: Optional[int] = None, dry_run: bool = False,
+                           debug: bool = False, skip_validation: bool = False,
+                           start_date: Optional[datetime] = None, **kwargs) -> Dict[str, Any]:
         """
-        Sync prospects data with chunked processing
+        Sync prospects data with CRM sync guide compliance
         
         Args:
-            since_date: Optional datetime to sync from (for delta updates)
-            force_overwrite: Whether to force overwrite existing records
-            dry_run: Whether to perform a dry run without database changes
+            sync_mode: 'incremental', 'full', or 'force'
+            batch_size: Records per batch for bulk operations
             max_records: Maximum number of records to process (for testing)
+            dry_run: Whether to perform a dry run without database changes
+            debug: Enable debug logging
+            skip_validation: Skip data validation steps
+            start_date: Manual sync start date
             
         Returns:
             Dictionary containing sync statistics
         """
-        logger.info(f"Starting prospects sync - since_date: {since_date}, force_overwrite: {force_overwrite}, "
-                   f"dry_run: {dry_run}, max_records: {max_records}")
+        # Map parameters for backward compatibility
+        force_overwrite = (sync_mode == 'force')
+        since_date = start_date if sync_mode != 'full' and start_date else None
+        
+        # Get last sync timestamp if incremental and no start_date provided
+        if sync_mode == 'incremental' and not start_date:
+            since_date = self.get_last_sync_timestamp(force_overwrite=False)
+        
+        logger.info(f"Starting prospects sync - sync_mode: {sync_mode}, since_date: {since_date}, "
+                   f"dry_run: {dry_run}, max_records: {max_records}, batch_size: {batch_size}")
+        
+        # Update batch size configuration
+        self.batch_size = batch_size
         
         # Create SyncHistory record
         configuration = {
+            'sync_mode': sync_mode,
             'since_date': since_date.isoformat() if since_date else None,
             'force_overwrite': force_overwrite,
             'dry_run': dry_run,
-            'max_records': max_records
+            'max_records': max_records,
+            'batch_size': batch_size,
+            'debug': debug,
+            'skip_validation': skip_validation
         }
         sync_record = self.create_sync_record(configuration)
         
         try:
-            stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0}
+            stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
             
             if max_records and max_records <= 10000:
                 # For smaller datasets, use direct processing
@@ -117,14 +143,14 @@ class GeniusProspectsSyncEngine:
             # Complete sync record with success
             self.complete_sync_record(sync_record, stats)
             
-            # Return stats with sync_id for compatibility
+            # Return stats with sync_record_id for CRM guide compliance
             result = stats.copy()
-            result['sync_id'] = sync_record.id
+            result['sync_record_id'] = sync_record.id
             return result
             
         except Exception as e:
             # Complete sync record with error
-            error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}
+            error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1, 'skipped': 0}
             self.complete_sync_record(sync_record, error_stats, error_message=str(e))
             raise
     

@@ -1,6 +1,6 @@
 """
 Django management command for syncing Genius prospects following CRM sync guide patterns.
-Supports both --full and --force flags with distinct behaviors.
+Supports all universal CRM flags: --debug, --full, --force, --dry-run, --batch-size, --max-records, --start-date, --skip-validation
 """
 import logging
 from datetime import datetime
@@ -8,6 +8,7 @@ from typing import Optional
 
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 
 from ingestion.sync.genius.engines.prospects import GeniusProspectsSyncEngine
 
@@ -17,133 +18,136 @@ class Command(BaseCommand):
     help = "Sync prospects data from Genius CRM database using the standardized sync architecture"
 
     def add_arguments(self, parser):
-        # Standard CRM sync arguments following the guide
+        # Universal CRM sync flags (mandatory for all CRM systems)
         parser.add_argument(
-            "--full",
-            action="store_true",
-            help="Perform full sync (ignore last sync timestamp)"
+            '--debug',
+            action='store_true',
+            help='Enable verbose logging, detailed output, and test mode'
         )
         parser.add_argument(
-            "--force",
-            action="store_true", 
-            help="Completely replace existing records"
+            '--full',
+            action='store_true',
+            help='Perform full sync (ignore last sync timestamp)'
         )
         parser.add_argument(
-            "--since",
-            type=str,
-            help="Manual sync start date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)"
+            '--skip-validation',
+            action='store_true',
+            help='Skip data validation steps'
         )
         parser.add_argument(
-            "--start-date",
-            type=str,
-            help="Start date for sync (same as --since, for backward compatibility)"
+            '--dry-run',
+            action='store_true',
+            help='Test run without database writes'
         )
         parser.add_argument(
-            "--end-date", 
-            type=str,
-            help="End date for sync (not implemented for database sources)"
+            '--batch-size',
+            type=int,
+            default=500,
+            help='Records per batch for bulk operations'
         )
         parser.add_argument(
-            "--dry-run",
-            action="store_true",
-            help="Test run without database writes"
-        )
-        parser.add_argument(
-            "--max-records",
+            '--max-records',
             type=int,
             default=0,
-            help="Limit total records (0 = unlimited)"
+            help='Limit total records (0 = unlimited)'
         )
         parser.add_argument(
-            "--debug",
-            action="store_true",
-            help="Enable debug mode with verbose logging"
+            '--force',
+            action='store_true',
+            help='Completely replace existing records'
         )
-        
-        # Legacy arguments for backward compatibility
         parser.add_argument(
-            "--table",
+            '--start-date',
             type=str,
-            default="prospect",
-            help="Table name (legacy, now fixed to 'prospect')"
-        )
-        parser.add_argument(
-            "--start-offset",
-            type=int,
-            default=0,
-            help="Starting offset (legacy, use --since instead)"
-        )
-        parser.add_argument(
-            "--page",
-            type=int,
-            default=1,
-            help="Starting page number (legacy, use --since instead)"
+            help='Manual sync start date (YYYY-MM-DD)'
         )
 
+    def parse_datetime_arg(self, date_str: str) -> Optional[datetime]:
+        """Parse datetime string argument with timezone handling"""
+        if not date_str:
+            return None
+            
+        # Try parsing as datetime first, then as date
+        try:
+            parsed = parse_datetime(date_str)
+            if parsed:
+                # If timezone-naive, make it timezone-aware using Django's current timezone
+                if parsed.tzinfo is None or parsed.tzinfo.utcoffset(parsed) is None:
+                    parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
+                return parsed
+                
+            # If no time component, try parsing as date and add time
+            from django.utils.dateparse import parse_date
+            date_obj = parse_date(date_str)
+            if date_obj:
+                dt = datetime.combine(date_obj, datetime.min.time())
+                return timezone.make_aware(dt, timezone.get_current_timezone())
+                
+            raise ValueError(f"Could not parse datetime: {date_str}")
+        except Exception as e:
+            raise ValueError(f"Invalid datetime format '{date_str}': {e}")
+
     def handle(self, *args, **options):
-        """Execute the sync using the Genius sync engine"""
+        """Main command handler using sync engine pattern"""
         
-        # Handle backward compatibility arguments
-        since_param = options.get("since") or options.get("start_date")
-        
-        if options.get("debug"):
+        # Set up logging
+        if options['debug']:
             logging.getLogger().setLevel(logging.DEBUG)
-            self.stdout.write(self.style.SUCCESS("🐛 DEBUG MODE - Verbose logging enabled"))
+            self.stdout.write("🐛 DEBUG MODE - Verbose logging enabled")
         
-        if options.get("dry_run"):
-            self.stdout.write(self.style.WARNING("🔍 DRY RUN MODE - No database changes will be made"))
+        # Handle dry run
+        if options['dry_run']:
+            self.stdout.write("🔍 DRY RUN MODE - No database changes will be made")
         
-        if options.get("end_date"):
-            self.stdout.write(self.style.WARNING("⚠️ --end-date is not supported for database sources"))
+        # Show flag modes
+        if options.get('force'):
+            self.stdout.write("🔄 FORCE MODE - Overwriting existing records")
+        if options.get('full'):
+            self.stdout.write("📋 FULL SYNC - Ignoring last sync timestamp")
         
-        # Show deprecation warnings for legacy arguments
-        if options.get("start_offset", 0) > 0:
-            self.stdout.write(self.style.WARNING("⚠️ DEPRECATED: --start-offset is deprecated. Use --since instead."))
-        
-        if options.get("page", 1) > 1:
-            self.stdout.write(self.style.WARNING("⚠️ DEPRECATED: --page is deprecated. Use --since instead."))
-        
-        # Prepare sync mode display messages
-        mode_messages = []
-        if options.get("full"):
-            mode_messages.append("FULL SYNC MODE - Ignoring last sync timestamp")
-        if options.get("force"):
-            mode_messages.append("FORCE OVERWRITE MODE - Completely replacing existing records")
-        if not options.get("full") and not options.get("force"):
-            mode_messages.append("DELTA SYNC MODE - Processing updates since last sync")
-        
-        if mode_messages:
-            for message in mode_messages:
-                self.stdout.write(self.style.WARNING(f"🔧 {message}"))
-        
-        # Create sync engine and execute
-        sync_engine = GeniusProspectsSyncEngine()
+        # Parse datetime arguments
+        start_date = self.parse_datetime_arg(options.get('start_date'))
         
         try:
-            # Determine since_date for sync
-            since_date = None if options.get('full') else since_param
+            # Initialize sync engine
+            engine = GeniusProspectsSyncEngine()
             
-            result = sync_engine.sync_prospects(
-                since_date=since_date,
-                force_overwrite=options.get('force', False),
-                dry_run=options.get('dry_run', False),
-                max_records=options.get('max_records')
-            )
+            # Determine sync mode
+            sync_mode = 'force' if options.get('force') else 'incremental'
+            if options.get('full'):
+                sync_mode = 'full'
+            
+            # Prepare sync parameters
+            sync_params = {
+                'sync_mode': sync_mode,
+                'batch_size': options.get('batch_size', 500),
+                'max_records': options.get('max_records'),
+                'dry_run': options.get('dry_run', False),
+                'debug': options.get('debug', False),
+                'skip_validation': options.get('skip_validation', False)
+            }
+            
+            # Add date parameters if provided
+            if start_date:
+                sync_params['start_date'] = start_date
+            
+            # Execute sync using new method signature
+            stats = engine.sync_prospects(**sync_params)
             
             # Display results
             self.stdout.write("✅ Sync completed successfully:")
-            self.stdout.write(f"   🆔 Sync ID: {result.get('sync_id', 'N/A')}")
-            self.stdout.write(f"   📊 Processed: {result['total_processed']:,} records")
-            self.stdout.write(f"   ➕ Created: {result['created']:,} records")
-            self.stdout.write(f"   📝 Updated: {result['updated']:,} records")
-            self.stdout.write(f"   ❌ Errors: {result['errors']:,} records")
+            self.stdout.write(f"   📊 Processed: {stats.get('total_processed', 0)} records")
+            self.stdout.write(f"   ➕ Created: {stats.get('created', 0)} records")
+            self.stdout.write(f"   📝 Updated: {stats.get('updated', 0)} records")
+            self.stdout.write(f"   ❌ Errors: {stats.get('errors', 0)} records")
+            self.stdout.write(f"   ⏭️ Skipped: {stats.get('skipped', 0)} records")
             
-            if result['errors'] > 0:
-                self.stdout.write(
-                    self.style.WARNING(f"⚠️ Completed with {result['errors']} errors. Check logs for details.")
-                )
-        
+            if stats.get('sync_record_id'):
+                self.stdout.write(f"   🆔 SyncHistory ID: {stats['sync_record_id']}")
+            
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f"❌ Sync failed: {str(e)}"))
-            logger.error(f"Genius prospects sync failed: {e}", exc_info=True)
+            logger.exception("Genius prospects sync failed")
+            self.stdout.write(
+                self.style.ERROR(f"❌ Sync failed: {str(e)}")
+            )
             raise
