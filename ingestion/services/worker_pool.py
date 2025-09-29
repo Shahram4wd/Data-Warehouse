@@ -73,6 +73,14 @@ class WorkerPoolService:
             ('hubspot', 'all'): 'ingestion.tasks.sync_hubspot_all',
             ('genius', 'all'): 'ingestion.tasks.sync_genius_all',
             ('arrivy', 'all'): 'ingestion.tasks.sync_arrivy_all',
+            # Add missing genius task mappings to prevent fallback to non-existent tasks
+            ('genius', 'prospectsource'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'prospect_sources'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'jobs'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'appointments'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'job_financings'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'appointment_services'): 'ingestion.tasks.sync_genius_all',
+            ('callrail', 'trackers'): 'ingestion.tasks.sync_callrail_all',
         }
         
         # Load state from cache

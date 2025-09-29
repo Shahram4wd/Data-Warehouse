@@ -97,12 +97,11 @@ class BaseFive9SyncEngine(BaseSyncEngine, ABC):
             SyncHistory instance
         """
         sync_history = SyncHistory.objects.create(
-            source=self.source_name,
-            sync_type=sync_type,
-            operation=operation,
-            status='RUNNING',
+            crm_source=self.source_name,
+            sync_type=f"{sync_type}_{operation}",
+            status='running',
             start_time=timezone.now(),
-            metadata=kwargs
+            configuration=kwargs
         )
         
         logger.info(f"Created sync history: {sync_history.id} ({sync_type}/{operation})")
