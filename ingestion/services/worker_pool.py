@@ -67,20 +67,64 @@ class WorkerPoolService:
         self.active_workers: Dict[str, WorkerTask] = {}
         
         # Task name mappings for different CRM sync operations
+        # Format: (crm_source, sync_type) -> celery_task_name
+        # Only mapping to tasks that actually exist in tasks_enhanced.py
         self.task_mappings = {
+            # Five9 mappings (specific task exists)
             ('five9', 'contacts'): 'ingestion.tasks.sync_five9_contacts',
-            ('genius', 'marketsharp_contacts'): 'ingestion.tasks.sync_genius_marketsharp_contacts', 
-            ('hubspot', 'all'): 'ingestion.tasks.sync_hubspot_all',
+            
+            # Genius mappings (sync_genius_all task exists)
             ('genius', 'all'): 'ingestion.tasks.sync_genius_all',
-            ('arrivy', 'all'): 'ingestion.tasks.sync_arrivy_all',
-            # Add missing genius task mappings to prevent fallback to non-existent tasks
-            ('genius', 'prospectsource'): 'ingestion.tasks.sync_genius_all',
-            ('genius', 'prospect_sources'): 'ingestion.tasks.sync_genius_all',
-            ('genius', 'jobs'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'marketsharp_contacts'): 'ingestion.tasks.sync_genius_marketsharp_contacts',
+            
+            # All other genius entities route to sync_genius_all
             ('genius', 'appointments'): 'ingestion.tasks.sync_genius_all',
-            ('genius', 'job_financings'): 'ingestion.tasks.sync_genius_all',
             ('genius', 'appointment_services'): 'ingestion.tasks.sync_genius_all',
-            ('callrail', 'trackers'): 'ingestion.tasks.sync_callrail_all',
+            ('genius', 'appointment_types'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'appointment_outcomes'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'appointment_outcome_types'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'contacts'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'customers'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'division_groups'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'division_regions'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'divisions'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'jobs'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'job_financings'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'job_statuses'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'job_change_orders'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'job_change_order_items'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'job_change_order_types'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'leads'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'marketing_sources'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'marketing_source_types'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'marketsharpsource'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'marketsharpsources'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'marketsharpmarketingsourcemap'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'prospects'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'prospectsource'): 'ingestion.tasks.sync_genius_all',  # singular from scheduling
+            ('genius', 'prospectsources'): 'ingestion.tasks.sync_genius_all',  # plural from adapter
+            ('genius', 'prospect_sources'): 'ingestion.tasks.sync_genius_all',  # underscore version
+            ('genius', 'products'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'quotes'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'services'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'users'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'user_associations'): 'ingestion.tasks.sync_genius_all',
+            ('genius', 'user_titles'): 'ingestion.tasks.sync_genius_all',
+            
+            # HubSpot mappings (sync_hubspot_all task exists)
+            ('hubspot', 'all'): 'ingestion.tasks.sync_hubspot_all',
+            ('hubspot', 'contacts'): 'ingestion.tasks.sync_hubspot_all',
+            ('hubspot', 'deals'): 'ingestion.tasks.sync_hubspot_all',
+            ('hubspot', 'appointments'): 'ingestion.tasks.sync_hubspot_all',
+            ('hubspot', 'hubspot_appointment'): 'ingestion.tasks.sync_hubspot_all',
+            
+            # Arrivy mappings (sync_arrivy_all task exists)
+            ('arrivy', 'all'): 'ingestion.tasks.sync_arrivy_all',
+            
+            # For CRMs without dedicated Celery tasks, let them fallback to management commands
+            # This includes: callrail, salespro, salesrabbit, gsheet, leadconduit, marketsharp
+            # The fallback mechanism will create task names like ingestion.tasks.sync_callrail_calls
+            # which may or may not exist, but that's handled by the Celery system
         }
         
         # Load state from cache
