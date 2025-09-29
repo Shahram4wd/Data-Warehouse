@@ -784,13 +784,8 @@ class ScheduleDetailAPIView(BaseAPIView):
             schedule = SyncSchedule.objects.get(id=schedule_id)
             schedule_name = schedule.name
             
-            # Delete the periodic task first (this was missing!)
-            try:
-                delete_periodic_task(schedule)
-            except Exception as e:
-                logger.warning(f"Failed to remove periodic task for schedule {schedule_id}: {e}")
-                # Continue with schedule deletion even if periodic task deletion fails
-            
+            # The model's delete() override will handle periodic task deletion
+            # No need to call delete_periodic_task() here to avoid double deletion
             schedule.delete()
             
             return self.json_response({

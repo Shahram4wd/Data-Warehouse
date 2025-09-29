@@ -76,7 +76,23 @@ def sync_periodic_task(schedule):
 
 def delete_periodic_task(schedule):
     """Delete the PeriodicTask associated with the given SyncSchedule."""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     if schedule.periodic_task:
-        schedule.periodic_task.delete()
-        schedule.periodic_task = None
-        schedule.save(update_fields=["periodic_task"])
+        logger.info(f"Attempting to delete PeriodicTask {schedule.periodic_task.id} for schedule {schedule.id}")
+        try:
+            # Delete the periodic task
+            periodic_task_id = schedule.periodic_task.id
+            schedule.periodic_task.delete()
+            logger.info(f"Successfully deleted PeriodicTask {periodic_task_id}")
+        except Exception as e:
+            # Handle case where periodic task might already be deleted
+            logger.warning(f"Failed to delete PeriodicTask for schedule {schedule.id}: {e}")
+        finally:
+            # Always clear the reference, even if deletion failed
+            logger.info(f"Clearing periodic_task reference for schedule {schedule.id}")
+            schedule.periodic_task = None
+            schedule.save(update_fields=["periodic_task"])
+    else:
+        logger.info(f"No periodic task to delete for schedule {schedule.id}")

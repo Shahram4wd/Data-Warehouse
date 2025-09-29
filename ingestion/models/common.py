@@ -155,18 +155,28 @@ class SyncSchedule(models.Model):
         """Override delete to ensure periodic task is also deleted"""
         # Import here to avoid circular imports
         from ingestion.services.schedule_sync import delete_periodic_task
+        import logging
+        logger = logging.getLogger(__name__)
         
-        try:
-            # Try to delete the periodic task first
-            delete_periodic_task(self)
-        except Exception as e:
-            # Log but don't prevent schedule deletion
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to delete periodic task for schedule {self.id}: {e}")
+        logger.info(f"Starting deletion of schedule {self.id}: {self.name}")
+        
+        # Only try to delete periodic task if one exists
+        if self.periodic_task_id:
+            try:
+                logger.info(f"Deleting periodic task {self.periodic_task_id} for schedule {self.id}")
+                # Try to delete the periodic task first
+                delete_periodic_task(self)
+                logger.info(f"Successfully deleted periodic task for schedule {self.id}")
+            except Exception as e:
+                # Log but don't prevent schedule deletion
+                logger.warning(f"Failed to delete periodic task for schedule {self.id}: {e}")
+        else:
+            logger.info(f"No periodic task to delete for schedule {self.id}")
         
         # Delete the schedule itself
+        logger.info(f"Deleting schedule model {self.id}")
         super().delete(*args, **kwargs)
+        logger.info(f"Successfully deleted schedule {self.id}")
 
     def get_recent_runs(self, limit=5):
         """Get recent SyncHistory records for this schedule."""

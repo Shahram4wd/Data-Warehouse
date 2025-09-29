@@ -134,14 +134,8 @@ def delete_schedule(request, source_key, pk):
     schedule_name = schedule.name
     
     with transaction.atomic():
-        # Delete the periodic task first
-        try:
-            delete_periodic_task(schedule)
-        except Exception as e:
-            messages.error(request, f'Failed to remove task from scheduler: {e}')
-            return redirect(reverse('ingestion:schedules', args=[source_key]))
-        
-        # Delete the schedule
+        # The model's delete() override will handle periodic task deletion
+        # No need to call delete_periodic_task() here to avoid double deletion
         schedule.delete()
         messages.success(request, f'Schedule "{schedule_name}" deleted successfully.')
     
