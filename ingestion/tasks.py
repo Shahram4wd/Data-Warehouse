@@ -275,6 +275,8 @@ def worker_pool_monitor(self):
         # Process any pending tasks
         worker_pool.process_queue()
         
+        # Note: SyncHistory cleanup is handled by the scheduled cleanup_stale_syncs task
+        
         stats = worker_pool.get_stats()
         logger.debug(f"Worker pool monitor: {stats['active_count']} active, {stats['queued_count']} queued, stale_cleaned={stale}")
         

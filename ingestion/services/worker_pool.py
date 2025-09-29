@@ -299,6 +299,10 @@ class WorkerPoolService:
             
             if status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
                 task.completed_at = datetime.utcnow()
+                
+                # Update associated SyncHistory record if it exists
+                self._update_sync_history(task_id, status, error_message)
+                
                 # Remove from active workers
                 del self.active_workers[task_id]
                 
@@ -308,6 +312,53 @@ class WorkerPoolService:
                 self.process_queue()
         
         self._save_state()
+    
+    def _update_sync_history(self, worker_task_id: str, status: TaskStatus, error_message: str = None):
+        """Update SyncHistory record associated with this worker task"""
+        try:
+            from ingestion.models.common import SyncHistory
+            from django.utils import timezone
+            import json
+            
+            # Find SyncHistory records that reference this worker task ID
+            sync_records = SyncHistory.objects.filter(
+                status='running',
+                configuration__icontains=worker_task_id
+            )
+            
+            for sync_record in sync_records:
+                # Verify this is the correct record by checking the configuration
+                config = sync_record.configuration
+                if isinstance(config, str):
+                    try:
+                        config = json.loads(config)
+                    except:
+                        continue
+                
+                if isinstance(config, dict) and config.get('worker_pool_task_id') == worker_task_id:
+                    # Update the sync record
+                    sync_record.end_time = timezone.now()
+                    
+                    if status == TaskStatus.COMPLETED:
+                        sync_record.status = 'success'
+                    elif status == TaskStatus.FAILED:
+                        sync_record.status = 'failed'
+                        sync_record.error_message = error_message or 'Task failed in worker pool'
+                    elif status == TaskStatus.CANCELLED:
+                        sync_record.status = 'failed'
+                        sync_record.error_message = 'Task was cancelled'
+                    
+                    sync_record.save(update_fields=['status', 'end_time', 'error_message'])
+                    
+                    logger.info(f"Updated SyncHistory {sync_record.id} to status: {sync_record.status}")
+                    break
+            
+        except Exception as e:
+            logger.error(f"Failed to update SyncHistory for worker task {worker_task_id}: {e}")
+            # Don't raise - this shouldn't stop the worker pool operation
+    
+    # Note: SyncHistory cleanup is handled by the existing cleanup_stale_syncs command
+    # which uses WORKER_POOL_STALE_MINUTES setting and runs nightly
     
     def cancel_task(self, task_id: str) -> bool:
         """Cancel a task"""

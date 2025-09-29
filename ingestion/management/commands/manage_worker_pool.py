@@ -20,7 +20,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             'action',
-            choices=['status', 'config', 'monitor', 'process-queue', 'cancel', 'list-tasks'],
+            choices=['status', 'config', 'monitor', 'process-queue', 'cancel', 'list-tasks', 'fix-stuck'],
             help='Action to perform'
         )
         
@@ -84,6 +84,8 @@ class Command(BaseCommand):
                 self.handle_cancel(worker_pool, options)
             elif action == 'list-tasks':
                 self.handle_list_tasks(worker_pool, options)
+            elif action == 'fix-stuck':
+                self.handle_fix_stuck(worker_pool, options)
             else:
                 raise CommandError(f"Unknown action: {action}")
                 
@@ -263,6 +265,17 @@ class Command(BaseCommand):
             for i, task in enumerate(queued_tasks, 1):
                 priority_info = f" (priority: {task.priority})" if task.priority > 0 else ""
                 self.stdout.write(f"  {i}. {task.id}: {task.crm_source}.{task.sync_type}{priority_info}")
-            
-            if not active_tasks and not queued_tasks:
-                self.stdout.write("No tasks found.")
+    
+    def handle_fix_stuck(self, worker_pool, options):
+        """Handle fix-stuck action - delegates to existing cleanup_stale_syncs command"""
+        self.stdout.write("Running cleanup for stuck SyncHistory records...")
+        
+        from django.core.management import call_command
+        
+        try:
+            # Use existing cleanup_stale_syncs with a shorter threshold for immediate cleanup
+            call_command('cleanup_stale_syncs', '--minutes', '5')
+            self.stdout.write(self.style.SUCCESS("Cleanup completed using existing cleanup_stale_syncs command"))
+            self.stdout.write("Note: Regular cleanup runs nightly and uses WORKER_POOL_STALE_MINUTES setting")
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f"Cleanup failed: {e}"))
