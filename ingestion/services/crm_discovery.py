@@ -385,7 +385,15 @@ class CRMDiscoveryService:
                 
                 # Get record count
                 try:
-                    record_count = model_info['model_class'].objects.count()
+                    model_class = model_info['model_class']
+                    table_name = model_class._meta.db_table
+                    
+                    # Check if table exists first
+                    if self._table_exists(table_name):
+                        record_count = model_class.objects.count()
+                    else:
+                        logger.debug(f"Table {table_name} does not exist, skipping count for {model_info['name']}")
+                        record_count = 0
                 except Exception as e:
                     logger.warning(f"Error counting records for {model_info['name']}: {e}")
                     record_count = 0
