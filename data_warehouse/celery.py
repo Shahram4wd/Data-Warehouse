@@ -7,7 +7,18 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'data_warehouse.settings')
 
 app = Celery('data_warehouse')
 app.config_from_object('django.conf:settings', namespace='CELERY')
-app.autodiscover_tasks()
+
+# Force discovery of tasks from Django apps
+from django.conf import settings
+app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+
+# Explicitly import task modules to ensure they're loaded
+try:
+    import ingestion.tasks
+    import ingestion.tasks_enhanced
+except ImportError as e:
+    import logging
+    logging.getLogger(__name__).warning(f"Could not import ingestion tasks: {e}")
 
 # Configure periodic tasks only for production environment
 # Check if we're in production using existing DJANGO_ENV variable
