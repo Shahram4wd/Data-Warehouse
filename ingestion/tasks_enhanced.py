@@ -304,15 +304,80 @@ def cleanup_old_data():
 
 @shared_task(bind=True, name="ingestion.run_ingestion")
 def run_ingestion(self, schedule_id: int):
-    """Run ingestion task"""
+    """
+    Execute a scheduled ingestion task for a specific schedule.
+    This runs the legacy periodic tasks using management commands directly.
+    
+    Args:
+        schedule_id: The ID of the SyncSchedule to run
+    
+    Returns:
+        dict: Task execution result
+    """
+    from django.core.cache import cache
+    from ingestion.models import SyncSchedule
+    from django.core.management import call_command
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    # Lock key to prevent overlapping runs for the same source and mode
+    def _lock_key(source_key: str, mode: str) -> str:
+        return f"ingestion-lock:{source_key}:{mode}"
+    
+    LOCK_TTL = 60 * 60  # 1 hour safety timeout
+    
     try:
-        logger.info(f"Starting ingestion for schedule {schedule_id}...")
-        # Add ingestion logic here
-        logger.info(f"Ingestion for schedule {schedule_id} completed")
-        return {'status': 'success', 'message': f'Ingestion for schedule {schedule_id} completed'}
+        schedule = SyncSchedule.objects.get(pk=schedule_id)
+        key = _lock_key(schedule.source_key, schedule.mode)
+        
+        # Try to acquire lock
+        if cache.get(key):
+            logger.warning(f"Skipping {schedule.source_key}:{schedule.mode} - already running (lock exists)")
+            return {"status": "skipped", "reason": "already_running"}
+        
+        # Set lock
+        cache.set(key, True, timeout=LOCK_TTL)
+        
+        try:
+            logger.info(f"Starting ingestion for schedule {schedule_id}: {schedule.source_key}:{schedule.mode}")
+            
+            # Execute the ingestion using management command
+            command_args = [schedule.source_key, '--mode', schedule.mode]
+            
+            # Add any additional options from the schedule
+            if schedule.options:
+                for key, value in schedule.options.items():
+                    if value and key != 'mode':  # mode is already handled
+                        if isinstance(value, bool) and value:
+                            command_args.append(f'--{key}')
+                        elif not isinstance(value, bool):
+                            command_args.extend([f'--{key}', str(value)])
+            
+            logger.info(f"Running ingestion command with args: {command_args}")
+            call_command('run_ingestion', *command_args)
+            
+            logger.info(f"Successfully completed ingestion for {schedule.source_key}:{schedule.mode}")
+            return {
+                "status": "success", 
+                "schedule_id": schedule_id,
+                "source_key": schedule.source_key,
+                "mode": schedule.mode
+            }
+            
+        finally:
+            # Always release the lock
+            cache.delete(key)
+            
+    except SyncSchedule.DoesNotExist:
+        error_msg = f"Schedule {schedule_id} not found"
+        logger.error(error_msg)
+        return {"status": "error", "error": error_msg}
+        
     except Exception as e:
-        logger.error(f"Error running ingestion for schedule {schedule_id}: {e}")
-        raise
+        error_msg = f"Ingestion failed for schedule {schedule_id}: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return {"status": "error", "error": str(e)}
 
 
 # Worker pool management tasks
