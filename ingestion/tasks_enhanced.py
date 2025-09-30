@@ -342,49 +342,32 @@ def run_ingestion(self, schedule_id: int):
         try:
             logger.info(f"Starting ingestion for schedule {schedule_id}: {schedule.source_key}:{schedule.mode}")
             
-            # Map source_key to the correct management command
-            command_mapping = {
-                'arrivy': 'sync_arrivy_all',
-                'callrail': 'sync_callrail_all', 
-                'five9': 'sync_five9_contacts',
-                'genius': 'sync_genius_all',
-                'hubspot': 'sync_hubspot_all',
-                'gsheet': 'sync_gsheet_all',
-                'leadconduit': 'sync_leadconduit_all',
-                'marketsharp': 'sync_marketsharp_data',
-                'salesrabbit': 'sync_salesrabbit_all',
-            }
+            # Use the new ingestion adapter for proper model-specific command mapping
+            from ingestion.services.ingestion_adapter import run_source_ingestion
             
-            command_name = command_mapping.get(schedule.source_key)
-            if not command_name:
-                raise ValueError(f"No management command mapped for source: {schedule.source_key}")
+            # Extract model name from schedule
+            model_name = schedule.model_name if hasattr(schedule, 'model_name') else None
             
-            # Execute the specific management command for this CRM
-            command_args = []
-            
-            # Add mode-specific arguments
-            if schedule.mode == 'full':
-                command_args.append('--full')
-            # Delta is usually the default, so no specific flag needed
-            
-            # Add any additional options from the schedule
+            # Prepare options from schedule
+            options = {}
             if schedule.options:
-                for key, value in schedule.options.items():
-                    if value and key != 'mode':  # mode is already handled
-                        if isinstance(value, bool) and value:
-                            command_args.append(f'--{key}')
-                        elif not isinstance(value, bool):
-                            command_args.extend([f'--{key}', str(value)])
+                options.update(schedule.options)
             
-            logger.info(f"Running command: {command_name} with args: {command_args}")
-            call_command(command_name, *command_args)
+            # Execute using the ingestion adapter (handles model-specific routing)
+            run_source_ingestion(
+                source_key=schedule.source_key,
+                mode=schedule.mode,
+                model_name=model_name,
+                **options
+            )
             
             logger.info(f"Successfully completed ingestion for {schedule.source_key}:{schedule.mode}")
             return {
                 "status": "success", 
                 "schedule_id": schedule_id,
                 "source_key": schedule.source_key,
-                "mode": schedule.mode
+                "mode": schedule.mode,
+                "model_name": model_name
             }
             
         finally:

@@ -104,6 +104,31 @@ def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
         
         default_args = {"full": True} if mode == "full" else {}
         return command, default_args
+
+    # Handle HubSpot models with specific commands
+    if source_key == 'hubspot' and model_name:
+        command = _get_hubspot_command(model_name)
+        
+        # If no command found (returns None), skip this sync
+        if command is None:
+            raise ValueError(f"No command mapping found for HubSpot model {model_name}, skipping sync")
+        
+        default_args = {}
+        
+        if mode == "full":
+            default_args = {"full": True}
+        elif mode == "delta":
+            # For delta syncs, get the last sync timestamp
+            sync_type = _get_hubspot_sync_type(f"HubSpot_{model_name}")
+            if sync_type:
+                last_sync_time = SyncHistory.get_last_sync_timestamp(source_key, sync_type)
+                if last_sync_time:
+                    # Format timestamp for the --since parameter
+                    default_args = {"since": last_sync_time.isoformat()}
+                # If no last sync time, do a full sync as fallback
+                # (this handles the first run case)
+        
+        return command, default_args
     
     # Define the mapping between source/mode and management commands for other sources
     command_map = {
@@ -111,7 +136,8 @@ def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
         ("arrivy", "delta"): ("sync_arrivy_all", {}),
         ("arrivy", "full"): ("sync_arrivy_all", {"full": True}),
         
-        # HubSpot source  
+        # HubSpot source - now handled above with individual model support
+        # Fallback for when no model is specified
         ("hubspot", "delta"): ("sync_hubspot_all", {}),
         ("hubspot", "full"): ("sync_hubspot_all", {"full": True}),
         
@@ -376,6 +402,39 @@ def _get_genius_command(model_name: str) -> str:
     # If no specific command found, log and return None to skip
     logger.warning(f"No specific command found for {model_name}, skipping sync")
     return None
+
+def _get_hubspot_command(model_name: str) -> str:
+    """Get the specific command for a HubSpot model"""
+    # Map both full model names and sync types to their specific commands
+    hubspot_commands = {
+        # Full model names
+        'Hubspot_Appointment': 'sync_hubspot_appointments',
+        'Hubspot_Contact': 'sync_hubspot_contacts',
+        'Hubspot_Deal': 'sync_hubspot_deals', 
+        'Hubspot_Division': 'sync_hubspot_divisions',
+        'Hubspot_GeniusUser': 'sync_hubspot_genius_users',
+        'Hubspot_Zipcode': 'sync_hubspot_zipcodes',
+        'Hubspot_AppointmentContactAssociation': 'sync_hubspot_associations',
+        'Hubspot_ContactDivisionAssociation': 'sync_hubspot_associations',
+        
+        # Sync types (from JavaScript modelNameToSyncType)
+        'appointments': 'sync_hubspot_appointments',
+        'contacts': 'sync_hubspot_contacts',
+        'deals': 'sync_hubspot_deals',
+        'divisions': 'sync_hubspot_divisions', 
+        'genius_users': 'sync_hubspot_genius_users',
+        'zipcodes': 'sync_hubspot_zipcodes',
+        'associations_contact_appointment': 'sync_hubspot_associations',
+        'associations_contact_division': 'sync_hubspot_associations',
+    }
+    
+    if model_name in hubspot_commands:
+        return hubspot_commands[model_name]
+    
+    # If no specific command found, log and return None to skip
+    logger.warning(f"No specific command found for HubSpot model {model_name}, skipping sync")
+    return None
+
 
 def _get_callrail_command(model_name: str) -> str:
     """Get the specific command for a CallRail model"""
