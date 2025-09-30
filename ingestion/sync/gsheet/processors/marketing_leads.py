@@ -133,10 +133,10 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
         Process a single row from Google Sheets synchronously
         
         Args:
-            row_data: Raw row data from Google Sheets
+            row_data: Raw row data from Google Sheets (includes year and sheet_row_number)
             
         Returns:
-            Processed data ready for model creation
+            Processed data ready for model creation with year-row ID format
         """
         try:
             processed_data = {}
@@ -156,8 +156,20 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
                     if processed_value is not None:
                         processed_data[model_field] = processed_value
             
-            # Add metadata
-            processed_data['sheet_row_number'] = row_data.get('sheet_row_number', 0)
+            # Add metadata with year and row number
+            year = row_data.get('year')
+            sheet_row_number = row_data.get('sheet_row_number', 0)
+            
+            if not year or not sheet_row_number:
+                logger.error(f"Missing year ({year}) or sheet_row_number ({sheet_row_number}) in row data")
+                return None
+            
+            # Generate the year-row ID format
+            record_id = f"{year}-{sheet_row_number}"
+            
+            processed_data['id'] = record_id
+            processed_data['year'] = year
+            processed_data['sheet_row_number'] = sheet_row_number
             processed_data['sheet_last_modified'] = timezone.now()
             processed_data['raw_data'] = row_data
             
@@ -194,7 +206,7 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
                 return self._parse_date(value)
             
             # Handle integer fields
-            elif field_name in ['recording_duration', 'hold_time', 'call_attempts', 'appt_attempts', 'sheet_row_number']:
+            elif field_name in ['recording_duration', 'hold_time', 'call_attempts', 'appt_attempts', 'sheet_row_number', 'year']:
                 return self._parse_integer(value)
             
             # Handle decimal fields

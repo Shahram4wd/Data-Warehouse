@@ -12,10 +12,14 @@ import json
 
 
 class GoogleSheetMarketingLead(models.Model):
-    """Marketing leads data from Google Sheets - Complete column mapping"""
+    """Marketing leads data from Google Sheets - Complete column mapping with multi-year support"""
     
-    # Primary key - using sheet row number as natural primary key
-    sheet_row_number = models.PositiveIntegerField(primary_key=True)
+    # Primary key - using year-row format (e.g., "2024-5", "2025-10") 
+    id = models.CharField(max_length=20, primary_key=True, help_text="Format: YYYY-row_number")
+    
+    # Year and original row tracking
+    year = models.PositiveIntegerField(help_text="Year from sheet source (2024, 2025, etc.)")
+    sheet_row_number = models.PositiveIntegerField(help_text="Original row number from sheet")
     
     # System timestamps
     sync_created_at = models.DateTimeField(auto_now_add=True)
@@ -130,6 +134,20 @@ class GoogleSheetMarketingLead(models.Model):
         help_text="Complete row data from sheet"
     )
     
+    @staticmethod
+    def generate_id(year: int, row_number: int) -> str:
+        """Generate year-row ID format (e.g., '2024-5', '2025-10')"""
+        return f"{year}-{row_number}"
+    
+    def save(self, *args, **kwargs):
+        """Override save to auto-generate ID if not provided"""
+        if not self.id and self.year and self.sheet_row_number:
+            self.id = self.generate_id(self.year, self.sheet_row_number)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Lead {self.id}: {self.first_name} {self.last_name} ({self.created_at})"
+    
     
     class Meta:
         db_table = 'gsheet_marketing_lead'
@@ -139,7 +157,20 @@ class GoogleSheetMarketingLead(models.Model):
         verbose_name = 'Google Sheet Marketing Lead'
         verbose_name_plural = 'Google Sheet Marketing Leads'
         ordering = ['-created_at', '-sync_created_at']
+        
+        # Unique constraint to prevent duplicate year/row combinations
+        constraints = [
+            models.UniqueConstraint(
+                fields=['year', 'sheet_row_number'],
+                name='unique_year_row_constraint'
+            ),
+        ]
+        
         indexes = [
+            # Primary lookup patterns
+            models.Index(fields=['year', 'sheet_row_number']),
+            models.Index(fields=['year', 'created_at']),
+            
             # Core lead identification
             models.Index(fields=['phone_number', 'created_at']),
             models.Index(fields=['email_address', 'created_at']),
