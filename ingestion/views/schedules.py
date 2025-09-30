@@ -14,7 +14,7 @@ from ingestion.models import SyncSchedule
 from ingestion.models.common import SyncHistory
 from ingestion.forms import IngestionScheduleForm, RunNowForm
 from ingestion.services.schedule_sync import sync_periodic_task, delete_periodic_task
-from ingestion.tasks import run_ingestion
+from ingestion.tasks_enhanced import run_ingestion
 
 @login_required
 @permission_required("ingestion.manage_schedules", raise_exception=True)
