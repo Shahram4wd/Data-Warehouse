@@ -342,8 +342,30 @@ def run_ingestion(self, schedule_id: int):
         try:
             logger.info(f"Starting ingestion for schedule {schedule_id}: {schedule.source_key}:{schedule.mode}")
             
-            # Execute the ingestion using management command
-            command_args = [schedule.source_key, '--mode', schedule.mode]
+            # Map source_key to the correct management command
+            command_mapping = {
+                'arrivy': 'sync_arrivy_all',
+                'callrail': 'sync_callrail_all', 
+                'five9': 'sync_five9_contacts',
+                'genius': 'sync_genius_all',
+                'hubspot': 'sync_hubspot_all',
+                'gsheet': 'sync_gsheet_all',
+                'leadconduit': 'sync_leadconduit_all',
+                'marketsharp': 'sync_marketsharp_data',
+                'salesrabbit': 'sync_salesrabbit_all',
+            }
+            
+            command_name = command_mapping.get(schedule.source_key)
+            if not command_name:
+                raise ValueError(f"No management command mapped for source: {schedule.source_key}")
+            
+            # Execute the specific management command for this CRM
+            command_args = []
+            
+            # Add mode-specific arguments
+            if schedule.mode == 'full':
+                command_args.append('--full')
+            # Delta is usually the default, so no specific flag needed
             
             # Add any additional options from the schedule
             if schedule.options:
@@ -354,8 +376,8 @@ def run_ingestion(self, schedule_id: int):
                         elif not isinstance(value, bool):
                             command_args.extend([f'--{key}', str(value)])
             
-            logger.info(f"Running ingestion command with args: {command_args}")
-            call_command('run_ingestion', *command_args)
+            logger.info(f"Running command: {command_name} with args: {command_args}")
+            call_command(command_name, *command_args)
             
             logger.info(f"Successfully completed ingestion for {schedule.source_key}:{schedule.mode}")
             return {

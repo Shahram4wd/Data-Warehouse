@@ -120,11 +120,9 @@ class Command(BaseCommand):
             # Import automation system
             from ingestion.base.automation import automation_system
             
-            # Get or create automation system for this CRM
-            crm_automation = automation_system.get_or_create_system(crm_name)
-            
-            # Generate comprehensive report
-            report = await crm_automation.report_metrics(
+            # Generate comprehensive report using the main automation system
+            # The automation system handles all CRMs, so we just need to generate a report
+            report = await automation_system.report_metrics(
                 time_window_hours=time_window,
                 include_detailed=detailed
             )
