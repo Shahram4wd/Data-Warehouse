@@ -129,6 +129,61 @@ def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
                 # (this handles the first run case)
         
         return command, default_args
+
+    # Handle Arrivy models with specific commands
+    if source_key == 'arrivy' and model_name:
+        command = _get_arrivy_command(model_name)
+        
+        # If no command found (returns None), skip this sync
+        if command is None:
+            raise ValueError(f"No command mapping found for Arrivy model {model_name}, skipping sync")
+        
+        default_args = {"full": True} if mode == "full" else {}
+        return command, default_args
+
+    # Handle LeadConduit models with specific commands
+    if source_key == 'leadconduit' and model_name:
+        command = _get_leadconduit_command(model_name)
+        
+        # If no command found (returns None), skip this sync
+        if command is None:
+            raise ValueError(f"No command mapping found for LeadConduit model {model_name}, skipping sync")
+        
+        default_args = {"full": True} if mode == "full" else {}
+        return command, default_args
+
+    # Handle GSheet models with specific commands
+    if source_key == 'gsheet' and model_name:
+        command = _get_gsheet_command(model_name)
+        
+        # If no command found (returns None), skip this sync
+        if command is None:
+            raise ValueError(f"No command mapping found for GSheet model {model_name}, skipping sync")
+        
+        default_args = {"full": True} if mode == "full" else {}
+        return command, default_args
+
+    # Handle SalesPro models with specific commands
+    if source_key == 'salespro' and model_name:
+        command = _get_salespro_command(model_name)
+        
+        # If no command found (returns None), skip this sync
+        if command is None:
+            raise ValueError(f"No command mapping found for SalesPro model {model_name}, skipping sync")
+        
+        default_args = {"full": True} if mode == "full" else {}
+        return command, default_args
+
+    # Handle SalesRabbit models with specific commands
+    if source_key == 'salesrabbit' and model_name:
+        command = _get_salesrabbit_command(model_name)
+        
+        # If no command found (returns None), skip this sync
+        if command is None:
+            raise ValueError(f"No command mapping found for SalesRabbit model {model_name}, skipping sync")
+        
+        default_args = {"full": True} if mode == "full" else {}
+        return command, default_args
     
     # Define the mapping between source/mode and management commands for other sources
     command_map = {
@@ -208,6 +263,14 @@ def normalize_sync_type(crm_source: str, sync_type: str) -> str:
         return _get_arrivy_sync_type(sync_type) or sync_type
     elif crm_source == 'hubspot':
         return _get_hubspot_sync_type(sync_type) or sync_type
+    elif crm_source == 'leadconduit':
+        return _get_leadconduit_sync_type(sync_type) or sync_type
+    elif crm_source == 'gsheet':
+        return _get_gsheet_sync_type(sync_type) or sync_type
+    elif crm_source == 'salespro':
+        return _get_salespro_sync_type(sync_type) or sync_type
+    elif crm_source == 'salesrabbit':
+        return _get_salesrabbit_sync_type(sync_type) or sync_type
     
     return sync_type
 
@@ -248,6 +311,58 @@ def _get_arrivy_sync_type(sync_type: str) -> str:
         'booking': 'bookings',
         'group': 'groups',
         'status': 'statuses'
+    }
+    return pluralization_map.get(base_name, base_name)
+
+def _get_leadconduit_sync_type(sync_type: str) -> str:
+    """Normalize LeadConduit sync_type from legacy format"""
+    if not sync_type or not sync_type.startswith('LeadConduit_'):
+        return None
+        
+    base_name = sync_type.replace('LeadConduit_', '').lower()
+    pluralization_map = {
+        'lead': 'leads'
+    }
+    return pluralization_map.get(base_name, base_name)
+
+def _get_gsheet_sync_type(sync_type: str) -> str:
+    """Normalize GSheet sync_type from legacy format"""
+    if not sync_type or not sync_type.startswith('GoogleSheet'):
+        return None
+        
+    base_name = sync_type.replace('GoogleSheet', '').lower()
+    # Handle the specific GSheet model naming patterns
+    conversion_map = {
+        'marketinglead': 'marketing_leads',
+        'marketingspend': 'marketing_spends'
+    }
+    return conversion_map.get(base_name, base_name)
+
+def _get_salespro_sync_type(sync_type: str) -> str:
+    """Normalize SalesPro sync_type from legacy format"""
+    if not sync_type or not sync_type.startswith('SalesPro_'):
+        return None
+        
+    base_name = sync_type.replace('SalesPro_', '').lower()
+    pluralization_map = {
+        'office': 'offices',
+        'user': 'users',
+        'creditapplication': 'creditapplications',
+        'customer': 'customers',
+        'estimate': 'estimates',
+        'leadresult': 'leadresults'
+    }
+    return pluralization_map.get(base_name, base_name)
+
+def _get_salesrabbit_sync_type(sync_type: str) -> str:
+    """Normalize SalesRabbit sync_type from legacy format"""
+    if not sync_type or not sync_type.startswith('SalesRabbit_'):
+        return None
+        
+    base_name = sync_type.replace('SalesRabbit_', '').lower()
+    pluralization_map = {
+        'lead': 'leads',
+        'user': 'users'
     }
     return pluralization_map.get(base_name, base_name)
 
@@ -436,6 +551,38 @@ def _get_hubspot_command(model_name: str) -> str:
     return None
 
 
+def _get_arrivy_command(model_name: str) -> str:
+    """Get the specific command for an Arrivy model"""
+    # Map both full model names and sync types to their specific commands
+    arrivy_commands = {
+        # Full model names
+        'Arrivy_Entity': 'sync_arrivy_entities',
+        'Arrivy_Booking': 'sync_arrivy_bookings',
+        'Arrivy_Group': 'sync_arrivy_groups',
+        'Arrivy_Status': 'sync_arrivy_statuses',
+        'Arrivy_Task': 'sync_arrivy_tasks',
+        
+        # Sync types (from JavaScript modelNameToSyncType)
+        'entities': 'sync_arrivy_entities',
+        'entity': 'sync_arrivy_entities',  # singular form
+        'bookings': 'sync_arrivy_bookings',
+        'booking': 'sync_arrivy_bookings',  # singular form
+        'groups': 'sync_arrivy_groups',
+        'group': 'sync_arrivy_groups',  # singular form
+        'statuses': 'sync_arrivy_statuses',
+        'status': 'sync_arrivy_statuses',  # singular form
+        'tasks': 'sync_arrivy_tasks',
+        'task': 'sync_arrivy_tasks',  # singular form
+    }
+    
+    if model_name in arrivy_commands:
+        return arrivy_commands[model_name]
+    
+    # If no specific command found, log and return None to skip
+    logger.warning(f"No specific command found for Arrivy model {model_name}, skipping sync")
+    return None
+
+
 def _get_callrail_command(model_name: str) -> str:
     """Get the specific command for a CallRail model"""
     # Map both full model names and sync types to their specific commands
@@ -466,6 +613,104 @@ def _get_callrail_command(model_name: str) -> str:
     
     # If no specific command found, log and return None to skip
     logger.warning(f"No specific command found for {model_name}, skipping sync")
+    return None
+
+def _get_leadconduit_command(model_name: str) -> str:
+    """Get the specific command for a LeadConduit model"""
+    # Map both full model names and sync types to their specific commands
+    leadconduit_commands = {
+        # Full model names
+        'LeadConduit_Lead': 'sync_leadconduit_leads',
+        
+        # Sync types (from JavaScript modelNameToSyncType)
+        'leads': 'sync_leadconduit_leads',
+        'lead': 'sync_leadconduit_leads',  # singular form
+    }
+    
+    if model_name in leadconduit_commands:
+        return leadconduit_commands[model_name]
+    
+    # If no specific command found, log and return None to skip
+    logger.warning(f"No specific command found for LeadConduit model {model_name}, skipping sync")
+    return None
+
+def _get_gsheet_command(model_name: str) -> str:
+    """Get the specific command for a Google Sheets model"""
+    # Map both full model names and sync types to their specific commands
+    gsheet_commands = {
+        # Full model names
+        'GoogleSheetMarketingLead': 'sync_gsheet_marketing_leads',
+        'GoogleSheetMarketingSpend': 'sync_gsheet_marketing_spends',
+        
+        # Sync types (from JavaScript modelNameToSyncType)
+        'marketing_leads': 'sync_gsheet_marketing_leads',
+        'marketing_lead': 'sync_gsheet_marketing_leads',  # singular form
+        'marketing_spends': 'sync_gsheet_marketing_spends', 
+        'marketing_spend': 'sync_gsheet_marketing_spends',  # singular form
+    }
+    
+    if model_name in gsheet_commands:
+        return gsheet_commands[model_name]
+    
+    # If no specific command found, log and return None to skip
+    logger.warning(f"No specific command found for GSheet model {model_name}, skipping sync")
+    return None
+
+def _get_salespro_command(model_name: str) -> str:
+    """Get the specific command for a SalesPro model"""
+    # Map both full model names and sync types to their specific commands
+    # Note: SalesPro has mixed command patterns - CSV for Office/User, DB for others
+    salespro_commands = {
+        # Full model names
+        'SalesPro_Office': 'csv_salespro_offices',
+        'SalesPro_User': 'csv_salespro_users',
+        'SalesPro_CreditApplication': 'db_salespro_creditapplications',
+        'SalesPro_Customer': 'db_salespro_customers',
+        'SalesPro_Estimate': 'db_salespro_estimates',
+        'SalesPro_LeadResult': 'db_salespro_leadresults',
+        
+        # Sync types (from JavaScript modelNameToSyncType)
+        'offices': 'csv_salespro_offices',
+        'office': 'csv_salespro_offices',  # singular form
+        'users': 'csv_salespro_users',
+        'user': 'csv_salespro_users',  # singular form
+        'creditapplications': 'db_salespro_creditapplications',
+        'creditapplication': 'db_salespro_creditapplications',  # singular form
+        'customers': 'db_salespro_customers',
+        'customer': 'db_salespro_customers',  # singular form
+        'estimates': 'db_salespro_estimates',
+        'estimate': 'db_salespro_estimates',  # singular form
+        'leadresults': 'db_salespro_leadresults',
+        'leadresult': 'db_salespro_leadresults',  # singular form
+    }
+    
+    if model_name in salespro_commands:
+        return salespro_commands[model_name]
+    
+    # If no specific command found, log and return None to skip
+    logger.warning(f"No specific command found for SalesPro model {model_name}, skipping sync")
+    return None
+
+def _get_salesrabbit_command(model_name: str) -> str:
+    """Get the specific command for a SalesRabbit model"""
+    # Map both full model names and sync types to their specific commands
+    salesrabbit_commands = {
+        # Full model names
+        'SalesRabbit_Lead': 'sync_salesrabbit_leads',
+        'SalesRabbit_User': 'sync_salesrabbit_users',
+        
+        # Sync types (from JavaScript modelNameToSyncType)
+        'leads': 'sync_salesrabbit_leads',
+        'lead': 'sync_salesrabbit_leads',  # singular form
+        'users': 'sync_salesrabbit_users',
+        'user': 'sync_salesrabbit_users',  # singular form
+    }
+    
+    if model_name in salesrabbit_commands:
+        return salesrabbit_commands[model_name]
+    
+    # If no specific command found, log and return None to skip
+    logger.warning(f"No specific command found for SalesRabbit model {model_name}, skipping sync")
     return None
 
 def get_available_sources():
