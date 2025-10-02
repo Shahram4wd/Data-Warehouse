@@ -1016,7 +1016,10 @@ function modelNameToSyncType(modelName) {
         'CallRail_Tag': 'tags',
         'CallRail_TextMessage': 'text_messages',
         'CallRail_Tracker': 'trackers',
-        'CallRail_User': 'users'
+        'CallRail_User': 'users',
+        // Add SalesRabbit mappings
+        'SalesRabbit_Lead': 'leads',
+        'SalesRabbit_User': 'users'
     };
     
     if (modelMappings[modelName]) {
@@ -1035,8 +1038,8 @@ function modelNameToSyncType(modelName) {
         name = name.substring(8); // Remove 'Hubspot_'/'HubSpot_'
     } else if (name.startsWith('Salespro_')) {
         name = name.substring(9); // Remove 'Salespro_'
-    } else if (name.startsWith('Salesrabbit_')) {
-        name = name.substring(12); // Remove 'Salesrabbit_'
+    } else if (name.startsWith('SalesRabbit_')) {
+        name = name.substring(12); // Remove 'SalesRabbit_' (fix case sensitivity)
     } else if (name.startsWith('Arrivy_')) {
         name = name.substring(7); // Remove 'Arrivy_'
     }
