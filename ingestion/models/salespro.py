@@ -15,7 +15,7 @@ class SalesPro_Office(models.Model):
     created_at = models.DateTimeField(blank=True, null=True, help_text="Original creation date from SalesPro")
     updated_at = models.DateTimeField(blank=True, null=True, help_text="Original last update date from SalesPro")
     
-    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
     last_edit_date = models.DateTimeField(blank=True, null=True)
 
@@ -76,7 +76,7 @@ class SalesPro_User(models.Model):
     deactivated_date = models.DateTimeField(blank=True, null=True)
     
     # Sync tracking timestamps
-    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -107,7 +107,7 @@ class SalesPro_CreditApplication(models.Model):
     credit_app_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     credit_app_status = models.CharField(max_length=255, blank=True, null=True)
     credit_app_note = models.TextField(null=True, blank=True)
-    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -131,7 +131,7 @@ class SalesPro_Customer(models.Model):
     customer_last_name = models.CharField(max_length=255, blank=True, null=True)
     crm_source = models.CharField(max_length=255, blank=True, null=True)
     crm_source_id = models.CharField(max_length=255, blank=True, null=True)
-    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -173,7 +173,7 @@ class SalesPro_Estimate(models.Model):
     document_count = models.BigIntegerField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True, help_text="Original creation date from SalesPro")
     updated_at = models.DateTimeField(blank=True, null=True, help_text="Original last update date from SalesPro")
-    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -192,7 +192,7 @@ class SalesPro_LeadResult(models.Model):
     # Use estimate_id as primary key to keep only latest version
     estimate_id = models.CharField(max_length=255, primary_key=True)
     company_id = models.CharField(max_length=255, blank=True, null=True)
-    sync_created_at = models.DateTimeField(default=timezone.now)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
     
     # Normalized lead result fields based on the sample data

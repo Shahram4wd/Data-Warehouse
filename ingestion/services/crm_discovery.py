@@ -492,6 +492,13 @@ class CRMDiscoveryService:
             # SalesRabbit mappings
             'SalesRabbit_Lead': 'leads',
             'SalesRabbit_User': 'users',
+            # SalesPro mappings (using actual sync_type names from management commands)
+            'SalesPro_Office': 'office',
+            'SalesPro_User': 'user',
+            'SalesPro_CreditApplication': 'creditapplications',
+            'SalesPro_Customer': 'customer',
+            'SalesPro_Estimate': 'estimate',
+            'SalesPro_LeadResult': 'leadresults',
             # Genius mappings based on standardized sync_types
             'Genius_Appointment': 'appointments',
             'Genius_AppointmentOutcome': 'appointment_outcomes',
@@ -543,8 +550,8 @@ class CRMDiscoveryService:
             name = name[7:]  # Remove 'Genius_'
         elif name.startswith('Hubspot_') or name.startswith('HubSpot_'):
             name = name[8:]  # Remove 'Hubspot_'/'HubSpot_'
-        elif name.startswith('Salespro_'):
-            name = name[9:]  # Remove 'Salespro_'
+        elif name.startswith('SalesPro_'):
+            name = name[9:]  # Remove 'SalesPro_'
         elif name.startswith('SalesRabbit_'):
             name = name[12:]  # Remove 'SalesRabbit_'
         elif name.startswith('Arrivy_'):
