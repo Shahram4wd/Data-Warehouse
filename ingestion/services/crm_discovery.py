@@ -489,6 +489,9 @@ class CRMDiscoveryService:
             'CallRail_Tracker': 'trackers',
             'CallRail_User': 'users',
             'Five9Contact': 'contacts',
+            # SalesRabbit mappings
+            'SalesRabbit_Lead': 'leads',
+            'SalesRabbit_User': 'users',
             # Genius mappings based on standardized sync_types
             'Genius_Appointment': 'appointments',
             'Genius_AppointmentOutcome': 'appointment_outcomes',
@@ -542,8 +545,8 @@ class CRMDiscoveryService:
             name = name[8:]  # Remove 'Hubspot_'/'HubSpot_'
         elif name.startswith('Salespro_'):
             name = name[9:]  # Remove 'Salespro_'
-        elif name.startswith('Salesrabbit_'):
-            name = name[12:]  # Remove 'Salesrabbit_'
+        elif name.startswith('SalesRabbit_'):
+            name = name[12:]  # Remove 'SalesRabbit_'
         elif name.startswith('Arrivy_'):
             name = name[7:]  # Remove 'Arrivy_'
         
