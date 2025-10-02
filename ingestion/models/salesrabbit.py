@@ -1,7 +1,5 @@
 from django.db import models
 from django.utils import timezone
-from .common import SyncHistory
-
 
 class SalesRabbit_Lead(models.Model):
     """Model representing a SalesRabbit lead"""
