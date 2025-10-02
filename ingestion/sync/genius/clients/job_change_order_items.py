@@ -101,8 +101,12 @@ class GeniusJobChangeOrderItemClient(GeniusBaseClient):
         """
         last_id = 0
         total_fetched = 0
+        max_iterations = 10000  # Safety limit to prevent infinite loops
+        iterations = 0
         
-        while True:
+        while iterations < max_iterations:
+            iterations += 1
+            
             # Build cursor-based query
             query = """
             SELECT 
@@ -118,31 +122,44 @@ class GeniusJobChangeOrderItemClient(GeniusBaseClient):
             
             params = [last_id]
             
-            # Add since_date filter if provided
+            # Add date filter if provided
             if since:
                 query += " AND jcoi.updated_at >= %s"
                 params.append(since.strftime('%Y-%m-%d %H:%M:%S'))
             
-            query += f" ORDER BY jcoi.id LIMIT {chunk_size}"
+            query += " ORDER BY jcoi.id LIMIT %s"
+            params.append(chunk_size)
             
-            logger.debug(f"Cursor-based query: {query} with params: {params}")
-            chunk_results = self.execute_query(query, tuple(params))
+            logger.debug(f"Cursor-based query iteration {iterations}: {query} with params: {params}")
             
-            if not chunk_results:
-                # No more records, break the loop
+            try:
+                # Execute query with timeout protection
+                chunk = self.execute_query(query, tuple(params))
+            except Exception as e:
+                logger.error(f"Query failed at iteration {iterations}: {e}")
                 break
             
-            total_fetched += len(chunk_results)
-            logger.debug(f"Fetched chunk of {len(chunk_results)} items (total: {total_fetched})")
-            
-            yield chunk_results
-            
-            # Update cursor for next iteration (last record's ID)
-            last_id = chunk_results[-1][0]  # Assuming ID is the first field
-            
-            # If we got less than chunk_size records, we're at the end
-            if len(chunk_results) < chunk_size:
+            if not chunk:
+                logger.debug(f"No more data found at iteration {iterations}, ending pagination")
                 break
+            
+            # Safety check: ensure we're making progress
+            new_last_id = chunk[-1][0]  # First field is ID
+            if new_last_id <= last_id:
+                logger.error(f"Cursor not advancing! last_id={last_id}, new_last_id={new_last_id}")
+                break
+                
+            last_id = new_last_id
+            total_fetched += len(chunk)
+            
+            logger.debug(f"Fetched chunk of {len(chunk)} items (total: {total_fetched}, last_id: {last_id})")
+            
+            yield chunk
+            
+        if iterations >= max_iterations:
+            logger.warning(f"Reached maximum iterations ({max_iterations}) in chunked fetch")
+            
+        logger.info(f"Completed chunked fetch: {total_fetched} total records in {iterations} iterations")
 
     def get_total_count(self, since_date: Optional[datetime] = None) -> int:
         """Get total count of job change order items matching the criteria"""

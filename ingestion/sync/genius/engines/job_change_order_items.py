@@ -59,62 +59,74 @@ class GeniusJobChangeOrderItemsSyncEngine(GeniusBaseSyncEngine):
             total_count = self.client.get_total_count(since_date)
             logger.info(f"Total job change order items to process: {total_count:,}")
             
-            # Get job change order items from source using cursor-based pagination
-            raw_data = []
-            for chunk in self.client.get_chunked_items(chunk_size=10000, since=since_date):
-                raw_data.extend(chunk)
-                if max_records and len(raw_data) >= max_records:
-                    raw_data = raw_data[:max_records]
-                    break
-            
-            logger.info(f"Fetched {len(raw_data)} job change order items from Genius")
-            
-            if dry_run:
-                logger.info("DRY RUN: Would process job change order items but making no changes")
-                stats['total_processed'] = len(raw_data)
-                return stats
-            
-            if not raw_data:
+            if total_count == 0:
                 logger.info("No job change order items to sync")
                 return stats
             
-            logger.info(f"Processing {len(raw_data)} job change order items in batches")
+            if dry_run:
+                logger.info("DRY RUN: Would process job change order items but making no changes")
+                stats['total_processed'] = total_count
+                return stats
+
+            logger.info(f"Processing {total_count} job change order items using streaming approach")
             
             # Get field mapping for data transformation
             field_mapping = self.client.get_field_mapping()
             
-            # Process in batches for better performance
-            batch_size = 10000
-            for i in range(0, len(raw_data), batch_size):
-                batch = raw_data[i:i + batch_size]
-                batch_num = (i // batch_size) + 1
-                total_batches = (len(raw_data) + batch_size - 1) // batch_size
+            # Process chunks directly from the generator (streaming approach)
+            batch_size = 1000  # Smaller batch size for better memory management
+            records_processed = 0
+            
+            for chunk_num, chunk in enumerate(self.client.get_chunked_items(chunk_size=10000, since=since_date), 1):
+                logger.info(f"📦 Processing chunk {chunk_num} ({len(chunk)} items)")
                 
-                logger.info(f"📦 Processing batch {batch_num}/{total_batches} ({len(batch)} items)")
+                if max_records and records_processed >= max_records:
+                    logger.info(f"Reached max_records limit of {max_records}")
+                    break
                 
                 try:
                     # Transform raw tuples to dictionaries
                     transformed_batch = []
-                    for raw_record in batch:
+                    for raw_record in chunk:
+                        if max_records and records_processed >= max_records:
+                            break
+                            
                         try:
                             record_dict = self.processor.transform_record(raw_record, field_mapping)
                             transformed_batch.append(record_dict)
+                            
                         except Exception as e:
-                            logger.error(f"Validation failed for record {raw_record}: {e}")
+                            logger.error(f"Transform failed for record {raw_record}: {e}")
                             stats['errors'] += 1
                             continue
                     
-                    if not dry_run and transformed_batch:
-                        batch_stats = self.processor.process_batch(transformed_batch, force_overwrite=force_overwrite)
-                        stats['created'] += batch_stats['created']
-                        stats['updated'] += batch_stats['updated']
-                        stats['errors'] += batch_stats['errors']
+                    # Process the batch
+                    if transformed_batch:
+                        # Process in smaller sub-batches for better performance
+                        for i in range(0, len(transformed_batch), batch_size):
+                            sub_batch = transformed_batch[i:i + batch_size]
+                            sub_batch_num = i // batch_size + 1
+                            total_sub_batches = (len(transformed_batch) + batch_size - 1) // batch_size
+                            
+                            logger.info(f"  Processing sub-batch {sub_batch_num}/{total_sub_batches} ({len(sub_batch)} items)")
+                            
+                            batch_stats = self.processor.process_batch(sub_batch, force_overwrite=force_overwrite)
+                            stats['created'] += batch_stats['created']
+                            stats['updated'] += batch_stats['updated']
+                            stats['errors'] += batch_stats['errors']
+                            
+                            records_processed += len(sub_batch)
+                            
+                            # Progress logging
+                            if total_count > 0:
+                                progress = (records_processed / total_count) * 100
+                                logger.info(f"  Progress: {records_processed}/{total_count} ({progress:.1f}%)")
                     
-                    stats['total_processed'] += len(transformed_batch)
+                    stats['total_processed'] = records_processed
                     
                 except Exception as e:
-                    logger.error(f"Error processing batch {batch_num}: {e}")
-                    stats['errors'] += len(batch)
+                    logger.error(f"Error processing chunk {chunk_num}: {e}")
+                    stats['errors'] += len(chunk)
                     
             logger.info(f"✅ Job change order items sync completed. Stats: {stats}")
             

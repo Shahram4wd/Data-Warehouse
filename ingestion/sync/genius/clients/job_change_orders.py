@@ -100,8 +100,12 @@ class GeniusJobChangeOrderClient(GeniusBaseClient):
         """
         last_id = 0
         total_fetched = 0
+        max_iterations = 10000  # Safety limit to prevent infinite loops
+        iterations = 0
         
-        while True:
+        while iterations < max_iterations:
+            iterations += 1
+            
             # Build the cursor-based query
             query = """
             SELECT
@@ -141,22 +145,36 @@ class GeniusJobChangeOrderClient(GeniusBaseClient):
             query += " ORDER BY jco.id LIMIT %s"
             params.append(chunk_size)
             
-            logger.debug(f"Cursor-based query: {query} with params: {params}")
+            logger.debug(f"Cursor-based query iteration {iterations}: {query} with params: {params}")
             
-            # Execute query
-            chunk = self.execute_query(query, tuple(params))
-            
-            if not chunk:
-                logger.debug("No more data found, ending pagination")
+            try:
+                # Execute query with timeout protection
+                chunk = self.execute_query(query, tuple(params))
+            except Exception as e:
+                logger.error(f"Query failed at iteration {iterations}: {e}")
                 break
             
-            # Update cursor for next iteration
-            last_id = chunk[-1][0]  # First field is ID
+            if not chunk:
+                logger.debug(f"No more data found at iteration {iterations}, ending pagination")
+                break
+            
+            # Safety check: ensure we're making progress
+            new_last_id = chunk[-1][0]  # First field is ID
+            if new_last_id <= last_id:
+                logger.error(f"Cursor not advancing! last_id={last_id}, new_last_id={new_last_id}")
+                break
+                
+            last_id = new_last_id
             total_fetched += len(chunk)
             
-            logger.debug(f"Fetched chunk of {len(chunk)} items (total: {total_fetched})")
+            logger.debug(f"Fetched chunk of {len(chunk)} items (total: {total_fetched}, last_id: {last_id})")
             
             yield chunk
+            
+        if iterations >= max_iterations:
+            logger.warning(f"Reached maximum iterations ({max_iterations}) in chunked fetch")
+            
+        logger.info(f"Completed chunked fetch: {total_fetched} total records in {iterations} iterations")
     
     def get_total_count(self, since: Optional[datetime] = None) -> int:
         """
