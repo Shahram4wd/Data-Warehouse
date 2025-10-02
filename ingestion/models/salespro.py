@@ -189,24 +189,86 @@ class SalesPro_Estimate(models.Model):
 
 
 class SalesPro_LeadResult(models.Model):
-    # Use estimate_id as primary key to keep only latest version
+    # Identity
     estimate_id = models.CharField(max_length=255, primary_key=True)
-    company_id = models.CharField(max_length=255, blank=True, null=True)
+    company_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+
+    # Result / reasons
+    appointment_result = models.CharField(max_length=255, blank=True, null=True)
+    result_reason_demo_not_sold = models.CharField(max_length=255, blank=True, null=True)  # "(objection)"
+    result_reason_no_demo = models.CharField(max_length=255, blank=True, null=True)        # "(REQUIRES SALES MANGER APPROVAL)"
+
+    # Presence
+    both_homeowners_present = models.BooleanField(blank=True, null=True)
+    sales_manager_present = models.BooleanField(blank=True, null=True)
+
+    # Money / amounts
+    job_size = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    total_job_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    one_year_price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    last_price_offered = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    last_payment_offered = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    no_brainer_commitment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    deposit_type = models.CharField(max_length=255, blank=True, null=True)
+    deposit_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    balance_type = models.CharField(max_length=255, blank=True, null=True)   # aka Balance Form Of Payment
+    balance_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+
+    # Financing / payment prefs
+    preferred_payment = models.CharField(max_length=255, blank=True, null=True)
+    financing = models.CharField(max_length=255, blank=True, null=True)
+    financing_approved = models.BooleanField(blank=True, null=True)
+    loan_docs_signed = models.BooleanField(blank=True, null=True)
+
+    # Category / scheduling
+    job_type = models.CharField(max_length=255, blank=True, null=True)
+    services = models.CharField(max_length=255, blank=True, null=True)
+    requested_start_month = models.CharField(max_length=255, blank=True, null=True)
+    deadline = models.CharField(max_length=255, blank=True, null=True)
+    timing = models.CharField(max_length=255, blank=True, null=True)  # e.g. "-RTG ..."
+    scheduling_notes = models.TextField(blank=True, null=True)        # appears as "Scheduling Notes"
+
+    # Process flags
+    upload_estimate_sheet_company_cam = models.BooleanField(blank=True, null=True)  # "Did you Upload Estimate Sheet to Company Cam"
+    st8_completed = models.BooleanField(blank=True, null=True)                      # "Did you complete your ST-8 Form Before leaving house?" / variant
+    did_use_company_cam = models.BooleanField(blank=True, null=True)               # "Did you use company cam"
+    client_most_likely_to_add_on = models.CharField(max_length=255, blank=True, null=True)  # "Client most likely to add on:"
+
+    # Narrative / qualifiers
+    warm_up_topic = models.CharField(max_length=255, blank=True, null=True)
+    urgency_time_frame = models.CharField(max_length=255, blank=True, null=True)
+    additional_services_demoed_priced = models.CharField(max_length=255, blank=True, null=True)
+
+    describe_rapport_hot_button = models.TextField(blank=True, null=True)
+    company_story_pain_point = models.TextField(blank=True, null=True)
+    call_to_action = models.TextField(blank=True, null=True)
+    price_conditioning_response = models.CharField(max_length=255, blank=True, null=True)
+    customers_final_price_commitment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+
+    # Free-form notes seen in data
+    notes = models.TextField(blank=True, null=True)                # "Notes", "Project Notes"
+    closing_notes = models.TextField(blank=True, null=True)        # "Closing Notes (how could you have booked this job)"
+    notes_for_install_team = models.TextField(blank=True, null=True)  # "Notes for Install Team"
+    details_discussed_for_install = models.TextField(blank=True, null=True)  # "Details Discussed With Homeowner That Installation Needs To Know"
+
+    # Misc selections / tools
+    measurement_tool = models.CharField(max_length=255, blank=True, null=True)  # "Measurement Tool(s) Used"
+    dumpster_preference = models.CharField(max_length=255, blank=True, null=True)
+    color_selection = models.TextField(blank=True, null=True)
+
+    # Other qualifiers
+    has_consider_solar = models.CharField(max_length=64, blank=True, null=True)
+
+    # Status bucket and raw data storage
+    status_bucket = models.CharField(max_length=64, blank=True, null=True)  # e.g. "[HRE] Demo Sold", "[CC] Rescheduled"
+    lead_results_raw = models.JSONField(blank=True, null=True)              # Original JSON data for reference
+
+    # Optional: precomputed TSV for fast full-text search (manage via signal/trigger if you want it)
+    # search = SearchVectorField(null=True, editable=False)
+
+    # Sync stamps
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
-    
-    # Normalized lead result fields based on the sample data
-    appointment_result = models.CharField(max_length=255, blank=True, null=True)  # "Appointment Result"
-    result_reason_demo_not_sold = models.CharField(max_length=255, blank=True, null=True)  # "Result Reason - Demo Not Sold (objection)"
-    result_reason_no_demo = models.CharField(max_length=255, blank=True, null=True)  # "Result Reason - No Demo (REQUIRES SALES MANGER APPROVAL)"
-    both_homeowners_present = models.CharField(max_length=10, blank=True, null=True)  # "Both Homeowners Present?" (Yes/No)
-    one_year_price = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)  # "One Year Price"
-    last_price_offered = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)  # "Last Price Offered"
-    preferred_payment = models.CharField(max_length=255, blank=True, null=True)  # "Preferred Payment"
-    notes = models.TextField(blank=True, null=True)  # "Notes"
-    
-    # Keep the original JSON field as backup/reference during transition
-    lead_results_raw = models.TextField(blank=True, null=True, help_text="Original JSON data for reference")
 
     class Meta:
         db_table = 'salespro_lead_result'
@@ -217,6 +279,41 @@ class SalesPro_LeadResult(models.Model):
         verbose_name_plural = 'Lead Results'
         # No unique_together needed since estimate_id is primary key
         ordering = ['-sync_updated_at']
+        indexes = [
+            models.Index(fields=["company_id"]),
+            models.Index(fields=["appointment_result"]),
+            models.Index(fields=["status_bucket"]),
+            models.Index(fields=["job_size"]),
+            models.Index(fields=["sync_updated_at"]),
+        ]
 
     def __str__(self):
         return f"{self.estimate_id} - {self.appointment_result}"
+
+
+class SalesPro_LeadResultLineItem(models.Model):
+    """Line items for SalesPro Lead Results (e.g., Job Type 1, Job Type 2, etc.)"""
+    estimate = models.ForeignKey(
+        SalesPro_LeadResult,
+        on_delete=models.CASCADE,
+        related_name="line_items",
+        db_column="estimate_id",
+    )
+    job_type_number = models.PositiveSmallIntegerField()  # 1, 2, 3, 4, 5, 6
+    job_type = models.CharField(max_length=255, blank=True, null=True)  # e.g., "-Roofing", "-Gutters and/or Guards"
+    job_type_amount = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+
+    class Meta:
+        db_table = 'salespro_lead_result_line_item'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'SalesPro Lead Result Line Items stored in ingestion schema'
+        verbose_name = 'Lead Result Line Item'
+        verbose_name_plural = 'Lead Result Line Items'
+        unique_together = (("estimate", "job_type_number"),)
+        indexes = [
+            models.Index(fields=["estimate", "job_type_number"]),
+        ]
+
+    def __str__(self):
+        return f"{self.estimate.estimate_id} - Job Type {self.job_type_number}: {self.job_type} ({self.job_type_amount})"

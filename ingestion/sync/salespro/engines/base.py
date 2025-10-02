@@ -13,6 +13,7 @@ from ingestion.base.exceptions import SyncException, ValidationException
 from ingestion.utils import get_athena_client
 from ingestion.athena_client import AthenaClient
 from ingestion.models.common import SyncHistory
+from ingestion.models.salespro import SalesPro_LeadResultLineItem
 
 logger = logging.getLogger(__name__)
 
@@ -826,6 +827,11 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
             
             logger.info(f"PostgreSQL UPSERT completed: {results['created']} created, {results['updated']} updated")
             
+            # Handle line items for LeadResult records after successful bulk operations
+            if self.model_class.__name__ == 'SalesPro_LeadResult':
+                logger.info(f"Processing line items for {len(deduplicated_records)} LeadResult records")
+                await self._handle_bulk_line_items(deduplicated_records)
+            
         except Exception as e:
             # Enhanced error logging with specific record and field context
             error_msg = str(e)
@@ -1024,11 +1030,19 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
                                         setattr(existing_obj, field, value)
                                 await sync_to_async(existing_obj.save)()
                                 results['updated'] += 1
+                                
+                                # Handle line items for updated LeadResult records
+                                await self._handle_lead_result_line_items(existing_obj, record)
                             # If existing is more recent, skip (no action needed)
                         except self.model_class.DoesNotExist:
                             # Create new record
-                            await sync_to_async(self.model_class.objects.create)(**record)
+                            obj = await sync_to_async(self.model_class.objects.create)(**record)
                             results['created'] += 1
+                        
+                        # Handle line items for LeadResult records
+                        if self.model_class.__name__ == 'SalesPro_LeadResult':
+                            await self._handle_lead_result_line_items(obj, record)
+                            
                     else:
                         # Missing required estimate_id, skip record
                         logger.warning(f"LeadResult record missing estimate_id: {record}")
@@ -1097,3 +1111,89 @@ class SalesProBaseSyncEngine(BaseSyncEngine):
         # Note: boto3 Athena client doesn't need explicit connection closing
         # Just log completion
         logger.info(f"Cleanup completed for {self.table_name} sync with enterprise features")
+
+    async def _handle_lead_result_line_items(self, lead_result_obj, record: Dict[str, Any]):
+        """Handle line items for LeadResult records"""
+        try:
+            # Check if line items were extracted during processing
+            line_items = record.get('_line_items', [])
+            
+            if line_items:
+                # Delete existing line items for this estimate
+                await sync_to_async(
+                    lead_result_obj.line_items.all().delete
+                )()
+                
+                # Create new line items using the updated model structure
+                line_item_objects = [
+                    SalesPro_LeadResultLineItem(
+                        estimate=lead_result_obj,
+                        job_type_number=li.get("job_type_number"),
+                        job_type=li.get("job_type"),
+                        job_type_amount=li.get("job_type_amount")
+                    )
+                    for li in line_items if li.get("job_type_number")
+                ]
+                
+                if line_item_objects:
+                    await sync_to_async(
+                        SalesPro_LeadResultLineItem.objects.bulk_create
+                    )(line_item_objects)
+                    
+                    logger.debug(f"Created {len(line_item_objects)} line items for estimate {lead_result_obj.estimate_id}")
+                    
+        except Exception as e:
+            logger.error(f"Error handling line items for estimate {lead_result_obj.estimate_id}: {e}")
+
+    async def _handle_bulk_line_items(self, records: List[Dict[str, Any]]):
+        """Handle line items for multiple LeadResult records after bulk operations"""
+        try:
+            logger.info(f"Starting bulk line items processing for {len(records)} records")
+            
+            for record in records:
+                estimate_id = record.get('estimate_id')
+                line_items = record.get('_line_items', [])
+                
+                logger.info(f"Record {estimate_id}: has {len(line_items)} line items")
+                
+                if estimate_id and line_items:
+                    try:
+                        # Get the LeadResult object
+                        lead_result_obj = await sync_to_async(
+                            self.model_class.objects.get
+                        )(estimate_id=estimate_id)
+                        
+                        # Delete existing line items for this estimate
+                        await sync_to_async(
+                            lead_result_obj.line_items.all().delete
+                        )()
+                        
+                        # Create new line items using the updated model structure
+                        line_item_objects = [
+                            SalesPro_LeadResultLineItem(
+                                estimate=lead_result_obj,
+                                job_type_number=li.get("job_type_number"),
+                                job_type=li.get("job_type"),
+                                job_type_amount=li.get("job_type_amount")
+                            )
+                            for li in line_items if li.get("job_type_number")
+                        ]
+                        
+                        if line_item_objects:
+                            await sync_to_async(
+                                SalesPro_LeadResultLineItem.objects.bulk_create
+                            )(line_item_objects)
+                            
+                            logger.info(f"Created {len(line_item_objects)} line items for estimate {estimate_id} in bulk processing")
+                        else:
+                            logger.warning(f"No valid line items to create for estimate {estimate_id}")
+                            
+                    except self.model_class.DoesNotExist:
+                        logger.warning(f"LeadResult with estimate_id {estimate_id} not found for line items processing")
+                    except Exception as e:
+                        logger.error(f"Error processing line items for estimate {estimate_id}: {e}")
+                        
+        except Exception as e:
+            logger.error(f"Error in bulk line items processing: {e}")
+
+

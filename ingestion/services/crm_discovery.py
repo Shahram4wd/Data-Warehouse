@@ -499,6 +499,7 @@ class CRMDiscoveryService:
             'SalesPro_Customer': 'customer',
             'SalesPro_Estimate': 'estimate',
             'SalesPro_LeadResult': 'leadresults',
+            'SalesPro_LeadResultLineItem': 'leadresults',  # Line items sync with parent
             # Genius mappings based on standardized sync_types
             'Genius_Appointment': 'appointments',
             'Genius_AppointmentOutcome': 'appointment_outcomes',
