@@ -87,8 +87,8 @@ def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
             if sync_type:
                 last_sync_time = SyncHistory.get_last_sync_timestamp(source_key, sync_type)
                 if last_sync_time:
-                    # Format timestamp for the --since parameter
-                    default_args = {"since": last_sync_time.isoformat()}
+                    # Format timestamp for the --start-date parameter (following CRM sync guide standards)
+                    default_args = {"start_date": last_sync_time.isoformat()}
                 # If no last sync time, do a full sync as fallback
                 # (this handles the first run case)
         
@@ -123,8 +123,8 @@ def _get_command_for_source(source_key: str, mode: str, model_name: str = None):
             if sync_type:
                 last_sync_time = SyncHistory.get_last_sync_timestamp(source_key, sync_type)
                 if last_sync_time:
-                    # Format timestamp for the --since parameter
-                    default_args = {"since": last_sync_time.isoformat()}
+                    # Format timestamp for the --start-date parameter (following CRM sync guide standards)
+                    default_args = {"start_date": last_sync_time.isoformat()}
                 # If no last sync time, do a full sync as fallback
                 # (this handles the first run case)
         
