@@ -500,6 +500,71 @@ class GeniusRecordValidator:
         return errors
     
     @staticmethod
+    def validate_integration_field_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate integration field record data"""
+        validated = {}
+        
+        # Validate required fields
+        validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
+        if validated['id'] is None:
+            raise ValueError("Integration field must have a valid id")
+        
+        validated['definition_id'] = GeniusValidator.validate_id_field(record.get('definition_id'))
+        if validated['definition_id'] is None:
+            raise ValueError("Integration field must have a valid definition_id")
+        
+        # Validate optional fields
+        validated['user_id'] = GeniusValidator.validate_id_field(record.get('user_id'))
+        validated['division_id'] = GeniusValidator.validate_id_field(record.get('division_id'))
+        
+        # Validate field_value (max 128 chars)
+        validated['field_value'] = GeniusValidator.validate_string_field(
+            record.get('field_value'), max_length=128, required=False
+        )
+        
+        # Validate datetime fields
+        validated['created_at'] = GeniusValidator.validate_datetime_field(record.get('created_at'))
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        
+        return validated
+    
+    @staticmethod
+    def validate_integration_field_definition_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate integration field definition record data"""
+        validated = {}
+        
+        # Validate required fields
+        validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
+        if validated['id'] is None:
+            raise ValueError("Integration field definition must have a valid id")
+        
+        validated['integration_id'] = GeniusValidator.validate_id_field(record.get('integration_id'))
+        if validated['integration_id'] is None:
+            raise ValueError("Integration field definition must have a valid integration_id")
+        
+        # Validate required string fields
+        validated['label'] = GeniusValidator.validate_string_field(
+            record.get('label'), max_length=32, required=True
+        )
+        validated['key_name'] = GeniusValidator.validate_string_field(
+            record.get('key_name'), max_length=64, required=True
+        )
+        
+        # Validate optional string fields
+        validated['hint'] = GeniusValidator.validate_string_field(
+            record.get('hint'), max_length=255, required=False
+        )
+        validated['input_type'] = GeniusValidator.validate_string_field(
+            record.get('input_type'), max_length=50, required=False
+        )
+        
+        # Validate boolean fields
+        validated['is_user'] = GeniusValidator.validate_boolean_field(record.get('is_user'))
+        validated['is_division'] = GeniusValidator.validate_boolean_field(record.get('is_division'))
+        
+        return validated
+    
+    @staticmethod
     def validate_business_rules(record_type: str, record: Dict[str, Any]) -> List[str]:
         """Validate business-specific rules"""
         errors = []

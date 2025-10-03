@@ -159,6 +159,7 @@ class Command(BaseCommand):
                 {"name": "db_genius_job_change_order_types", "description": "Job change order type definitions", "options": {}},
                 {"name": "db_genius_job_change_order_statuses", "description": "Job change order status definitions", "options": {}},
                 {"name": "db_genius_job_change_order_reasons", "description": "Job change order reason codes", "options": {}},
+                {"name": "db_genius_integration_field_definitions", "description": "Integration field definition templates", "options": {}},
                 
                 # Level 2: Depends on division_groups
                 {"name": "db_genius_divisions", "description": "Organizational divisions", "options": {}},
@@ -170,10 +171,11 @@ class Command(BaseCommand):
                 # Level 4: Depends on divisions and user_titles
                 {"name": "db_genius_users", "description": "System users", "options": {}},
                 
-                # Level 5: Depends on users and divisions
+                # Level 5: Depends on users and divisions and integration_field_definitions
                 {"name": "db_genius_user_associations", "description": "User organizational associations", "options": {}},
                 {"name": "db_genius_prospects", "description": "Prospect records", "options": {}},
                 {"name": "db_genius_leads", "description": "Lead records", "options": {}},
+                {"name": "db_genius_integration_fields", "description": "Integration field values", "options": {}},
                 
                 # Level 6: Depends on prospects and marketing_sources
                 {"name": "db_genius_prospect_sources", "description": "Prospect source attributions", "options": {}},

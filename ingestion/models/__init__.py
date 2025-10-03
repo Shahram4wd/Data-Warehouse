@@ -29,6 +29,8 @@ from .genius import (
     Genius_JobChangeOrderStatus,
     Genius_JobChangeOrderType,
     Genius_JobStatus,
+    Genius_IntegrationField,
+    Genius_IntegrationFieldDefinition,
 )
 
 # Import SalesPro models

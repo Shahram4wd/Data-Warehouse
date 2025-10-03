@@ -915,3 +915,50 @@ class Genius_JobFinancing(models.Model):
     def __str__(self):
         return f"Job Financing {self.job_id} - Term {self.term_id}"
 
+
+class Genius_IntegrationField(models.Model):
+    id = models.AutoField(primary_key=True)
+    definition_id = models.IntegerField(null=False, blank=False)
+    user_id = models.IntegerField(null=True, blank=True)
+    division_id = models.IntegerField(null=True, blank=True)
+    field_value = models.CharField(max_length=128, null=True, blank=True)
+    created_at = models.DateTimeField(null=False, blank=False)
+    updated_at = models.DateTimeField(null=False, blank=False)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_integration_field'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Integration Field data stored in ingestion schema'
+        verbose_name = 'Genius Integration Field'
+        verbose_name_plural = 'Genius Integration Fields'
+
+    def __str__(self):
+        return f"Integration Field {self.id} - Definition {self.definition_id}"
+
+
+class Genius_IntegrationFieldDefinition(models.Model):
+    id = models.AutoField(primary_key=True)
+    integration_id = models.IntegerField(null=False, blank=False)
+    label = models.CharField(max_length=32, null=False, blank=False)
+    key_name = models.CharField(max_length=64, null=False, blank=False)
+    is_user = models.BooleanField(default=False)
+    is_division = models.BooleanField(default=False)
+    hint = models.CharField(max_length=255, null=True, blank=True)
+    input_type = models.CharField(max_length=50, null=True, blank=True)
+    sync_created_at = models.DateTimeField(auto_now_add=True)
+    sync_updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'genius_integration_field_definition'
+        managed = True
+        app_label = 'ingestion'
+        db_table_comment = 'Genius Integration Field Definition data stored in ingestion schema'
+        verbose_name = 'Genius Integration Field Definition'
+        verbose_name_plural = 'Genius Integration Field Definitions'
+
+    def __str__(self):
+        return f"Integration Field Definition {self.id} - {self.label}"
+
