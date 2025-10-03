@@ -57,7 +57,7 @@ class CRMListAPIView(BaseAPIView):
             
             return self.json_response({
                 'success': True,
-                'data': crm_sources,
+                'crm_sources': crm_sources,
                 'total': len(crm_sources)
             })
             
@@ -91,7 +91,7 @@ class CRMModelsAPIView(BaseAPIView):
             return self.json_response({
                 'success': True,
                 'crm_source': crm_source,
-                'data': serializable_models,
+                'models': serializable_models,
                 'total': len(serializable_models)
             })
             

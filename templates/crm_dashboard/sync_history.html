@@ -292,6 +292,25 @@ let isLoading = false;
 document.addEventListener('DOMContentLoaded', function() {
     loadFilters();
     loadHistory();
+    
+    // Add event listener for CRM filter changes
+    document.getElementById('crmFilter').addEventListener('change', function() {
+        loadModelsForCRM(this.value);
+        loadHistory(); // Refresh history when filter changes
+    });
+    
+    // Add event listeners for other filters
+    document.getElementById('modelFilter').addEventListener('change', function() {
+        loadHistory(); // Refresh history when model filter changes
+    });
+    
+    document.getElementById('statusFilter').addEventListener('change', function() {
+        loadHistory(); // Refresh history when status filter changes
+    });
+    
+    document.getElementById('dateFilter').addEventListener('change', function() {
+        loadHistory(); // Refresh history when date filter changes
+    });
 });
 
 function loadFilters() {
@@ -310,6 +329,33 @@ function loadFilters() {
             }
         })
         .catch(error => console.error('Error loading CRM filters:', error));
+}
+
+function loadModelsForCRM(crmSource) {
+    const modelFilter = document.getElementById('modelFilter');
+    
+    // Clear existing options except "All Models"
+    modelFilter.innerHTML = '<option value="">All Models</option>';
+    
+    // If no CRM selected, don't load models
+    if (!crmSource) {
+        return;
+    }
+    
+    // Load models for the selected CRM
+    fetch(`/ingestion/crm-dashboard/api/crms/${crmSource}/models/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.name;
+                    option.textContent = model.display_name || model.name;
+                    modelFilter.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error loading models:', error));
 }
 
 function loadHistory(reset = true) {
