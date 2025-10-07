@@ -11,7 +11,7 @@ from django.utils import timezone
 from .base import GeniusBaseSyncEngine
 from ..clients.marketing_source_types import GeniusMarketingSourceTypeClient
 from ..processors.marketing_source_types import GeniusMarketingSourceTypeProcessor
-from ingestion.models import Genius_MarketingSourceType
+from ingestion.models import Genius_MarketingSourceType, SyncHistory
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,108 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
         # Configuration constants (no separate config class needed)
         self.DEFAULT_CHUNK_SIZE = 1000
         self.BATCH_SIZE = 500
+
+    @sync_to_async
+    def get_last_sync_timestamp(self):
+        """Get the timestamp of the last successful sync from SyncHistory table"""
+        try:
+            latest_sync = SyncHistory.objects.filter(
+                crm_source='genius',
+                sync_type='marketing_source_types',
+                status__in=['success', 'completed'],
+                end_time__isnull=False
+            ).order_by('-end_time').first()
+            
+            if latest_sync and latest_sync.end_time:
+                logger.info(f"Last successful sync completed at: {latest_sync.end_time}")
+                return latest_sync.end_time
+            else:
+                logger.info("No previous successful sync found")
+                return None
+        except Exception as e:
+            logger.error(f"Error getting last sync timestamp: {e}")
+            return None
+
+    @sync_to_async
+    def _create_sync_record(self, sync_mode: str, since_date: Optional[datetime] = None, 
+                           max_records: Optional[int] = None) -> SyncHistory:
+        """Create a new SyncHistory record for this sync operation"""
+        sync_record = SyncHistory.objects.create(
+            crm_source='genius',
+            sync_type='marketing_source_types',
+            status='running',
+            start_time=timezone.now(),
+            configuration={
+                'sync_mode': sync_mode,
+                'since_date': since_date.isoformat() if since_date else None,
+                'max_records': max_records
+            }
+        )
+        logger.info(f"Created sync history record: {sync_record.id}")
+        return sync_record
+
+    @sync_to_async  
+    def _complete_sync_record_async(self, sync_record: SyncHistory, stats: Dict[str, Any], 
+                                   status: str = 'success'):
+        """Complete the sync record with final stats and status"""
+        sync_record.status = status
+        sync_record.end_time = timezone.now()
+        sync_record.records_processed = stats.get('total_processed', 0)
+        sync_record.records_created = stats.get('created', 0)
+        sync_record.records_updated = stats.get('updated', 0)
+        sync_record.records_failed = stats.get('errors', 0)
+        
+        # Calculate duration
+        if sync_record.start_time:
+            duration = sync_record.end_time - sync_record.start_time
+            sync_record.performance_metrics = {
+                'duration_seconds': duration.total_seconds()
+            }
+        
+        sync_record.save()
+        logger.info(f"Completed sync history record {sync_record.id}: {status}")
+        return sync_record
+
+    async def execute_sync_with_history(self, sync_mode: str = 'incremental', 
+                                       since_date: Optional[datetime] = None,
+                                       max_records: Optional[int] = None,
+                                       dry_run: bool = False,
+                                       **kwargs) -> Dict[str, Any]:
+        """Execute sync with proper SyncHistory tracking"""
+        
+        # If since_date not provided and mode is incremental, get from last sync
+        if sync_mode == 'incremental' and since_date is None:
+            since_date = await self.get_last_sync_timestamp()
+        
+        # Create sync record (unless dry run)
+        sync_record = None
+        if not dry_run:
+            sync_record = await self._create_sync_record(sync_mode, since_date, max_records)
+        
+        try:
+            # Execute the actual sync
+            stats = await self.sync_marketing_source_types_async(
+                since_date=since_date,
+                force_overwrite=(sync_mode == 'force'),
+                dry_run=dry_run,
+                max_records=max_records or 0,
+                **kwargs
+            )
+            
+            # Complete sync record on success
+            if sync_record:
+                await self._complete_sync_record_async(sync_record, stats, 'success')
+            
+            return stats
+            
+        except Exception as e:
+            # Mark sync record as failed
+            if sync_record:
+                error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}
+                await self._complete_sync_record_async(sync_record, error_stats, 'failed')
+            
+            logger.error(f"Sync failed: {e}")
+            raise
     
     def sync_marketing_source_types(self, 
                                    sync_mode: str = 'incremental',
@@ -42,36 +144,24 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
         """
         import asyncio
         
-        # Map sync_mode to existing parameters
-        force_overwrite = (sync_mode == 'force')
-        full_sync = (sync_mode == 'full')
-        
-        # Determine since_date based on sync mode
-        if full_sync:
-            effective_since_date = None
-        elif start_date:
-            effective_since_date = start_date
-        else:
-            effective_since_date = None  # Will be auto-determined by async method
-        
-        # Set up parameters for async method
+        # Use the new execute_sync_with_history method for proper SyncHistory tracking
         sync_params = {
-            'since_date': effective_since_date,
-            'force_overwrite': force_overwrite,
+            'sync_mode': sync_mode,
+            'since_date': start_date,  # Use start_date parameter directly 
+            'max_records': max_records,
             'dry_run': dry_run,
-            'max_records': max_records or 0,
             **kwargs
         }
         
         # Run the async method synchronously
         try:
-            return asyncio.run(self.sync_marketing_source_types_async(**sync_params))
+            return asyncio.run(self.execute_sync_with_history(**sync_params))
         except RuntimeError as e:
             if "asyncio.run() cannot be called from a running event loop" in str(e):
                 # Already in an event loop, use different approach
                 import asyncio
                 loop = asyncio.get_event_loop()
-                return loop.run_until_complete(self.sync_marketing_source_types_async(**sync_params))
+                return loop.run_until_complete(self.execute_sync_with_history(**sync_params))
             else:
                 raise
     
@@ -104,7 +194,7 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
                    f"force_overwrite: {force_overwrite}, dry_run: {dry_run}, "
                    f"max_records: {max_records}")
         
-        # Initialize stats
+        # Initialize stats with proper error tracking
         stats = {
             'total_processed': 0,
             'created': 0,
@@ -137,8 +227,11 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
                     raw_data, self.client.get_field_mapping(), force_overwrite
                 )
                 
-                # Update stats
-                stats.update(batch_stats)
+                # Update stats properly
+                stats['created'] = batch_stats.get('created', 0)
+                stats['updated'] = batch_stats.get('updated', 0)
+                # Preserve any errors from batch processing
+                stats['errors'] = batch_stats.get('errors', 0)
                 
             else:
                 # For full sync (no max_records), use chunked processing to avoid memory issues
@@ -169,27 +262,34 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
                     logger.info(f"Processing chunk {chunk_num}: {chunk_size_actual} records "
                               f"(total processed so far: {total_processed})")
                     
-                    # Process this chunk
-                    chunk_stats = await self._process_marketing_source_type_batch(
-                        chunk_data, self.client.get_field_mapping(), force_overwrite
-                    )
+                    try:
+                        # Process this chunk
+                        chunk_stats = await self._process_marketing_source_type_batch(
+                            chunk_data, self.client.get_field_mapping(), force_overwrite
+                        )
+                        
+                        # Update running totals
+                        stats['created'] += chunk_stats.get('created', 0)
+                        stats['updated'] += chunk_stats.get('updated', 0)
+                        stats['errors'] += chunk_stats.get('errors', 0)
+                        stats['total_processed'] = total_processed
+                        
+                        logger.info(f"Chunk {chunk_num} completed - Created: {chunk_stats.get('created', 0)}, "
+                                  f"Updated: {chunk_stats.get('updated', 0)}, "
+                                  f"Errors: {chunk_stats.get('errors', 0)}, "
+                                  f"Running totals: {stats['created']} created, {stats['updated']} updated, {stats['errors']} errors")
                     
-                    # Update running totals
-                    stats['created'] += chunk_stats['created']
-                    stats['updated'] += chunk_stats['updated']
-                    stats['total_processed'] = total_processed
-                    
-                    logger.info(f"Chunk {chunk_num} completed - Created: {chunk_stats['created']}, "
-                              f"Updated: {chunk_stats['updated']}, "
-                              f"Running totals: {stats['created']} created, {stats['updated']} updated")
+                    except Exception as chunk_error:
+                        logger.error(f"Error processing chunk {chunk_num}: {chunk_error}")
+                        stats['errors'] += chunk_size_actual  # Count entire chunk as errors
+                        stats['total_processed'] = total_processed  # Still count as processed
+                        # Continue with next chunk rather than failing entirely
             
         except Exception as e:
-            logger.error(f"Marketing source types sync failed: {str(e)}")
+            logger.error(f"Error in sync_marketing_source_types_async: {e}")
+            stats['errors'] += 1
+            # Re-raise to let the caller handle it
             raise
-        
-        finally:
-            # Client cleanup if needed
-            pass
         
         logger.info(f"Marketing source types sync completed - Stats: {stats}")
         return stats
@@ -201,26 +301,36 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
         
         # Validate and transform records
         validated_records = []
+        error_count = 0
+        
         for record_tuple in batch:
             try:
                 record = self.processor.validate_record(record_tuple, field_mapping)
                 if record:
                     validated_records.append(record)
+                else:
+                    error_count += 1
             except Exception as e:
                 logger.error(f"Error validating marketing source type record: {e}")
+                error_count += 1
                 continue
         
         if not validated_records:
             logger.warning("No valid marketing source type records to process")
-            return {'created': 0, 'updated': 0}
+            return {'created': 0, 'updated': 0, 'errors': error_count}
         
         # Perform bulk upsert
-        return self._bulk_upsert_records(validated_records, force_overwrite)
+        bulk_stats = self._bulk_upsert_records(validated_records, force_overwrite)
+        
+        # Add error count to stats
+        bulk_stats['errors'] = error_count
+        
+        return bulk_stats
     
     def _bulk_upsert_records(self, validated_records: List[dict], force_overwrite: bool) -> Dict[str, int]:
         """Perform bulk upsert of marketing source type records using modern bulk_create with update_conflicts"""
         
-        stats = {'created': 0, 'updated': 0}
+        stats = {'created': 0, 'updated': 0, 'errors': 0}
         
         if not validated_records:
             return stats
@@ -238,53 +348,64 @@ class GeniusMarketingSourceTypesSyncEngine(GeniusBaseSyncEngine):
                     
                     logger.info(f"Processing batch {batch_num}/{total_batches}: records {i+1}-{min(i+batch_size, len(validated_records))}")
                     
-                    # Prepare model instances for this batch
-                    source_type_instances = []
-                    for record_data in batch:
-                        # Handle NULL updated_at with current timestamp workaround
-                        if record_data.get('updated_at') is None:
-                            record_data['updated_at'] = timezone.now()
+                    try:
+                        # Prepare model instances for this batch
+                        source_type_instances = []
+                        for record_data in batch:
+                            # Handle NULL updated_at with current timestamp workaround
+                            if record_data.get('updated_at') is None:
+                                record_data['updated_at'] = timezone.now()
+                            
+                            try:
+                                source_type_instances.append(Genius_MarketingSourceType(**record_data))
+                            except Exception as e:
+                                logger.error(f"Error creating MarketingSourceType object for id {record_data.get('id')}: {e}")
+                                stats['errors'] += 1
+                                continue
                         
-                        try:
-                            source_type_instances.append(Genius_MarketingSourceType(**record_data))
-                        except Exception as e:
-                            logger.error(f"Error creating MarketingSourceType object for id {record_data.get('id')}: {e}")
+                        if not source_type_instances:
+                            logger.warning(f"No valid MarketingSourceType objects in batch {batch_num}")
+                            stats['errors'] += len(batch)
                             continue
+                        
+                        # Perform bulk upsert for this batch
+                        if force_overwrite:
+                            # Force mode: update all fields
+                            update_fields = ['label', 'description', 'is_active', 'list_order',
+                                           'created_at', 'updated_at', 'sync_updated_at']
+                        else:
+                            # Normal mode: update selective fields
+                            update_fields = ['updated_at', 'sync_updated_at', 'label', 'description', 
+                                           'is_active', 'list_order', 'created_at']
+                        
+                        # Bulk create with conflict resolution
+                        created_source_types = Genius_MarketingSourceType.objects.bulk_create(
+                            source_type_instances,
+                            update_conflicts=True,
+                            update_fields=update_fields,
+                            unique_fields=['id']
+                        )
+                        
+                        # Count results
+                        batch_created = sum(1 for st in created_source_types if st._state.adding)
+                        stats['created'] += batch_created
+                        stats['updated'] += len(source_type_instances) - batch_created
+                        
+                        logger.info(f"Batch {batch_num} completed - Created: {batch_created}, "
+                                  f"Updated: {len(source_type_instances) - batch_created}, "
+                                  f"Total so far: {stats['created']} created, {stats['updated']} updated, {stats['errors']} errors")
                     
-                    if not source_type_instances:
-                        logger.warning(f"No valid MarketingSourceType objects in batch {batch_num}")
-                        continue
-                    
-                    # Perform bulk upsert for this batch
-                    if force_overwrite:
-                        # Force mode: update all fields
-                        update_fields = ['label', 'description', 'is_active', 'list_order',
-                                       'created_at', 'updated_at', 'sync_updated_at']
-                    else:
-                        # Normal mode: update selective fields
-                        update_fields = ['updated_at', 'sync_updated_at', 'label', 'description', 
-                                       'is_active', 'list_order', 'created_at']
-                    
-                    # Bulk create with conflict resolution
-                    created_source_types = Genius_MarketingSourceType.objects.bulk_create(
-                        source_type_instances,
-                        update_conflicts=True,
-                        update_fields=update_fields,
-                        unique_fields=['id']
-                    )
-                    
-                    # Count results
-                    batch_created = sum(1 for st in created_source_types if st._state.adding)
-                    stats['created'] += batch_created
-                    stats['updated'] += len(source_type_instances) - batch_created
-                    
-                    logger.info(f"Batch {batch_num} completed - Created: {batch_created}, "
-                              f"Updated: {len(source_type_instances) - batch_created}, "
-                              f"Total so far: {stats['created']} created, {stats['updated']} updated")
+                    except Exception as batch_error:
+                        logger.error(f"Error processing batch {batch_num}: {batch_error}")
+                        stats['errors'] += len(batch)  # Count entire batch as errors
+                        # Continue with next batch rather than failing entirely
                               
         except Exception as e:
             logger.error(f"Error in bulk_upsert_records: {e}")
+            stats['errors'] += len(validated_records)
             raise
         
+        logger.info(f"Bulk upsert completed - Created: {stats['created']}, "
+                   f"Updated: {stats['updated']}, Errors: {stats['errors']}")
         return stats
 
