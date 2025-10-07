@@ -37,7 +37,7 @@ class GeniusUserTitlesSyncEngine:
             last_sync = SyncHistory.objects.filter(
                 crm_source=self.crm_source,
                 sync_type=self.entity_type,
-                status__in=['completed', 'success']  # Support both old and new status values
+                status='success'  # Use 'success' which is the valid status value
             ).order_by('-end_time').first()
             
             return last_sync.end_time if last_sync else None
@@ -59,16 +59,17 @@ class GeniusUserTitlesSyncEngine:
                            error_message: Optional[str] = None):
         """Complete the SyncHistory record"""
         sync_record.end_time = timezone.now()
-        sync_record.total_processed = stats.get('total_processed', 0)
-        sync_record.successful_count = stats.get('created', 0) + stats.get('updated', 0)
-        sync_record.error_count = stats.get('errors', 0)
-        sync_record.statistics = stats
+        sync_record.records_processed = stats.get('total_processed', 0)
+        sync_record.records_created = stats.get('created', 0)
+        sync_record.records_updated = stats.get('updated', 0)
+        sync_record.records_failed = stats.get('errors', 0)
+        sync_record.performance_metrics = stats
         
         if error_message:
             sync_record.status = 'failed'
             sync_record.error_message = error_message
         else:
-            sync_record.status = 'completed'  # Changed from 'success' to 'completed'
+            sync_record.status = 'success'  # Use 'success' which is a valid choice
         
         sync_record.save()
     
