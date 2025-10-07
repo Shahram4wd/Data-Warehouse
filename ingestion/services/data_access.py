@@ -470,51 +470,76 @@ class DataAccessService:
             
             logger.info(f"Computing statistics for {model_class.__name__} (table: {model_class._meta.db_table})")
             
-            # Intelligent counting strategy: use approximate for very large tables, exact for smaller ones
-            # Also check if approximate count is reasonable by comparing with recent sync activity
+            # PostgreSQL best practices for counting rows efficiently
+            # Reference: https://wiki.postgresql.org/wiki/Count_estimate
             try:
                 from django.db import connection
-                approximate_count = None
+                table_name = model_class._meta.db_table
                 
-                # First, try to get approximate count from PostgreSQL statistics
                 with connection.cursor() as cursor:
+                    # Best practice: Use pg_class.reltuples for fast estimates
+                    # This is the most reliable estimate PostgreSQL provides
                     cursor.execute("""
-                        SELECT COALESCE(n_tup_ins - n_tup_del, 0) as approx_count,
-                               last_analyze,
-                               last_autoanalyze
-                        FROM pg_stat_user_tables 
-                        WHERE relname = %s
-                    """, [model_class._meta.db_table])
+                        SELECT 
+                            c.reltuples::bigint as estimated_rows,
+                            c.relpages,
+                            CASE WHEN c.relpages = 0 THEN 0 
+                                 ELSE c.reltuples::bigint 
+                            END as estimate_reliability
+                        FROM pg_class c
+                        WHERE c.relname = %s AND c.relkind = 'r'
+                    """, [table_name])
                     
                     result = cursor.fetchone()
-                    if result and result[0] is not None:
-                        approximate_count = result[0]
-                        last_analyze = result[1]
-                        last_autoanalyze = result[2]
-                        logger.info(f"PostgreSQL stats - approximate count: {approximate_count}, last analyze: {last_analyze}, last autoanalyze: {last_autoanalyze}")
-                
-                # Check if we should trust the approximate count
-                use_approximate = False
-                if approximate_count is not None and approximate_count > 1000000:
-                    # For very large tables (>1M), use approximate to avoid performance issues
-                    use_approximate = True
-                    logger.info(f"Using approximate count for large table: {approximate_count}")
-                elif approximate_count is not None and approximate_count > 100000:
-                    # For medium tables, check if stats are recent enough
-                    # If no analyze time available, or approximate count is reasonable, use it
-                    use_approximate = True
-                    logger.info(f"Using approximate count for medium table: {approximate_count}")
-                
-                if use_approximate:
-                    total_records = approximate_count
-                else:
-                    # Use exact count for smaller tables or when approximate seems unreliable
-                    logger.info(f"Using exact count (approximate: {approximate_count}, using exact for accuracy)")
-                    total_records = model_class.objects.count()
                     
+                    if result and result[0] is not None:
+                        estimated_rows, pages, reliability = result
+                        
+                        # PostgreSQL best practice decision tree:
+                        if estimated_rows > 10000000:  # >10M rows
+                            # Very large tables: Always use estimate for performance
+                            total_records = int(estimated_rows)
+                            method_used = "pg_class.reltuples (>10M rows, performance optimized)"
+                            
+                        elif estimated_rows > 1000000:  # 1M-10M rows  
+                            # Large tables: Use estimate unless it's clearly wrong (empty table with estimate)
+                            if pages > 0:  # Table has actual data pages
+                                total_records = int(estimated_rows)
+                                method_used = "pg_class.reltuples (1M-10M rows, reliable estimate)"
+                            else:
+                                # Empty table or corrupted stats
+                                total_records = model_class.objects.count()
+                                method_used = "exact count (estimate unreliable - no pages)"
+                                
+                        elif estimated_rows > 100000:  # 100K-1M rows
+                            # Medium tables: Use estimate if reasonable, otherwise exact
+                            if pages > 0 and estimated_rows > 0:
+                                total_records = int(estimated_rows)
+                                method_used = "pg_class.reltuples (100K-1M rows)"
+                            else:
+                                total_records = model_class.objects.count()
+                                method_used = "exact count (medium table, verifying estimate)"
+                                
+                        else:  # <100K rows
+                            # Small tables: Always use exact count for accuracy
+                            total_records = model_class.objects.count()
+                            method_used = "exact count (<100K rows, accuracy preferred)"
+                            
+                        logger.info(f"Count method: {method_used}")
+                        logger.info(f"Result: {total_records:,} records")
+                        logger.debug(f"PostgreSQL estimate: {estimated_rows:,}, pages: {pages}")
+                        
+                    else:
+                        # No PostgreSQL statistics available
+                        total_records = model_class.objects.count()
+                        method_used = "exact count (no PostgreSQL statistics)"
+                        logger.info(f"Count method: {method_used}, Result: {total_records:,}")
+                        
             except Exception as count_error:
-                logger.warning(f"Error getting approximate count, using exact count: {count_error}")
+                logger.warning(f"Error accessing PostgreSQL statistics: {count_error}")
                 total_records = model_class.objects.count()
+                method_used = "exact count (fallback due to error)"
+                logger.info(f"Count method: {method_used}, Result: {total_records:,}")
             
             stats = {
                 'total_records': total_records,
