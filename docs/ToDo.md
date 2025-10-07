@@ -1,3 +1,5 @@
 - The CRM list and their number of records are missing
 - The job_change_orders keep failing
-- db_genius_prospect_sources command does not support chunking.
+- GoogleSheet not working
+- Add remaining schedulers
+- server shotdown
