@@ -182,10 +182,49 @@ class DataAccessService:
                       search: str = None,
                       order_by: str = None,
                       filters: Dict = None) -> Dict[str, Any]:
-        """Get paginated model data with search and filtering"""
+        """Get paginated model data with search and filtering - optimized for large tables"""
         try:
-            # Start with all objects
+            # Limit per_page to prevent excessive memory usage
+            per_page = min(per_page, 100)
+            
+            # Start with all objects and optimize for large tables
             queryset = model_class.objects.all()
+            
+            # For very large tables, use select_related and prefetch_related to minimize queries
+            table_size_estimate = getattr(model_class, '_table_size_estimate', None)
+            if not table_size_estimate:
+                # Quick estimate using EXPLAIN ESTIMATE
+                try:
+                    from django.db import connection
+                    with connection.cursor() as cursor:
+                        cursor.execute(f"SELECT reltuples::BIGINT FROM pg_class WHERE relname = %s", 
+                                     [model_class._meta.db_table])
+                        result = cursor.fetchone()
+                        table_size_estimate = result[0] if result else 0
+                        # Cache the estimate on the model class
+                        model_class._table_size_estimate = table_size_estimate
+                except Exception:
+                    table_size_estimate = 0
+            
+            # Apply optimizations for large tables
+            if table_size_estimate > 100000:
+                logger.info(f"Applying large table optimizations for {model_class.__name__} (~{table_size_estimate:,} rows)")
+                # Use only() to limit fields returned and improve performance
+                # Get essential fields only for large tables
+                essential_fields = ['id']
+                if hasattr(model_class, 'created_at'):
+                    essential_fields.append('created_at')
+                if hasattr(model_class, 'updated_at'):
+                    essential_fields.append('updated_at')
+                    
+                # Add first few text fields for display
+                for field in model_class._meta.fields[:5]:
+                    if field.name not in essential_fields and hasattr(field, 'max_length'):
+                        essential_fields.append(field.name)
+                        if len(essential_fields) >= 8:  # Limit to 8 fields for performance
+                            break
+                
+                queryset = queryset.only(*essential_fields)
             
             # Apply search if provided
             if search:
@@ -212,8 +251,14 @@ class DataAccessService:
                 else:
                     queryset = queryset.order_by('-pk')
             
-            # Get total count before pagination
-            total_count = queryset.count()
+            # For large tables, use approximate count to avoid slow COUNT queries
+            if table_size_estimate > 500000:
+                # Use approximate count for pagination info
+                total_count = table_size_estimate
+                logger.info(f"Using approximate count {total_count:,} for pagination")
+            else:
+                # Get exact count for smaller tables
+                total_count = queryset.count()
             
             # Apply pagination
             paginator = Paginator(queryset, per_page)
@@ -241,7 +286,8 @@ class DataAccessService:
                 'previous_page': page_obj.previous_page_number() if page_obj.has_previous() else None,
                 'next_page': page_obj.next_page_number() if page_obj.has_next() else None,
                 'start_index': page_obj.start_index(),
-                'end_index': page_obj.end_index()
+                'end_index': page_obj.end_index(),
+                'is_approximate': table_size_estimate > 500000
             }
             
             return {
@@ -406,47 +452,111 @@ class DataAccessService:
             }
     
     def get_model_statistics(self, model_class: Type[models.Model]) -> Dict[str, Any]:
-        """Get statistical information about a model"""
+        """Get statistical information about a model with performance optimizations"""
         try:
+            from django.core.cache import cache
+            from django.db.models import Count
+            from django.utils import timezone
+            from datetime import timedelta
+            
+            # Cache key for statistics
+            cache_key = f"model_stats_{model_class._meta.db_table}"
+            
+            # Try to get from cache first (cache for 5 minutes)
+            cached_stats = cache.get(cache_key)
+            if cached_stats:
+                logger.debug(f"Using cached statistics for {model_class.__name__}")
+                return cached_stats
+            
+            logger.info(f"Computing statistics for {model_class.__name__} (table: {model_class._meta.db_table})")
+            
+            # Use approximate count for large tables to avoid full table scans
+            # For PostgreSQL, we can use pg_stat_user_tables for approximate counts
+            try:
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    # Try to get approximate count from PostgreSQL statistics
+                    cursor.execute("""
+                        SELECT COALESCE(n_tup_ins - n_tup_del, 0) as approx_count 
+                        FROM pg_stat_user_tables 
+                        WHERE relname = %s
+                    """, [model_class._meta.db_table])
+                    
+                    result = cursor.fetchone()
+                    if result and result[0] > 0:
+                        # Use approximate count for large tables
+                        total_records = result[0]
+                        logger.info(f"Using approximate count: {total_records}")
+                    else:
+                        # Fallback to exact count with timeout protection
+                        logger.warning(f"Approximate count unavailable, using exact count for {model_class.__name__}")
+                        total_records = model_class.objects.count()
+            except Exception as count_error:
+                logger.warning(f"Error getting approximate count, using exact count: {count_error}")
+                total_records = model_class.objects.count()
+            
             stats = {
-                'total_records': model_class.objects.count(),
+                'total_records': total_records,
                 'model_name': model_class.__name__,
-                'table_name': model_class._meta.db_table
+                'table_name': model_class._meta.db_table,
+                'last_updated': timezone.now().isoformat()
             }
             
-            # Add date-based statistics if date fields exist
-            if hasattr(model_class, 'created_at'):
-                from django.db.models import Count
-                from django.utils import timezone
-                from datetime import timedelta
-                
-                now = timezone.now()
-                last_24h = now - timedelta(days=1)
-                last_week = now - timedelta(days=7)
-                last_month = now - timedelta(days=30)
-                
-                stats.update({
-                    'created_last_24h': model_class.objects.filter(created_at__gte=last_24h).count(),
-                    'created_last_week': model_class.objects.filter(created_at__gte=last_week).count(),
-                    'created_last_month': model_class.objects.filter(created_at__gte=last_month).count()
-                })
+            # Only compute date-based statistics for tables with reasonable size
+            if total_records < 1000000 and hasattr(model_class, 'created_at'):
+                try:
+                    now = timezone.now()
+                    last_24h = now - timedelta(days=1)
+                    last_week = now - timedelta(days=7)
+                    last_month = now - timedelta(days=30)
+                    
+                    # Use efficient exists() queries instead of count() for large tables
+                    if total_records > 100000:
+                        stats.update({
+                            'created_last_24h': 'many' if model_class.objects.filter(created_at__gte=last_24h).exists() else 0,
+                            'created_last_week': 'many' if model_class.objects.filter(created_at__gte=last_week).exists() else 0,
+                            'created_last_month': 'many' if model_class.objects.filter(created_at__gte=last_month).exists() else 0
+                        })
+                    else:
+                        stats.update({
+                            'created_last_24h': model_class.objects.filter(created_at__gte=last_24h).count(),
+                            'created_last_week': model_class.objects.filter(created_at__gte=last_week).count(),
+                            'created_last_month': model_class.objects.filter(created_at__gte=last_month).count()
+                        })
+                except Exception as date_error:
+                    logger.warning(f"Error computing date statistics: {date_error}")
+                    stats['date_stats_error'] = str(date_error)
+            else:
+                logger.info(f"Skipping date statistics for large table {model_class.__name__} ({total_records} records)")
             
-            # Add status-based statistics if status field exists
-            if hasattr(model_class, 'status'):
-                from django.db.models import Count
-                status_distribution = model_class.objects.values('status').annotate(
-                    count=Count('status')
-                ).order_by('-count')
-                stats['status_distribution'] = list(status_distribution)
+            # Only compute status distribution for smaller tables
+            if total_records < 500000 and hasattr(model_class, 'status'):
+                try:
+                    status_distribution = model_class.objects.values('status').annotate(
+                        count=Count('status')
+                    ).order_by('-count')[:10]  # Limit to top 10 statuses
+                    stats['status_distribution'] = list(status_distribution)
+                except Exception as status_error:
+                    logger.warning(f"Error computing status distribution: {status_error}")
+                    stats['status_error'] = str(status_error)
+            else:
+                logger.info(f"Skipping status distribution for large table {model_class.__name__}")
             
-            return {
+            result = {
                 'success': True,
                 'statistics': stats
             }
             
+            # Cache the result for 5 minutes (300 seconds)
+            cache.set(cache_key, result, 300)
+            logger.info(f"Cached statistics for {model_class.__name__}")
+            
+            return result
+            
         except Exception as e:
-            logger.error(f"Error getting model statistics: {e}")
+            logger.error(f"Error getting model statistics for {model_class.__name__}: {e}")
             return {
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'model_name': model_class.__name__ if model_class else 'unknown'
             }

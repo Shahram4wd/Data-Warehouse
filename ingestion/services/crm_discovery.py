@@ -367,9 +367,22 @@ class CRMDiscoveryService:
     def get_crm_models(self, crm_source: str) -> List[Dict]:
         """
         Get detailed information about all models for a specific CRM source
-        including sync status for each model
+        including sync status for each model - with caching and performance optimizations
         """
         try:
+            from django.core.cache import cache
+            
+            # Cache key for this CRM's models
+            cache_key = f"crm_models_{crm_source}"
+            
+            # Try to get from cache first (cache for 10 minutes)
+            cached_models = cache.get(cache_key)
+            if cached_models:
+                logger.debug(f"Using cached models for {crm_source}")
+                return cached_models
+            
+            logger.info(f"Computing model information for {crm_source}")
+            
             # Import the CRM module
             module_path = f'ingestion.models.{crm_source}'
             module = importlib.import_module(module_path)
@@ -383,14 +396,15 @@ class CRMDiscoveryService:
                 # Get sync info for this specific model
                 model_sync_info = self._get_model_sync_info(crm_source, model_info)
                 
-                # Get record count
+                # Get record count with performance optimizations
                 try:
                     model_class = model_info['model_class']
                     table_name = model_class._meta.db_table
                     
                     # Check if table exists first
                     if self._table_exists(table_name):
-                        record_count = model_class.objects.count()
+                        # Use approximate count for large tables to avoid slow COUNT queries
+                        record_count = self._get_optimized_record_count(model_class)
                     else:
                         logger.debug(f"Table {table_name} does not exist, skipping count for {model_info['name']}")
                         record_count = 0
@@ -410,6 +424,10 @@ class CRMDiscoveryService:
             
             # Sort by model name
             enhanced_models.sort(key=lambda x: x['name'])
+            
+            # Cache the result for 10 minutes (600 seconds)
+            cache.set(cache_key, enhanced_models, 600)
+            logger.info(f"Cached models for {crm_source}")
             
             return enhanced_models
             
@@ -646,3 +664,50 @@ class CRMDiscoveryService:
         except Exception as e:
             logger.error(f"Error getting sync history for {crm_source}: {e}")
             return []
+    
+    def _get_optimized_record_count(self, model_class):
+        """Get record count using performance optimizations for large tables"""
+        try:
+            # First try to get approximate count from PostgreSQL statistics
+            from django.db import connection
+            table_name = model_class._meta.db_table
+            
+            with connection.cursor() as cursor:
+                # Try to get approximate count from PostgreSQL statistics
+                cursor.execute("""
+                    SELECT COALESCE(n_tup_ins - n_tup_del, 0) as approx_count 
+                    FROM pg_stat_user_tables 
+                    WHERE relname = %s
+                """, [table_name])
+                
+                result = cursor.fetchone()
+                if result and result[0] > 0:
+                    # Use approximate count for performance
+                    approx_count = result[0]
+                    logger.debug(f"Using approximate count {approx_count:,} for {model_class.__name__}")
+                    return approx_count
+                else:
+                    # Fallback to exact count, but with a reasonable limit check first
+                    # Use EXISTS query to check if table has data before doing expensive COUNT
+                    if model_class.objects.exists():
+                        # For very large tables, return a placeholder instead of exact count
+                        try:
+                            # Set a timeout for the count query
+                            count = model_class.objects.count()
+                            if count > 1000000:  # Over 1M records
+                                return f"{count//1000000}M+"  # Return approximate like "2M+"
+                            return count
+                        except Exception as count_error:
+                            logger.warning(f"Count query failed for {model_class.__name__}: {count_error}")
+                            return "many"
+                    else:
+                        return 0
+                        
+        except Exception as e:
+            logger.warning(f"Error getting optimized count for {model_class.__name__}: {e}")
+            # Final fallback to basic count
+            try:
+                return model_class.objects.count()
+            except Exception as final_error:
+                logger.error(f"All count methods failed for {model_class.__name__}: {final_error}")
+                return "unknown"

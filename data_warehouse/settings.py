@@ -118,11 +118,21 @@ DATABASES = {
     ),
 }
 
-# Add database connection pooling for production
+# Add database connection pooling and performance optimizations for production
 if not DEBUG:
     DATABASES['default']['OPTIONS'] = {
         'MAX_CONNS': 20,
         'MIN_CONNS': 1,
+        # Performance optimizations for large databases
+        'autocommit': True,
+        'isolation_level': None,
+        'sslmode': 'require',
+        # PostgreSQL-specific performance settings
+        'connect_timeout': 10,
+        'statement_timeout': 30000,  # 30 second query timeout
+        'tcp_keepalives_idle': 600,
+        'tcp_keepalives_interval': 30,
+        'tcp_keepalives_count': 3,
     }
 
 # Configure PostgreSQL schema search path for Django tables separation
