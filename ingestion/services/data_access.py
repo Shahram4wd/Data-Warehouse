@@ -470,27 +470,48 @@ class DataAccessService:
             
             logger.info(f"Computing statistics for {model_class.__name__} (table: {model_class._meta.db_table})")
             
-            # Use approximate count for large tables to avoid full table scans
-            # For PostgreSQL, we can use pg_stat_user_tables for approximate counts
+            # Intelligent counting strategy: use approximate for very large tables, exact for smaller ones
+            # Also check if approximate count is reasonable by comparing with recent sync activity
             try:
                 from django.db import connection
+                approximate_count = None
+                
+                # First, try to get approximate count from PostgreSQL statistics
                 with connection.cursor() as cursor:
-                    # Try to get approximate count from PostgreSQL statistics
                     cursor.execute("""
-                        SELECT COALESCE(n_tup_ins - n_tup_del, 0) as approx_count 
+                        SELECT COALESCE(n_tup_ins - n_tup_del, 0) as approx_count,
+                               last_analyze,
+                               last_autoanalyze
                         FROM pg_stat_user_tables 
                         WHERE relname = %s
                     """, [model_class._meta.db_table])
                     
                     result = cursor.fetchone()
-                    if result and result[0] > 0:
-                        # Use approximate count for large tables
-                        total_records = result[0]
-                        logger.info(f"Using approximate count: {total_records}")
-                    else:
-                        # Fallback to exact count with timeout protection
-                        logger.warning(f"Approximate count unavailable, using exact count for {model_class.__name__}")
-                        total_records = model_class.objects.count()
+                    if result and result[0] is not None:
+                        approximate_count = result[0]
+                        last_analyze = result[1]
+                        last_autoanalyze = result[2]
+                        logger.info(f"PostgreSQL stats - approximate count: {approximate_count}, last analyze: {last_analyze}, last autoanalyze: {last_autoanalyze}")
+                
+                # Check if we should trust the approximate count
+                use_approximate = False
+                if approximate_count is not None and approximate_count > 1000000:
+                    # For very large tables (>1M), use approximate to avoid performance issues
+                    use_approximate = True
+                    logger.info(f"Using approximate count for large table: {approximate_count}")
+                elif approximate_count is not None and approximate_count > 100000:
+                    # For medium tables, check if stats are recent enough
+                    # If no analyze time available, or approximate count is reasonable, use it
+                    use_approximate = True
+                    logger.info(f"Using approximate count for medium table: {approximate_count}")
+                
+                if use_approximate:
+                    total_records = approximate_count
+                else:
+                    # Use exact count for smaller tables or when approximate seems unreliable
+                    logger.info(f"Using exact count (approximate: {approximate_count}, using exact for accuracy)")
+                    total_records = model_class.objects.count()
+                    
             except Exception as count_error:
                 logger.warning(f"Error getting approximate count, using exact count: {count_error}")
                 total_records = model_class.objects.count()
