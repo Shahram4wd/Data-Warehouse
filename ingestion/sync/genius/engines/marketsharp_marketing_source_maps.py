@@ -110,13 +110,26 @@ class GeniusMarketsharpMarketingSourceMapsSyncEngine(GeniusBaseSyncEngine):
                    f"force_overwrite: {force_overwrite}, dry_run: {dry_run}, "
                    f"max_records: {max_records}")
         
+        # Create sync configuration for SyncHistory
+        configuration = {
+            'since_date': since_date.isoformat() if since_date else None,
+            'force_overwrite': force_overwrite,
+            'dry_run': dry_run,
+            'max_records': max_records,
+            **kwargs
+        }
+        
+        # Create SyncHistory record
+        sync_record = await self.create_sync_record(configuration)
+        
         # Initialize stats
         stats = {
             'total_processed': 0,
             'created': 0,
             'updated': 0,
             'skipped': 0,
-            'errors': 0
+            'errors': 0,
+            'sync_record_id': sync_record.id
         }
         
         try:
@@ -195,7 +208,12 @@ class GeniusMarketsharpMarketingSourceMapsSyncEngine(GeniusBaseSyncEngine):
         except Exception as e:
             logger.error(f"Error in sync_marketsharp_marketing_source_maps_async: {e}")
             stats['errors'] += 1
+            # Complete SyncHistory with error
+            await self._complete_sync_record_async(sync_record, stats, str(e))
             raise
+        
+        # Complete SyncHistory record successfully
+        await self._complete_sync_record_async(sync_record, stats, None)
         
         logger.info(f"MarketSharp marketing source maps sync completed - Stats: {stats}")
         return stats
