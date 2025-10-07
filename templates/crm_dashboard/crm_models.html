@@ -226,7 +226,7 @@ function loadModels() {
         .then(response => response.json())
         .then(data => {
             if (data && data.success) {
-                renderModels(data.data);
+                renderModels(data.models);
             } else {
                 showError('Failed to load models' + (data && (data.message || data.error) ? (': ' + (data.message || data.error)) : ''));
             }

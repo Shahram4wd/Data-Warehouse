@@ -172,6 +172,7 @@ class Genius_ProspectSource(models.Model):
     add_user_id = models.IntegerField()
     add_date = models.DateTimeField()
     updated_at = models.DateTimeField()
+    source_user_id = models.IntegerField(null=True, blank=True)
     sync_created_at = models.DateTimeField(auto_now_add=True)
     sync_updated_at = models.DateTimeField(auto_now=True)
 

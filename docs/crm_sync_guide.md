@@ -112,18 +112,321 @@ class SyncHistory(models.Model):
 ### Key Concepts
 
 1. **Incremental Sync (Default)**: Only fetch records modified since last successful sync
-2. **Full Sync**: Fetch all records but respect local timestamps for updates
+2. **Full Sync**: Fetch all records but respect local timestamps for updates  
 3. **Force Overwrite**: Fetch all records and completely replace local data
 
-### **CRITICAL: SyncHistory Framework Required**
+### Status Values and Engine Implementation
 
-**All CRM integrations MUST use the standardized SyncHistory table for sync tracking.** This ensures:
+**CRITICAL**: Sync engines must use proper status values and async-compatible methods:
+
+- **'success'**: Sync completed without errors (preferred status)
+- **'partial'**: Sync completed with some errors but didn't fail completely
+- **'failed'**: Sync failed due to critical errors
+- **'running'**: Sync is currently in progress
+
+**❌ AVOID**: Using 'completed' status - this should be 'success' instead
+
+### **Critical: Async-Compatible SyncHistory Management**
+
+**All async sync engines MUST use async-compatible methods for SyncHistory operations:**
+
+```python
+from asgiref.sync import sync_to_async
+from ingestion.models.common import SyncHistory
+from django.utils import timezone
+
+class AsyncSyncEngine(GeniusBaseSyncEngine):
+    """Proper async sync engine implementation"""
+    
+    @sync_to_async
+    def _save_sync_record(self, sync_record) -> None:
+        """Save sync record asynchronously"""
+        sync_record.save()
+    
+    @sync_to_async
+    def _complete_sync_record_async(self, sync_record, stats: Dict[str, int], 
+                                   error_message: str = None) -> None:
+        """Complete sync record asynchronously using proper status logic"""
+        self.complete_sync_record(sync_record, stats, error_message)
+    
+    async def execute_sync(self, **kwargs) -> Dict[str, Any]:
+        """Execute sync with proper async SyncHistory handling"""
+        
+        # Create sync record using base class async method
+        configuration = {k: v for k, v in kwargs.items()}
+        sync_history = await self.create_sync_record(configuration)
+        
+        try:
+            # Execute sync logic
+            stats = await self._perform_sync(**kwargs)
+            
+            # Complete sync record with proper status logic
+            # Convert stats format if needed (processed -> total_processed)
+            base_stats = {
+                'total_processed': stats.get('processed', stats.get('total_processed', 0)),
+                'created': stats.get('created', 0),
+                'updated': stats.get('updated', 0),
+                'errors': stats.get('errors', 0)
+            }
+            
+            error_message = None if stats['errors'] == 0 else f"{stats['errors']} errors occurred"
+            await self._complete_sync_record_async(sync_history, base_stats, error_message)
+            
+            return {
+                'stats': stats,
+                'sync_id': sync_history.id
+            }
+            
+        except Exception as e:
+            # Handle errors with proper async SyncHistory update
+            error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}
+            await self._complete_sync_record_async(sync_history, error_stats, str(e))
+            raise
+```
+
+**Key Requirements:**
+
+1. **Use `@sync_to_async` decorator** for all database operations in async engines
+2. **Never call `SyncHistory.objects.create()` directly** in async context
+3. **Use base class `complete_sync_record()` method** for proper status logic
+4. **Convert stats format** if management command expects different key names
+5. **Handle both success and error cases** with proper async SyncHistory updates
+
+**❌ Common Async Errors to Avoid:**
+
+```python
+# ❌ WRONG: Direct database calls in async context
+sync_history = SyncHistory.objects.create(...)  # SynchronousOnlyOperation error
+
+# ❌ WRONG: Manual status setting instead of base class logic
+sync_history.status = 'completed'  # Should be 'success' via complete_sync_record()
+
+# ❌ WRONG: Missing async wrapper
+sync_history.save()  # SynchronousOnlyOperation error in async context
+
+# ✅ CORRECT: Use async-compatible methods
+sync_history = await self.create_sync_record(configuration)
+await self._complete_sync_record_async(sync_history, stats, error_message)
+```
+
+
 - **Consistent sync state management** across all CRM sources
 - **Reliable delta sync timestamps** for incremental syncing
 - **Centralized monitoring** and troubleshooting capabilities
 - **Performance tracking** and optimization insights
 
-### Delta Sync Flow
+### **Engine Implementation Requirements**
+
+**Every CRM sync engine must include proper client and processor implementations:**
+
+#### 1. **Client Implementation** (`clients/{entity}.py`)
+
+```python
+class GeniusEntityClient(GeniusBaseClient):
+    """Client for accessing CRM entity data"""
+    
+    def __init__(self):
+        super().__init__()
+        self.table_name = 'entity_table'
+    
+    def get_entities(self, since_date: Optional[datetime] = None, limit: int = 0) -> List[tuple]:
+        """Fetch entities from data source"""
+        query = """
+        SELECT 
+            e.id,
+            e.name,
+            e.status
+        FROM {table_name} e
+        ORDER BY e.id
+        """
+        
+        if limit > 0:
+            query += f" LIMIT {limit}"
+        
+        return self.execute_query(query)
+    
+    def get_field_mapping(self) -> List[str]:
+        """Return field mapping for transformation"""
+        return ['id', 'name', 'status']
+    
+    def count_records(self) -> int:
+        """Count total records available"""
+        query = f"SELECT COUNT(*) FROM {self.table_name}"
+        result = self.execute_query(query)
+        return result[0][0] if result else 0
+```
+
+#### 2. **Processor Implementation** (`processors/{entity}.py`)
+
+```python
+class GeniusEntityProcessor:
+    """Processor for entity data validation and transformation"""
+    
+    def __init__(self, model_class):
+        self.model_class = model_class
+    
+    def validate_record(self, record_tuple: tuple, field_mapping: List[str]) -> Optional[Dict[str, Any]]:
+        """Validate and transform a single record"""
+        if not record_tuple or len(record_tuple) != len(field_mapping):
+            return None
+        
+        record_dict = dict(zip(field_mapping, record_tuple))
+        
+        # Validate required fields
+        if not record_dict.get('id'):
+            return None
+        
+        # Transform and validate
+        validated_record = {
+            'id': int(record_dict['id']),
+            'name': str(record_dict.get('name', '')).strip() or None,
+            'status': record_dict.get('status')
+        }
+        
+        return validated_record
+    
+    def process_batch(self, records: List[Dict[str, Any]], force_overwrite: bool = False) -> Dict[str, int]:
+        """Process batch of records with bulk operations"""
+        stats = {'processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
+        
+        if not records:
+            return stats
+        
+        # Bulk existence check
+        record_ids = [record['id'] for record in records]
+        existing_ids = set(
+            self.model_class.objects.filter(id__in=record_ids).values_list('id', flat=True)
+        )
+        
+        create_records = []
+        update_records = []
+        
+        for record in records:
+            stats['processed'] += 1
+            record_id = record['id']
+            
+            if record_id in existing_ids:
+                if force_overwrite:
+                    update_records.append(record)
+                else:
+                    stats['skipped'] += 1
+            else:
+                create_records.append(record)
+        
+        # Bulk create
+        if create_records:
+            try:
+                new_objects = [self.model_class(**record) for record in create_records]
+                created_objects = self.model_class.objects.bulk_create(new_objects, ignore_conflicts=True)
+                stats['created'] += len(created_objects)
+            except Exception as e:
+                logger.error(f"Error creating records: {e}")
+                stats['errors'] += len(create_records)
+        
+        # Bulk update
+        if update_records:
+            try:
+                for record in update_records:
+                    self.model_class.objects.filter(id=record['id']).update(**{
+                        k: v for k, v in record.items() if k != 'id'
+                    })
+                stats['updated'] += len(update_records)
+            except Exception as e:
+                logger.error(f"Error updating records: {e}")
+                stats['errors'] += len(update_records)
+        
+        return stats
+```
+
+#### 3. **Engine Implementation** (`engines/{entity}.py`)
+
+```python
+class GeniusEntitySyncEngine(GeniusBaseSyncEngine):
+    """Complete sync engine with client and processor"""
+    
+    def __init__(self):
+        super().__init__('entities')
+        self.client = GeniusEntityClient()
+        self.processor = GeniusEntityProcessor(Genius_Entity)
+    
+    async def execute_sync(self, **kwargs) -> Dict[str, Any]:
+        """Execute sync with proper implementation"""
+        
+        stats = {'processed': 0, 'created': 0, 'updated': 0, 'errors': 0, 'skipped': 0}
+        
+        try:
+            # Get total count
+            total_count = await sync_to_async(self.client.count_records)()
+            
+            if total_count > 0:
+                # Fetch data
+                raw_data = await sync_to_async(self.client.get_entities)(
+                    limit=kwargs.get('max_records', 0)
+                )
+                
+                if kwargs.get('dry_run'):
+                    stats['processed'] = len(raw_data)
+                else:
+                    # Process in batches
+                    batch_size = 100
+                    field_mapping = self.client.get_field_mapping()
+                    
+                    for i in range(0, len(raw_data), batch_size):
+                        batch = raw_data[i:i + batch_size]
+                        batch_stats = await self._process_batch(
+                            batch, field_mapping, kwargs.get('force_overwrite', False)
+                        )
+                        
+                        for key in stats:
+                            stats[key] += batch_stats[key]
+            
+            # Use async-compatible SyncHistory completion
+            configuration = {k: v for k, v in kwargs.items()}
+            sync_history = await self.create_sync_record(configuration)
+            
+            base_stats = {
+                'total_processed': stats['processed'],
+                'created': stats['created'],
+                'updated': stats['updated'],
+                'errors': stats['errors']
+            }
+            
+            error_message = None if stats['errors'] == 0 else f"{stats['errors']} errors occurred"
+            await self._complete_sync_record_async(sync_history, base_stats, error_message)
+            
+            return {'stats': stats, 'sync_id': sync_history.id}
+            
+        except Exception as e:
+            logger.error(f"Sync failed: {e}")
+            raise
+        finally:
+            if hasattr(self.client, 'disconnect'):
+                self.client.disconnect()
+    
+    @sync_to_async
+    def _process_batch(self, batch: List[tuple], field_mapping: List[str], 
+                      force_overwrite: bool = False) -> Dict[str, int]:
+        """Process batch asynchronously"""
+        validated_records = []
+        for raw_record in batch:
+            validated_record = self.processor.validate_record(raw_record, field_mapping)
+            if validated_record:
+                validated_records.append(validated_record)
+        
+        return self.processor.process_batch(validated_records, force_overwrite)
+```
+
+**Critical Implementation Checklist:**
+
+- [ ] **Client class** exists with `get_{entity}()`, `get_field_mapping()`, `count_records()` methods
+- [ ] **Processor class** exists with `validate_record()` and `process_batch()` methods  
+- [ ] **Engine class** uses async-compatible SyncHistory methods
+- [ ] **All database operations** use `@sync_to_async` decorator in async engines
+- [ ] **Bulk operations** implemented for performance (bulk_create, bulk_update)
+- [ ] **Error handling** includes proper SyncHistory status updates
+- [ ] **Stats format** matches management command expectations
+
+
 
 ```python
 def get_last_sync_time():
@@ -1207,17 +1510,43 @@ class StandardSyncEngine:
             logger.error(f"Error getting last sync timestamp: {e}")
             return None
 
+    @sync_to_async
+    def _complete_sync_record_async(self, sync_record, stats: Dict[str, int], 
+                                   error_message: str = None) -> None:
+        """Complete sync record asynchronously using proper status logic"""
+        # Use base class logic for proper status setting
+        sync_record.end_time = timezone.now()
+        sync_record.records_processed = stats.get('total_processed', 0)
+        sync_record.records_created = stats.get('created', 0)
+        sync_record.records_updated = stats.get('updated', 0)
+        sync_record.records_failed = stats.get('errors', 0)
+        
+        if error_message:
+            sync_record.status = 'failed'
+            sync_record.error_message = error_message
+        else:
+            # CRITICAL: Use 'success' not 'completed'
+            sync_record.status = 'success' if stats.get('errors', 0) == 0 else 'partial'
+        
+        # Calculate performance metrics
+        duration = (sync_record.end_time - sync_record.start_time).total_seconds()
+        total_processed = stats.get('total_processed', 0)
+        success_rate = ((total_processed - stats.get('errors', 0)) / total_processed) if total_processed > 0 else 0
+        
+        sync_record.performance_metrics = {
+            'duration_seconds': duration,
+            'records_per_second': total_processed / duration if duration > 0 else 0,
+            'success_rate': success_rate
+        }
+        
+        sync_record.save()
+
     async def execute_sync(self, **kwargs) -> Dict[str, Any]:
         """STANDARD PATTERN: Execute sync with mandatory SyncHistory tracking"""
 
-        # Step 1: Create SyncHistory record at start
-        sync_record = SyncHistory.objects.create(
-            crm_source=self.crm_source,
-            sync_type=self.entity_type,    # IMPORTANT: Use entity_type directly
-            status='running',
-            start_time=timezone.now(),
-            configuration=kwargs
-        )
+        # Step 1: Create SyncHistory record at start using proper async method
+        configuration = kwargs.copy()
+        sync_record = await self._create_sync_record_async(configuration)
         
         stats = {
             'sync_history_id': sync_record.id,
@@ -1236,32 +1565,30 @@ class StandardSyncEngine:
                 stats['updated'] += batch_results['updated']
                 stats['errors'] += batch_results['errors']
             
-            # Step 3: Update SyncHistory with success
-            sync_record.status = 'success' if stats['errors'] == 0 else 'partial'
-            sync_record.end_time = timezone.now()
-            sync_record.records_processed = stats['total_processed']
-            sync_record.records_created = stats['created']
-            sync_record.records_updated = stats['updated']
-            sync_record.records_failed = stats['errors']
-            sync_record.performance_metrics = {
-                'duration_seconds': (sync_record.end_time - sync_record.start_time).total_seconds(),
-                'records_per_second': stats['total_processed'] / (sync_record.end_time - sync_record.start_time).total_seconds() if stats['total_processed'] > 0 else 0,
-                'success_rate': (stats['total_processed'] - stats['errors']) / stats['total_processed'] if stats['total_processed'] > 0 else 0
-            }
-            sync_record.save()
+            # Step 3: Complete SyncHistory using async-compatible method
+            error_message = None if stats['errors'] == 0 else f"{stats['errors']} errors occurred"
+            await self._complete_sync_record_async(sync_record, stats, error_message)
             
             return stats
             
         except Exception as e:
-            # Step 4: Update SyncHistory with failure
-            sync_record.status = 'failed'
-            sync_record.end_time = timezone.now()
-            sync_record.error_message = str(e)
-            sync_record.records_failed = stats.get('errors', 0)
-            sync_record.save()
+            # Step 4: Update SyncHistory with failure using async method
+            error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}
+            await self._complete_sync_record_async(sync_record, error_stats, str(e))
             
             logger.error(f"{self.crm_source} {self.entity_type} sync failed: {e}")
             raise
+
+    @sync_to_async
+    def _create_sync_record_async(self, configuration: Dict[str, Any]) -> SyncHistory:
+        """Create SyncHistory record asynchronously"""
+        return SyncHistory.objects.create(
+            crm_source=self.crm_source,
+            sync_type=self.entity_type,
+            status='running',
+            start_time=timezone.now(),
+            configuration=configuration
+        )
 ```
 
 ### **Critical Field Standards**
@@ -1636,6 +1963,235 @@ class CRMTestFixtures:
 - [ ] **Remove all redundant synced_at fields** from model classes
 - [ ] **Include configuration details** for debugging and audit trails
 - [ ] **Implement proper error handling** with SyncHistory status updates
+
+## Troubleshooting Common Issues
+
+### 1. **SynchronousOnlyOperation Errors**
+
+**Problem**: `django.core.exceptions.SynchronousOnlyOperation: You cannot call this from an async context`
+
+**Cause**: Direct database operations in async functions without proper async wrappers
+
+**Solution**: Use `@sync_to_async` decorator for all database operations:
+
+```python
+# ❌ WRONG: Direct database call in async function
+async def execute_sync(self):
+    sync_record = SyncHistory.objects.create(...)  # Error!
+
+# ✅ CORRECT: Use async wrapper
+@sync_to_async
+def _create_sync_record_sync(self, data):
+    return SyncHistory.objects.create(**data)
+
+async def execute_sync(self):
+    sync_record = await self._create_sync_record_sync(data)
+```
+
+### 2. **Missing Method Errors**
+
+**Problem**: `AttributeError: 'GeniusEntitySyncEngine' object has no attribute 'create_sync_history_record'`
+
+**Cause**: Calling non-existent methods or using incorrect method names
+
+**Solution**: Use base class methods or create proper async wrappers:
+
+```python
+# ❌ WRONG: Non-existent method
+await self.create_sync_history_record(...)  # Method doesn't exist
+
+# ✅ CORRECT: Use base class method
+sync_record = await self.create_sync_record(configuration)
+await self._complete_sync_record_async(sync_record, stats, error_message)
+```
+
+### 3. **Status Display Issues**
+
+**Problem**: CRM dashboard shows "Completed" instead of "Success"
+
+**Cause**: Manually setting status to 'completed' instead of using base class logic
+
+**Solution**: Use base class `complete_sync_record()` method for proper status logic:
+
+```python
+# ❌ WRONG: Manual status setting
+sync_record.status = 'completed'  # Should be 'success'
+
+# ✅ CORRECT: Use base class logic
+error_message = None if stats['errors'] == 0 else f"{stats['errors']} errors"
+await self._complete_sync_record_async(sync_record, stats, error_message)
+# This sets status to 'success' if no errors, 'partial' if some errors
+```
+
+### 4. **Stats Key Mismatch Errors**
+
+**Problem**: `KeyError: 'processed'` in management command display
+
+**Cause**: Management command expects different stat key names than engine provides
+
+**Solution**: Standardize stats format or convert between formats:
+
+```python
+# Option 1: Use consistent keys throughout
+stats = {
+    'processed': 0,      # Use 'processed' not 'total_processed'
+    'created': 0,
+    'updated': 0,
+    'errors': 0
+}
+
+# Option 2: Convert for base class if needed
+base_stats = {
+    'total_processed': stats['processed'],  # Convert for base class
+    'created': stats['created'],
+    'updated': stats['updated'],
+    'errors': stats['errors']
+}
+```
+
+### 5. **Empty Sync Results (0 Records Processed)**
+
+**Problem**: Sync shows 0 records processed despite data existing
+
+**Cause**: Missing or incorrect client/processor implementation
+
+**Solution**: Implement proper client and processor classes:
+
+```python
+# Ensure client exists and returns data
+class GeniusEntityClient(GeniusBaseClient):
+    def get_entities(self, limit=0):
+        query = "SELECT * FROM entity_table"
+        if limit > 0:
+            query += f" LIMIT {limit}"
+        return self.execute_query(query)  # Must return actual data
+
+# Ensure processor validates records properly  
+class GeniusEntityProcessor:
+    def validate_record(self, record_tuple, field_mapping):
+        if not record_tuple:
+            return None  # Don't return empty records
+        return dict(zip(field_mapping, record_tuple))
+```
+
+### 6. **Command Mapping Issues**
+
+**Problem**: CRM dashboard generates incorrect command names
+
+**Cause**: Missing model mappings in ingestion adapter
+
+**Solution**: Add proper model-to-command mappings:
+
+```python
+# In ingestion/services/ingestion_adapter.py
+def _get_genius_command(model_name: str) -> str:
+    genius_commands = {
+        'Genius_Entity': 'db_genius_entities',  # Add missing mappings
+        'Genius_NewModel': 'db_genius_new_models',
+        # ... all models must be mapped
+    }
+    return genius_commands.get(model_name)
+```
+
+### 7. **Performance Issues (Long-Running Syncs)**
+
+**Problem**: Syncs taking hours or hanging indefinitely
+
+**Cause**: Loading large datasets into memory instead of streaming processing
+
+**Solution**: Implement chunked/streaming processing:
+
+```python
+# ❌ WRONG: Load all data into memory
+all_records = client.fetch_all_records()  # Memory intensive
+for record in all_records:
+    process_record(record)
+
+# ✅ CORRECT: Streaming/chunked processing
+for chunk in client.chunked_fetch_with_streaming():
+    for sub_batch in chunk.create_sub_batches(batch_size=500):
+        bulk_upsert(sub_batch)  # Process immediately
+```
+
+### 8. **Validation and Error Handling**
+
+**Problem**: Sync fails completely on single bad record
+
+**Cause**: Poor error handling without proper record-level recovery
+
+**Solution**: Implement graceful error handling with batch fallback:
+
+```python
+try:
+    # Try bulk operation first
+    result = await self.bulk_process_batch(batch)
+except Exception as e:
+    logger.warning(f"Bulk operation failed, falling back to individual processing: {e}")
+    # Fallback to individual record processing
+    result = await self.individual_process_batch(batch)
+```
+
+### 8. **SyncHistory Record Creation Issues**
+
+**Problem**: SyncHistory records are not being created, or sync runs without any database tracking
+
+**Common Causes:**
+
+1. **Missing `_create_sync_record_async` method**
+2. **Calling non-existent `create_sync_record` method** 
+3. **Direct database calls in async context**
+4. **Missing SyncHistory import**
+
+**Solution**: Implement proper async SyncHistory creation pattern:
+
+```python
+from asgiref.sync import sync_to_async
+from ingestion.models.common import SyncHistory
+from django.utils import timezone
+
+class ProperSyncEngine:
+    """Correct SyncHistory implementation"""
+    
+    @sync_to_async
+    def _create_sync_record_async(self, configuration: Dict[str, Any]) -> SyncHistory:
+        """Create SyncHistory record asynchronously"""
+        return SyncHistory.objects.create(
+            crm_source=self.crm_source,
+            sync_type=self.entity_type,  # Use entity_type directly, no '_sync' suffix
+            status='running',
+            start_time=timezone.now(),
+            configuration=configuration
+        )
+    
+    async def execute_sync(self, **kwargs) -> Dict[str, Any]:
+        """Proper sync execution with SyncHistory tracking"""
+        
+        # Step 1: Create SyncHistory record
+        configuration = kwargs.copy()
+        sync_record = await self._create_sync_record_async(configuration)
+        
+        try:
+            # Step 2: Execute sync logic
+            stats = await self._perform_sync(**kwargs)
+            
+            # Step 3: Complete SyncHistory record
+            await self._complete_sync_record_async(sync_record, stats, None)
+            
+            return {'stats': stats, 'sync_id': sync_record.id}
+            
+        except Exception as e:
+            # Step 4: Mark SyncHistory as failed
+            error_stats = {'total_processed': 0, 'created': 0, 'updated': 0, 'errors': 1}
+            await self._complete_sync_record_async(sync_record, error_stats, str(e))
+            raise
+```
+
+**Verification Steps:**
+
+1. **Check SyncHistory table** after sync: `SELECT * FROM ingestion_sync_history ORDER BY start_time DESC LIMIT 5`
+2. **Verify imports** are correct: `from ingestion.models.common import SyncHistory`
+3. **Confirm method exists**: Engine should have `_create_sync_record_async` method
+4. **Check async decorators**: All database operations need `@sync_to_async`
 
 ## Common Pitfalls to Avoid
 

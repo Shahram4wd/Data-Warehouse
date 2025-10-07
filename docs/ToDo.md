@@ -1,0 +1,6 @@
+- The job_change_orders keep failing
+- GoogleSheet not working
+- Add remaining schedulers
+- server shotdown
+- fix Genius_Marketsharpmarketingsourcemap
+- reenable the leads

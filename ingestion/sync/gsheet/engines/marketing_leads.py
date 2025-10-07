@@ -53,14 +53,15 @@ class MarketingLeadsSyncEngine(BaseGoogleSheetsSyncEngine):
     TARGET_MODEL = GoogleSheetMarketingLead
     CRM_SOURCE = 'gsheet_marketing_leads'  # For SyncHistory table
     
-    def __init__(self, batch_size: int = 500, dry_run: bool = False, force_overwrite: bool = False):
+    def __init__(self, batch_size: int = 500, dry_run: bool = False, force_overwrite: bool = False, **kwargs):
         """Initialize the marketing leads sync engine"""
         
         super().__init__(
             sheet_name='marketing_leads',
             batch_size=batch_size,
             dry_run=dry_run,
-            force_overwrite=force_overwrite
+            force_overwrite=force_overwrite,
+            **kwargs  # Pass through additional kwargs like max_records
         )
         
         # Validate environment variables

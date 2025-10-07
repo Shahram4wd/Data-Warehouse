@@ -137,3 +137,14 @@ class GeniusBaseSyncEngine:
             'since_date': last_sync,
             'force_overwrite': False
         }
+
+    @sync_to_async
+    def _save_sync_record(self, sync_record) -> None:
+        """Save sync record asynchronously"""
+        sync_record.save()
+
+    @sync_to_async
+    def _complete_sync_record_async(self, sync_record, stats: Dict[str, int], 
+                                   error_message: str = None) -> None:
+        """Complete sync record asynchronously using the proper status logic"""
+        self.complete_sync_record(sync_record, stats, error_message)

@@ -196,46 +196,44 @@ class Command(BaseCommand):
             if debug:
                 logger.info(f"Sync parameters: full={full}, sync_start={sync_start}")
             
-            # Fetch data from Genius database
+            # Fetch data from Genius database using chunked streaming approach
             logger.info("Fetching prospect sources from Genius database...")
-            raw_records = client.get_prospect_sources(
+            
+            # Initialize counters for progress tracking
+            total_chunks_processed = 0
+            chunk_size = 1000  # Fetch in smaller chunks for memory efficiency
+            
+            # Use chunked streaming processing following CRM sync guide
+            for chunk_records in client.get_prospect_sources_chunked(
                 since_date=sync_start,
-                limit=max_records or 0
-            )
-            
-            if debug:
-                logger.info(f"Retrieved {len(raw_records)} raw records")
-            
-            # Convert tuples to dictionaries using field mapping
-            field_mapping = client.get_field_mapping()
-            records = []
-            for raw_record in raw_records:
-                if len(raw_record) != len(field_mapping):
-                    logger.warning(f"Field count mismatch: got {len(raw_record)} fields, expected {len(field_mapping)}")
-                    continue
-                
-                record_dict = dict(zip(field_mapping, raw_record))
-                records.append(record_dict)
-            
-            if debug:
-                logger.info(f"Converted to {len(records)} dictionary records")
-            
-            # Process records in chunks
-            chunk_size = 100000  # 100K records per chunk
-            batch_size = 500     # 500 records per batch for bulk operations
-            
-            for chunk_start in range(0, len(records), chunk_size):
-                chunk_end = min(chunk_start + chunk_size, len(records))
-                chunk_records = records[chunk_start:chunk_end]
+                chunk_size=chunk_size
+            ):
+                total_chunks_processed += 1
                 
                 if debug:
-                    logger.info(f"Processing chunk {chunk_start//chunk_size + 1}: records {chunk_start+1}-{chunk_end}")
+                    logger.info(f"Processing chunk {total_chunks_processed}: {len(chunk_records)} records")
                 
-                # Process chunk in batches
-                objects_to_create = []
-                objects_to_update = []
+                # Convert tuples to dictionaries using field mapping
+                field_mapping = client.get_field_mapping()
+                records = []
+                for raw_record in chunk_records:
+                    if len(raw_record) != len(field_mapping):
+                        logger.warning(f"Field count mismatch: got {len(raw_record)} fields, expected {len(field_mapping)}")
+                        continue
+                    
+                    record_dict = dict(zip(field_mapping, raw_record))
+                    records.append(record_dict)
                 
-                for i, record in enumerate(chunk_records, start=chunk_start):
+                if debug:
+                    logger.info(f"Converted chunk {total_chunks_processed} to {len(records)} dictionary records")
+                
+                # Process chunk in batches for optimal database performance
+                batch_size = 500     # 500 records per batch for bulk operations
+                
+                # Collect all records for bulk processing
+                records_to_process = []
+                
+                for i, record in enumerate(records):
                     try:
                         # Transform and validate record
                         if not processor.validate_record(record):
@@ -244,54 +242,41 @@ class Command(BaseCommand):
                         
                         transformed_record = processor.transform_record(record)
                         
-                        if debug and i < 3:  # Show first few records in debug mode
+                        if debug and i < 3 and total_chunks_processed == 1:  # Show first few records in debug mode
                             logger.info(f"Transformed record {i+1}: {transformed_record}")
                         
-                        # Prepare for bulk operation
-                        record_id = transformed_record.get('id')
-                        if record_id:
-                            # Check if record exists
-                            try:
-                                if Genius_ProspectSource.objects.filter(id=record_id).exists():
-                                    # Update existing record
-                                    obj, created = Genius_ProspectSource.objects.get_or_create(
-                                        id=record_id,
-                                        defaults=transformed_record
-                                    )
-                                    if not created:
-                                        for field, value in transformed_record.items():
-                                            setattr(obj, field, value)
-                                        objects_to_update.append(obj)
-                                else:
-                                    # Create new record
-                                    objects_to_create.append(Genius_ProspectSource(**transformed_record))
-                            except Exception as e:
-                                logger.error(f"Error checking existing record {record_id}: {e}")
-                                stats['errors'] += 1
-                                continue
-                        
+                        # Add to batch for bulk processing
+                        records_to_process.append(transformed_record)
                         stats['processed'] += 1
                         
                         # Process batch when it reaches batch_size
-                        if len(objects_to_create) + len(objects_to_update) >= batch_size:
-                            batch_stats = self._process_batch(objects_to_create, objects_to_update, dry_run, debug)
+                        if len(records_to_process) >= batch_size:
+                            batch_stats = self._process_batch_bulk_upsert(records_to_process, dry_run, debug)
                             stats['created'] += batch_stats['created']
                             stats['updated'] += batch_stats['updated']
                             stats['errors'] += batch_stats['errors']
-                            objects_to_create = []
-                            objects_to_update = []
+                            records_to_process = []
+                        
+                        # Respect max_records limit if specified
+                        if max_records and stats['processed'] >= max_records:
+                            break
                     
                     except Exception as e:
-                        logger.error(f"Error processing record {i+1}: {e}")
+                        logger.error(f"Error processing record {i+1} in chunk {total_chunks_processed}: {e}")
                         stats['errors'] += 1
                         continue
                 
                 # Process remaining records in the chunk
-                if objects_to_create or objects_to_update:
-                    batch_stats = self._process_batch(objects_to_create, objects_to_update, dry_run, debug)
+                if records_to_process:
+                    batch_stats = self._process_batch_bulk_upsert(records_to_process, dry_run, debug)
                     stats['created'] += batch_stats['created']
                     stats['updated'] += batch_stats['updated']
                     stats['errors'] += batch_stats['errors']
+                
+                # Break if we've reached max_records limit
+                if max_records and stats['processed'] >= max_records:
+                    logger.info(f"Reached max_records limit of {max_records}, stopping sync")
+                    break
             
             # Complete sync record with success
             self.complete_sync_record(sync_record, stats)
@@ -347,8 +332,67 @@ class Command(BaseCommand):
         
         return last_sync.end_time if last_sync else None
 
+    def _process_batch_bulk_upsert(self, records, dry_run, debug):
+        """Process a batch of records using efficient bulk upsert operations"""
+        from django.db import transaction
+        
+        batch_stats = {'created': 0, 'updated': 0, 'errors': 0}
+        
+        if dry_run:
+            # In dry-run mode, just count what would be processed
+            batch_stats['created'] = len(records)  # Assume all would be processed
+            if debug:
+                logger.info(f"DRY-RUN: Would process {len(records)} records with bulk upsert")
+            return batch_stats
+        
+        if not records:
+            return batch_stats
+        
+        try:
+            with transaction.atomic():
+                # Use bulk_create with update_conflicts for efficient upsert
+                # This is much faster than individual saves or get_or_create calls
+                
+                # Get the field names from the model (excluding auto-generated fields)
+                model_fields = [f.name for f in Genius_ProspectSource._meta.fields 
+                               if not f.auto_created and f.name != 'sync_created_at']
+                
+                # Create model instances
+                objects_to_upsert = []
+                for record_data in records:
+                    try:
+                        obj = Genius_ProspectSource(**record_data)
+                        objects_to_upsert.append(obj)
+                    except Exception as e:
+                        logger.error(f"Error creating model instance: {e}")
+                        batch_stats['errors'] += 1
+                        continue
+                
+                if objects_to_upsert:
+                    # Use bulk_create with update_conflicts for high performance upsert
+                    created_objects = Genius_ProspectSource.objects.bulk_create(
+                        objects_to_upsert,
+                        update_conflicts=True,
+                        update_fields=[f for f in model_fields if f not in ['id', 'sync_created_at']],
+                        unique_fields=['id']
+                    )
+                    
+                    # bulk_create with update_conflicts doesn't return created vs updated counts
+                    # So we'll track total processed
+                    total_processed = len(objects_to_upsert)
+                    batch_stats['created'] = total_processed  # This includes both created and updated
+                    
+                    if debug:
+                        logger.info(f"Bulk upserted {total_processed} prospect source records")
+                        
+        except Exception as e:
+            logger.error(f"Error in bulk upsert operation: {e}")
+            batch_stats['errors'] += len(records)
+        
+        return batch_stats
+
     def _process_batch(self, objects_to_create, objects_to_update, dry_run, debug):
-        """Process a batch of objects for creation/update"""
+        """Legacy batch processing method - kept for backward compatibility"""
         batch_stats = {'created': 0, 'updated': 0, 'errors': 0}
         
         if dry_run:
@@ -374,14 +418,16 @@ class Command(BaseCommand):
                 logger.error(f"Error creating prospect source records: {e}")
                 batch_stats['errors'] += len(objects_to_create)
         
-        # Update existing records
+        # Update existing records using bulk_update for better performance
         if objects_to_update:
             try:
-                for obj in objects_to_update:
-                    obj.save()
-                    batch_stats['updated'] += 1
+                # Use bulk_update instead of individual saves
+                update_fields = ['prospect_id', 'marketing_source_id', 'source_date', 'notes', 
+                               'add_user_id', 'source_user_id', 'add_date', 'updated_at']
+                Genius_ProspectSource.objects.bulk_update(objects_to_update, update_fields)
+                batch_stats['updated'] = len(objects_to_update)
                 if debug:
-                    logger.info(f"Updated {batch_stats['updated']} existing prospect source records")
+                    logger.info(f"Bulk updated {batch_stats['updated']} existing prospect source records")
                     
             except Exception as e:
                 logger.error(f"Error updating prospect source records: {e}")

@@ -40,14 +40,27 @@ class GeniusJobChangeOrderTypesSyncEngine(GeniusBaseSyncEngine):
         if dry_run:
             logger.info("Dry run mode - no actual sync performed")
         
-        sync_id = await self.create_sync_history_record(
-            sync_type=self.entity_type,
-            status='completed',
-            stats=stats
-        )
+        # Create sync history record using async-compatible method from base class
+        configuration = {
+            'full': full,
+            'dry_run': dry_run,
+            'max_records': max_records
+        }
+        sync_history = await self.create_sync_record(configuration)
+        
+        # Complete the sync record with results
+        sync_history.status = 'completed'
+        sync_history.records_processed = stats['processed']
+        sync_history.records_created = stats['created']
+        sync_history.records_updated = stats['updated']
+        sync_history.records_failed = stats['errors']
+        
+        from django.utils import timezone
+        sync_history.end_time = timezone.now()
+        await self._save_sync_record(sync_history)
         
         return {
             'stats': stats,
-            'sync_id': sync_id
+            'sync_id': sync_history.id
         }
 

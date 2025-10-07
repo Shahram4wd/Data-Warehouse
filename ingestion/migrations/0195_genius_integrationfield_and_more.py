@@ -53,4 +53,9 @@ class Migration(migrations.Migration):
                 'managed': True,
             },
         ),
+        migrations.AddField(
+            model_name='genius_prospectsource',
+            name='source_user_id',
+            field=models.IntegerField(blank=True, null=True),
+        ),
     ]

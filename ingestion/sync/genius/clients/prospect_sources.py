@@ -29,7 +29,8 @@ class GeniusProspectSourceClient(GeniusBaseClient):
             ps.notes,
             ps.add_user_id,
             ps.add_date,
-            ps.updated_at
+            ps.updated_at,
+            ps.source_user_id
         FROM prospect_source ps
         """
         
@@ -47,10 +48,14 @@ class GeniusProspectSourceClient(GeniusBaseClient):
         return self.execute_query(query)
     
     def get_prospect_sources_chunked(self, since_date: Optional[datetime] = None, chunk_size: int = 1000):
-        """Generator that yields chunks of prospect sources to handle large datasets efficiently"""
-        offset = 0
+        """Generator that yields chunks of prospect sources to handle large datasets efficiently
         
-        while True:
+        Follows CRM sync guide patterns with safety limits to prevent infinite loops.
+        """
+        offset = 0
+        iteration_limit = 10000  # Safety limit to prevent infinite loops (10M records max)
+        
+        for iteration in range(iteration_limit):
             # Base query with all required fields matching the model schema
             query = """
             SELECT 
@@ -61,7 +66,8 @@ class GeniusProspectSourceClient(GeniusBaseClient):
                 ps.notes,
                 ps.add_user_id,
                 ps.add_date,
-                ps.updated_at
+                ps.updated_at,
+                ps.source_user_id
             FROM prospect_source ps
             """
             
@@ -73,20 +79,26 @@ class GeniusProspectSourceClient(GeniusBaseClient):
             # Add ordering and pagination
             query += f" ORDER BY ps.id LIMIT {chunk_size} OFFSET {offset}"
             
-            logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {chunk_size}): {query}")
+            logger.info(f"Executing chunked query (iteration: {iteration+1}, offset: {offset}, chunk_size: {chunk_size})")
             chunk_results = self.execute_query(query)
             
             if not chunk_results:
                 # No more records, break the loop
+                logger.info(f"No more records found after {iteration+1} iterations, ending chunked fetch")
                 break
             
             yield chunk_results
             
             # If we got less than chunk_size records, we've reached the end
             if len(chunk_results) < chunk_size:
+                logger.info(f"Received {len(chunk_results)} records (less than chunk_size {chunk_size}), ending chunked fetch")
                 break
             
             offset += chunk_size
+        
+        # Safety warning if we hit the iteration limit
+        if iteration == iteration_limit - 1:
+            logger.warning(f"Hit iteration limit of {iteration_limit}, sync may be incomplete. Consider increasing limit or investigating data issues.")
     
     def get_field_mapping(self) -> List[str]:
         """Get field mapping for transformation matching the model schema"""
@@ -98,5 +110,6 @@ class GeniusProspectSourceClient(GeniusBaseClient):
             'notes',
             'add_user_id',
             'add_date',
-            'updated_at'
+            'updated_at',
+            'source_user_id'
         ]

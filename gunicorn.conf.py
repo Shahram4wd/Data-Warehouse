@@ -5,14 +5,14 @@ import os
 bind = f"0.0.0.0:{os.getenv('PORT', '8000')}"
 backlog = 2048
 
-# Worker processes
-workers = min(4, (multiprocessing.cpu_count() * 2) + 1)
+# Worker processes - Reduced for better memory management
+workers = min(2, multiprocessing.cpu_count())  # Reduced from 4
 worker_class = "sync"
 worker_connections = 1000
-timeout = 120  # Increased timeout
+timeout = 300  # Increased timeout for long-running sync operations
 keepalive = 5
-max_requests = 1000
-max_requests_jitter = 100
+max_requests = 2000  # Increased before worker restart
+max_requests_jitter = 200
 
 # Memory management
 worker_tmp_dir = "/dev/shm"
@@ -49,3 +49,16 @@ def pre_fork(server, worker):
 
 def post_fork(server, worker):
     server.log.info("Worker spawned (pid: %s)", worker.pid)
+
+def worker_exit(server, worker):
+    """Log worker exits with reason"""
+    # Worker object may not have exitcode attribute, handle gracefully
+    try:
+        exit_code = getattr(worker, 'exitcode', 'unknown')
+        server.log.info("Worker exiting (pid: %s) - Exit code: %s", worker.pid, exit_code)
+    except AttributeError:
+        server.log.info("Worker exiting (pid: %s)", worker.pid)
+
+def on_exit(server):
+    """Log server shutdown"""
+    server.log.info("Shutting down: Master")

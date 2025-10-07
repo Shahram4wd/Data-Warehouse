@@ -77,6 +77,17 @@ class GeniusProspectSourceProcessor:
             else:
                 validated_record['add_user_id'] = 0  # Default fallback
             
+            # Source user ID (nullable integer field)
+            source_user_id = record.get('source_user_id')
+            if source_user_id is not None:
+                try:
+                    validated_record['source_user_id'] = int(source_user_id)
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid source_user_id value: {source_user_id}, setting to None")
+                    validated_record['source_user_id'] = None
+            else:
+                validated_record['source_user_id'] = None
+            
             # Timestamps (DateTimeField, not nullable based on model)
             validated_record['add_date'] = self._validate_datetime(record.get('add_date'))
             validated_record['updated_at'] = self._validate_datetime(record.get('updated_at'))
@@ -102,29 +113,51 @@ class GeniusProspectSourceProcessor:
         if isinstance(value, datetime):
             # If datetime is naive, assume it's UTC and make it timezone-aware
             if timezone.is_naive(value):
-                return timezone.make_aware(value, utc)
+                return timezone.make_aware(value, timezone.get_default_timezone())
             return value
             
         if isinstance(value, date):
-            # Convert date to timezone-aware datetime at midnight UTC
+            # Convert date to timezone-aware datetime at midnight in default timezone
             naive_dt = datetime.combine(value, datetime.min.time())
-            return timezone.make_aware(naive_dt, utc)
+            return timezone.make_aware(naive_dt, timezone.get_default_timezone())
             
         try:
-            # Try to parse string datetime
+            # Try to parse string datetime with various formats
             if isinstance(value, str):
-                parsed_dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                # If the parsed datetime is still naive, make it UTC
+                # Handle ISO format with Z suffix
+                if value.endswith('Z'):
+                    parsed_dt = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                    return parsed_dt
+                
+                # Try common datetime formats
+                datetime_formats = [
+                    '%Y-%m-%d %H:%M:%S.%f',  # 2025-08-28 07:14:07.949436
+                    '%Y-%m-%d %H:%M:%S',     # 2020-11-21 07:38:52
+                    '%Y-%m-%d',              # 2020-10-28
+                ]
+                
+                for fmt in datetime_formats:
+                    try:
+                        parsed_dt = datetime.strptime(value, fmt)
+                        # Make timezone-aware using default timezone
+                        return timezone.make_aware(parsed_dt, timezone.get_default_timezone())
+                    except ValueError:
+                        continue
+                
+                # Fallback: try fromisoformat
+                parsed_dt = datetime.fromisoformat(value)
                 if timezone.is_naive(parsed_dt):
-                    return timezone.make_aware(parsed_dt, utc)
+                    return timezone.make_aware(parsed_dt, timezone.get_default_timezone())
                 return parsed_dt
-        except (ValueError, AttributeError):
-            pass
+                
+        except (ValueError, AttributeError) as e:
+            logger.warning(f"Could not parse datetime value '{value}': {e}")
             
         return None
 
     def transform_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform raw prospect source data to dictionary"""
+        """Transform raw prospect source data to dictionary with proper timezone handling"""
         
-        # Use direct record processing since input is already a dictionary
-        return record
+        # Apply the full validation and transformation logic
+        # This ensures datetime fields are properly converted to timezone-aware datetimes
+        return self._validate_and_transform_record(record)
