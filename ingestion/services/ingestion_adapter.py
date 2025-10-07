@@ -418,7 +418,7 @@ def _get_genius_sync_type(model_name: str) -> str:
         'divisiongroup': 'division_groups',
         'divisionregion': 'division_regions',
         'user': 'users',
-        'userdata': 'users',  # Genius_UserData -> users
+        'userdata': 'user_data',  # Fixed: Genius_UserData -> user_data (consistent with crm_discovery)
         'usertitle': 'user_titles',
         'userassociation': 'user_associations',
         'service': 'services',
@@ -462,7 +462,7 @@ def _get_genius_command(model_name: str) -> str:
         'Genius_Quote': 'db_genius_quotes',
         'Genius_Service': 'db_genius_services',
         'Genius_UserAssociation': 'db_genius_user_associations',
-        'Genius_UserData': 'db_genius_users',
+        'Genius_UserData': 'db_genius_user_data',  # Fixed: use correct command name
         'Genius_UserTitle': 'db_genius_user_titles',
         'Genius_IntegrationFieldDefinition': 'db_genius_integration_field_definitions',
         'Genius_IntegrationField': 'db_genius_integration_fields',

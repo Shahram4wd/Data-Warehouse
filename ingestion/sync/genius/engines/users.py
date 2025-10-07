@@ -25,7 +25,7 @@ class GeniusUsersSyncEngine:
         self.chunk_size = 100000  # 100K records per chunk
         self.batch_size = 500     # 500 records per batch
         self.crm_source = 'genius'
-        self.entity_type = 'users'
+        self.entity_type = 'user_data'  # Fixed: use 'user_data' to match model mapping
         self.SyncHistory = SyncHistory
 
     def get_last_sync_timestamp(self) -> Optional[datetime]:

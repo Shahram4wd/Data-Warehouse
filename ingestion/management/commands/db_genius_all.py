@@ -169,7 +169,7 @@ class Command(BaseCommand):
                 {"name": "db_genius_marketing_sources", "description": "Marketing source definitions", "options": {}},
                 
                 # Level 4: Depends on divisions and user_titles
-                {"name": "db_genius_users", "description": "System users", "options": {}},
+                {"name": "db_genius_user_data", "description": "System users", "options": {}},
                 
                 # Level 5: Depends on users and divisions and integration_field_definitions
                 {"name": "db_genius_user_associations", "description": "User organizational associations", "options": {}},
