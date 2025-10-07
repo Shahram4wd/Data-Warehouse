@@ -110,23 +110,30 @@ class GeniusJobChangeOrderItemsSyncEngine(GeniusBaseSyncEngine):
                             
                             logger.info(f"  Processing sub-batch {sub_batch_num}/{total_sub_batches} ({len(sub_batch)} items)")
                             
-                            batch_stats = self.processor.process_batch(sub_batch, force_overwrite=force_overwrite)
-                            stats['created'] += batch_stats['created']
-                            stats['updated'] += batch_stats['updated']
-                            stats['errors'] += batch_stats['errors']
+                            try:
+                                batch_stats = self.processor.process_batch(sub_batch, force_overwrite=force_overwrite)
+                                stats['created'] += batch_stats.get('created', 0)
+                                stats['updated'] += batch_stats.get('updated', 0)
+                                stats['errors'] += batch_stats.get('errors', 0)
+                                
+                                records_processed += len(sub_batch)
+                                
+                                # Progress logging
+                                if total_count > 0:
+                                    progress = (records_processed / total_count) * 100
+                                    logger.info(f"  Progress: {records_processed}/{total_count} ({progress:.1f}%)")
                             
-                            records_processed += len(sub_batch)
-                            
-                            # Progress logging
-                            if total_count > 0:
-                                progress = (records_processed / total_count) * 100
-                                logger.info(f"  Progress: {records_processed}/{total_count} ({progress:.1f}%)")
+                            except Exception as sub_batch_error:
+                                logger.error(f"Error processing sub-batch {sub_batch_num}: {sub_batch_error}")
+                                stats['errors'] += len(sub_batch)
+                                records_processed += len(sub_batch)  # Still count as processed
                     
                     stats['total_processed'] = records_processed
                     
-                except Exception as e:
-                    logger.error(f"Error processing chunk {chunk_num}: {e}")
+                except Exception as chunk_error:
+                    logger.error(f"Error processing chunk {chunk_num}: {chunk_error}")
                     stats['errors'] += len(chunk)
+                    # Continue with next chunk rather than failing entirely
                     
             logger.info(f"✅ Job change order items sync completed. Stats: {stats}")
             
@@ -154,7 +161,8 @@ class GeniusJobChangeOrderItemsSyncEngine(GeniusBaseSyncEngine):
             last_sync = SyncHistory.objects.filter(
                 crm_source='genius',
                 sync_type='job_change_order_items',
-                status='success'
+                status__in=['success', 'completed'],
+                end_time__isnull=False
             ).order_by('-end_time').first()
             
             if last_sync and last_sync.end_time:
@@ -175,6 +183,16 @@ class GeniusJobChangeOrderItemsSyncEngine(GeniusBaseSyncEngine):
             sync_history.records_processed = stats['total_processed']
             sync_history.records_created = stats['created']
             sync_history.records_updated = stats['updated']
+            sync_history.records_failed = stats['errors']
+            
+            # Store performance metrics
+            if sync_history.start_time:
+                duration = sync_history.end_time - sync_history.start_time
+                sync_history.performance_metrics = {
+                    'duration_seconds': duration.total_seconds(),
+                    'stats': stats
+                }
+            
             sync_history.save()
             logger.info(f"✅ Sync history updated: {sync_history.id}")
         except Exception as e:
