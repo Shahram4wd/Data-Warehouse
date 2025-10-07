@@ -56,7 +56,12 @@ class EnhancedDashboardManager {
         if (!response.ok) throw new Error('Failed to fetch CRM data');
         const result = await response.json();
         
-        // Handle wrapped response format
+        // Handle wrapped response format with crm_sources
+        if (result.success && Array.isArray(result.crm_sources)) {
+            return result.crm_sources;
+        }
+        
+        // Handle wrapped response format with data (backwards compatibility)
         if (result.success && Array.isArray(result.data)) {
             return result.data;
         }
@@ -429,17 +434,22 @@ class EnhancedDashboardManager {
         }
         
         return crmsData.filter(crm => {
+            // Normalize properties for consistent access
+            const source = crm.name || crm.source || 'unknown';
+            const displayName = crm.display_name || 'Unknown CRM';
+            const status = crm.status || crm.overall_status || 'unknown';
+            
             // Search filter
             if (this.filters.search) {
                 const searchTerm = this.filters.search;
-                if (!crm.display_name.toLowerCase().includes(searchTerm) &&
-                    !crm.source.toLowerCase().includes(searchTerm)) {
+                if (!displayName.toLowerCase().includes(searchTerm) &&
+                    !source.toLowerCase().includes(searchTerm)) {
                     return false;
                 }
             }
             
             // Status filter
-            if (this.filters.status !== 'all' && crm.overall_status !== this.filters.status) {
+            if (this.filters.status !== 'all' && status !== this.filters.status) {
                 return false;
             }
             
@@ -910,11 +920,11 @@ class EnhancedDashboardManager {
     convertToCSV(data) {
         const headers = ['CRM Source', 'Models', 'Records', 'Last Sync', 'Status'];
         const rows = data.map(crm => [
-            crm.display_name,
-            crm.model_count,
-            crm.total_records,
+            crm.display_name || 'Unknown CRM',
+            crm.model_count || 0,
+            crm.total_records || crm.record_count || 0,
             crm.last_sync || 'Never',
-            crm.overall_status
+            crm.status || crm.overall_status || 'unknown'
         ]);
         
         return [headers, ...rows]
