@@ -37,7 +37,7 @@ class GeniusUserTitlesSyncEngine:
             last_sync = SyncHistory.objects.filter(
                 crm_source=self.crm_source,
                 sync_type=self.entity_type,
-                status='completed'
+                status__in=['completed', 'success']  # Support both old and new status values
             ).order_by('-end_time').first()
             
             return last_sync.end_time if last_sync else None
@@ -68,7 +68,7 @@ class GeniusUserTitlesSyncEngine:
             sync_record.status = 'failed'
             sync_record.error_message = error_message
         else:
-            sync_record.status = 'success'
+            sync_record.status = 'completed'  # Changed from 'success' to 'completed'
         
         sync_record.save()
     

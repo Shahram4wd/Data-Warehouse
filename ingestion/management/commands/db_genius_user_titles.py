@@ -103,6 +103,14 @@ class Command(BaseCommand):
         # For --full flag, ignore since_date from database
         if options.get('full'):
             since_date = None
+        elif since_date is None:
+            # For incremental sync (no --since and no --full), get last sync timestamp
+            engine = GeniusUserTitlesSyncEngine()
+            since_date = engine.get_last_sync_timestamp(force_overwrite=options.get('force', False))
+            if since_date:
+                self.stdout.write(f"📅 INCREMENTAL SYNC - Starting from last sync: {since_date}")
+            else:
+                self.stdout.write("📂 INITIAL SYNC - No previous sync found, performing full sync")
         
         # Execute sync
         try:
