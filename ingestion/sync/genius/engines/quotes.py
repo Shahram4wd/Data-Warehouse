@@ -35,7 +35,8 @@ class GeniusQuotesSyncEngine:
             last_sync = SyncHistory.objects.filter(
                 crm_source=self.crm_source,
                 sync_type=self.entity_type,
-                status='completed'
+                status__in=['success', 'completed'],
+                end_time__isnull=False
             ).order_by('-end_time').first()
             
             return last_sync.end_time if last_sync else None
@@ -57,10 +58,18 @@ class GeniusQuotesSyncEngine:
                            error_message: Optional[str] = None):
         """Complete the SyncHistory record"""
         sync_record.end_time = timezone.now()
-        sync_record.total_processed = stats.get('total_processed', 0)
-        sync_record.successful_count = stats.get('created', 0) + stats.get('updated', 0)
-        sync_record.error_count = stats.get('errors', 0)
-        sync_record.statistics = stats
+        sync_record.records_processed = stats.get('total_processed', 0)
+        sync_record.records_created = stats.get('created', 0)
+        sync_record.records_updated = stats.get('updated', 0)
+        sync_record.records_failed = stats.get('errors', 0)
+        
+        # Store performance metrics
+        if sync_record.start_time:
+            duration = sync_record.end_time - sync_record.start_time
+            sync_record.performance_metrics = {
+                'duration_seconds': duration.total_seconds(),
+                'stats': stats
+            }
         
         if error_message:
             sync_record.status = 'failed'
@@ -146,11 +155,11 @@ class GeniusQuotesSyncEngine:
             logger.info(f"Executing chunked query (offset: {offset}, chunk_size: {current_chunk_size})")
             
             # Get chunked query for logging
-            query = self.client.get_chunked_query(offset, current_chunk_size, since_date)
+            query = self.client.get_chunked_query(since_date, offset, current_chunk_size)
             logger.info(query)
             
             # Fetch chunk data
-            chunk_data = self.client.get_chunked_quotes(offset, current_chunk_size, since_date)
+            chunk_data = self.client.get_chunked_quotes(since_date, offset, current_chunk_size)
             
             if not chunk_data:
                 logger.info("No more data to process")
