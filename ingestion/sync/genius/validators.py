@@ -565,6 +565,48 @@ class GeniusRecordValidator:
         return validated
     
     @staticmethod
+    def validate_prospect_source_record(record: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate prospect source record data following CRM sync guide patterns"""
+        validated = {}
+        
+        # Validate required ID field (primary key)
+        validated['id'] = GeniusValidator.validate_id_field(record.get('id'))
+        
+        # Validate required foreign keys
+        validated['prospect_id'] = GeniusValidator.validate_id_field(record.get('prospect_id'))
+        if validated['prospect_id'] is None:
+            raise ValueError("ProspectSource must have a valid prospect_id")
+        
+        validated['marketing_source_id'] = GeniusValidator.validate_id_field(record.get('marketing_source_id'))
+        if validated['marketing_source_id'] is None:
+            raise ValueError("ProspectSource must have a valid marketing_source_id")
+        
+        # Validate optional datetime field
+        validated['source_date'] = GeniusValidator.validate_datetime_field(record.get('source_date'))
+        
+        # Validate optional text field
+        validated['notes'] = GeniusValidator.validate_string_field(record.get('notes'))
+        
+        # Validate required user ID
+        validated['add_user_id'] = GeniusValidator.validate_id_field(record.get('add_user_id'))
+        if validated['add_user_id'] is None:
+            validated['add_user_id'] = 0  # Default fallback as per processor pattern
+        
+        # Validate NEW field: source_user_id (nullable)
+        validated['source_user_id'] = GeniusValidator.validate_id_field(record.get('source_user_id'))
+        
+        # Validate required datetime fields
+        validated['add_date'] = GeniusValidator.validate_datetime_field(record.get('add_date'))
+        if validated['add_date'] is None:
+            raise ValueError("ProspectSource must have a valid add_date")
+        
+        validated['updated_at'] = GeniusValidator.validate_datetime_field(record.get('updated_at'))
+        if validated['updated_at'] is None:
+            raise ValueError("ProspectSource must have a valid updated_at")
+        
+        return validated
+    
+    @staticmethod
     def validate_business_rules(record_type: str, record: Dict[str, Any]) -> List[str]:
         """Validate business-specific rules"""
         errors = []

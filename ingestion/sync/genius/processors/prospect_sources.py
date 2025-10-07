@@ -77,6 +77,17 @@ class GeniusProspectSourceProcessor:
             else:
                 validated_record['add_user_id'] = 0  # Default fallback
             
+            # Source user ID (nullable integer field)
+            source_user_id = record.get('source_user_id')
+            if source_user_id is not None:
+                try:
+                    validated_record['source_user_id'] = int(source_user_id)
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid source_user_id value: {source_user_id}, setting to None")
+                    validated_record['source_user_id'] = None
+            else:
+                validated_record['source_user_id'] = None
+            
             # Timestamps (DateTimeField, not nullable based on model)
             validated_record['add_date'] = self._validate_datetime(record.get('add_date'))
             validated_record['updated_at'] = self._validate_datetime(record.get('updated_at'))

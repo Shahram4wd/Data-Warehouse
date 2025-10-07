@@ -29,7 +29,8 @@ class GeniusProspectSourceClient(GeniusBaseClient):
             ps.notes,
             ps.add_user_id,
             ps.add_date,
-            ps.updated_at
+            ps.updated_at,
+            ps.source_user_id
         FROM prospect_source ps
         """
         
@@ -61,7 +62,8 @@ class GeniusProspectSourceClient(GeniusBaseClient):
                 ps.notes,
                 ps.add_user_id,
                 ps.add_date,
-                ps.updated_at
+                ps.updated_at,
+                ps.source_user_id
             FROM prospect_source ps
             """
             
@@ -98,5 +100,6 @@ class GeniusProspectSourceClient(GeniusBaseClient):
             'notes',
             'add_user_id',
             'add_date',
-            'updated_at'
+            'updated_at',
+            'source_user_id'
         ]
