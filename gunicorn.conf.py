@@ -52,7 +52,12 @@ def post_fork(server, worker):
 
 def worker_exit(server, worker):
     """Log worker exits with reason"""
-    server.log.info("Worker exiting (pid: %s) - Exit code: %s", worker.pid, worker.exitcode)
+    # Worker object may not have exitcode attribute, handle gracefully
+    try:
+        exit_code = getattr(worker, 'exitcode', 'unknown')
+        server.log.info("Worker exiting (pid: %s) - Exit code: %s", worker.pid, exit_code)
+    except AttributeError:
+        server.log.info("Worker exiting (pid: %s)", worker.pid)
 
 def on_exit(server):
     """Log server shutdown"""

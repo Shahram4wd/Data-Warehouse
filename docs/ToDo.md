@@ -1,4 +1,3 @@
-- The CRM list and their number of records are missing
 - The job_change_orders keep failing
 - GoogleSheet not working
 - Add remaining schedulers
