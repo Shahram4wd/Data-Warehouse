@@ -211,7 +211,7 @@ class DataAccessService:
                 logger.info(f"Applying large table optimizations for {model_class.__name__} (~{table_size_estimate:,} rows)")
                 # Use only() to limit fields returned and improve performance
                 # Get essential fields only for large tables
-                essential_fields = ['id']
+                essential_fields = [model_class._meta.pk.name]  # Use actual primary key field name
                 if hasattr(model_class, 'created_at'):
                     essential_fields.append('created_at')
                 if hasattr(model_class, 'updated_at'):
@@ -411,8 +411,9 @@ class DataAccessService:
                 data[f'{field_name}_count'] = getattr(instance, field_name).count()
         
         # Add primary key if not already included
-        if 'id' not in data:
-            data['id'] = instance.pk
+        pk_field_name = instance._meta.pk.name
+        if pk_field_name not in data:
+            data[pk_field_name] = instance.pk
         
         return data
     

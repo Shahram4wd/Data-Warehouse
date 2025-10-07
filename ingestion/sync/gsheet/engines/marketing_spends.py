@@ -36,7 +36,7 @@ class MarketingSpendsSyncEngine(BaseGoogleSheetsSyncEngine):
         'header_row': 1,
         'data_start_row': 2,
         'target_model': GoogleSheetMarketingSpend,
-        'crm_source': 'gsheet_marketing_spends',
+        'crm_source': 'gsheet',
     }
     
     def __init__(self, batch_size: int = 500, dry_run: bool = False, force_overwrite: bool = False):
@@ -89,7 +89,7 @@ class MarketingSpendsSyncEngine(BaseGoogleSheetsSyncEngine):
             sync_type='marketing_spends',
             status=status,
             start_time=timezone.now(),
-            sync_config={
+            configuration={
                 'sheet_id': self.SHEET_CONFIG['sheet_id'],
                 'tab_name': self.SHEET_CONFIG['tab_name'],
                 'batch_size': self.batch_size,
@@ -117,14 +117,19 @@ class MarketingSpendsSyncEngine(BaseGoogleSheetsSyncEngine):
         sync_record.records_created = stats.get('records_created', 0)
         sync_record.records_updated = stats.get('records_updated', 0)
         sync_record.records_failed = stats.get('records_failed', 0)
-        sync_record.error_details = stats.get('error_details', {})
+        
+        # Handle error details
+        error_details = stats.get('error_details', {})
+        if error_details and 'error_message' in error_details:
+            sync_record.error_message = error_details['error_message']
         
         # Calculate duration and performance metrics
         if sync_record.start_time and sync_record.end_time:
             duration = (sync_record.end_time - sync_record.start_time).total_seconds()
             sync_record.performance_metrics = {
                 'duration_seconds': duration,
-                'records_per_second': sync_record.records_processed / duration if duration > 0 else 0
+                'records_per_second': sync_record.records_processed / duration if duration > 0 else 0,
+                'records_deleted': stats.get('records_deleted', 0)
             }
         
         sync_record.save()
@@ -190,11 +195,26 @@ class MarketingSpendsSyncEngine(BaseGoogleSheetsSyncEngine):
     def sync_sync(self) -> Dict[str, Any]:
         """
         Synchronous version of sync for management commands with chunking and batching
+        Performs full refresh by clearing table first, then importing all data
         """
+        # Create SyncHistory record for tracking
+        sync_record = self.create_sync_history_record('running')
+        sync_start_time = timezone.now()
+        
         try:
             # Test connection
             if not self.client.test_connection():
                 raise Exception("Google Sheets API connection failed")
+            
+            # Clear existing records first (full refresh)
+            if not self.dry_run:
+                existing_count = GoogleSheetMarketingSpend.objects.count()
+                logger.info(f"🗑️  Clearing existing marketing spends records: {existing_count:,}")
+                GoogleSheetMarketingSpend.objects.all().delete()
+                logger.info("✅ Table cleared successfully")
+            else:
+                existing_count = GoogleSheetMarketingSpend.objects.count()
+                logger.info(f"DRY RUN: Would clear {existing_count:,} existing marketing spends records")
             
             # Fetch data from Google Sheets
             logger.info("Fetching data from Google Sheets...")
@@ -215,6 +235,7 @@ class MarketingSpendsSyncEngine(BaseGoogleSheetsSyncEngine):
                     'records_created': 0,
                     'records_updated': 0,
                     'records_failed': 0,
+                    'records_deleted': existing_count if not self.dry_run else 0,
                     'message': 'No data found in sheet'
                 }
             
@@ -267,24 +288,48 @@ class MarketingSpendsSyncEngine(BaseGoogleSheetsSyncEngine):
                 'records_created': stats['records_created'],
                 'records_updated': stats['records_updated'],
                 'records_failed': stats['records_failed'],
-                'sheet_info': sheet_info
+                'records_deleted': existing_count if not self.dry_run else 0,
+                'sheet_info': sheet_info,
+                'sync_id': sync_record.id
             }
             
             if stats['errors']:
                 result['warnings'] = stats['errors']
+            
+            # Update SyncHistory record with success
+            final_stats = {
+                'records_processed': stats['records_processed'],
+                'records_created': stats['records_created'],
+                'records_updated': stats['records_updated'],
+                'records_failed': stats['records_failed'],
+                'records_deleted': existing_count if not self.dry_run else 0
+            }
+            self.update_sync_history_record(sync_record, 'success', final_stats)
             
             logger.info(f"Sync completed successfully: {result}")
             return result
             
         except Exception as e:
             logger.error(f"Sync failed: {e}")
+            
+            # Update SyncHistory record with failure
+            error_stats = {
+                'records_processed': 0,
+                'records_created': 0,
+                'records_updated': 0,
+                'records_failed': 0,
+                'error_details': {'error_message': str(e)}
+            }
+            self.update_sync_history_record(sync_record, 'failed', error_stats)
+            
             return {
                 'status': 'failed',
                 'error': str(e),
                 'records_processed': 0,
                 'records_created': 0,
                 'records_updated': 0,
-                'records_failed': 0
+                'records_failed': 0,
+                'sync_id': sync_record.id
             }
     
     def _process_data_chunk(self, chunk_data: List[Dict[str, Any]], start_index: int) -> Dict[str, int]:

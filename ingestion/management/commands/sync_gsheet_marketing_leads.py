@@ -120,8 +120,13 @@ class Command(BaseSyncCommand):
         
         if success or status == 'success':
             self.stdout.write(
-                self.style.SUCCESS("✓ Marketing Leads sync completed successfully!")
+                self.style.SUCCESS("✓ Marketing Leads full refresh completed successfully!")
             )
+            
+            # Show operation summary
+            records_deleted = result.get('records_deleted', 0)
+            if records_deleted > 0:
+                self.stdout.write(f"🗑️  Cleared existing records: {records_deleted:,}")
             
             # Show statistics
             records_processed = result.get('records_processed', 0)
@@ -129,18 +134,71 @@ class Command(BaseSyncCommand):
             records_updated = result.get('records_updated', 0)
             records_failed = result.get('records_failed', 0)
             
-            self.stdout.write(f"Records: {records_processed} processed ({records_created} created, {records_updated} updated, {records_failed} failed)")
+            self.stdout.write(f"📊 Total: {records_processed:,} processed ({records_created:,} created, {records_updated:,} updated, {records_failed:,} failed)")
             
-            # Show sheet info
-            sheet_info = result.get('sheet_info', {})
-            if sheet_info:
-                self.stdout.write(f"Sheet: {sheet_info.get('name', 'Unknown')} ({sheet_info.get('estimated_data_rows', 0)} rows)")
+            # Show sheet-by-sheet results
+            sheets_processed = result.get('sheets_processed', 0)
+            sheets_failed = result.get('sheets_failed', 0)
+            total_sheets = sheets_processed + sheets_failed
+            
+            self.stdout.write(f"📋 Sheets: {sheets_processed}/{total_sheets} successful")
+            
+            # Show individual sheet results
+            sheet_results = result.get('sheet_results', [])
+            for sheet_result in sheet_results:
+                year = sheet_result.get('year', 'Unknown')
+                sheet_status = sheet_result.get('status', 'unknown')
+                
+                if sheet_status == 'success':
+                    created = sheet_result.get('records_created', 0)
+                    processed = sheet_result.get('records_processed', 0)
+                    self.stdout.write(f"  ✅ {year}: {processed:,} processed → {created:,} imported")
+                elif sheet_status == 'failed':
+                    error = sheet_result.get('error', 'Unknown error')
+                    self.stdout.write(f"  ❌ {year}: Failed - {error}")
+                else:
+                    self.stdout.write(f"  ⚠️  {year}: {sheet_status}")
+            
+            # Show sync ID for tracking
+            sync_id = result.get('sync_id')
+            if sync_id:
+                self.stdout.write(f"🆔 Sync ID: {sync_id}")
             
             # Show duration
             duration = result.get('duration', result.get('sync_duration', 0))
             if hasattr(duration, 'total_seconds'):
                 duration = duration.total_seconds()
-            self.stdout.write(f"Duration: {duration:.2f} seconds")
+            if duration > 0:
+                self.stdout.write(f"⏱️  Duration: {duration:.2f} seconds")
+        
+        elif status == 'partial':
+            self.stdout.write(
+                self.style.WARNING("⚠️ Marketing Leads sync partially completed!")
+            )
+            
+            # Show what succeeded and what failed
+            sheets_processed = result.get('sheets_processed', 0)
+            sheets_failed = result.get('sheets_failed', 0)
+            
+            self.stdout.write(f"📊 Results: {sheets_processed} sheets succeeded, {sheets_failed} sheets failed")
+            
+            # Show sheet details
+            sheet_results = result.get('sheet_results', [])
+            for sheet_result in sheet_results:
+                year = sheet_result.get('year', 'Unknown')
+                sheet_status = sheet_result.get('status', 'unknown')
+                
+                if sheet_status == 'success':
+                    created = sheet_result.get('records_created', 0)
+                    self.stdout.write(f"  ✅ {year}: {created:,} records imported")
+                elif sheet_status == 'failed':
+                    error = sheet_result.get('error', 'Unknown error')
+                    self.stdout.write(f"  ❌ {year}: {error}")
+            
+            # Show overall stats for successful sheets
+            records_created = result.get('records_created', 0)
+            if records_created > 0:
+                self.stdout.write(f"📊 Total imported: {records_created:,} records")
         
         elif status == 'skipped':
             self.stdout.write(
@@ -150,6 +208,22 @@ class Command(BaseSyncCommand):
             self.stdout.write(
                 self.style.ERROR(f"✗ Sync failed: {result.get('error', 'Unknown error')}")
             )
+            
+            # Show any partial results
+            sheet_results = result.get('sheet_results', [])
+            if sheet_results:
+                self.stdout.write("Sheet-by-sheet results:")
+                for sheet_result in sheet_results:
+                    year = sheet_result.get('year', 'Unknown')
+                    sheet_status = sheet_result.get('status', 'unknown')
+                    error = sheet_result.get('error', '')
+                    
+                    if sheet_status == 'failed':
+                        self.stdout.write(f"  ❌ {year}: {error}")
+                    elif sheet_status == 'success':
+                        self.stdout.write(f"  ✅ {year}: Success")
+                    else:
+                        self.stdout.write(f"  ⚠️  {year}: {sheet_status}")
     
     def _display_results(self, result, options):
         """Display sync results (deprecated - use output_results)"""

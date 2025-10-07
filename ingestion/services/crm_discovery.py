@@ -441,12 +441,8 @@ class CRMDiscoveryService:
     def _get_model_sync_info(self, crm_source: str, model_info: Dict) -> Optional[Dict]:
         """Get sync information for a specific model"""
         try:
-            # Try to find sync history by matching model name patterns
-            possible_sync_types = [
-                self._model_name_to_sync_type(model_info['name']),
-                model_info['table_name'],
-                model_info['verbose_name_plural'].lower()
-            ]
+            # Get all possible sync_types for this model
+            possible_sync_types = self._get_all_possible_sync_types(crm_source, model_info)
             
             last_sync = None
             for sync_type in possible_sync_types:
@@ -490,6 +486,25 @@ class CRMDiscoveryService:
         except Exception as e:
             logger.error(f"Error getting sync info for {crm_source} {model_info['name']}: {e}")
             return None
+
+    def _get_all_possible_sync_types(self, crm_source: str, model_info: Dict) -> List[str]:
+        """Get all possible sync_types for a model, including special cases"""
+        model_name = model_info['name']
+        
+        # Special handling for GoogleSheetMarketingLead - it can have multiple sync_types
+        if model_name == 'GoogleSheetMarketingLead':
+            return [
+                'marketing_leads_full_refresh',  # Primary sync_type from mapping
+                'marketing_leads_2024',          # Individual year syncs
+                'marketing_leads_2025'
+            ]
+        
+        # Standard sync_types for other models
+        return [
+            self._model_name_to_sync_type(model_name),
+            model_info['table_name'],
+            model_info['verbose_name_plural'].lower()
+        ]
     
     def _model_name_to_sync_type(self, model_name: str) -> str:
         """Convert model name to likely sync_type name"""
@@ -549,7 +564,10 @@ class CRMDiscoveryService:
             'Genius_Task': 'tasks',
             'Genius_UserAssociation': 'user_associations',
             'Genius_UserData': 'user_data',
-            'Genius_UserTitle': 'user_titles'
+            'Genius_UserTitle': 'user_titles',
+            # Google Sheets mappings
+            'GoogleSheetMarketingLead': 'marketing_leads_full_refresh',
+            'GoogleSheetMarketingSpend': 'marketing_spends'
         }
         
         if model_name in model_mappings:

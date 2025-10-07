@@ -13,9 +13,9 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseSyncCommand):
-    """Sync Marketing Spends from Google Sheets"""
+    """Sync Marketing Spends from Google Sheets with full refresh (clear table first)"""
     
-    help = 'Sync marketing spends data from Google Sheets to database'
+    help = 'Sync marketing spends data from Google Sheets to database (performs full refresh by clearing table first)'
     crm_name = 'gsheet'
     entity_name = 'marketing_spends'
     
@@ -91,8 +91,9 @@ class Command(BaseSyncCommand):
             
             # Display configuration
             dry_mode = "DRY RUN: " if dry_run else ""
-            self.stdout.write(f"{dry_mode}Starting Marketing Spends sync from Google Sheets...")
+            self.stdout.write(f"{dry_mode}Starting Marketing Spends full refresh sync from Google Sheets...")
             self.stdout.write(f"Configuration:")
+            self.stdout.write(f"  - Sync type: Full refresh (clear table first)")
             self.stdout.write(f"  - Dry run: {dry_run}")
             self.stdout.write(f"  - Force sync: {force_overwrite}")
             self.stdout.write(f"  - Full sync: {full_sync}")
@@ -127,8 +128,13 @@ class Command(BaseSyncCommand):
         
         if success or status == 'success':
             self.stdout.write(
-                self.style.SUCCESS("✓ Marketing Spends sync completed successfully!")
+                self.style.SUCCESS("✓ Marketing Spends full refresh completed successfully!")
             )
+            
+            # Show operation summary
+            records_deleted = result.get('records_deleted', 0)
+            if records_deleted > 0:
+                self.stdout.write(f"🗑️  Cleared existing records: {records_deleted:,}")
             
             # Show statistics
             records_processed = result.get('records_processed', 0)
@@ -136,18 +142,24 @@ class Command(BaseSyncCommand):
             records_updated = result.get('records_updated', 0)
             records_failed = result.get('records_failed', 0)
             
-            self.stdout.write(f"Records: {records_processed} processed ({records_created} created, {records_updated} updated, {records_failed} failed)")
+            self.stdout.write(f"📊 Total: {records_processed:,} processed ({records_created:,} created, {records_updated:,} updated, {records_failed:,} failed)")
             
             # Show sheet info
             sheet_info = result.get('sheet_info', {})
             if sheet_info:
-                self.stdout.write(f"Sheet: {sheet_info.get('name', 'Unknown')} ({sheet_info.get('estimated_data_rows', 0)} rows)")
+                self.stdout.write(f"📋 Sheet: {sheet_info.get('name', 'Unknown')} ({sheet_info.get('estimated_data_rows', 0):,} rows)")
+            
+            # Show sync ID for tracking (if available)
+            sync_id = result.get('sync_id')
+            if sync_id:
+                self.stdout.write(f"🆔 Sync ID: {sync_id}")
             
             # Show duration
             duration = result.get('duration', result.get('sync_duration', 0))
             if hasattr(duration, 'total_seconds'):
                 duration = duration.total_seconds()
-            self.stdout.write(f"Duration: {duration:.2f} seconds")
+            if duration > 0:
+                self.stdout.write(f"⏱️  Duration: {duration:.2f} seconds")
         
         elif status == 'skipped':
             self.stdout.write(

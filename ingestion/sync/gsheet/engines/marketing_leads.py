@@ -199,7 +199,12 @@ class MarketingLeadsSyncEngine(BaseGoogleSheetsSyncEngine):
     
     def sync_with_retry_sync(self, max_retries: int = 2) -> Dict[str, Any]:
         """
-        Execute sync with retry logic and SyncHistory tracking for all configured sheets
+        Execute complete sync with table clearing and multi-sheet import
+        
+        Process:
+        1. Clear the entire GoogleSheetMarketingLead table
+        2. Import data from all configured sheets (2024 and 2025)
+        3. Track entire operation in SyncHistory
         
         Args:
             max_retries: Maximum number of retry attempts
@@ -207,6 +212,23 @@ class MarketingLeadsSyncEngine(BaseGoogleSheetsSyncEngine):
         Returns:
             Dict: Combined sync result with status and statistics
         """
+        
+        # Create main SyncHistory record for the entire operation
+        main_sync_record = SyncHistory.objects.create(
+            crm_source='gsheet',
+            sync_type='marketing_leads_full_refresh',
+            endpoint='multiple_sheets_2024_2025',
+            configuration={
+                'operation': 'full_table_refresh',
+                'sheets': [config['year'] for config in self.sheet_configs],
+                'model': self.model.__name__,
+                'batch_size': self.batch_size,
+                'dry_run': self.dry_run,
+                'force_overwrite': self.force_overwrite
+            },
+            status='running',
+            start_time=timezone.now()
+        )
         
         overall_stats = {
             'status': 'success',
@@ -216,102 +238,140 @@ class MarketingLeadsSyncEngine(BaseGoogleSheetsSyncEngine):
             'records_failed': 0,
             'sheets_processed': 0,
             'sheets_failed': 0,
-            'sheet_results': []
+            'sheet_results': [],
+            'sync_id': main_sync_record.id
         }
         
-        # Process each configured sheet
-        for sheet_config in self.sheet_configs:
-            try:
-                logger.info(f"Starting sync for {sheet_config['year']} sheet: {sheet_config['sheet_id']}")
-                
-                # Create SyncHistory record for this sheet
-                sync_record = self.create_sync_history_record(sheet_config)
-                
+        try:
+            # STEP 1: Clear the entire table first (unless dry run)
+            if not self.dry_run:
+                logger.info("🗑️  Clearing entire GoogleSheetMarketingLead table...")
+                deleted_count = self.model.objects.all().delete()[0]
+                logger.info(f"✅ Cleared {deleted_count:,} existing records from table")
+                overall_stats['records_deleted'] = deleted_count
+            else:
+                logger.info("🔍 DRY RUN: Would clear entire GoogleSheetMarketingLead table")
+                overall_stats['records_deleted'] = 0
+            
+            # STEP 2: Process each configured sheet (2024 and 2025)
+            for sheet_config in self.sheet_configs:
                 try:
-                    # Check if sync is needed (unless forced)
-                    if not self.force_overwrite:
-                        last_sync = self.get_last_sync_timestamp_for_year(sheet_config['year'])
+                    logger.info(f"📊 Starting import for {sheet_config['year']} sheet: {sheet_config['sheet_id']}")
+                    
+                    # Create individual SyncHistory record for this sheet
+                    sync_record = self.create_sync_history_record(sheet_config)
+                    
+                    try:
+                        # Execute sync for this sheet
+                        result = self.sync_sheet_sync(sheet_config)
                         
-                        # Create client for this specific sheet to check modification
-                        client = MarketingLeadsClient(
-                            sheet_id=sheet_config['sheet_id'],
-                            tab_name=sheet_config['tab_name']
-                        )
+                        # Update SyncHistory with success
+                        self.update_sync_history_record(sync_record, 'success', result)
                         
-                        if not client.is_sheet_modified_since_sync(last_sync):
-                            stats = {'status': 'skipped', 'reason': f'Sheet {sheet_config["year"]} not modified since last sync'}
-                            self.update_sync_history_record(sync_record, 'skipped', stats)
-                            overall_stats['sheet_results'].append({
-                                'year': sheet_config['year'],
-                                'status': 'skipped',
-                                'reason': stats['reason']
-                            })
-                            continue
-                    
-                    # Execute sync for this sheet
-                    result = self.sync_sheet_sync(sheet_config)
-                    
-                    # Update SyncHistory with success
-                    self.update_sync_history_record(sync_record, 'success', result)
-                    
-                    # Add to overall stats
-                    overall_stats['records_processed'] += result.get('records_processed', 0)
-                    overall_stats['records_created'] += result.get('records_created', 0)
-                    overall_stats['records_updated'] += result.get('records_updated', 0)
-                    overall_stats['records_failed'] += result.get('records_failed', 0)
-                    overall_stats['sheets_processed'] += 1
-                    
-                    overall_stats['sheet_results'].append({
-                        'year': sheet_config['year'],
-                        'status': 'success',
-                        **result
-                    })
-                    
-                    logger.info(f"Successfully synced {sheet_config['year']} sheet")
-                    
+                        # Add to overall stats
+                        overall_stats['records_processed'] += result.get('records_processed', 0)
+                        overall_stats['records_created'] += result.get('records_created', 0)
+                        overall_stats['records_updated'] += result.get('records_updated', 0)
+                        overall_stats['records_failed'] += result.get('records_failed', 0)
+                        overall_stats['sheets_processed'] += 1
+                        
+                        overall_stats['sheet_results'].append({
+                            'year': sheet_config['year'],
+                            'status': 'success',
+                            **result
+                        })
+                        
+                        logger.info(f"✅ Successfully imported {sheet_config['year']} sheet: "
+                                  f"{result.get('records_created', 0)} records created")
+                        
+                    except Exception as e:
+                        logger.error(f"❌ Import failed for {sheet_config['year']} sheet: {e}")
+                        
+                        # Update SyncHistory with failure
+                        error_stats = {
+                            'status': 'failed',
+                            'error_message': str(e),
+                            'records_processed': 0,
+                            'records_created': 0,
+                            'records_updated': 0,
+                            'records_failed': 0
+                        }
+                        
+                        self.update_sync_history_record(sync_record, 'failed', error_stats)
+                        
+                        overall_stats['sheets_failed'] += 1
+                        overall_stats['sheet_results'].append({
+                            'year': sheet_config['year'],
+                            'status': 'failed',
+                            'error': str(e)
+                        })
+                        
+                        # Continue with other sheets instead of failing completely
+                        continue
+                        
                 except Exception as e:
-                    logger.error(f"Sync failed for {sheet_config['year']} sheet: {e}")
-                    
-                    # Update SyncHistory with failure
-                    error_stats = {
-                        'status': 'failed',
-                        'error_message': str(e),
-                        'records_processed': 0,
-                        'records_created': 0,
-                        'records_updated': 0,
-                        'records_failed': 0
-                    }
-                    
-                    self.update_sync_history_record(sync_record, 'failed', error_stats)
-                    
+                    logger.error(f"❌ Failed to process {sheet_config['year']} sheet: {e}")
                     overall_stats['sheets_failed'] += 1
                     overall_stats['sheet_results'].append({
                         'year': sheet_config['year'],
                         'status': 'failed',
                         'error': str(e)
                     })
-                    
-                    # Continue with other sheets instead of failing completely
                     continue
-                    
-            except Exception as e:
-                logger.error(f"Failed to process {sheet_config['year']} sheet: {e}")
-                overall_stats['sheets_failed'] += 1
-                overall_stats['sheet_results'].append({
-                    'year': sheet_config['year'],
-                    'status': 'failed',
-                    'error': str(e)
-                })
-                continue
-        
-        # Determine overall status
-        if overall_stats['sheets_failed'] > 0:
-            if overall_stats['sheets_processed'] == 0:
-                overall_stats['status'] = 'failed'
+            
+            # STEP 3: Determine overall status
+            if overall_stats['sheets_failed'] > 0:
+                if overall_stats['sheets_processed'] == 0:
+                    overall_stats['status'] = 'failed'
+                    overall_stats['error'] = 'All sheets failed to import'
+                else:
+                    overall_stats['status'] = 'partial'
+                    overall_stats['error'] = f"{overall_stats['sheets_failed']} out of {len(self.sheet_configs)} sheets failed"
             else:
-                overall_stats['status'] = 'partial'
-        
-        return overall_stats
+                overall_stats['status'] = 'success'
+            
+            # Update main SyncHistory record
+            main_sync_record.status = overall_stats['status']
+            main_sync_record.end_time = timezone.now()
+            main_sync_record.records_processed = overall_stats['records_processed']
+            main_sync_record.records_created = overall_stats['records_created'] 
+            main_sync_record.records_updated = overall_stats['records_updated']
+            main_sync_record.records_failed = overall_stats['records_failed']
+            
+            # Add performance metrics
+            duration = (main_sync_record.end_time - main_sync_record.start_time).total_seconds()
+            main_sync_record.performance_metrics = {
+                'duration_seconds': duration,
+                'records_per_second': overall_stats['records_processed'] / duration if duration > 0 else 0,
+                'sheets_processed': overall_stats['sheets_processed'],
+                'sheets_failed': overall_stats['sheets_failed'],
+                'records_deleted': overall_stats.get('records_deleted', 0)
+            }
+            
+            if overall_stats['status'] == 'failed' and 'error' in overall_stats:
+                main_sync_record.error_message = overall_stats['error']
+            
+            main_sync_record.save()
+            
+            logger.info(f"🎯 Full refresh sync completed: {overall_stats['status']} | "
+                       f"Processed: {overall_stats['records_processed']:,} | "
+                       f"Created: {overall_stats['records_created']:,} | "
+                       f"Sheets: {overall_stats['sheets_processed']}/{len(self.sheet_configs)}")
+            
+            return overall_stats
+            
+        except Exception as e:
+            # Update main sync record with failure
+            main_sync_record.status = 'failed'
+            main_sync_record.end_time = timezone.now()
+            main_sync_record.error_message = str(e)
+            main_sync_record.save()
+            
+            overall_stats['status'] = 'failed'
+            overall_stats['error'] = str(e)
+            
+            logger.error(f"❌ Full refresh sync failed: {e}")
+            return overall_stats
     
     def sync_sheet_sync(self, sheet_config: Dict[str, Any]) -> Dict[str, Any]:
         """
