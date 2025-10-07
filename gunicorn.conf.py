@@ -5,18 +5,44 @@ import os
 bind = f"0.0.0.0:{os.getenv('PORT', '8000')}"
 backlog = 2048
 
-# Worker processes - Reduced for better memory management
-workers = min(2, multiprocessing.cpu_count())  # Reduced from 4
+# Worker processes - Optimized for Render.com memory constraints
+workers = 1  # Single worker for memory efficiency on Render.com
 worker_class = "sync"
-worker_connections = 1000
-timeout = 300  # Increased timeout for long-running sync operations
-keepalive = 5
-max_requests = 2000  # Increased before worker restart
-max_requests_jitter = 200
+worker_connections = 100  # Reduced for memory efficiency
+timeout = 120  # Reduced timeout to prevent memory buildup
+keepalive = 2
+max_requests = 500  # Restart workers more frequently to prevent memory leaks
+max_requests_jitter = 50  # Smaller jitter range
 
-# Memory management
+# Memory management - Optimized for Render.com
 worker_tmp_dir = "/dev/shm"
 preload_app = True
+
+# Force garbage collection and memory optimization
+def post_fork(server, worker):
+    server.log.info("Worker spawned (pid: %s)", worker.pid)
+    # Force garbage collection on worker start
+    import gc
+    gc.collect()
+
+def pre_request(worker, req):
+    """Called before processing each request"""
+    # Periodic garbage collection to prevent memory buildup
+    import gc
+    if hasattr(worker, '_request_count'):
+        worker._request_count += 1
+    else:
+        worker._request_count = 1
+    
+    # Force GC every 50 requests to prevent memory accumulation
+    if worker._request_count % 50 == 0:
+        gc.collect()
+
+def post_request(worker, req, environ, resp):
+    """Called after processing each request"""
+    # Additional cleanup for long-running requests
+    import gc
+    gc.collect()
 
 # Logging
 accesslog = "-"
