@@ -435,7 +435,7 @@ def _get_genius_command(model_name: str) -> str:
     """Get the specific command for a Genius model"""
     # Map both full model names and sync types to their specific commands
     genius_commands = {
-        # Full model names (all 28 models from genius.py)
+        # Full model names (actual models from genius.py with corresponding command files)
         'Genius_Appointment': 'db_genius_appointments',
         'Genius_AppointmentOutcome': 'db_genius_appointment_outcomes', 
         'Genius_AppointmentOutcomeType': 'db_genius_appointment_outcome_types',
@@ -453,23 +453,19 @@ def _get_genius_command(model_name: str) -> str:
         'Genius_JobFinancing': 'db_genius_job_financings',
         'Genius_JobStatus': 'db_genius_job_statuses',
         'Genius_Lead': 'db_genius_leads',
-        'Genius_Location': 'db_genius_locations',
         'Genius_MarketingSource': 'db_genius_marketing_sources',
         'Genius_MarketingSourceType': 'db_genius_marketing_source_types',
         'Genius_MarketSharpMarketingSourceMap': 'db_genius_marketsharp_marketing_source_maps',
         'Genius_MarketSharpSource': 'db_genius_marketsharp_sources',
-        'Genius_Person': 'db_genius_people',
-        'Genius_Product': 'db_genius_products',
         'Genius_Prospect': 'db_genius_prospects',
         'Genius_ProspectSource': 'db_genius_prospect_sources',
         'Genius_Quote': 'db_genius_quotes',
-        'Genius_SalesRep': 'db_genius_sales_reps',
         'Genius_Service': 'db_genius_services',
-        'Genius_Unit': 'db_genius_units',
-        'Genius_UnitType': 'db_genius_unit_types',
         'Genius_UserAssociation': 'db_genius_user_associations',
         'Genius_UserData': 'db_genius_users',
         'Genius_UserTitle': 'db_genius_user_titles',
+        'Genius_IntegrationFieldDefinition': 'db_genius_integration_field_definitions',
+        'Genius_IntegrationField': 'db_genius_integration_fields',
         
         # Sync types (matching JavaScript modelNameToSyncType function behavior)
         # JavaScript strips 'Genius_' (7 chars) and converts to lowercase + pluralization
@@ -492,23 +488,19 @@ def _get_genius_command(model_name: str) -> str:
         'jobstatuses': 'db_genius_job_statuses',
         'jobstatus': 'db_genius_job_statuses',  # JavaScript: 'JobStatus' -> 'jobstatus' (singular ends with 's')
         'leads': 'db_genius_leads',
-        'locations': 'db_genius_locations',
         'marketingsources': 'db_genius_marketing_sources',
         'marketingsourcetypes': 'db_genius_marketing_source_types',
         'marketsharpsources': 'db_genius_marketsharp_sources',
         'marketsharpmarketingsourcemaps': 'db_genius_marketsharp_marketing_source_maps',
-        'people': 'db_genius_people',
-        'products': 'db_genius_products',
         'prospects': 'db_genius_prospects',
         'prospectsources': 'db_genius_prospect_sources',
         'quotes': 'db_genius_quotes',
-        'salesreps': 'db_genius_sales_reps',
         'services': 'db_genius_services',
-        'units': 'db_genius_units',
-        'unittypes': 'db_genius_unit_types',
         'userassociations': 'db_genius_user_associations',
         'userdatas': 'db_genius_users',  # JavaScript: 'UserData' -> 'userdatas'
         'usertitles': 'db_genius_user_titles',
+        'integrationfielddefinitions': 'db_genius_integration_field_definitions',  # JavaScript: 'IntegrationFieldDefinition' -> 'integrationfielddefinitions'
+        'integrationfields': 'db_genius_integration_fields',  # JavaScript: 'IntegrationField' -> 'integrationfields'
     }
     
     if model_name in genius_commands:

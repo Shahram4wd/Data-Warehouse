@@ -50,7 +50,7 @@ class GoogleSheetMarketingLead(models.Model):
     
     # Page and Source Information
     page_source_name = models.CharField(max_length=128, null=True, blank=True)  # was 122, power of 2
-    page_url = models.URLField(max_length=512, null=True, blank=True)           # was 511, power of 2
+    page_url = models.URLField(max_length=1024, null=True, blank=True)          # Increased from 512 to 1024 to prevent truncation
     variant = models.CharField(max_length=100, null=True, blank=True)           # was 69, rounded to 100
     
     # Click and Tracking Data
