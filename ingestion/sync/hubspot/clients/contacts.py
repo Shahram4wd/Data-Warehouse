@@ -208,58 +208,72 @@ class HubSpotContactsClient(HubSpotBaseClient):
         properties = self._get_contact_properties()
         
         try:
-            if last_sync:
-                # Use search endpoint for incremental sync
-                # Note: HubSpot search API has a 10,000 result limit across all pages
-                # For large incremental syncs, we should consider using the regular endpoint
-                # and filtering locally, but for now we use search for precision
-                endpoint = f"{self.base_endpoint}/search"
-                last_sync_str = last_sync.strftime('%Y-%m-%dT%H:%M:%SZ')
-                
-                payload = {
-                    "filterGroups": [{
-                        "filters": [{
-                            "propertyName": "lastmodifieddate",  # Use lastmodifieddate for contacts
-                            "operator": "GTE",  # Use GTE instead of GT
-                            "value": last_sync_str
-                        }]
-                    }],
-                    "properties": properties,
-                    "limit": limit
-                }
-                
-                if page_token:
-                    payload["after"] = page_token
-                
-                response_data = await self.make_request("POST", endpoint, json=payload)
-                
-                # Check if we're hitting the 10,000 limit
-                results = response_data.get("results", [])
-                paging = response_data.get("paging", {})
-                next_page = paging.get("next", {}).get("after")
-                
-                # If this is the first page and we have a full batch, 
-                # and there's more data, warn about potential 10k limit
-                if not page_token and len(results) == limit and next_page:
-                    logger.warning(f"HubSpot search endpoint may hit 10,000 result limit for incremental sync since {last_sync_str}. "
-                                 f"Consider using full sync for large data sets.")
-                
-            else:
-                # Use regular endpoint for full sync
-                endpoint = self.base_endpoint
-                params = {
-                    "limit": str(limit),
-                    "properties": ",".join(properties)
-                }
-                
-                if page_token:
-                    params["after"] = page_token
-                
-                response_data = await self.make_request("GET", endpoint, params=params)
+            # Always use the regular endpoint to avoid the 10,000 result limit
+            # Filter by lastmodifieddate locally for incremental syncs
+            endpoint = self.base_endpoint
+            params = {
+                "limit": str(limit),
+                "properties": ",".join(properties)
+            }
+            
+            if page_token:
+                params["after"] = page_token
+            
+            response_data = await self.make_request("GET", endpoint, params=params)
             
             results = response_data.get("results", [])
             paging = response_data.get("paging", {})
             next_page = paging.get("next", {}).get("after")
+            
+            # Filter results locally if last_sync is provided (incremental sync)
+            if last_sync and results:
+                filtered_results = []
+                for contact in results:
+                    # Parse the lastmodifieddate from the contact
+                    props = contact.get("properties", {})
+                    lastmodified_str = props.get("lastmodifieddate")
+                    
+                    if lastmodified_str:
+                        try:
+                            # HubSpot can return timestamps in different formats:
+                            # 1. ISO format: "2025-10-08T04:00:42.602Z"
+                            # 2. Milliseconds since epoch: "1728361242602"
+                            
+                            if 'T' in lastmodified_str and 'Z' in lastmodified_str:
+                                # ISO format - parse as datetime
+                                from datetime import datetime
+                                # Remove microseconds if present and parse
+                                if '.' in lastmodified_str:
+                                    # Handle microseconds: 2025-10-08T04:00:42.602Z
+                                    dt_part, _ = lastmodified_str.split('.')
+                                    tz_part = 'Z'
+                                    clean_str = f"{dt_part}Z"
+                                else:
+                                    clean_str = lastmodified_str
+                                
+                                lastmodified_dt = datetime.fromisoformat(clean_str.replace('Z', '+00:00'))
+                                # Convert to naive datetime for comparison (remove timezone info)
+                                lastmodified_dt = lastmodified_dt.replace(tzinfo=None)
+                            else:
+                                # Timestamp format - convert from milliseconds
+                                lastmodified_timestamp = int(lastmodified_str)
+                                lastmodified_dt = datetime.fromtimestamp(lastmodified_timestamp / 1000)
+                            
+                            # Include contacts modified since last_sync
+                            # Ensure both datetimes are naive for comparison
+                            last_sync_naive = last_sync.replace(tzinfo=None) if last_sync.tzinfo else last_sync
+                            if lastmodified_dt >= last_sync_naive:
+                                filtered_results.append(contact)
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"Failed to parse lastmodifieddate '{lastmodified_str}' for contact {contact.get('id')}: {e}")
+                            # Include the contact if we can't parse the date to be safe
+                            filtered_results.append(contact)
+                    else:
+                        # Include contacts without lastmodifieddate to be safe
+                        filtered_results.append(contact)
+                
+                logger.info(f"Fetched {len(results)} contacts from HubSpot, {len(filtered_results)} modified since {last_sync}")
+                return filtered_results, next_page
             
             logger.info(f"Fetched {len(results)} contacts from HubSpot")
             return results, next_page

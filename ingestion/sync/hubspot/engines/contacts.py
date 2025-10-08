@@ -199,9 +199,6 @@ class HubSpotContactSyncEngine(HubSpotBaseSyncEngine):
                     # NEW: Additional Fields
                     "country", "hatch_id", "address_url", "division_id",
                     
-                    # Source fields (existing)
-                    "primary_source", "secondary_source",
-                    
                     # Metadata fields
                     "archived"
                 ],
