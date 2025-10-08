@@ -73,9 +73,6 @@ def worker_int(worker):
 def pre_fork(server, worker):
     server.log.info("Worker spawned (pid: %s)", worker.pid)
 
-def post_fork(server, worker):
-    server.log.info("Worker spawned (pid: %s)", worker.pid)
-
 def worker_exit(server, worker):
     """Log worker exits with reason"""
     # Worker object may not have exitcode attribute, handle gracefully
