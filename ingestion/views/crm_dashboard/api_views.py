@@ -52,13 +52,17 @@ class CRMListAPIView(BaseAPIView):
     
     def get(self, request):
         try:
+            # Check if record counts should be included (default: false for fast loading)
+            include_counts = request.GET.get('include_counts', 'false').lower() == 'true'
+            
             crm_discovery = CRMDiscoveryService()
-            crm_sources = crm_discovery.get_all_crm_sources()
+            crm_sources = crm_discovery.get_all_crm_sources(include_record_counts=include_counts)
             
             return self.json_response({
                 'success': True,
                 'crm_sources': crm_sources,
-                'total': len(crm_sources)
+                'total': len(crm_sources),
+                'include_counts': include_counts
             })
             
         except Exception as e:
@@ -860,4 +864,46 @@ class AllSchedulesAPIView(BaseAPIView):
             
         except Exception as e:
             logger.error(f"Error getting all schedules: {e}")
+            return self.error_response(str(e), 500)
+
+
+class CRMRecordCountAPIView(BaseAPIView):
+    """API endpoint for lazy loading CRM record counts"""
+    
+    def get(self, request, crm_source):
+        """Get record count for a specific CRM source"""
+        try:
+            crm_discovery = CRMDiscoveryService()
+            
+            # Check if CRM source is valid
+            if not crm_discovery.is_valid_crm_system(crm_source):
+                return self.error_response(f"Invalid CRM source: {crm_source}", 404)
+            
+            # Get the models for this CRM with accurate counts
+            models_list = crm_discovery.get_crm_models(crm_source, force_accurate_counts=True)
+            
+            # Calculate total records
+            total_records = 0
+            model_counts = {}
+            
+            for model_info in models_list:
+                try:
+                    model_name = model_info.get('name')
+                    record_count = model_info.get('record_count', 0)
+                    total_records += record_count
+                    model_counts[model_name] = record_count
+                except Exception as e:
+                    logger.debug(f"Error getting count for model {model_info.get('name')}: {e}")
+                    model_counts[model_info.get('name', 'unknown')] = 0
+            
+            return self.json_response({
+                'success': True,
+                'crm_source': crm_source,
+                'total_records': total_records,
+                'model_counts': model_counts,
+                'model_count': len(models_list)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error getting record count for {crm_source}: {e}")
             return self.error_response(str(e), 500)

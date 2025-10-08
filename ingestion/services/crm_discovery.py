@@ -116,11 +116,14 @@ class CRMDiscoveryService:
         """Check if a CRM source is registered as a valid CRM system"""
         return crm_source in self.crm_systems
     
-    def get_all_crm_sources(self) -> List[Dict]:
+    def get_all_crm_sources(self, include_record_counts: bool = False) -> List[Dict]:
         """
         Scan ingestion/models/ directory for CRM model files and return
         comprehensive information about each CRM source.
         Only includes files that are registered as actual CRM systems.
+        
+        Args:
+            include_record_counts: If True, calculate record counts (slow). If False, skip counts for fast loading.
         """
         crm_sources = []
         
@@ -139,7 +142,7 @@ class CRMDiscoveryService:
             
             for crm_source in valid_crm_files:
                 try:
-                    crm_info = self._get_crm_source_info(crm_source)
+                    crm_info = self._get_crm_source_info(crm_source, include_record_counts=include_record_counts)
                     if crm_info:
                         crm_sources.append(crm_info)
                 except Exception as e:
@@ -166,8 +169,13 @@ class CRMDiscoveryService:
             
         return crm_sources
     
-    def _get_crm_source_info(self, crm_source: str) -> Optional[Dict]:
-        """Get comprehensive information for a single CRM source"""
+    def _get_crm_source_info(self, crm_source: str, include_record_counts: bool = False) -> Optional[Dict]:
+        """Get comprehensive information for a single CRM source
+        
+        Args:
+            crm_source: The CRM source name
+            include_record_counts: If True, calculate record counts (slow). If False, skip counts for fast loading.
+        """
         try:
             # Only process registered CRM systems
             if crm_source not in self.crm_systems:
@@ -187,8 +195,8 @@ class CRMDiscoveryService:
             # Get sync status for this CRM
             last_sync_info = self._get_last_sync_info(crm_source)
             
-            # Calculate total records across all models
-            total_records = self._get_total_records(models_list)
+            # Calculate total records across all models (only if requested)
+            total_records = self._get_total_records(models_list) if include_record_counts else 0
             
             return {
                 'name': crm_source,
@@ -364,10 +372,14 @@ class CRMDiscoveryService:
         else:
             return "Just now"
     
-    def get_crm_models(self, crm_source: str) -> List[Dict]:
+    def get_crm_models(self, crm_source: str, force_accurate_counts: bool = False) -> List[Dict]:
         """
         Get detailed information about all models for a specific CRM source
         including sync status for each model - with caching and performance optimizations
+        
+        Args:
+            crm_source: Name of the CRM source (e.g., 'hubspot', 'genius')
+            force_accurate_counts: If True, use accurate record counts (slower but precise)
         """
         try:
             from django.core.cache import cache
@@ -375,13 +387,14 @@ class CRMDiscoveryService:
             # Cache key for this CRM's models
             cache_key = f"crm_models_{crm_source}"
             
-            # Try to get from cache first (cache for 10 minutes)
-            cached_models = cache.get(cache_key)
-            if cached_models:
-                logger.debug(f"Using cached models for {crm_source}")
-                return cached_models
+            # Try to get from cache first (cache for 10 minutes), but skip cache for accurate counts
+            if not force_accurate_counts:
+                cached_models = cache.get(cache_key)
+                if cached_models:
+                    logger.debug(f"Using cached models for {crm_source}")
+                    return cached_models
             
-            logger.info(f"Computing model information for {crm_source}")
+            logger.info(f"Computing model information for {crm_source} (accurate_counts={force_accurate_counts})")
             
             # Import the CRM module
             module_path = f'ingestion.models.{crm_source}'
@@ -403,8 +416,8 @@ class CRMDiscoveryService:
                     
                     # Check if table exists first
                     if self._table_exists(table_name):
-                        # Use approximate count for large tables to avoid slow COUNT queries
-                        record_count = self._get_optimized_record_count(model_class)
+                        # Use accurate count for API calls, approximate for dashboard
+                        record_count = self._get_optimized_record_count(model_class, force_accurate=force_accurate_counts)
                     else:
                         logger.debug(f"Table {table_name} does not exist, skipping count for {model_info['name']}")
                         record_count = 0
@@ -425,9 +438,10 @@ class CRMDiscoveryService:
             # Sort by model name
             enhanced_models.sort(key=lambda x: x['name'])
             
-            # Cache the result for 10 minutes (600 seconds)
-            cache.set(cache_key, enhanced_models, 600)
-            logger.info(f"Cached models for {crm_source}")
+            # Cache the result for 10 minutes (600 seconds) only if not using accurate counts
+            if not force_accurate_counts:
+                cache.set(cache_key, enhanced_models, 600)
+                logger.info(f"Cached models for {crm_source}")
             
             return enhanced_models
             
@@ -454,13 +468,20 @@ class CRMDiscoveryService:
                     ).order_by('-start_time')[:5]  # Check last 5 syncs
                     
                     if recent_syncs:
-                        # Look for the most recent successful sync first
+                        # First priority: Check for any running sync
                         for sync in recent_syncs:
-                            if sync.status == 'success':
+                            if sync.status == 'running':
                                 last_sync = sync
                                 break
                         
-                        # If no successful sync found, use the most recent one
+                        # Second priority: Look for the most recent successful sync
+                        if not last_sync:
+                            for sync in recent_syncs:
+                                if sync.status == 'success':
+                                    last_sync = sync
+                                    break
+                        
+                        # Third priority: If no successful or running sync found, use the most recent one
                         if not last_sync:
                             last_sync = recent_syncs[0]
                         break
@@ -679,9 +700,20 @@ class CRMDiscoveryService:
             logger.error(f"Error getting sync history for {crm_source}: {e}")
             return []
     
-    def _get_optimized_record_count(self, model_class):
-        """Get record count using performance optimizations for large tables"""
+    def _get_optimized_record_count(self, model_class, force_accurate=False):
+        """Get record count using performance optimizations for large tables
+        
+        Args:
+            model_class: Django model class
+            force_accurate: If True, always use accurate count (for API endpoints)
+        """
         try:
+            if force_accurate:
+                # For API endpoints, always return accurate counts
+                count = model_class.objects.count()
+                logger.debug(f"Using accurate count {count:,} for {model_class.__name__}")
+                return count
+            
             # First try to get approximate count from PostgreSQL statistics
             from django.db import connection
             table_name = model_class._meta.db_table
@@ -696,24 +728,34 @@ class CRMDiscoveryService:
                 
                 result = cursor.fetchone()
                 if result and result[0] > 0:
-                    # Use approximate count for performance
+                    # Check if stats are reasonably accurate by comparing with a quick sample
                     approx_count = result[0]
-                    logger.debug(f"Using approximate count {approx_count:,} for {model_class.__name__}")
-                    return approx_count
+                    
+                    # If the stats seem way off (common with bulk operations), use accurate count
+                    try:
+                        # Quick sanity check: if table is small, just get exact count
+                        if approx_count < 100000:
+                            exact_count = model_class.objects.count()
+                            if abs(exact_count - approx_count) / max(exact_count, 1) > 0.5:  # 50% difference
+                                logger.warning(f"PostgreSQL stats inaccurate for {model_class.__name__}: stats={approx_count}, actual={exact_count}")
+                                return exact_count
+                        
+                        logger.debug(f"Using approximate count {approx_count:,} for {model_class.__name__}")
+                        return approx_count
+                    except Exception as check_error:
+                        logger.debug(f"Error in accuracy check for {model_class.__name__}: {check_error}")
+                        return approx_count
                 else:
                     # Fallback to exact count, but with a reasonable limit check first
                     # Use EXISTS query to check if table has data before doing expensive COUNT
                     if model_class.objects.exists():
-                        # For very large tables, return a placeholder instead of exact count
+                        # For very large tables, return actual count (no more string approximations)
                         try:
-                            # Set a timeout for the count query
                             count = model_class.objects.count()
-                            if count > 1000000:  # Over 1M records
-                                return f"{count//1000000}M+"  # Return approximate like "2M+"
                             return count
                         except Exception as count_error:
                             logger.warning(f"Count query failed for {model_class.__name__}: {count_error}")
-                            return "many"
+                            return 0
                     else:
                         return 0
                         

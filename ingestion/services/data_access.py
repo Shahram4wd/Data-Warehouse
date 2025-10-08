@@ -187,6 +187,9 @@ class DataAccessService:
             # Limit per_page to prevent excessive memory usage
             per_page = min(per_page, 100)
             
+            # Initialize optimization flags
+            use_values_query = False
+            
             # Start with all objects and optimize for large tables
             queryset = model_class.objects.all()
             
@@ -209,22 +212,57 @@ class DataAccessService:
             # Apply optimizations for large tables
             if table_size_estimate > 100000:
                 logger.info(f"Applying large table optimizations for {model_class.__name__} (~{table_size_estimate:,} rows)")
-                # Use only() to limit fields returned and improve performance
+                # Use values() to get dictionaries directly and avoid model instantiation overhead
                 # Get essential fields only for large tables
                 essential_fields = [model_class._meta.pk.name]  # Use actual primary key field name
-                if hasattr(model_class, 'created_at'):
-                    essential_fields.append('created_at')
-                if hasattr(model_class, 'updated_at'):
-                    essential_fields.append('updated_at')
-                    
-                # Add first few text fields for display
-                for field in model_class._meta.fields[:5]:
-                    if field.name not in essential_fields and hasattr(field, 'max_length'):
-                        essential_fields.append(field.name)
-                        if len(essential_fields) >= 8:  # Limit to 8 fields for performance
-                            break
                 
-                queryset = queryset.only(*essential_fields)
+                # Add common timestamp fields
+                for field_name in ['created_at', 'updated_at', 'date_created', 'date_modified', 'createdate', 'lastmodifieddate', 'sync_created_at', 'sync_updated_at']:
+                    if hasattr(model_class, field_name):
+                        essential_fields.append(field_name)
+                
+                # For HubSpot contacts, include the most important fields
+                if 'hubspot' in model_class.__name__.lower() and 'contact' in model_class.__name__.lower():
+                    hubspot_priority_fields = [
+                        'email', 'firstname', 'lastname', 'phone', 'company', 
+                        'address', 'city', 'state', 'zip', 'division',
+                        'hs_object_id', 'campaign_name', 'original_lead_source',
+                        'lead_status', 'lifecyclestage', 'lead_source'
+                    ]
+                    for field_name in hubspot_priority_fields:
+                        if hasattr(model_class, field_name) and field_name not in essential_fields:
+                            essential_fields.append(field_name)
+                else:
+                    # For other models, use general priority logic
+                    display_priority_fields = []
+                    for field in model_class._meta.fields:
+                        if field.name in essential_fields:
+                            continue
+                        
+                        field_name = field.name.lower()
+                        # Prioritize common display fields
+                        if any(keyword in field_name for keyword in [
+                            'name', 'title', 'email', 'phone', 'first', 'last', 
+                            'company', 'status', 'type', 'description'
+                        ]):
+                            display_priority_fields.append((field.name, 1))  # High priority
+                        elif hasattr(field, 'max_length') and field.max_length and field.max_length < 500:
+                            display_priority_fields.append((field.name, 2))  # Medium priority for short text
+                        elif field.__class__.__name__ in ['BooleanField', 'IntegerField', 'DecimalField']:
+                            display_priority_fields.append((field.name, 3))  # Low priority for numbers/booleans
+                    
+                    # Sort by priority and add to essential fields
+                    display_priority_fields.sort(key=lambda x: x[1])
+                    for field_name, _ in display_priority_fields[:10]:  # Limit to 10 additional fields
+                        essential_fields.append(field_name)
+                
+                # Use values() instead of only() for large tables
+                queryset = queryset.values(*essential_fields)
+                use_values_query = True
+                logger.info(f"Using values() query with fields: {essential_fields}")
+            else:
+                use_values_query = False
+            
             
             # Apply search if provided
             if search:
@@ -272,8 +310,13 @@ class DataAccessService:
             
             # Convert model instances to dictionaries
             data = []
-            for instance in page_obj.object_list:
-                instance_data = self._model_instance_to_dict(instance)
+            for item in page_obj.object_list:
+                if use_values_query:
+                    # Already a dictionary from values() query
+                    instance_data = self._format_values_dict(item, model_class)
+                else:
+                    # Model instance - convert to dictionary
+                    instance_data = self._model_instance_to_dict(item)
                 data.append(instance_data)
             
             pagination_info = {
@@ -370,9 +413,24 @@ class DataAccessService:
         """Convert model instance to dictionary with proper value formatting"""
         data = {}
         
+        # For optimized queries, we need to be more careful about which fields to access
+        # Check if this is an optimized query by looking for deferred fields
+        deferred_fields = set()
+        if hasattr(instance, '_state') and hasattr(instance._state, 'deferred_fields'):
+            deferred_fields = instance._state.deferred_fields or set()
+        
         for field in instance._meta.fields:
             field_name = field.name
-            value = getattr(instance, field_name)
+            
+            # Skip deferred fields to avoid database queries
+            if field_name in deferred_fields:
+                continue
+            
+            try:
+                value = getattr(instance, field_name)
+            except Exception:
+                # If we can't access the field, skip it
+                continue
             
             # Format value based on field type
             if value is None:
@@ -400,21 +458,50 @@ class DataAccessService:
                 data[field_name] = value
         
         # Add many-to-many relationships (limited to avoid huge payloads)
-        for field in instance._meta.many_to_many:
-            field_name = field.name
-            related_objects = getattr(instance, field_name).all()[:5]  # Limit to 5
-            data[field_name] = [
-                {'id': obj.pk, 'display': str(obj)} 
-                for obj in related_objects
-            ]
-            if getattr(instance, field_name).count() > 5:
-                data[f'{field_name}_count'] = getattr(instance, field_name).count()
+        # Skip M2M relationships for large tables to improve performance
+        table_size_estimate = getattr(instance.__class__, '_table_size_estimate', 0)
+        if table_size_estimate < 100000:  # Only for smaller tables
+            for field in instance._meta.many_to_many:
+                field_name = field.name
+                related_objects = getattr(instance, field_name).all()[:5]  # Limit to 5
+                data[field_name] = [
+                    {'id': obj.pk, 'display': str(obj)} 
+                    for obj in related_objects
+                ]
+                if getattr(instance, field_name).count() > 5:
+                    data[f'{field_name}_count'] = getattr(instance, field_name).count()
         
         # Add primary key if not already included
         pk_field_name = instance._meta.pk.name
         if pk_field_name not in data:
             data[pk_field_name] = instance.pk
         
+        return data
+    
+    def _format_values_dict(self, values_dict: Dict, model_class) -> Dict[str, Any]:
+        """Format a dictionary from values() query with proper value formatting"""
+        data = {}
+        
+        # Get field information for proper formatting
+        field_map = {field.name: field for field in model_class._meta.fields}
+        
+        for field_name, value in values_dict.items():
+            field = field_map.get(field_name)
+            
+            # Format value based on field type
+            if value is None:
+                data[field_name] = None
+            elif field and field.__class__.__name__ == 'DateTimeField':
+                data[field_name] = value.isoformat() if value else None
+            elif field and field.__class__.__name__ == 'DateField':
+                data[field_name] = value.isoformat() if value else None
+            elif field and field.__class__.__name__ == 'TimeField':
+                data[field_name] = value.strftime('%H:%M:%S') if value else None
+            elif field and field.__class__.__name__ == 'DecimalField':
+                data[field_name] = float(value) if value is not None else None
+            else:
+                data[field_name] = value
+                
         return data
     
     def get_record_detail(self, model_class: Type[models.Model], record_id: Any) -> Dict[str, Any]:

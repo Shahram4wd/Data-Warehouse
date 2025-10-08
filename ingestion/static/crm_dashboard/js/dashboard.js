@@ -3,8 +3,8 @@
  * Handles dashboard interactions, data visualization, and advanced features
  */
 class EnhancedDashboardManager {
-    constructor() {
-        this.refreshInterval = 30000; // 30 seconds
+    constructor(options = {}) {
+        this.refreshInterval = options.autoRefreshInterval || 30000; // 30 seconds
         this.refreshTimer = null;
         this.charts = new Map();
         this.filters = {
@@ -12,12 +12,18 @@ class EnhancedDashboardManager {
             status: 'all',
             timeRange: '24h'
         };
-    // Auto-refresh disabled by default (manual refresh only)
-    this.isAutoRefreshEnabled = false;
+        this.chartContainers = options.chartContainers || {};
+        this.apiEndpoints = options.apiEndpoints || {};
+        // Auto-refresh disabled by default (manual refresh only)
+        this.isAutoRefreshEnabled = false;
         
-        this.initializeDashboard();
-        this.setupEventHandlers();
-    // No auto-start of refresh; user uses Refresh button
+        try {
+            this.initializeDashboard();
+            this.setupEventHandlers();
+        } catch (error) {
+            console.error('Dashboard initialization error:', error);
+        }
+        // No auto-start of refresh; user uses Refresh button
     }
     
     initializeDashboard() {
@@ -30,21 +36,32 @@ class EnhancedDashboardManager {
     
     async loadDashboardData() {
         try {
+            console.log('🔄 Loading dashboard data...');
             this.showLoadingState();
             
-            const [crmsData, syncHistory, runningSyncs] = await Promise.all([
-                this.fetchCRMsData(),
+            // Load CRM list quickly without record counts
+            console.log('📡 Fetching CRM data...');
+            const crmsData = await this.fetchCRMsData();
+            console.log('✅ CRM data received:', crmsData);
+            this.renderCRMCards(crmsData);
+            
+            // Load other data in parallel
+            console.log('📡 Fetching sync history and running syncs...');
+            const [syncHistory, runningSyncs] = await Promise.all([
                 this.fetchSyncHistory(),
                 this.fetchRunningSyncs()
             ]);
             
-            this.renderCRMCards(crmsData);
             this.renderSyncStatistics(syncHistory);
             this.renderActiveSyncs(runningSyncs);
             this.updateLastRefreshTime();
             
+            // Now lazy load record counts for each CRM
+            console.log('🚀 Starting lazy load for record counts...');
+            this.lazyLoadRecordCounts(crmsData);
+            
         } catch (error) {
-            console.error('Error loading dashboard data:', error);
+            console.error('❌ Error loading dashboard data:', error);
             this.showErrorState(error.message);
         } finally {
             this.hideLoadingState();
@@ -169,34 +186,48 @@ class EnhancedDashboardManager {
     }
     
     renderCRMCards(crmsData) {
+        console.log('🎨 Rendering CRM cards...', crmsData);
         const container = document.getElementById('crm-cards-container');
-        if (!container) return;
+        if (!container) {
+            console.error('❌ CRM cards container not found!');
+            return;
+        }
         
         // Ensure crmsData is an array
         if (!Array.isArray(crmsData)) {
-            console.warn('CRM data is not an array:', crmsData);
+            console.warn('⚠️ CRM data is not an array:', crmsData);
             crmsData = [];
         }
+        
+        console.log(`📊 Processing ${crmsData.length} CRM sources`);
         
         // Store the data for future filtering
         this.lastCRMData = crmsData;
         
         // Apply search filter
         const filteredCRMs = this.applyFilters(crmsData);
+        console.log(`🔍 After filtering: ${filteredCRMs.length} CRM sources`);
         
         container.innerHTML = '';
         
         if (filteredCRMs.length === 0) {
+            console.log('📭 No CRMs to display, showing no results message');
             container.innerHTML = this.createNoResultsMessage();
             return;
         }
         
-        filteredCRMs.forEach(crm => {
+        filteredCRMs.forEach((crm, index) => {
+            console.log(`🔧 Creating card ${index + 1} for CRM:`, crm.name || crm.source);
             const cardElement = this.createCRMCard(crm);
-            if (cardElement) { // Only append if card was created successfully
+            if (cardElement) {
                 container.appendChild(cardElement);
+                console.log(`✅ Added card for ${crm.name || crm.source}`);
+            } else {
+                console.error(`❌ Failed to create card for CRM:`, crm);
             }
         });
+        
+        console.log(`🎉 Rendered ${filteredCRMs.length} CRM cards successfully`);
         
         // Add animation to cards
         this.animateCards();
@@ -250,7 +281,9 @@ class EnhancedDashboardManager {
                         </div>
                         <div class="col-6">
                             <div class="metric-box">
-                                <h3 class="text-success mb-1" data-crm-records-count="${crmData.source}">${this.formatNumber(crmData.total_records)}</h3>
+                                <h3 class="text-success mb-1" data-crm-records-count="${crmData.source}">
+                                    <i class="fas fa-spinner fa-spin text-muted"></i>
+                                </h3>
                                 <small class="text-muted">Records</small>
                             </div>
                         </div>
@@ -455,6 +488,56 @@ class EnhancedDashboardManager {
             
             return true;
         });
+    }
+    
+    // Lazy loading for record counts
+    async lazyLoadRecordCounts(crmsData) {
+        console.log('🚀 Starting lazy load for', crmsData.length, 'CRMs');
+        // Load record counts for each CRM in the background
+        for (const crm of crmsData) {
+            if (crm.name) {
+                console.log('📊 Scheduling lazy load for:', crm.name);
+                // Add a small delay to stagger requests
+                setTimeout(() => this.loadRecordCountForCRM(crm.name), Math.random() * 2000);
+            } else {
+                console.warn('⚠️ CRM missing name property:', crm);
+            }
+        }
+    }
+    
+    async loadRecordCountForCRM(crmSource) {
+        try {
+            console.log(`Loading record count for ${crmSource}`);
+            const recordCountElement = document.querySelector(`[data-crm-records-count="${crmSource}"]`);
+            if (!recordCountElement) {
+                console.warn(`No element found for ${crmSource}`);
+                return;
+            }
+            
+            // Show loading state
+            recordCountElement.innerHTML = '<i class="fas fa-spinner fa-spin text-primary"></i>';
+            
+            const response = await fetch(`/ingestion/crm-dashboard/api/crms/${crmSource}/record-count/`);
+            if (!response.ok) throw new Error('Failed to fetch record count');
+            
+            const result = await response.json();
+            console.log(`Record count for ${crmSource}:`, result);
+            
+            if (result.success) {
+                // Update the record count with formatted number
+                recordCountElement.innerHTML = this.formatNumber(result.total_records);
+                console.log(`Updated ${crmSource} with ${result.total_records} records`);
+            } else {
+                recordCountElement.innerHTML = '-';
+            }
+            
+        } catch (error) {
+            console.error(`Error loading record count for ${crmSource}:`, error);
+            const recordCountElement = document.querySelector(`[data-crm-records-count="${crmSource}"]`);
+            if (recordCountElement) {
+                recordCountElement.innerHTML = '<i class="fas fa-exclamation-triangle text-warning" title="Failed to load"></i>';
+            }
+        }
     }
     
     // Quick actions
@@ -983,92 +1066,25 @@ class EnhancedDashboardManager {
         }
     }
     
+    // Method for refreshing dashboard data
+    refreshData() {
+        this.loadDashboardData();
+    }
+    
+    // Cleanup method called on page unload
     cleanup() {
-        this.stopAutoRefresh();
-        this.destroy();
-    }
-    
-    quickSync(crmSource) {
-        // Open sync modal for quick sync
-        const modal = document.getElementById('syncModal');
-        if (modal) {
-            const crmSourceInput = document.getElementById('syncCrmSource');
-            const syncTypeSelect = document.getElementById('syncType');
-            
-            if (crmSourceInput) crmSourceInput.value = crmSource;
-            if (syncTypeSelect) syncTypeSelect.value = 'all';
-            
-            const bootstrapModal = new bootstrap.Modal(modal);
-            bootstrapModal.show();
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = null;
         }
-    }
-    
-    updateRunningSyncs(runningSyncs) {
-        // Update running syncs display
-        this.renderActiveSyncs(runningSyncs);
-    }
-    
-    initializeSyncChart(container) {
-        // Initialize sync trends chart
-        if (typeof Chart === 'undefined') return;
         
-        const ctx = container.getContext('2d');
-        const chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Sync Success Rate',
-                    data: [],
-                    borderColor: '#28a745',
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 100
-                    }
-                }
+        // Cleanup charts
+        this.charts.forEach(chart => {
+            if (chart && typeof chart.destroy === 'function') {
+                chart.destroy();
             }
         });
-        
-        this.charts.set('sync', chart);
-    }
-    
-    initializePerformanceChart(container) {
-        // Initialize performance metrics chart
-        if (typeof Chart === 'undefined') return;
-        
-        const ctx = container.getContext('2d');
-        const chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Sync Duration (seconds)',
-                    data: [],
-                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-        
-        this.charts.set('performance', chart);
+        this.charts.clear();
     }
 }
 

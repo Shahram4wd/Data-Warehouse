@@ -18,18 +18,22 @@ class WorkerPoolManager {
     
     async init() {
         try {
-            // Load initial configuration
+            // Show initial loading state
+            this.showWorkerPoolLoading();
+            
+            // Load configuration first (this is fast)
             await this.loadConfiguration();
             
-            // Start status monitoring
-            this.startStatusMonitoring();
-            
-            // Update UI
-            this.updateUI();
+            // Start status monitoring but delay the first update
+            setTimeout(() => {
+                this.startStatusMonitoring();
+                this.updateUI();
+            }, 1000); // Delay by 1 second to let page load first
             
             console.log('Worker Pool Manager initialized');
         } catch (error) {
             console.error('Failed to initialize Worker Pool Manager:', error);
+            this.showWorkerPoolError(error.message);
         }
     }
     
@@ -45,6 +49,38 @@ class WorkerPoolManager {
             }
         } catch (error) {
             console.error('Error loading worker pool configuration:', error);
+        }
+    }
+    
+    showWorkerPoolLoading() {
+        const container = document.getElementById('worker-pool-status');
+        if (container) {
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span><strong>Worker Pool Status</strong></span>
+                    <span class="badge bg-secondary">Loading...</span>
+                </div>
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin text-muted"></i>
+                    <span class="ms-2 text-muted">Loading worker pool status...</span>
+                </div>
+            `;
+        }
+    }
+    
+    showWorkerPoolError(message) {
+        const container = document.getElementById('worker-pool-status');
+        if (container) {
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span><strong>Worker Pool Status</strong></span>
+                    <span class="badge bg-danger">Error</span>
+                </div>
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    <span class="ms-2 text-muted">Failed to load: ${message}</span>
+                </div>
+            `;
         }
     }
     

@@ -3,6 +3,63 @@ from django.views.generic import RedirectView
 from django.contrib.auth import views as auth_views
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from .views import GeniusUserSyncView
+from django.http import HttpResponse
+
+# Debug view for testing dashboard
+def debug_dashboard(request):
+    html = """<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard Test</title>
+    <style>
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard Debug Test</h1>
+    <div id="debug-output" class="debug">Loading...</div>
+    <div id="crm-cards-container" class="debug">CRM cards will appear here...</div>
+
+    <script src="/static/crm_dashboard/js/dashboard.js"></script>
+    
+    <script>
+        const debugOutput = document.getElementById('debug-output');
+        
+        function log(message) {
+            debugOutput.innerHTML += '<br>' + message;
+            console.log(message);
+        }
+        
+        log('🚀 Starting debug test...');
+        
+        // Test if the class exists
+        if (typeof EnhancedDashboardManager !== 'undefined') {
+            log('✅ EnhancedDashboardManager class is available');
+            
+            try {
+                const manager = new EnhancedDashboardManager();
+                log('✅ Dashboard manager created successfully');
+                log('Manager methods: ' + Object.getOwnPropertyNames(Object.getPrototypeOf(manager)).join(', '));
+                
+                // Test if we can call fetchCRMsData
+                log('🔍 Testing fetchCRMsData...');
+                manager.fetchCRMsData().then(data => {
+                    log('✅ CRM data fetched: ' + JSON.stringify(data).substring(0, 200) + '...');
+                }).catch(err => {
+                    log('❌ Error fetching CRM data: ' + err.message);
+                });
+                
+            } catch (error) {
+                log('❌ Error creating dashboard manager: ' + error.message);
+                log('Stack: ' + error.stack);
+            }
+        } else {
+            log('❌ EnhancedDashboardManager class is not available');
+        }
+    </script>
+</body>
+</html>"""
+    return HttpResponse(html)
 
 # Register app namespace for namespaced URL reversing
 app_name = 'ingestion'
@@ -19,6 +76,7 @@ try:
     from ingestion.views.crm_dashboard.api_views import (
         CRMListAPIView,
         CRMModelsAPIView,
+        CRMRecordCountAPIView,
         ModelDetailAPIView,
         ModelDataAPIView,
         SyncExecuteAPIView,
@@ -82,6 +140,7 @@ crm_dashboard_urlpatterns = [
     # API endpoints (must come first to avoid conflicts with dynamic patterns)
     path('api/crms/', CRMListAPIView.as_view(), name='api_crm_list'),
     path('api/crms/<str:crm_source>/models/', CRMModelsAPIView.as_view(), name='api_crm_models'),
+    path('api/crms/<str:crm_source>/record-count/', CRMRecordCountAPIView.as_view(), name='api_crm_record_count'),
     path('api/crms/<str:crm_source>/models/<str:model_name>/', ModelDetailAPIView.as_view(), name='api_model_detail'),
     path('api/crms/<str:crm_source>/models/<str:model_name>/data/', ModelDataAPIView.as_view(), name='api_model_data'),
     path('api/crms/<str:crm_source>/commands/', AvailableCommandsAPIView.as_view(), name='api_available_commands'),
@@ -186,4 +245,7 @@ urlpatterns = [
 
     # Added URL patterns for the reports module
     path('reports/', include('reports.urls')),
+    
+    # Debug dashboard test
+    path('debug-dashboard/', debug_dashboard, name='debug_dashboard'),
 ]
