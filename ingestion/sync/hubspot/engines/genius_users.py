@@ -142,7 +142,11 @@ class HubSpotGeniusUsersSyncEngine(BaseSyncEngine):
 
     async def save_data_bulk(self, validated_data: List[Dict]) -> Dict[str, int]:
         """Bulk save method for better performance"""
-        return await self.save_data(validated_data)
+        results = await self.save_data(validated_data)
+        
+        # Don't add 'processed' here - the base class handles that
+        # Just return the created/updated/failed counts from save_data
+        return results
 
     async def _bulk_save_users(self, validated_data: List[Dict]) -> Dict[str, int]:
         """Bulk upsert for genius users using bulk_create with update_conflicts=True"""
@@ -255,53 +259,8 @@ class HubSpotGeniusUsersSyncEngine(BaseSyncEngine):
     # Legacy compatibility methods
     async def run_sync(self, **kwargs):
         """Legacy run_sync method for backward compatibility"""
-        # If called with the new interface, delegate to the base class
-        if any(key in kwargs for key in ['last_sync', 'limit', 'max_records', 'endpoint', 'show_progress', 'force_overwrite']):
-            return await super().run_sync(**kwargs)
-        
-        # Legacy interface - maintain backward compatibility
-        total = 0
-        processed_count = 0
-        
-        # Get last sync time for delta sync (unless full sync is requested)
-        last_sync = None
-        if not self.full:
-            try:
-                # Get last successful sync timestamp from sync state
-                from ingestion.models.sync_state import HubSpotSyncState
-                sync_state = await sync_to_async(HubSpotSyncState.objects.filter(
-                    entity_type='genius_users',
-                    status='completed'
-                ).order_by('-completed_at').first)()
-                
-                if sync_state:
-                    last_sync = sync_state.completed_at
-                    logger.info(f"Performing incremental sync since {last_sync}")
-                else:
-                    logger.info("No previous sync found, performing full sync")
-            except Exception as e:
-                logger.warning(f"Could not get last sync state: {e}, performing full sync")
-        
-        # Use the new delta-aware client method
-        async for batch in self.client.fetch_genius_users(
-            last_sync=last_sync,
-            limit=self.batch_size
-        ):
-            if self.max_records and (processed_count + len(batch)) > self.max_records:
-                batch = batch[:self.max_records - processed_count]
-            
-            processed = [self.processor.process(user) for user in batch]
-            if not self.dry_run:
-                await self.bulk_upsert(processed)
-            total += len(processed)
-            processed_count += len(batch)
-            if self.stdout:
-                self.stdout.write(f"Processed {total} genius users...")
-            if self.max_records and processed_count >= self.max_records:
-                break
-                
-        if self.stdout:
-            self.stdout.write(f"Sync complete. Total genius users processed: {total}")
+        # Always delegate to the base class which properly handles SyncHistory
+        return await super().run_sync(**kwargs)
 
     @sync_to_async
     def bulk_upsert(self, records):

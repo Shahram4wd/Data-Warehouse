@@ -586,9 +586,15 @@ class CRMDiscoveryService:
             'Genius_UserAssociation': 'user_associations',
             'Genius_UserData': 'user_data',
             'Genius_UserTitle': 'user_titles',
+            # HubSpot mappings
+            'Hubspot_Appointments': 'appointments',
+            'Hubspot_Contacts': 'contacts',
+            'Hubspot_GeniusUser': 'genius_users',
             # Google Sheets mappings
             'GoogleSheetMarketingLead': 'marketing_leads_full_refresh',
-            'GoogleSheetMarketingSpend': 'marketing_spends'
+            'GoogleSheetMarketingSpend': 'marketing_spends',
+            # LeadConduit mappings
+            'LeadConduit_Lead': 'leads'
         }
         
         if model_name in model_mappings:
