@@ -547,13 +547,13 @@ class CRMDiscoveryService:
             'SalesRabbit_Lead': 'leads',
             'SalesRabbit_User': 'users',
             # SalesPro mappings (using actual sync_type names from management commands)
-            'SalesPro_Office': 'office',
-            'SalesPro_User': 'user',
+            'SalesPro_Office': 'offices',
+            'SalesPro_User': 'users',
             'SalesPro_CreditApplication': 'creditapplications',
-            'SalesPro_Customer': 'customer',
-            'SalesPro_Estimate': 'estimate',
-            'SalesPro_LeadResult': 'leadresults',
-            'SalesPro_LeadResultLineItem': 'leadresults',  # Line items sync with parent
+            'SalesPro_Customer': 'customers',
+            'SalesPro_Estimate': 'estimates',
+            'SalesPro_LeadResult': 'lead_results',
+            'SalesPro_LeadResultLineItem': 'lead_result_line_items',  # Line items sync with parent
             # Genius mappings based on standardized sync_types
             'Genius_Appointment': 'appointments',
             'Genius_AppointmentOutcome': 'appointment_outcomes',
