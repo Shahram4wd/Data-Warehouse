@@ -37,6 +37,19 @@ services:
     ports:
       - "6379:6379"
 
+  adk:
+    build: .
+    command: bash -c "adk web ."
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - web
+
   test:
     build: .
     command: python ingestion/tests/test_hubspot_docker.py
