@@ -39,11 +39,13 @@ services:
 
   adk:
     build: .
-    command: bash -c "adk web ."
+    command: python /app/patch_and_run_adk.py
     ports:
-      - "7860:7860"
+      - "7860:8000"
     env_file:
       - .env
+    environment:
+      - PYTHONUNBUFFERED=1
     volumes:
       - .:/app
     depends_on:
