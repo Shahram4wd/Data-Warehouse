@@ -46,6 +46,7 @@ services:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
     volumes:
       - .:/app
     depends_on:
