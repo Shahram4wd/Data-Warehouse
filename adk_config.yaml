@@ -1,0 +1,29 @@
+# adk_config.yaml or adk_config.json
+tools:
+  - name: "read_files"
+    type: "file_reader"
+    permissions:
+      - "read"
+    allowed_paths:
+      - "ingestion/**/*.py"
+      - "docs/**/*.md"
+      - "agents/**/*.py"
+  - name: "read_single_file"
+    type: "single_file_reader"
+    permissions:
+      - "read"
+  - name: "write_text"
+    type: "file_writer"
+    permissions:
+      - "write"
+    allowed_paths:
+      - "ingestion/**/*.py"
+      - "docs/**/*.md"
+
+agents:
+  - name: "Architect"
+    tools: ["read_files", "read_single_file"]
+  - name: "Developer" 
+    tools: ["read_single_file", "write_text"]
+  - name: "Documenter"
+    tools: ["read_single_file", "write_text"]
