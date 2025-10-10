@@ -26,10 +26,18 @@ def read_single_file(file_path: str, max_kb: int = 96) -> str:
 
 def write_text(path: str, content: str) -> str:
     """Write text content to a file"""
+    # Handle relative paths from agents directory to project root
+    if path.startswith("ingestion/") or path.startswith("docs/") or path.startswith("scripts/"):
+        # If path looks like a project file, go up one directory to project root
+        path = os.path.join("..", path)
+    
+    # Ensure directory exists
     os.makedirs(os.path.dirname(path), exist_ok=True)
+    
     with open(path, "w", encoding="utf-8") as f: 
         f.write(content)
-    return path
+    
+    return os.path.abspath(path)
 
 def run_tests(args: Optional[List[str]] = None) -> Dict[str, Union[bool, str]]:
     """Run tests using docker compose"""

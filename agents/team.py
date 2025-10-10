@@ -19,6 +19,8 @@ Developer = LlmAgent(
   name="Developer",
   model="gemini-2.0-flash",
   instruction=("Implement {dev_plan}. When changing files, call WriteText(path, content). "
+               "IMPORTANT: Use absolute paths from project root. For example: "
+               "../ingestion/sync/gsheet/engines/marketing_leads.py NOT ingestion/sync/gsheet/engines/marketing_leads.py. "
                "Only touch project files. Use ReadSingleFile to examine specific files."),
   tools=[ReadSingleFile, WriteText])
 
