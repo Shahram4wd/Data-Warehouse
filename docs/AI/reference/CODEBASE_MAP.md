@@ -74,6 +74,8 @@ Data-Warehouse/
 │   │   │   ├── API_INTEGRATIONS.md
 │   │   │   ├── EXISTING_TESTS.md
 │   │   │   ├── PM_GUIDE.md
+│   │   │   ├── CRM_SYNC_GUIDE.md
+│   │   │   ├── WORKER_POOL_SYSTEM.md
 │   │   │   └── CODEBASE_MAP.md (this file)
 │   │   ├── SETUP_GUIDE.md
 │   │   ├── QUICK_REFERENCE.md
@@ -107,18 +109,63 @@ Data-Warehouse/
 
 ### "I need to..."
 
+#### 🚨 **CRITICAL REFERENCE**: Before Adding Any New Feature
+
+**MANDATORY READING for AI agents and developers:**
+
+1. **[CRM_SYNC_GUIDE.md](CRM_SYNC_GUIDE.md)** - **READ FIRST** before any CRM integration work
+   - SyncHistory framework (MANDATORY for all CRMs)
+   - Universal command flags and patterns
+   - Async-compatible sync engine requirements
+   - Performance optimization patterns
+   - Production-ready architecture standards
+
+2. **[WORKER_POOL_SYSTEM.md](WORKER_POOL_SYSTEM.md)** - **READ FIRST** before task/sync management work
+   - Task lifecycle management
+   - Celery integration patterns
+   - Error handling and recovery
+   - Performance monitoring
+   - Production deployment considerations
+
 #### Add a New CRM Integration
 
+**⚠️ MANDATORY**: Read `CRM_SYNC_GUIDE.md` completely before starting!
+
 **Start Here**:
-1. `docs/AI/reference/ARCHITECTURE.md` - Read CRM Integration Framework section
-2. `ingestion/models/{crm}.py` - Create new model file
-3. `ingestion/sync/{crm}/` - Create sync directory structure
-4. `ingestion/management/commands/sync_{crm}_{entity}.py` - Create command
+1. `docs/AI/reference/CRM_SYNC_GUIDE.md` - **MANDATORY** CRM integration framework
+2. `docs/AI/reference/ARCHITECTURE.md` - System architecture overview
+3. `ingestion/models/{crm}.py` - Create new model file
+4. `ingestion/sync/{crm}/` - Create sync directory structure
+5. `ingestion/management/commands/sync_{crm}_{entity}.py` - Create command
 
 **Follow Patterns From**:
 - `ingestion/models/hubspot.py` - Model structure
 - `ingestion/sync/hubspot/` - Complete integration example
 - `ingestion/management/commands/sync_hubspot_contacts.py` - Command example
+
+**Critical Requirements** (from CRM_SYNC_GUIDE.md):
+- ✅ MUST use SyncHistory table for tracking
+- ✅ MUST support universal command flags (--debug, --full, --dry-run, etc.)
+- ✅ MUST follow layered architecture (clients/processors/engines)
+- ✅ MUST implement async-compatible methods
+- ✅ MUST include comprehensive testing
+
+#### Work with Task/Sync Management
+
+**⚠️ MANDATORY**: Read `WORKER_POOL_SYSTEM.md` before modifying sync/task systems!
+
+**Key Components**:
+1. `ingestion/services/worker_pool.py` - Worker pool orchestration
+2. `ingestion/tasks_enhanced.py` - Enhanced Celery tasks
+3. `ingestion/services/ingestion_adapter.py` - Centralized command routing
+4. `ingestion/management/commands/manage_worker_pool.py` - CLI management
+
+**Critical Patterns** (from WORKER_POOL_SYSTEM.md):
+- ✅ Dual architecture: Legacy periodic tasks + Worker pool system
+- ✅ Individual model command mapping (61 commands vs 9 generic)
+- ✅ Proper Celery task registration and discovery
+- ✅ Redis-backed state persistence
+- ✅ Comprehensive error handling and recovery
 
 #### Fix a Sync Issue
 
@@ -485,7 +532,9 @@ ingestion/
 
 - [ ] Clone repository
 - [ ] Read `README.md`
-- [ ] Read `docs/AI/reference/ARCHITECTURE.md`
+- [ ] **📖 CRITICAL**: Read `docs/AI/reference/CRM_SYNC_GUIDE.md` - Learn CRM integration patterns
+- [ ] **📖 CRITICAL**: Read `docs/AI/reference/WORKER_POOL_SYSTEM.md` - Learn task management
+- [ ] Read `docs/AI/reference/ARCHITECTURE.md` - Understand system architecture
 - [ ] Set up `.env` file with credentials
 - [ ] Run `docker-compose up -d` to start services
 - [ ] Run `python manage.py migrate` to set up database
@@ -495,11 +544,13 @@ ingestion/
 
 ### Adding a New Feature
 
+- [ ] **📖 MANDATORY**: Read `docs/AI/reference/CRM_SYNC_GUIDE.md` if CRM-related
+- [ ] **📖 MANDATORY**: Read `docs/AI/reference/WORKER_POOL_SYSTEM.md` if task/sync-related
 - [ ] Read relevant documentation in `docs/AI/reference/`
 - [ ] Identify similar existing feature to use as template
-- [ ] Create models if needed
-- [ ] Implement sync engine/service
-- [ ] Write tests
+- [ ] Create models if needed (follow SyncHistory patterns)
+- [ ] Implement sync engine/service (follow layered architecture)
+- [ ] Write tests (follow testing patterns)
 - [ ] Update documentation
 - [ ] Test manually
 - [ ] Create pull request
@@ -513,6 +564,8 @@ ingestion/
 - [API & Integration Reference](API_INTEGRATIONS.md) - API endpoints and integrations
 - [Existing Tests Documentation](EXISTING_TESTS.md) - Test suite catalog
 - [PM Reference Guide](PM_GUIDE.md) - Requirements and user stories
+- [CRM Sync Architecture Guide](CRM_SYNC_GUIDE.md) - **CRITICAL**: Enterprise CRM sync patterns, SyncHistory framework, and implementation standards
+- [Worker Pool System Documentation](WORKER_POOL_SYSTEM.md) - **CRITICAL**: Task management, Celery integration, and sync orchestration
 
 ---
 
