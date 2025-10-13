@@ -123,7 +123,11 @@ class MarketingSpendsClient(GoogleSheetsClient):
             sheet_info = self.get_sheet_metadata(self.sheet_id)
             
             # Get headers for additional info
-            headers = self.get_headers()
+            headers = self.get_headers(
+                sheet_id=self.sheet_id,
+                tab_name=self.tab_name,
+                header_row=self.header_row
+            )
             
             # Estimate data rows (this is approximate)
             estimated_rows = self.get_estimated_row_count(

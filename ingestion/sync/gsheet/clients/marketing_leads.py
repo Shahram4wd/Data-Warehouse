@@ -159,7 +159,11 @@ class MarketingLeadsClient(GoogleSheetsClient):
             metadata = self.get_sheet_metadata(self.sheet_id)
             
             # Get headers
-            headers = self.get_headers()
+            headers = self.get_headers(
+                sheet_id=self.sheet_id,
+                tab_name=self.tab_name,
+                header_row=self.header_row
+            )
             
             # Get row count estimate
             data = self.get_worksheet_data(self.sheet_id, self.tab_name)
