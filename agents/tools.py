@@ -20,6 +20,14 @@ def read_files(glob_pattern, max_kb=96):
 
 def read_single_file(file_path, max_kb=96):
     """Read a single file"""
+    # Validate path is not empty
+    if not file_path or not file_path.strip():
+        return "Error: Empty file path provided"
+    
+    # Handle relative paths from agents directory to project root
+    if file_path.startswith("ingestion/") or file_path.startswith("docs/") or file_path.startswith("scripts/"):
+        file_path = os.path.join("..", file_path)
+    
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             return f.read()[:max_kb*1024]
@@ -28,18 +36,26 @@ def read_single_file(file_path, max_kb=96):
 
 def write_text(path, content):
     """Write text content to a file"""
+    # Validate path is not empty
+    if not path or not path.strip():
+        return "Error: Empty file path provided"
+    
     # Handle relative paths from agents directory to project root
     if path.startswith("ingestion/") or path.startswith("docs/") or path.startswith("scripts/"):
         # If path looks like a project file, go up one directory to project root
         path = os.path.join("..", path)
     
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # Get directory path and handle edge cases
+    dir_path = os.path.dirname(path)
+    if dir_path:  # Only create directory if dirname is not empty
+        os.makedirs(dir_path, exist_ok=True)
     
-    with open(path, "w", encoding="utf-8") as f: 
-        f.write(content)
-    
-    return os.path.abspath(path)
+    try:
+        with open(path, "w", encoding="utf-8") as f: 
+            f.write(content)
+        return os.path.abspath(path)
+    except Exception as e:
+        return f"Error writing file: {str(e)}"
 
 def run_tests(args=None):
     """Run tests using docker compose"""
