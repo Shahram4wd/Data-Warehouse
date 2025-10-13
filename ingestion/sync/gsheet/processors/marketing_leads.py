@@ -120,6 +120,7 @@ class MarketingLeadsProcessor(BaseGoogleSheetsProcessor):
             # Event Information
             'event_show_type': 'event_show_type',
             'event_show_name': 'event_show_name',
+            'event_field_marketer': 'event_field_marketer',
             
             # Campaign Rename
             'google_ads_campaign_rename': 'google_ads_campaign_rename',

@@ -36,8 +36,18 @@ class MarketingSpendsProcessor(BaseGoogleSheetsProcessor):
             'Division': 'division',
             'Channel': 'channel',
             'Campaign': 'campaign',
+            
+            # Campaign Details (NEW FIELDS)
+            'Campaign ID': 'campaign_id',
+            'Campaign Type': 'campaign_type',
+            
+            # Event information
             'event_start_date': 'event_start_date',
             'event_end_date': 'event_end_date',
+            
+            # Event Cost Breakdown (NEW FIELDS)
+            'event_fee': 'event_fee',
+            'event_labor_cost': 'event_labor_cost',
             
             # Base metadata fields (inherited)
             '_sheet_row_number': 'sheet_row_number',
@@ -87,12 +97,19 @@ class MarketingSpendsProcessor(BaseGoogleSheetsProcessor):
         if 'event_end_date' in record:
             record['event_end_date'] = self._parse_date(record['event_end_date'])
         
-        # Cost transformation
+        # Cost transformations
         if 'cost' in record:
             record['cost'] = self._parse_decimal(record['cost'])
         
+        # Event cost transformations (NEW FIELDS)
+        if 'event_fee' in record:
+            record['event_fee'] = self._parse_decimal(record['event_fee'])
+            
+        if 'event_labor_cost' in record:
+            record['event_labor_cost'] = self._parse_decimal(record['event_labor_cost'])
+        
         # String field cleaning
-        for field in ['division', 'channel', 'campaign']:
+        for field in ['division', 'channel', 'campaign', 'campaign_id', 'campaign_type']:
             if field in record:
                 record[field] = self._clean_string_field(record[field])
         
@@ -270,11 +287,19 @@ class MarketingSpendsProcessor(BaseGoogleSheetsProcessor):
         if start_date and end_date and start_date > end_date:
             validation_errors.append(f"Event start date ({start_date}) cannot be after end date ({end_date})")
         
+        # Validate event cost values are positive if present
+        for cost_field in ['event_fee', 'event_labor_cost']:
+            cost_value = record.get(cost_field)
+            if cost_value is not None and cost_value < 0:
+                validation_errors.append(f"{cost_field} cannot be negative: {cost_value}")
+        
         # Validate string field lengths
         field_limits = {
             'division': 50,
             'channel': 50,
             'campaign': 100,
+            'campaign_id': 50,      # NEW FIELD
+            'campaign_type': 20,    # NEW FIELD
         }
         
         for field, max_length in field_limits.items():

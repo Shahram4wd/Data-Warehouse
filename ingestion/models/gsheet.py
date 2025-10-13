@@ -124,6 +124,7 @@ class GoogleSheetMarketingLead(models.Model):
     # Event Information
     event_show_type = models.CharField(max_length=50, null=True, blank=True)    # was 10, rounded to 50
     event_show_name = models.CharField(max_length=128, null=True, blank=True)   # was 109, power of 2
+    event_field_marketer = models.CharField(max_length=100, null=True, blank=True, help_text="Field marketer assigned to event")
     
     # Campaign Rename
     google_ads_campaign_rename = models.CharField(max_length=128, null=True, blank=True)  # was 114, power of 2
@@ -182,6 +183,9 @@ class GoogleSheetMarketingLead(models.Model):
             models.Index(fields=['created_at', 'utm_campaign']),
             models.Index(fields=['channel', 'division']),
             models.Index(fields=['channel', 'created_at']),
+            
+            # Event tracking
+            models.Index(fields=['event_field_marketer', 'created_at']),
             
             # Lead management
             models.Index(fields=['lead_set', 'division']),
@@ -247,8 +251,18 @@ class GoogleSheetMarketingSpend(models.Model):
     division = models.CharField(max_length=50, null=True, blank=True, help_text="Marketing division")
     channel = models.CharField(max_length=50, null=True, blank=True, help_text="Marketing channel")
     campaign = models.CharField(max_length=100, null=True, blank=True, help_text="Marketing campaign name")
+    
+    # Campaign Details
+    campaign_id = models.CharField(max_length=50, null=True, blank=True, help_text="Campaign ID from Google Ads or other platforms")
+    campaign_type = models.CharField(max_length=20, null=True, blank=True, help_text="Campaign type (SEARCH, DISPLAY, etc.)")
+    
+    # Event information
     event_start_date = models.DateField(null=True, blank=True, help_text="Event start date")
     event_end_date = models.DateField(null=True, blank=True, help_text="Event end date")
+    
+    # Event Cost Breakdown
+    event_fee = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Event registration or venue fee")
+    event_labor_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Labor cost for event participation")
     
     # Metadata - preserve original raw data
     raw_data = models.JSONField(
@@ -274,6 +288,13 @@ class GoogleSheetMarketingSpend(models.Model):
             models.Index(fields=['channel', 'campaign']),
             models.Index(fields=['spend_date', 'channel']),
             
+            # Campaign tracking
+            models.Index(fields=['campaign_id', 'spend_date']),
+            models.Index(fields=['campaign_type', 'channel']),
+            
+            # Event cost analysis
+            models.Index(fields=['event_fee', 'event_labor_cost']),
+            
             # System fields
             models.Index(fields=['sheet_row_number']),
             models.Index(fields=['sync_created_at']),
@@ -284,7 +305,9 @@ class GoogleSheetMarketingSpend(models.Model):
         ]
 
     def __str__(self):
-        return f"Row {self.sheet_row_number}: {self.division or 'No Division'} - {self.channel or 'No Channel'} - ${self.cost or 0} on {self.spend_date or 'No Date'}"
+        campaign_info = f" - {self.campaign}" if self.campaign else ""
+        campaign_id_info = f" ({self.campaign_id})" if self.campaign_id else ""
+        return f"Row {self.sheet_row_number}: {self.division or 'No Division'} - {self.channel or 'No Channel'}{campaign_info}{campaign_id_info} - ${self.cost or 0} on {self.spend_date or 'No Date'}"
 
     def save(self, *args, **kwargs):
         # Ensure raw_data is properly formatted
@@ -303,3 +326,20 @@ class GoogleSheetMarketingSpend(models.Model):
     def has_event_dates(self):
         """Check if spend has event date information"""
         return bool(self.event_start_date or self.event_end_date)
+    
+    @property
+    def total_event_cost(self):
+        """Calculate total event cost (fee + labor)"""
+        fee = self.event_fee or 0
+        labor = self.event_labor_cost or 0
+        return fee + labor
+
+    @property
+    def has_campaign_id(self):
+        """Check if spend has campaign ID tracking"""
+        return bool(self.campaign_id)
+
+    @property
+    def is_event_spend(self):
+        """Check if this is event-related spending"""
+        return self.channel and self.channel.lower() == 'events'
