@@ -1,7 +1,9 @@
 # agents/tools.py
 from google.adk.tools import FunctionTool
-import os, subprocess, json, glob
-from typing import Dict, List, Optional, Union
+import os
+import subprocess
+import json
+import glob
 
 def read_files(glob_pattern, max_kb=96):
     """Read files matching a glob pattern"""
@@ -43,9 +45,13 @@ def run_tests(args=None):
     """Run tests using docker compose"""
     if args is None:
         args = []
-    cmd = ["docker","compose","run","--rm","tests","pytest","-q"] + args
-    res = subprocess.run(cmd, capture_output=True, text=True)
-    return {"ok": res.returncode==0, "stdout": res.stdout, "stderr": res.stderr}
+    cmd = ["docker", "compose", "run", "--rm", "tests", "pytest", "-q"] + args
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    return {
+        "ok": result.returncode == 0, 
+        "stdout": result.stdout, 
+        "stderr": result.stderr
+    }
 
 # Create tool instances
 ReadFiles = FunctionTool(func=read_files, name="read_files")
@@ -54,4 +60,13 @@ WriteText = FunctionTool(func=write_text, name="write_text")
 RunTests = FunctionTool(func=run_tests, name="run_tests")
 
 # Export all tools
-__all__ = ["ReadFiles", "ReadSingleFile", "WriteText", "RunTests", "read_files", "read_single_file", "write_text", "run_tests"]
+__all__ = [
+    "ReadFiles", 
+    "ReadSingleFile", 
+    "WriteText", 
+    "RunTests", 
+    "read_files", 
+    "read_single_file", 
+    "write_text", 
+    "run_tests"
+]

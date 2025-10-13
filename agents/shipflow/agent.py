@@ -26,7 +26,7 @@ except ImportError:
     from google.adk.tools import FunctionTool
     import glob
     
-    def read_files(glob_pattern: str, max_kb: int = 96) -> dict:
+    def read_files(glob_pattern, max_kb=96):
         """Read files matching a glob pattern."""
         paths = [p for p in glob.glob(glob_pattern, recursive=True) if os.path.isfile(p)]
         out = {}
@@ -38,14 +38,14 @@ except ImportError:
                 out[p] = f"Error reading file: {e}"
         return out
 
-    def write_text(path: str, content: str) -> str:
+    def write_text(path, content):
         """Write text content to a file."""
         os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
         with open(path, "w") as f:
             f.write(content)
         return f"Successfully wrote to {path}"
 
-    def run_tests(args: list = None) -> dict:
+    def run_tests(args=None):
         """Run tests (placeholder)."""
         return {"ok": True, "message": "Tests not configured", "stdout": "", "stderr": ""}
 
