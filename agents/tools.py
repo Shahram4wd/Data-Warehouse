@@ -3,7 +3,7 @@ from google.adk.tools import FunctionTool
 import os, subprocess, json, glob
 from typing import Dict, List, Optional, Union
 
-def read_files(glob_pattern: str, max_kb: int = 96) -> Dict[str, str]:
+def read_files(glob_pattern, max_kb=96):
     """Read files matching a glob pattern"""
     paths = [p for p in glob.glob(glob_pattern, recursive=True) if os.path.isfile(p)]
     out = {}
@@ -16,7 +16,7 @@ def read_files(glob_pattern: str, max_kb: int = 96) -> Dict[str, str]:
             out[p] = f"Error reading file: {str(e)}"
     return out
 
-def read_single_file(file_path: str, max_kb: int = 96) -> str:
+def read_single_file(file_path, max_kb=96):
     """Read a single file"""
     try:
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -24,7 +24,7 @@ def read_single_file(file_path: str, max_kb: int = 96) -> str:
     except Exception as e:
         return f"Error reading file: {str(e)}"
 
-def write_text(path: str, content: str) -> str:
+def write_text(path, content):
     """Write text content to a file"""
     # Handle relative paths from agents directory to project root
     if path.startswith("ingestion/") or path.startswith("docs/") or path.startswith("scripts/"):
@@ -39,7 +39,7 @@ def write_text(path: str, content: str) -> str:
     
     return os.path.abspath(path)
 
-def run_tests(args: Optional[List[str]] = None) -> Dict[str, Union[bool, str]]:
+def run_tests(args=None):
     """Run tests using docker compose"""
     if args is None:
         args = []
