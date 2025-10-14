@@ -221,8 +221,28 @@ class DataAccessService:
                     if hasattr(model_class, field_name):
                         essential_fields.append(field_name)
                 
+                # For GoogleSheetMarketingLead, include the important display fields
+                if model_class.__name__ == 'GoogleSheetMarketingLead':
+                    gsheet_priority_fields = [
+                        'year', 'sheet_row_number', 'first_name', 'last_name', 
+                        'phone_number', 'email_address', 'utm_campaign', 'utm_term',
+                        'created_at', 'sheet_last_modified', 'division', 'channel'
+                    ]
+                    for field_name in gsheet_priority_fields:
+                        if hasattr(model_class, field_name) and field_name not in essential_fields:
+                            essential_fields.append(field_name)
+                # For GoogleSheetMarketingSpend, include the important display fields
+                elif model_class.__name__ == 'GoogleSheetMarketingSpend':
+                    gsheet_spend_priority_fields = [
+                        'sheet_row_number', 'spend_date', 'cost', 'division', 
+                        'channel', 'campaign', 'campaign_id', 'campaign_type',
+                        'event_fee', 'event_labor_cost', 'sheet_last_modified'
+                    ]
+                    for field_name in gsheet_spend_priority_fields:
+                        if hasattr(model_class, field_name) and field_name not in essential_fields:
+                            essential_fields.append(field_name)
                 # For HubSpot contacts, include the most important fields
-                if 'hubspot' in model_class.__name__.lower() and 'contact' in model_class.__name__.lower():
+                elif 'hubspot' in model_class.__name__.lower() and 'contact' in model_class.__name__.lower():
                     hubspot_priority_fields = [
                         'email', 'firstname', 'lastname', 'phone', 'company', 
                         'address', 'city', 'state', 'zip', 'division',
