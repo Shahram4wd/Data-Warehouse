@@ -1,9 +1,6 @@
-"""
-Base management command for SalesPro database sync operations
-Following import_refactoring.md guidelines
-"""
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 from django.core.management.base import BaseCommand, CommandError
@@ -83,6 +80,24 @@ class BaseSalesProSyncCommand(BaseCommand):
             logging.getLogger().setLevel(logging.DEBUG)
             
         self.stdout.write(f"Starting SalesPro {self.get_sync_name()} sync...")
+        
+        # Check for required Athena environment variables
+        required_env_vars = [
+            'SALESPRO_ACCESS_KEY_ID',
+            'SALESPRO_SECRET_ACCESS_KEY',
+            'SALESPRO_S3_LOCATION'
+        ]
+        
+        missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+        if missing_vars:
+            self.stdout.write(
+                self.style.ERROR(
+                    f"❌ SalesPro sync failed: Missing AWS Athena credentials: {', '.join(missing_vars)}\n"
+                    f"   Configure these environment variables to enable SalesPro sync."
+                )
+            )
+            raise CommandError(f"AWS Athena connection details are missing in environment variables.")
+            return
         
         try:
             # Get sync engine

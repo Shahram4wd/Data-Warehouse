@@ -31,7 +31,7 @@ class AthenaClient:
         # Use provided values or fall back to environment variables
         self.region = region or os.getenv("SALESPRO_SERVER_REGION", "us-east-1")
         self.aws_key = aws_key or os.getenv("SALESPRO_ACCESS_KEY_ID")
-        self.aws_secret = aws_secret or os.getenv("SALESPRO_SECRETE_ACCESS_KEY")
+        self.aws_secret = aws_secret or os.getenv("SALESPRO_SECRET_ACCESS_KEY")  # Fixed: removed extra 'E'
         s3_base = os.getenv("SALESPRO_S3_LOCATION", "s3://customer-analytics-data-vault-staging/production/HomeGenius/")
         self.s3_output = s3_output or f"{s3_base}athena-results/"
         self.workgroup = workgroup
