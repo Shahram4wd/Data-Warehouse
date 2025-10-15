@@ -60,15 +60,17 @@ class SalesRabbitBaseClient(BaseAPIClient):
             params = {}
         
         all_data = []
-        page = 1
+        page = 0 if '/users' in endpoint else 1  # SalesRabbit users API uses 0-indexed pages
         page_size = params.get('limit', 1000)
+        max_pages = 1000  # Safety limit to prevent infinite loops
+        previous_data_hash = None  # Track duplicate responses
         
         # Use context manager for proper session handling
         async with self as client:
-            while True:
+            while page < max_pages:  # Use < instead of <= for 0-indexed pagination
                 # Different endpoints use different pagination parameters
                 if '/users' in endpoint:
-                    current_params = {**params, 'currentPage': page, 'limit': page_size}
+                    current_params = {**params, 'page': page, 'limit': page_size}
                 else:
                     current_params = {**params, 'page': page, 'limit': page_size}
                 
@@ -84,14 +86,39 @@ class SalesRabbitBaseClient(BaseAPIClient):
                         data = []
                     
                     if not data:
+                        logger.info(f"No data returned on page {page}, ending pagination")
                         break
+                    
+                    # Check for duplicate responses (API returning same data on every page)
+                    if '/users' in endpoint and len(data) > 0:
+                        # Create a hash of all user IDs to detect exact duplicates
+                        current_ids = set(user.get('id') for user in data if user.get('id'))
+                        current_data_hash = f"{len(data)}-{min(current_ids) if current_ids else 'none'}-{max(current_ids) if current_ids else 'none'}"
+                        
+                        if previous_data_hash == current_data_hash and page > 1:
+                            logger.warning(f"Detected identical response on page {page} (same {len(data)} users as page {page-1}). "
+                                         f"SalesRabbit Users API appears to return all users on every page regardless of pagination.")
+                            logger.info(f"Total unique users available: {len(data)}. Stopping pagination to avoid duplicates.")
+                            break
+                        previous_data_hash = current_data_hash
                     
                     all_data.extend(data)
-                    logger.info(f"Fetched page {page} with {len(data)} records from {endpoint}")
+                    logger.info(f"Page {page}: fetched {len(data)} records")
                     
-                    # If we got less than page_size, we're done
-                    if len(data) < page_size:
-                        break
+                    # Enhanced termination conditions
+                    if '/users' in endpoint:
+                        # For users endpoint: if we get all users (less than limit), we're likely done
+                        # But also check if this looks like "all users" being returned every time
+                        if len(data) < page_size:
+                            logger.info(f"Got {len(data)} records (less than limit {page_size}), ending pagination")
+                            break
+                        elif page > 1 and len(data) == len(all_data) // page:
+                            # If each page returns the same number of records and it looks like total/page_count
+                            logger.warning(f"Suspicious pagination pattern detected - each page returning {len(data)} records")
+                    else:
+                        # For other endpoints: standard pagination logic
+                        if len(data) < page_size:
+                            break
                     
                     page += 1
                     
@@ -111,16 +138,18 @@ class SalesRabbitBaseClient(BaseAPIClient):
             params = {}
         
         all_data = []
-        page = 1
+        page = 0 if '/users' in endpoint else 1  # SalesRabbit users API uses 0-indexed pages
         # Use the limit from params directly for true pagination testing
         page_size = params.get('limit', 100)
+        max_pages = 1000  # Safety limit to prevent infinite loops
+        previous_data_hash = None  # Track duplicate responses
         
         # Use context manager for proper session handling
         async with self as client:
-            while len(all_data) < max_records:
+            while len(all_data) < max_records and page < max_pages:  # Use < for 0-indexed users
                 # Different endpoints use different pagination parameters
                 if '/users' in endpoint:
-                    current_params = {**params, 'currentPage': page, 'limit': page_size}
+                    current_params = {**params, 'page': page, 'limit': page_size}
                 else:
                     current_params = {**params, 'page': page, 'limit': page_size}
                 
@@ -136,7 +165,22 @@ class SalesRabbitBaseClient(BaseAPIClient):
                         data = []
                     
                     if not data:
+                        logger.info(f"No data returned on page {page}, ending pagination")
                         break
+                    
+                    # Check for duplicate responses (API returning same data on every page)
+                    if '/users' in endpoint and len(data) > 0:
+                        # Create a hash of all user IDs to detect exact duplicates
+                        current_ids = set(user.get('id') for user in data if user.get('id'))
+                        current_data_hash = f"{len(data)}-{min(current_ids) if current_ids else 'none'}-{max(current_ids) if current_ids else 'none'}"
+                        
+                        if previous_data_hash == current_data_hash and page > 1:
+                            logger.warning(f"Detected identical response on page {page} (same {len(data)} users as page {page-1}). "
+                                         f"SalesRabbit Users API appears to return all users on every page regardless of pagination.")
+                            logger.info(f"Total unique users available: {len(data)}. Stopping pagination to avoid duplicates.")
+                            # Don't add duplicate data, just break
+                            break
+                        previous_data_hash = current_data_hash
                     
                     # Add only the records we need to stay within max_records limit
                     remaining_slots = max_records - len(all_data)
@@ -149,9 +193,16 @@ class SalesRabbitBaseClient(BaseAPIClient):
                     if len(all_data) >= max_records:
                         break
                     
-                    # If we got less than page_size, we're done
-                    if len(data) < page_size:
-                        break
+                    # Enhanced termination conditions
+                    if '/users' in endpoint:
+                        # For users endpoint: if we get all users (less than limit), we're likely done
+                        if len(data) < page_size:
+                            logger.info(f"Got {len(data)} records (less than limit {page_size}), ending pagination")
+                            break
+                    else:
+                        # For other endpoints: standard pagination logic
+                        if len(data) < page_size:
+                            break
                     
                     page += 1
                     

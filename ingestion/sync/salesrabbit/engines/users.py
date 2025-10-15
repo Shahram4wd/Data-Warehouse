@@ -52,8 +52,9 @@ class SalesRabbitUserSyncEngine(SalesRabbitBaseSyncEngine):
             await self.client.authenticate()
             
             # Use page-by-page fetching instead of collecting all data first
-            page = 1
+            page = 0  # SalesRabbit API uses 0-indexed pages
             total_fetched = 0
+            previous_data_hash = None  # Track duplicate responses
             
             async with self.client as client:
                 while True:
@@ -69,7 +70,7 @@ class SalesRabbitUserSyncEngine(SalesRabbitBaseSyncEngine):
                         page_limit = min(limit, remaining)
                     
                     # Prepare API parameters
-                    params = {'limit': page_limit, 'currentPage': page}
+                    params = {'limit': page_limit, 'page': page}
                     
                     # Add date filter if doing incremental sync
                     extra_headers = {}
@@ -100,6 +101,19 @@ class SalesRabbitUserSyncEngine(SalesRabbitBaseSyncEngine):
                         if not data:
                             logger.info(f"No data returned on page {page}, ending pagination")
                             break
+                        
+                        # Check for duplicate responses (SalesRabbit Users API returns all users on every page)
+                        if len(data) > 0:
+                            # Create a hash of all user IDs to detect exact duplicates
+                            current_ids = set(user.get('id') for user in data if user.get('id'))
+                            current_data_hash = f"{len(data)}-{min(current_ids) if current_ids else 'none'}-{max(current_ids) if current_ids else 'none'}"
+                            
+                            if previous_data_hash == current_data_hash and page > 1:
+                                logger.warning(f"Detected identical response on page {page} (same {len(data)} users as page {page-1}). "
+                                             f"SalesRabbit Users API appears to return all users on every page regardless of pagination.")
+                                logger.info(f"Total unique users available: {len(data)}. Stopping pagination to avoid duplicates.")
+                                break
+                            previous_data_hash = current_data_hash
                         
                         # Limit data to max_records if needed
                         if max_records > 0:
