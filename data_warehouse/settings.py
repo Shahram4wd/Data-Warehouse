@@ -446,6 +446,23 @@ if not DEBUG:
     DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
     FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 
+# Memory-safe ingestion settings
+INGEST_PAGE_SIZE = config('INGEST_PAGE_SIZE', default=5000, cast=int)
+DB_BULK_BATCH_SIZE = config('DB_BULK_BATCH_SIZE', default=1000, cast=int)
+
+# Ensure page size safety
+if INGEST_PAGE_SIZE > 5000:
+    INGEST_PAGE_SIZE = 5000
+    
+# Ensure bulk batch safety  
+if DB_BULK_BATCH_SIZE > 2000:
+    DB_BULK_BATCH_SIZE = 2000
+
+if not DEBUG:
+    # Reduce worker timeout issues
+    DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+    FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+
     # Shared cache configuration
     # IMPORTANT: The worker_pool service persists its in-memory state using Django's cache.
     # Using LocMemCache caused each process (web, worker, beat) to keep an isolated copy,

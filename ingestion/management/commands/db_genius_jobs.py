@@ -9,7 +9,7 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 
-from ingestion.sync.genius.engines.jobs import GeniusJobSyncEngine
+from ingestion.sync.genius.engines.jobs_streaming import StreamingGeniusJobsSyncEngine
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ class Command(BaseCommand):
             since_date = None
             
         try:
-            engine = GeniusJobSyncEngine()
+            engine = StreamingGeniusJobsSyncEngine()
             result = engine.sync_jobs(
                 since_date=since_date,
                 force_overwrite=options.get('force', False),

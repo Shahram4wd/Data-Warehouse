@@ -10,7 +10,7 @@ from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 
-from ingestion.sync.genius.engines.prospects import GeniusProspectsSyncEngine
+from ingestion.sync.genius.engines.prospects_streaming import StreamingGeniusProspectsSyncEngine
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ class Command(BaseCommand):
         
         try:
             # Initialize sync engine
-            engine = GeniusProspectsSyncEngine()
+            engine = StreamingGeniusProspectsSyncEngine()
             
             # Determine sync mode
             sync_mode = 'force' if options.get('force') else 'incremental'

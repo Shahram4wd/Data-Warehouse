@@ -1,6 +1,6 @@
 """
-Django management command for syncing Genius quotes using the new sync engine architecture.
-This command follows the CRM sync guide patterns for consistent data synchronization.
+Django management command for syncing Genius quotes using the new streaming sync engine architecture.
+This command follows the CRM sync guide patterns for consistent data synchronization with memory safety.
 """
 import logging
 from datetime import datetime
@@ -9,7 +9,7 @@ from typing import Optional
 from django.core.management.base import BaseCommand
 from django.utils.dateparse import parse_datetime
 
-from ingestion.sync.genius.engines.quotes import GeniusQuotesSyncEngine
+from ingestion.sync.genius.engines.quotes_streaming import StreamingGeniusQuotesSyncEngine
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +123,7 @@ class Command(BaseCommand):
         
         # Execute sync
         try:
-            engine = GeniusQuotesSyncEngine()
+            engine = StreamingGeniusQuotesSyncEngine()
             
             # Determine since_date for sync
             since_date = None if options.get('full') else since
