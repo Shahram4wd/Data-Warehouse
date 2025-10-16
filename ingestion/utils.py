@@ -177,7 +177,7 @@ def get_athena_client():
     
     # Get AWS credentials and configuration from environment variables
     aws_access_key_id = os.getenv("SALESPRO_ACCESS_KEY_ID")
-    aws_secret_access_key = os.getenv("SALESPRO_SECRETE_ACCESS_KEY")
+    aws_secret_access_key = os.getenv("SALESPRO_SECRET_ACCESS_KEY")  # Fixed: removed extra 'E'
     region_name = os.getenv("SALESPRO_SERVER_REGION", "us-east-1")
     s3_staging_dir = os.getenv("SALESPRO_S3_LOCATION")
 

@@ -14,7 +14,7 @@ services:
 
   celery:
     build: .
-    command: celery -A data_warehouse worker -l info --concurrency=2 -Q dw-local
+    command: celery -A data_warehouse worker --concurrency=2 --prefetch-multiplier=1 --max-tasks-per-child=50 --max-memory-per-child=300000 -l info -Q dw-local
     volumes:
       - .:/app
     env_file:

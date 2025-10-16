@@ -220,6 +220,14 @@ MAX_SYNC_WORKERS = config('MAX_SYNC_WORKERS', default=2, cast=int)
 # Stale heartbeat timeout (minutes) before a task is considered failed/orphaned
 WORKER_POOL_STALE_MINUTES = config('WORKER_POOL_STALE_MINUTES', default=30, cast=int)
 
+# Ingestion Performance Settings
+# Page size for API requests to prevent memory overload
+INGEST_PAGE_SIZE = config('INGEST_PAGE_SIZE', default=200, cast=int)
+# Batch size for database bulk operations
+DB_BULK_BATCH_SIZE = config('DB_BULK_BATCH_SIZE', default=1000, cast=int)
+# Database cursor chunk size for large queries
+DB_CURSOR_CHUNK_SIZE = config('DB_CURSOR_CHUNK_SIZE', default=1000, cast=int)
+
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'

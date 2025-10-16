@@ -10,6 +10,7 @@ from celery import shared_task
 from django.utils import timezone
 from django.core.management import call_command
 from datetime import timedelta
+from ingestion.tasks.base import DataSyncTask
 
 logger = logging.getLogger(__name__)
 
@@ -60,46 +61,38 @@ def generate_automation_reports(self):
         raise
 
 
-@shared_task(bind=True, name='ingestion.tasks.sync_five9_contacts')
+@shared_task(bind=True, base=DataSyncTask, name='ingestion.tasks.sync_five9_contacts')
 def sync_five9_contacts(self, **kwargs):
-    """Sync Five9 contacts with worker pool integration"""
+    """Sync Five9 contacts with enhanced monitoring and concurrency control"""
     try:
-        from ingestion.services.worker_pool import get_worker_pool, TaskStatus
+        from django.conf import settings
         
-        # Update worker pool that task started
-        worker_pool = get_worker_pool()
-        for task_id, worker_task in worker_pool.active_workers.items():
-            if worker_task.celery_task_id == self.request.id:
-                worker_pool.update_task_status(task_id, TaskStatus.RUNNING)
-                break
+        # Use optimized settings for performance
+        page_size = getattr(settings, 'INGEST_PAGE_SIZE', 200)
+        batch_size = getattr(settings, 'DB_BULK_BATCH_SIZE', 1000)
         
-        # Run the sync
-        logger.info("Starting Five9 contacts sync...")
-        result = call_command('sync_five9_contacts', **kwargs)
-        logger.info("Five9 contacts sync completed")
+        logger.info(f"Starting Five9 contacts sync with page_size={page_size}, batch_size={batch_size}")
         
-        # Update worker pool that task completed
-        for task_id, worker_task in worker_pool.active_workers.items():
-            if worker_task.celery_task_id == self.request.id:
-                worker_pool.update_task_status(task_id, TaskStatus.COMPLETED)
-                break
+        # Run Five9 sync command with optimized settings
+        result = call_command(
+            'sync_five9_contacts',
+            page_size=page_size,
+            batch_size=batch_size,
+            **kwargs
+        )
         
-        return {'status': 'success', 'message': 'Five9 contacts synced successfully', 'result': result}
+        logger.info("Five9 contacts sync completed successfully")
+        return {
+            'status': 'success', 
+            'message': 'Five9 contacts synced successfully', 
+            'result': result,
+            'page_size': page_size,
+            'batch_size': batch_size
+        }
         
     except Exception as e:
         logger.error(f"Error syncing Five9 contacts: {e}")
-        
-        # Update worker pool that task failed
-        try:
-            from ingestion.services.worker_pool import get_worker_pool, TaskStatus
-            worker_pool = get_worker_pool()
-            for task_id, worker_task in worker_pool.active_workers.items():
-                if worker_task.celery_task_id == self.request.id:
-                    worker_pool.update_task_status(task_id, TaskStatus.FAILED, str(e))
-                    break
-        except:
-            pass
-        
+        # DataSyncTask automatically handles error status updates
         raise
 
 
@@ -146,132 +139,105 @@ def sync_genius_marketsharp_contacts(self, **kwargs):
         raise
 
 
-@shared_task(bind=True, name='ingestion.tasks.sync_hubspot_all')
+@shared_task(bind=True, base=DataSyncTask, name='ingestion.tasks.sync_hubspot_all')
 def sync_hubspot_all(self, **kwargs):
-    """Sync all HubSpot data with worker pool integration"""
+    """Sync all HubSpot data with enhanced monitoring and concurrency control"""
     try:
-        from ingestion.services.worker_pool import get_worker_pool, TaskStatus
+        from django.conf import settings
         
-        # Update worker pool that task started
-        worker_pool = get_worker_pool()
-        for task_id, worker_task in worker_pool.active_workers.items():
-            if worker_task.celery_task_id == self.request.id:
-                worker_pool.update_task_status(task_id, TaskStatus.RUNNING)
-                break
+        # Use optimized settings for performance
+        page_size = getattr(settings, 'INGEST_PAGE_SIZE', 200)
+        batch_size = getattr(settings, 'DB_BULK_BATCH_SIZE', 1000)
         
-        # Run HubSpot sync tasks
-        logger.info("Starting HubSpot all sync...")
-        # Add HubSpot sync logic here
-        logger.info("HubSpot all sync completed")
+        logger.info(f"Starting HubSpot all sync with page_size={page_size}, batch_size={batch_size}")
         
-        # Update worker pool that task completed
-        for task_id, worker_task in worker_pool.active_workers.items():
-            if worker_task.celery_task_id == self.request.id:
-                worker_pool.update_task_status(task_id, TaskStatus.COMPLETED)
-                break
+        # Run HubSpot sync command with optimized settings
+        call_command(
+            'sync_hubspot_all',
+            page_size=page_size,
+            batch_size=batch_size,
+            **kwargs
+        )
         
-        return {'status': 'success', 'message': 'HubSpot data synced successfully'}
+        logger.info("HubSpot all sync completed successfully")
+        return {
+            'status': 'success', 
+            'message': 'HubSpot data synced successfully',
+            'page_size': page_size,
+            'batch_size': batch_size
+        }
         
     except Exception as e:
         logger.error(f"Error syncing HubSpot data: {e}")
-        
-        # Update worker pool that task failed
-        try:
-            from ingestion.services.worker_pool import get_worker_pool, TaskStatus
-            worker_pool = get_worker_pool()
-            for task_id, worker_task in worker_pool.active_workers.items():
-                if worker_task.celery_task_id == self.request.id:
-                    worker_pool.update_task_status(task_id, TaskStatus.FAILED, str(e))
-                    break
-        except:
-            pass
-        
+        # DataSyncTask automatically handles error status updates
         raise
 
 
-@shared_task(bind=True, name='ingestion.tasks.sync_genius_all')
+@shared_task(bind=True, base=DataSyncTask, name='ingestion.tasks.sync_genius_all')
 def sync_genius_all(self, **kwargs):
-    """Sync all Genius data with worker pool integration"""
+    """Sync all Genius data with enhanced monitoring and concurrency control"""
     try:
-        from ingestion.services.worker_pool import get_worker_pool, TaskStatus
+        from django.conf import settings
         
-        # Update worker pool that task started
-        worker_pool = get_worker_pool()
-        for task_id, worker_task in worker_pool.active_workers.items():
-            if worker_task.celery_task_id == self.request.id:
-                worker_pool.update_task_status(task_id, TaskStatus.RUNNING)
-                break
+        # Use optimized settings for performance
+        page_size = getattr(settings, 'INGEST_PAGE_SIZE', 200)
+        batch_size = getattr(settings, 'DB_BULK_BATCH_SIZE', 1000)
         
-        # Run Genius sync tasks
-        logger.info("Starting Genius all sync...")
-        # Add Genius sync logic here
-        logger.info("Genius all sync completed")
+        logger.info(f"Starting Genius all sync with page_size={page_size}, batch_size={batch_size}")
         
-        # Update worker pool that task completed
-        for task_id, worker_task in worker_pool.active_workers.items():
-            if worker_task.celery_task_id == self.request.id:
-                worker_pool.update_task_status(task_id, TaskStatus.COMPLETED)
-                break
+        # Run Genius sync command with optimized settings
+        call_command(
+            'db_genius_all',
+            page_size=page_size,
+            batch_size=batch_size,
+            **kwargs
+        )
         
-        return {'status': 'success', 'message': 'Genius data synced successfully'}
+        logger.info("Genius all sync completed successfully")
+        return {
+            'status': 'success', 
+            'message': 'Genius data synced successfully',
+            'page_size': page_size,
+            'batch_size': batch_size
+        }
         
     except Exception as e:
         logger.error(f"Error syncing Genius data: {e}")
-        
-        # Update worker pool that task failed
-        try:
-            from ingestion.services.worker_pool import get_worker_pool, TaskStatus
-            worker_pool = get_worker_pool()
-            for task_id, worker_task in worker_pool.active_workers.items():
-                if worker_task.celery_task_id == self.request.id:
-                    worker_pool.update_task_status(task_id, TaskStatus.FAILED, str(e))
-                    break
-        except:
-            pass
-        
+        # DataSyncTask automatically handles error status updates
         raise
 
 
-@shared_task(bind=True, name='ingestion.tasks.sync_arrivy_all')
+@shared_task(bind=True, base=DataSyncTask, name='ingestion.tasks.sync_arrivy_all')
 def sync_arrivy_all(self, **kwargs):
-    """Sync all Arrivy data with worker pool integration"""
+    """Sync all Arrivy data with enhanced monitoring and concurrency control"""
     try:
-        from ingestion.services.worker_pool import get_worker_pool, TaskStatus
+        from django.conf import settings
         
-        # Update worker pool that task started
-        worker_pool = get_worker_pool()
-        for task_id, worker_task in worker_pool.active_workers.items():
-            if worker_task.celery_task_id == self.request.id:
-                worker_pool.update_task_status(task_id, TaskStatus.RUNNING)
-                break
+        # Use optimized settings for performance
+        page_size = getattr(settings, 'INGEST_PAGE_SIZE', 200)
+        batch_size = getattr(settings, 'DB_BULK_BATCH_SIZE', 1000)
         
-        # Run Arrivy sync tasks
-        logger.info("Starting Arrivy all sync...")
-        # Add Arrivy sync logic here
-        logger.info("Arrivy all sync completed")
+        logger.info(f"Starting Arrivy all sync with page_size={page_size}, batch_size={batch_size}")
         
-        # Update worker pool that task completed
-        for task_id, worker_task in worker_pool.active_workers.items():
-            if worker_task.celery_task_id == self.request.id:
-                worker_pool.update_task_status(task_id, TaskStatus.COMPLETED)
-                break
+        # Run Arrivy sync command with optimized settings
+        call_command(
+            'sync_arrivy_all',
+            page_size=page_size,
+            batch_size=batch_size,
+            **kwargs
+        )
         
-        return {'status': 'success', 'message': 'Arrivy data synced successfully'}
+        logger.info("Arrivy all sync completed successfully")
+        return {
+            'status': 'success', 
+            'message': 'Arrivy data synced successfully',
+            'page_size': page_size,
+            'batch_size': batch_size
+        }
         
     except Exception as e:
         logger.error(f"Error syncing Arrivy data: {e}")
-        
-        # Update worker pool that task failed
-        try:
-            from ingestion.services.worker_pool import get_worker_pool, TaskStatus
-            worker_pool = get_worker_pool()
-            for task_id, worker_task in worker_pool.active_workers.items():
-                if worker_task.celery_task_id == self.request.id:
-                    worker_pool.update_task_status(task_id, TaskStatus.FAILED, str(e))
-                    break
-        except:
-            pass
-        
+        # DataSyncTask automatically handles error status updates
         raise
 
 
@@ -410,4 +376,187 @@ def worker_pool_monitor(self):
         
     except Exception as e:
         logger.error(f"Worker pool monitor error: {e}")
+        raise
+
+
+# Additional CRM Sync Tasks using DataSyncTask
+
+@shared_task(bind=True, base=DataSyncTask, name='ingestion.tasks.sync_callrail_all')
+def sync_callrail_all(self, **kwargs):
+    """Sync all CallRail data with enhanced monitoring and concurrency control"""
+    try:
+        from django.conf import settings
+        
+        # Use optimized settings for performance
+        page_size = getattr(settings, 'INGEST_PAGE_SIZE', 200)
+        batch_size = getattr(settings, 'DB_BULK_BATCH_SIZE', 1000)
+        
+        logger.info(f"Starting CallRail all sync with page_size={page_size}, batch_size={batch_size}")
+        
+        # Run CallRail sync command with optimized settings
+        call_command(
+            'sync_callrail_all',
+            page_size=page_size,
+            batch_size=batch_size,
+            **kwargs
+        )
+        
+        logger.info("CallRail all sync completed successfully")
+        return {
+            'status': 'success', 
+            'message': 'CallRail data synced successfully',
+            'page_size': page_size,
+            'batch_size': batch_size
+        }
+        
+    except Exception as e:
+        logger.error(f"Error syncing CallRail data: {e}")
+        raise
+
+
+@shared_task(bind=True, base=DataSyncTask, name='ingestion.tasks.sync_leadconduit_all')
+def sync_leadconduit_all(self, **kwargs):
+    """Sync all LeadConduit data with enhanced monitoring and concurrency control"""
+    try:
+        from django.conf import settings
+        
+        # Use optimized settings for performance
+        page_size = getattr(settings, 'INGEST_PAGE_SIZE', 200)
+        batch_size = getattr(settings, 'DB_BULK_BATCH_SIZE', 1000)
+        
+        logger.info(f"Starting LeadConduit all sync with page_size={page_size}, batch_size={batch_size}")
+        
+        # Run LeadConduit sync command with optimized settings
+        call_command(
+            'sync_leadconduit_all',
+            page_size=page_size,
+            batch_size=batch_size,
+            **kwargs
+        )
+        
+        logger.info("LeadConduit all sync completed successfully")
+        return {
+            'status': 'success', 
+            'message': 'LeadConduit data synced successfully',
+            'page_size': page_size,
+            'batch_size': batch_size
+        }
+        
+    except Exception as e:
+        logger.error(f"Error syncing LeadConduit data: {e}")
+        raise
+
+
+@shared_task(bind=True, base=DataSyncTask, name='ingestion.tasks.sync_salesrabbit_all')
+def sync_salesrabbit_all(self, **kwargs):
+    """Sync all SalesRabbit data with enhanced monitoring and concurrency control"""
+    try:
+        from django.conf import settings
+        
+        # Use optimized settings for performance
+        page_size = getattr(settings, 'INGEST_PAGE_SIZE', 200)
+        batch_size = getattr(settings, 'DB_BULK_BATCH_SIZE', 1000)
+        
+        logger.info(f"Starting SalesRabbit all sync with page_size={page_size}, batch_size={batch_size}")
+        
+        # Run SalesRabbit sync command with optimized settings
+        call_command(
+            'sync_salesrabbit_all',
+            page_size=page_size,
+            batch_size=batch_size,
+            **kwargs
+        )
+        
+        logger.info("SalesRabbit all sync completed successfully")
+        return {
+            'status': 'success', 
+            'message': 'SalesRabbit data synced successfully',
+            'page_size': page_size,
+            'batch_size': batch_size
+        }
+        
+    except Exception as e:
+        logger.error(f"Error syncing SalesRabbit data: {e}")
+        raise
+
+
+@shared_task(bind=True, base=DataSyncTask, name='ingestion.tasks.sync_gsheet_all')
+def sync_gsheet_all(self, **kwargs):
+    """Sync all Google Sheets data with enhanced monitoring and concurrency control"""
+    try:
+        from django.conf import settings
+        
+        # Use optimized settings for performance
+        page_size = getattr(settings, 'INGEST_PAGE_SIZE', 200)
+        batch_size = getattr(settings, 'DB_BULK_BATCH_SIZE', 1000)
+        
+        logger.info(f"Starting Google Sheets all sync with page_size={page_size}, batch_size={batch_size}")
+        
+        # Run Google Sheets sync command with optimized settings
+        call_command(
+            'sync_gsheet_all',
+            page_size=page_size,
+            batch_size=batch_size,
+            **kwargs
+        )
+        
+        logger.info("Google Sheets all sync completed successfully")
+        return {
+            'status': 'success', 
+            'message': 'Google Sheets data synced successfully',
+            'page_size': page_size,
+            'batch_size': batch_size
+        }
+        
+    except Exception as e:
+        logger.error(f"Error syncing Google Sheets data: {e}")
+        raise
+
+
+@shared_task(bind=True, base=DataSyncTask, name='ingestion.tasks.sync_salespro_all')
+def sync_salespro_all(self, **kwargs):
+    """Sync all SalesPro data with enhanced monitoring and concurrency control"""
+    try:
+        from django.conf import settings
+        import os
+        
+        # Check if required Athena credentials are configured
+        required_env_vars = [
+            'SALESPRO_ACCESS_KEY_ID',
+            'SALESPRO_SECRETE_ACCESS_KEY',
+            'SALESPRO_S3_LOCATION'
+        ]
+        
+        missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+        if missing_vars:
+            logger.info(f"SalesPro sync skipped - missing AWS Athena credentials: {', '.join(missing_vars)}")
+            return {
+                'status': 'skipped', 
+                'message': f'SalesPro sync skipped - missing credentials: {", ".join(missing_vars)}'
+            }
+        
+        # Use optimized settings for performance
+        page_size = getattr(settings, 'INGEST_PAGE_SIZE', 200)
+        batch_size = getattr(settings, 'DB_BULK_BATCH_SIZE', 1000)
+        
+        logger.info(f"Starting SalesPro all sync with page_size={page_size}, batch_size={batch_size}")
+        
+        # Run SalesPro sync command with optimized settings
+        call_command(
+            'db_salespro_all',
+            page_size=page_size,
+            batch_size=batch_size,
+            **kwargs
+        )
+        
+        logger.info("SalesPro all sync completed successfully")
+        return {
+            'status': 'success', 
+            'message': 'SalesPro data synced successfully',
+            'page_size': page_size,
+            'batch_size': batch_size
+        }
+        
+    except Exception as e:
+        logger.error(f"Error syncing SalesPro data: {e}")
         raise
