@@ -39,11 +39,6 @@ class Command(BaseSyncCommand):
             help='(DEPRECATED) Use --start-date instead. Manual sync start date (YYYY-MM-DD format)'
         )
         parser.add_argument(
-            '--force',
-            action='store_true',
-            help='(DEPRECATED) Use --force instead. Completely replace existing records'
-        )
-        parser.add_argument(
             '--config',
             type=str,
             default='default',
@@ -140,9 +135,11 @@ class Command(BaseSyncCommand):
         # Run async sync
         import asyncio
         return asyncio.run(sync_engine.sync_all(
-            start_date=since_date,
+            since_date=since_date,
             end_date=end_date,
-            force=force_overwrite
+            force_overwrite=force_overwrite,
+            full_sync=full_sync,
+            dry_run=dry_run
         ))
     
     def parse_date(self, date_str: str) -> datetime:

@@ -24,6 +24,33 @@ class Command(BaseSyncCommand):
     crm_name = 'CallRail'
     entity_name = 'all'
     
+    def add_arguments(self, parser):
+        """Add command arguments"""
+        super().add_arguments(parser)
+        
+        # Add entities argument for selecting which entities to sync
+        parser.add_argument(
+            '--entities',
+            nargs='*',
+            default=['accounts', 'companies', 'calls', 'trackers', 'form_submissions', 'text_messages', 'tags', 'users'],
+            choices=['accounts', 'companies', 'calls', 'trackers', 'form_submissions', 'text_messages', 'tags', 'users'],
+            help='Specific entities to sync (default: all entities)'
+        )
+        
+        # Add company_id filter
+        parser.add_argument(
+            '--company-id',
+            type=str,
+            help='Filter by specific company ID'
+        )
+        
+        # Add parallel processing option
+        parser.add_argument(
+            '--parallel',
+            action='store_true',
+            help='Run entity syncs in parallel (experimental)'
+        )
+    
     def handle(self, *args, **options):
         """Handle the management command"""
         try:
@@ -357,6 +384,12 @@ class Command(BaseSyncCommand):
         errors = result.get('total_errors', 0)
         duration = result.get('duration', 0)
         
+        # Convert timedelta to seconds if needed
+        if hasattr(duration, 'total_seconds'):
+            duration = duration.total_seconds()
+        elif not isinstance(duration, (int, float)):
+            duration = 0
+        
         status_icon = '✅' if errors == 0 else '⚠️'
         self.stdout.write(
             f'{status_icon} {entity_name.title()}: +{created} created, ~{updated} updated, '
@@ -385,6 +418,12 @@ class Command(BaseSyncCommand):
             updated = result.get('total_updated', 0)
             errors = result.get('total_errors', 0)
             duration = result.get('duration', 0)
+            
+            # Convert timedelta to seconds if needed
+            if hasattr(duration, 'total_seconds'):
+                duration = duration.total_seconds()
+            elif not isinstance(duration, (int, float)):
+                duration = 0
             
             total_created += created
             total_updated += updated
